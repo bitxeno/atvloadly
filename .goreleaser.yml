@@ -1,0 +1,81 @@
+env:
+  - GO111MODULE=on
+
+build:
+  # env:
+  #   - CGO_ENABLED=0
+  ldflags:
+    - -w -s -X main.Version={{ .Version }} -X main.BuildDate={{ .Date }} -X main.Commit={{ .FullCommit }} -X main.Mode=prod
+  binary: "{{.ProjectName}}"
+  goos:
+    - darwin
+    - linux
+    - windows
+  goarch:
+    - amd64
+    - arm64
+  ignore:
+    - goos: windows
+      goarch: 386
+
+archives:
+  - name_template: "{{.ProjectName}}-{{.Os}}-{{.Arch}}"
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+
+dockers:
+  - image_templates:
+      # - "{{ .Env.GIT_OWER }}/{{ .Env.GIT_REPO }}:{{ .Tag }}-amd64"
+      - "ghcr.io/{{ .Env.GIT_OWER }}/{{ .Env.GIT_REPO }}:{{ .Tag }}-amd64"
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.name={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+      - "--platform=linux/amd64"
+      - "--build-arg=APP_NAME={{.ProjectName}}"
+      - "--build-arg=VERSION={{.Version}}"
+      - "--build-arg=BUILDDATE={{.Date}}"
+      - "--build-arg=COMMIT={{.FullCommit}}"
+  - image_templates:
+      # - "{{ .Env.GIT_OWER }}/{{ .Env.GIT_REPO }}:{{ .Tag }}-arm64"
+      - "ghcr.io/{{ .Env.GIT_OWER }}/{{ .Env.GIT_REPO }}:{{ .Tag }}-arm64"
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.name={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+      - "--platform=linux/arm64"
+      - "--build-arg=APP_NAME={{.ProjectName}}"
+      - "--build-arg=VERSION={{.Version}}"
+      - "--build-arg=BUILDDATE={{.Date}}"
+      - "--build-arg=COMMIT={{.FullCommit}}"
+    goarch: arm64
+
+docker_manifests:
+  # - name_template: "{{ .Env.GIT_OWER }}/{{ .Env.GIT_REPO }}:{{ .Tag }}"
+  #   image_templates:
+  #     - "{{ .Env.GIT_OWER }}/{{ .Env.GIT_REPO }}:{{ .Tag }}-amd64"
+  #     - "{{ .Env.GIT_OWER }}/{{ .Env.GIT_REPO }}:{{ .Tag }}-arm64"
+  - name_template: "ghcr.io/{{ .Env.GIT_OWER }}/{{ .Env.GIT_REPO }}:{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/{{ .Env.GIT_OWER }}/{{ .Env.GIT_REPO }}:{{ .Tag }}-amd64"
+      - "ghcr.io/{{ .Env.GIT_OWER }}/{{ .Env.GIT_REPO }}:{{ .Tag }}-arm64"
+  # - name_template: "{{ .Env.GIT_OWER }}/{{ .Env.GIT_REPO }}:latest"
+  #   image_templates:
+  #     - "{{ .Env.GIT_OWER }}/{{ .Env.GIT_REPO }}:{{ .Tag }}-amd64"
+  #     - "{{ .Env.GIT_OWER }}/{{ .Env.GIT_REPO }}:{{ .Tag }}-arm64"
+  - name_template: "ghcr.io/{{ .Env.GIT_OWER }}/{{ .Env.GIT_REPO }}:latest"
+    image_templates:
+      - "ghcr.io/{{ .Env.GIT_OWER }}/{{ .Env.GIT_REPO }}:{{ .Tag }}-amd64"
+      - "ghcr.io/{{ .Env.GIT_OWER }}/{{ .Env.GIT_REPO }}:{{ .Tag }}-arm64"

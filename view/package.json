@@ -1,0 +1,31 @@
+{
+  "name": "node-starter",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "vite build --emptyOutDir --sourcemap --mode development --watch",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.4.0",
+    "crypto-js": "^4.1.1",
+    "dayjs": "^1.11.8",
+    "vue": "^3.2.31",
+    "vue-router": "^4.2.2",
+    "vue3-popper": "^1.5.0",
+    "vue3-toastify": "^0.1.11"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.9",
+    "@vicons/fluent": "^0.12.0",
+    "@vicons/utils": "^0.1.4",
+    "@vitejs/plugin-vue": "^2.2.4",
+    "@vue/compiler-sfc": "^3.2.31",
+    "autoprefixer": "^10.4.2",
+    "daisyui": "^3.0.20",
+    "postcss": "^8.4.7",
+    "tailwindcss": "^3.0.23",
+    "vite": "^2.8.6",
+    "vite-svg-loader": "^4.0.0"
+  }
+}

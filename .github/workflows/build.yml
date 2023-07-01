@@ -1,0 +1,32 @@
+name: "🏗️ Build"
+# trigger events
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        go_version: [1.18.x]
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go_version }}
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+      - uses: actions/checkout@v3
+      - name: build frontend
+        run: cd ./view && npm install && npm run build
+      - uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.53.2
+          args: --out-format=colored-line-number --timeout=5m
+      - run: go mod download
+      - run: go test -coverprofile=coverage.txt -covermode=atomic ./...

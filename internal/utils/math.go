@@ -1,0 +1,97 @@
+package utils
+
+import (
+	"math"
+	"strconv"
+)
+
+const MaxDigits = 18 // MAX_INT64 ~ 9 * 10^18
+
+var Pow10Table = [MaxDigits + 1]int64{
+	1, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18,
+}
+
+func Pow10(n int64) int64 {
+	if n < 0 || n > MaxDigits {
+		return 0
+	}
+	return Pow10Table[n]
+}
+
+func FormatFloat(val float64, prec int) string {
+	return strconv.FormatFloat(val, 'f', prec, 64)
+}
+
+func ParseBool(s string) (bool, error) {
+	if len(s) == 0 {
+		return false, nil
+	}
+
+	return strconv.ParseBool(s)
+}
+
+func MustParseBool(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+
+	v, err := strconv.ParseBool(s)
+	if err != nil {
+		return false
+	}
+	return v
+}
+
+func ParseFloat(s string) (float64, error) {
+	if len(s) == 0 {
+		return 0.0, nil
+	}
+
+	return strconv.ParseFloat(s, 64)
+}
+
+func MustParseFloat(s string) float64 {
+	if len(s) == 0 {
+		return 0.0
+	}
+
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0.0
+	}
+	return v
+}
+
+func MustParseInt64(s string) int64 {
+	if len(s) == 0 {
+		return 0
+	}
+
+	v, err := strconv.ParseInt(s, 0, 64)
+	if err != nil {
+		return 0
+	}
+	return v
+}
+
+func MustParseInt(s string) int {
+	if len(s) == 0 {
+		return 0
+	}
+
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		return 0
+	}
+	return v
+}
+
+const epsilon = 0.0000001
+
+func Zero(v float64) bool {
+	return math.Abs(v) < epsilon
+}
+
+func NotZero(v float64) bool {
+	return math.Abs(v) > epsilon
+}
