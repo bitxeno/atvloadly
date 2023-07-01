@@ -316,11 +316,6 @@ export default {
           })
           .then((res) => {
             toast.success("安装成功");
-          })
-          .catch(function (e) {
-            toast.error(
-              "安装成功，但保存安装记录时失败。错误信息：" + e.message
-            );
           });
 
         return;

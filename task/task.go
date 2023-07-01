@@ -162,23 +162,23 @@ func (t *Task) RunImmediately(v model.InstalledApp) {
 		_ = service.UpdateAppRefreshResult(v)
 
 		// 发送安装失败通知
-		_ = notify.Send(fmt.Sprintf("[%s]刷新任务执行失败", v.IpaName), fmt.Sprintf("帐号：%s\n错误日志：%s", v.Acount, err.Error()))
+		_ = notify.Send(fmt.Sprintf("[%s]刷新任务执行失败", v.IpaName), fmt.Sprintf("帐号：%s\n错误日志：%s", v.Account, err.Error()))
 	}
 }
 
 func (t *Task) runInternal(v model.InstalledApp) error {
 	t.InstallingApp = &v
 
-	if v.Acount == "" || v.Password == "" || v.UDID == "" {
+	if v.Account == "" || v.Password == "" || v.UDID == "" {
 		log.Info("任务帐号，密码，UDID为空")
 		return fmt.Errorf("任务帐号，密码，UDID为空")
 	}
 
 	// 为每个appleid创建对应的工作目录，用于存储AltServer生成的签名证书
-	dirName := regValidName.ReplaceAllString(strings.ToLower(v.Acount), "")
+	dirName := regValidName.ReplaceAllString(strings.ToLower(v.Account), "")
 	workdir := filepath.Join(cfg.Server.WorkDir, "AltServer", dirName)
 
-	cmd := exec.Command("AltServer", "-u", v.UDID, "-a", v.Acount, "-p", v.Password, v.IpaPath)
+	cmd := exec.Command("AltServer", "-u", v.UDID, "-a", v.Account, "-p", v.Password, v.IpaPath)
 	cmd.Dir = workdir
 	cmd.Env = []string{"ALTSERVER_ANISETTE_SERVER=http://127.0.0.1:6969"}
 	stdin, err := cmd.StdinPipe()

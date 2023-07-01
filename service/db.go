@@ -43,8 +43,9 @@ func GetEnableAppList() ([]model.InstalledApp, error) {
 func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 	// 查找之前的安装记录，存在记录直接更新旧的
 	var cur model.InstalledApp
-	result := db.Store().Where("udid=? and bundle_identifier=? and account=?", app.UDID, app.BundleIdentifier, app.Acount).First(&cur)
+	result := db.Store().Where("udid=? and bundle_identifier=? and account=?", app.UDID, app.BundleIdentifier, app.Account).First(&cur)
 	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
+		log.Err(result.Error).Msg("保存安装记录时出错.")
 		return nil, result.Error
 	}
 

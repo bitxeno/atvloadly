@@ -13,8 +13,8 @@ type InstalledApp struct {
 	IpaPath          string     `json:"ipa_path"`
 	Description      string     `json:"description,omitempty"`
 	Device           string     `json:"device"`
-	UDID             string     `json:"udid"`
-	Acount           string     `json:"account"`
+	UDID             string     `gorm:"column:udid" json:"udid"`
+	Account          string     `json:"account"`
 	Password         string     `json:"-"`
 	InstalledDate    *time.Time `json:"installed_date"`
 	RefreshedDate    *time.Time `json:"refreshed_date"`

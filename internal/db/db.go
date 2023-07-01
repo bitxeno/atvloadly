@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -47,6 +48,7 @@ func (s *sqliteDb) Open() *sqliteDb {
 		conf.Logger = logger.Default.LogMode(logger.Info)
 	}
 
+	fmt.Printf("Load db path: %s\n", s.path)
 	db, err := gorm.Open(sqlite.Open(s.path), conf)
 	if err != nil {
 		panic("failed to open database")
