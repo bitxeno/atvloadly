@@ -10,7 +10,7 @@ RUN echo "I'm building for $TARGETPLATFORM"
 
 # 安装依赖
 RUN apt-get update && apt-get -y install \
-    libusb-1.0 wget libavahi-compat-libdnssd-dev
+    libusb-1.0 wget libavahi-compat-libdnssd-dev curl
 
 # 安装libssl 1.1
 RUN cd /tmp \
