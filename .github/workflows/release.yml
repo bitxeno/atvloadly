@@ -69,6 +69,14 @@ jobs:
         run: cd ./build && for i in *; do tar -czf $i.tar.gz $i; done && cd ..
 
       # step 6: Upload binary to GitHub Release
+      - name: Generate Changelog
+        id: changelog
+        uses: TriPSs/conventional-changelog-action@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          output-file: "false"
+          skip-git-pull: "true"
+          skip-version-file: "true"
       - name: Upload binary to GitHub Release
         uses: softprops/action-gh-release@v1
         if: "startsWith(github.ref, 'refs/tags/')"
@@ -77,6 +85,7 @@ jobs:
             ./build/*.tar.gz
           prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
           generate_release_notes: true
+          body: ${{ steps.changelog.outputs.clean_changelog }}
           fail_on_unmatched_files: true
 
       # step 7.1: push to DockerHub
