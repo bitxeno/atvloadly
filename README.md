@@ -45,7 +45,7 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 2. 请参考下面的命令进行安装，记得修改下 mount 目录
    
    ```
-   docker run -d --name=atvloadly --restart=always -p 8080:80 -v /path/to/mount/dir:/data -v /var/run/dbus:/var/run/dbus -v /var/run/avahi-daemon:/var/run/avahi-daemon  ghcr.io/bitxeno/atvloadly:latest
+   docker run -d --name=atvloadly --restart=always -p 5533:80 -v /path/to/mount/dir:/data -v /var/run/dbus:/var/run/dbus -v /var/run/avahi-daemon:/var/run/avahi-daemon  ghcr.io/bitxeno/atvloadly:latest
    ```
    
    镜像名称：`ghcr.io/bitxeno/atvloadly:latest`，需要使用这个带域名的完整名称才能pull下来。

@@ -1,0 +1,13 @@
+version: '3.3'
+services:
+  atvloadly:
+    container_name: atvloadly
+    hostname: atvloadly
+    image: ghcr.io/bitxeno/atvloadly:latest
+    volumes:
+      - /etc/atvloadly:/data
+      - /var/run/dbus:/var/run/dbus
+      - /var/run/avahi-daemon:/var/run/avahi-daemon 
+    ports:
+      - 5533:80/tcp
+    restart: unless-stopped
