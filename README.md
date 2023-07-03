@@ -1,7 +1,7 @@
 # atvloadly
 
 [![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt-989898)](https://github.com/bitxeno/atvloadly/releases)
-[![release](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/latest_tag?label=docker%20latest)](https://github.com/bitxeno/atvloadly/releases)
+[![release](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/latest_tag?label=docker%20latest)](https://github.com/bitxeno/atvloadly/pkgs/container/atvloadly)
 [![image size](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/size)](https://github.com/bitxeno/atvloadly/pkgs/container/atvloadly)
 [![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/blob/master/LICENSE) 
 
@@ -68,7 +68,7 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 1. 打开 Web 管理页面，正常会显示可配对的 `AppleTV`
 1. 点击 `AppleTV` 设备进入配对页面，并完成配对操作。
 1. 配对成功后返回首页，将显示已连接的 `AppleTV` 
-1. 点击已连接的 `AppleTV` 进入侧载安装页面，选择需要侧载的 IPA 文件并点击`安装`以完成侧载。
+1. 点击已连接的 `AppleTV` 进入侧载安装页面，选择需要侧载的 IPA 文件并点击`安装`。
 
 ## 常见问题
 
