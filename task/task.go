@@ -2,6 +2,7 @@ package task
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -242,6 +243,9 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 }
 
 func (t *Task) writeLog(v model.InstalledApp, data []byte) {
+	// 打码密码字符串
+	data = bytes.Replace(data, []byte(v.Password), []byte("******"), -1)
+
 	saveDir := filepath.Join(cfg.Server.WorkDir, "log")
 	if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
 		log.Error("failed to create directory :" + saveDir)

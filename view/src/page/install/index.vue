@@ -180,7 +180,7 @@ export default {
           .replace(/[^0-9a-zA-Z]+/gi, "");
         let workdir = `./AltServer/${dirName}`;
         _this.websocketsend(
-          `mkdir -p ${workdir} && cd ${workdir} && AltServer -u ${_this.device.udid} -a ${_this.form.account} -p ${_this.form.password} "${ipa.path}"`
+          `mkdir -p ${workdir} && cd ${workdir} && AltServer -u ${_this.device.udid} -a "${_this.form.account}" -p "${_this.form.password}" "${ipa.path}"`
         );
       });
     },
@@ -248,9 +248,17 @@ export default {
       _this.cmd.output += e.data;
       _this.cmd.line += e.data;
       if (e.data.indexOf("\n") >= 0) {
-        console.log("<--", _this.cmd.line);
+        // 打码密码字符串
+        _this.cmd.output = _this.cmd.output.replace(
+          _this.form.password,
+          "******"
+        );
+        _this.cmd.line = _this.cmd.line.replace(_this.form.password, "******");
 
-        if (_this.cmd.line.indexOf("Signing Progress") === -1) {
+        if (
+          _this.cmd.line.indexOf("Signing Progress") === -1 &&
+          _this.cmd.line.indexOf("AltServer -u") === -1
+        ) {
           _this.log.output += _this.cmd.line;
           // 文本框跟随滚动到底部
           _this.$nextTick(() => {
