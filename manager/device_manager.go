@@ -1,11 +1,14 @@
 package manager
 
 import (
-	"log"
+	"encoding/json"
 	"sync"
 
+	"github.com/bitxeno/atvloadly/config"
+	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/utils"
 	"github.com/bitxeno/atvloadly/model"
+	gidevice "github.com/electricbubble/gidevice"
 )
 
 var deviceManager = newDeviceManager()
@@ -26,6 +29,25 @@ func (dm *DeviceManager) GetDevices() []model.Device {
 	})
 
 	return devices
+}
+
+func (dm *DeviceManager) GetDeviceByID(id string) (*model.Device, bool) {
+	devices := dm.GetDevices()
+	for _, d := range devices {
+		if d.ID == id {
+			return &d, true
+		}
+	}
+
+	return nil, false
+}
+
+func (dm *DeviceManager) GetDeviceByUDID(udid string) (*model.Device, bool) {
+	if dev, ok := dm.devices.Load(udid); ok {
+		return dev.(*model.Device), ok
+	}
+
+	return nil, false
 }
 
 func (dm *DeviceManager) ReloadDevices() {
@@ -57,4 +79,46 @@ func (dm *DeviceManager) ReloadDevices() {
 
 		return true
 	})
+}
+
+// 获取DeveloperDiskImage绑定信息，install/screenshot等功能
+// 都需要先绑定DeveloperDiskImage才有权限操作
+func (dm *DeviceManager) GetMountImageInfo(udid string) (*model.UsbmuxdDevice, error) {
+	usbmux, err := gidevice.NewUsbmux()
+	if err != nil {
+		log.Err(err).Msg("Cannot get image signatures: ")
+		return nil, err
+	}
+
+	devices, err := usbmux.Devices()
+	if err != nil {
+		log.Err(err).Msg("Cannot get image signatures: ")
+		return nil, err
+	}
+
+	for _, dev := range devices {
+		if dev.Properties().SerialNumber == udid {
+
+			res, _ := dev.GetValue("", "")
+			data, _ := json.Marshal(res)
+			devInfo := new(model.UsbmuxdDevice)
+			err := json.Unmarshal(data, devInfo)
+			if err != nil {
+				log.Err(err).Msg("Cannot get image signatures: ")
+				return nil, err
+			}
+
+			imageSignatures, err := dev.Images()
+			if err != nil {
+				log.Err(err).Msg("Cannot get image signatures: ")
+				return nil, err
+			}
+
+			devInfo.ImageMounted = len(imageSignatures) > 0
+			devInfo.SetDeveloperDiskImageUrl(config.Settings.DeveloperDiskImage.ImageSource)
+			return devInfo, nil
+		}
+	}
+
+	return nil, nil
 }

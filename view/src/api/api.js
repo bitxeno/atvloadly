@@ -7,6 +7,21 @@ export default {
       method: "get",
     });
   },
+  mountDeviceImageAsync: (id) => {
+    return new Promise((resolve, reject) => {
+      request({
+        url: `/api/devices/${id}/mountimage`,
+        timeout: 300000,
+        method: "post",
+      })
+        .then((res) => {
+          resolve(res.data);
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  },
   getDevices: (params) => {
     return request({
       url: "/api/devices",

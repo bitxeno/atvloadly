@@ -54,7 +54,6 @@ RUN chmod +x /usr/bin/${APP_NAME}
 
 # lockdown记录移到到/data
 RUN rm -rf /var/lib/lockdown && mkdir -p /data/lockdown && ln -s /data/lockdown /var/lib/lockdown
-# RUN rm -rf /AltServerData && mkdir -p /data/AltServerData && ln -s /data/AltServerData /AltServerData
 
 
 # 生成启动脚本

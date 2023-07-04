@@ -10,6 +10,14 @@ func GetDevices() ([]model.Device, error) {
 	return deviceManager.GetDevices(), nil
 }
 
+func GetDeviceByID(id string) (*model.Device, bool) {
+	return deviceManager.GetDeviceByID(id)
+}
+
+func GetDeviceMountImageInfo(udid string) (*model.UsbmuxdDevice, error) {
+	return deviceManager.GetMountImageInfo(udid)
+}
+
 func ReloadDevices() {
 	deviceManager.ReloadDevices()
 }

@@ -100,22 +100,6 @@ func Create(app *fiber.App, f fs.FS) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))
 	})
 
-	api.Get("/devices/:id", func(c *fiber.Ctx) error {
-		id := c.Params("id")
-		devices, err := manager.GetDevices()
-		if err != nil {
-			return c.Status(500).JSON(apiError(err.Error()))
-		}
-
-		for _, device := range devices {
-			if device.ID == id {
-				return c.Status(http.StatusOK).JSON(apiSuccess(device))
-			}
-		}
-
-		return c.Status(http.StatusOK).JSON(apiError("not found"))
-	})
-
 	api.Get("/devices", func(c *fiber.Ctx) error {
 		manager.ReloadDevices()
 
@@ -124,6 +108,25 @@ func Create(app *fiber.App, f fs.FS) {
 			return c.Status(500).JSON(apiError(err.Error()))
 		} else {
 			return c.Status(http.StatusOK).JSON(apiSuccess(devices))
+		}
+	})
+
+	api.Get("/devices/:id", func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		if device, ok := manager.GetDeviceByID(id); ok {
+			return c.Status(http.StatusOK).JSON(apiSuccess(device))
+		}
+
+		return c.Status(http.StatusOK).JSON(apiError("not found"))
+	})
+
+	api.Post("/devices/:id/mountimage", func(c *fiber.Ctx) error {
+		id := c.Params("id")
+
+		if err := service.MountDeveloperDiskImage(c.Context(), id); err != nil {
+			return c.Status(http.StatusOK).JSON(apiSuccess(err.Error()))
+		} else {
+			return c.Status(http.StatusOK).JSON(apiSuccess("success"))
 		}
 	})
 

@@ -16,7 +16,10 @@
           <div class="w-32 rounded">
             <AppleTVIcon />
           </div>
-          <span>{{ device.host }} ({{ device.ip }})</span>
+          <div class="flex flex-col gap-y-2 items-center justify-center">
+            <span>{{ device.name }}</span>
+            <span>({{ device.ip }})</span>
+          </div>
         </div>
 
         <div class="divider divider-horizontal"></div>
@@ -145,8 +148,13 @@ export default {
   created() {
     this.id = this.$route.params.id;
 
-    this.initWebSocket();
     this.fetchData();
+  },
+  mounted() {
+    this.initWebSocket();
+  },
+  unmounted() {
+    this.closeWebSocket();
   },
   methods: {
     fetchData() {
@@ -155,7 +163,7 @@ export default {
         _this.device = res.data;
       });
     },
-    onSubmit(e) {
+    async onSubmit(e) {
       let _this = this;
 
       if (!_this.validateForm("#form")) {
@@ -165,6 +173,18 @@ export default {
       _this.loading = true;
       _this.log.output = "";
       _this.log.show = true;
+
+      // 挂载DeveloperDiskImage
+      _this.log.output += "Prepare to mount DeveloperDiskImage...\n";
+      let data = await api.mountDeviceImageAsync(_this.id);
+      if (data != "success") {
+        _this.log.output += resp.data;
+        _this.cmd.output = "";
+        _this.loading = false;
+        toast.error("安装失败，请查看日志了解详细信息");
+        return;
+      }
+
       let formData = new FormData();
       for (let i = 0; i < _this.files.length; i++) {
         let file = _this.files[i];
@@ -180,7 +200,7 @@ export default {
           .replace(/[^0-9a-zA-Z]+/gi, "");
         let workdir = `./AltServer/${dirName}`;
         _this.websocketsend(
-          `mkdir -p ${workdir} && cd ${workdir} && AltServer -u ${_this.device.udid} -a "${_this.form.account}" -p "${_this.form.password}" "${ipa.path}"`
+          `mkdir -p ${workdir} && cd ${workdir} && AltServer -u ${_this.device.udid} -a '${_this.form.account}' -p '${_this.form.password}' '${ipa.path}'`
         );
       });
     },
@@ -222,6 +242,9 @@ export default {
       this.websock.onerror = this.websocketonerror;
       this.websock.onmessage = this.websocketonmessage;
       this.websock.onclose = this.websocketclose;
+    },
+    closeWebSocket() {
+      this.websock.close();
     },
     onSubmit2FA() {
       let _this = this;

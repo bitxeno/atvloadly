@@ -3,6 +3,7 @@ module github.com/bitxeno/atvloadly
 go 1.18
 
 require (
+	github.com/artdarek/go-unzip v1.0.1-0.20210323073738-f9883ad8bd15
 	github.com/creasty/defaults v1.5.2
 	github.com/electricbubble/gidevice v0.6.2
 	github.com/fatih/color v1.9.0
