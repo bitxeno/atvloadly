@@ -178,7 +178,7 @@ export default {
       _this.log.output += "Prepare to mount DeveloperDiskImage...\n";
       let data = await api.mountDeviceImageAsync(_this.id);
       if (data != "success") {
-        _this.log.output += resp.data;
+        _this.log.output += data;
         _this.cmd.output = "";
         _this.loading = false;
         toast.error("安装失败，请查看日志了解详细信息");
@@ -190,6 +190,7 @@ export default {
         let file = _this.files[i];
         formData.append("files", file);
       }
+      _this.log.output += "IPA uploading...\n";
       api.upload(formData).then((res) => {
         let ipa = res.data[0];
         _this.ipa = ipa;

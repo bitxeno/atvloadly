@@ -14,7 +14,7 @@ func GetDeviceByID(id string) (*model.Device, bool) {
 	return deviceManager.GetDeviceByID(id)
 }
 
-func GetDeviceMountImageInfo(udid string) (*model.UsbmuxdDevice, error) {
+func GetDeviceMountImageInfo(udid string) (*model.UsbmuxdImage, error) {
 	return deviceManager.GetMountImageInfo(udid)
 }
 

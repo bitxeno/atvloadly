@@ -1,10 +1,5 @@
 package model
 
-import (
-	"fmt"
-	"strings"
-)
-
 type UsbmuxdDevice struct {
 	DeviceName           string `json:"DeviceName,omitempty"`
 	ProductVersion       string `json:"ProductVersion,omitempty"`
@@ -24,22 +19,4 @@ type UsbmuxdDevice struct {
 	BasebandVersion      string `json:"BasebandVersion,omitempty"`
 	DeviceColor          string `json:"DeviceColor,omitempty"`
 	DeviceClass          string `json:"DeviceClass,omitempty"`
-
-	// custom
-	ImageMounted              bool   `json:"ImageMounted,omitempty"`
-	DeveloperDiskImageUrl     string `json:"DeveloperDiskImageUrl,omitempty"`
-	DeveloperDiskImageVersion string `json:"DeveloperDiskImageVersion,omitempty"`
-}
-
-func (ud *UsbmuxdDevice) SetDeveloperDiskImageUrl(imageSource string) {
-	arr := strings.Split(ud.ProductVersion, ".")
-	tvOSVersion := ""
-	if len(arr) < 2 {
-		tvOSVersion = fmt.Sprintf("%s.0", arr[0])
-	} else {
-		tvOSVersion = fmt.Sprintf("%s.%s", arr[0], arr[1])
-	}
-
-	ud.DeveloperDiskImageVersion = tvOSVersion
-	ud.DeveloperDiskImageUrl = strings.Replace(imageSource, "{0}", tvOSVersion, -1)
 }

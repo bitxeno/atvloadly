@@ -2,6 +2,7 @@ package manager
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 
 	"github.com/bitxeno/atvloadly/config"
@@ -83,7 +84,7 @@ func (dm *DeviceManager) ReloadDevices() {
 
 // 获取DeveloperDiskImage绑定信息，install/screenshot等功能
 // 都需要先绑定DeveloperDiskImage才有权限操作
-func (dm *DeviceManager) GetMountImageInfo(udid string) (*model.UsbmuxdDevice, error) {
+func (dm *DeviceManager) GetMountImageInfo(udid string) (*model.UsbmuxdImage, error) {
 	usbmux, err := gidevice.NewUsbmux()
 	if err != nil {
 		log.Err(err).Msg("Cannot get image signatures: ")
@@ -114,11 +115,11 @@ func (dm *DeviceManager) GetMountImageInfo(udid string) (*model.UsbmuxdDevice, e
 				return nil, err
 			}
 
-			devInfo.ImageMounted = len(imageSignatures) > 0
-			devInfo.SetDeveloperDiskImageUrl(config.Settings.DeveloperDiskImage.ImageSource)
-			return devInfo, nil
+			imageInfo := model.NewUsbmuxdImage(*devInfo, config.Settings.DeveloperDiskImage.ImageSource)
+			imageInfo.ImageMounted = len(imageSignatures) > 0
+			return imageInfo, nil
 		}
 	}
 
-	return nil, nil
+	return nil, fmt.Errorf("Device pairing state not valid. Please try to pair again.")
 }

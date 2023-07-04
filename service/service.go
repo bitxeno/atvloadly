@@ -87,35 +87,40 @@ func MountDeveloperDiskImage(ctx context.Context, id string) error {
 
 	// 尝试挂载
 	// 对应版本的DeveloperDiskImage不存在的话，尝试下载
-	imageDir := filepath.Join(cfg.Server.WorkDir, "DeveloperDiskImage", imageInfo.DeveloperDiskImageVersion)
-	if _, err := os.Stat(imageDir); os.IsNotExist(err) {
+	imageDir := filepath.Join(cfg.Server.WorkDir, "DeveloperDiskImage")
+	imageVersionDir := filepath.Join(cfg.Server.WorkDir, "DeveloperDiskImage", imageInfo.DeveloperDiskImageVersion)
+	if _, err := os.Stat(imageVersionDir); os.IsNotExist(err) {
 		tmpPath := filepath.Join(cfg.Server.WorkDir, "tmp", "DeveloperDiskImage.zip")
-		if _, err = http.NewClient().SetDoNotParseResponse(true).R().SetOutput(tmpPath).Get(imageInfo.DeveloperDiskImageUrl); err != nil {
-			log.Err(err).Msg("Download DeveloperDiskImage error: ")
+		resp, err := http.NewClient().R().SetOutput(tmpPath).Get(imageInfo.DeveloperDiskImageUrl)
+		if err != nil {
+			log.Err(err).Msg("Download Developer disk image error: ")
 			return err
+		}
+		if !resp.IsSuccess() {
+			return fmt.Errorf("Developer disk image could not found. os: tvOS %s url: %s status: %d", imageInfo.Device.ProductVersion, imageInfo.DeveloperDiskImageUrl, resp.StatusCode())
 		}
 
 		// unzip
 		uz := unzip.New()
 		if _, err = uz.Extract(tmpPath, imageDir); err != nil {
-			log.Err(err).Msg("Unzip DeveloperDiskImage error: ")
+			log.Err(err).Msg("Unzip Developer disk image error: ")
 			return err
 		}
 	}
 
 	// 开始执行挂载
-	dmg := filepath.Join(imageDir, "DeveloperDiskImage.dmg")
-	signature := filepath.Join(imageDir, "DeveloperDiskImage.dmg.signature")
+	dmg := filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg")
+	signature := filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg.signature")
 	cmd := exec.CommandContext(ctx, "ideviceimagemounter", "-u", device.UDID, "-n", dmg, signature)
-	data, err := cmd.Output()
+	data, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Err(err).Msg("Run ideviceimagemounter error: ")
-		return err
+		return fmt.Errorf("%s%s", string(data), err.Error())
 	}
 
 	output := string(data)
 	if strings.Contains(output, "ERROR") {
-		return fmt.Errorf(output)
+		return fmt.Errorf("%s\n%s", "Run ideviceimagemounter error: ", output)
 	}
 
 	return nil
