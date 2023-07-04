@@ -1,15 +1,15 @@
 package manager
 
 import (
-	"encoding/json"
 	"fmt"
+	"os/exec"
+	"strings"
 	"sync"
 
 	"github.com/bitxeno/atvloadly/config"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/utils"
 	"github.com/bitxeno/atvloadly/model"
-	gidevice "github.com/electricbubble/gidevice"
 )
 
 var deviceManager = newDeviceManager()
@@ -85,41 +85,62 @@ func (dm *DeviceManager) ReloadDevices() {
 // 获取DeveloperDiskImage绑定信息，install/screenshot等功能
 // 都需要先绑定DeveloperDiskImage才有权限操作
 func (dm *DeviceManager) GetMountImageInfo(udid string) (*model.UsbmuxdImage, error) {
-	usbmux, err := gidevice.NewUsbmux()
+	devInfo, err := dm.GetUsbmuxdDevice(udid)
 	if err != nil {
-		log.Err(err).Msg("Cannot get image signatures: ")
+		log.Err(err).Msg("Cannot get device info: ")
 		return nil, err
 	}
 
-	devices, err := usbmux.Devices()
+	imageInfo := model.NewUsbmuxdImage(*devInfo, config.Settings.DeveloperDiskImage.ImageSource)
+	imageMounted, err := dm.CheckHasMountImage(udid)
 	if err != nil {
-		log.Err(err).Msg("Cannot get image signatures: ")
+		log.Err(err).Msg("Cannot get image signature: ")
 		return nil, err
 	}
+	imageInfo.ImageMounted = imageMounted
+	return imageInfo, nil
 
-	for _, dev := range devices {
-		if dev.Properties().SerialNumber == udid {
+	// return nil, fmt.Errorf("Device pairing state not valid. Please try to pair again.")
+}
 
-			res, _ := dev.GetValue("", "")
-			data, _ := json.Marshal(res)
-			devInfo := new(model.UsbmuxdDevice)
-			err := json.Unmarshal(data, devInfo)
-			if err != nil {
-				log.Err(err).Msg("Cannot get image signatures: ")
-				return nil, err
+func (dm *DeviceManager) GetUsbmuxdDevice(udid string) (*model.UsbmuxdDevice, error) {
+	cmd := exec.Command("ideviceinfo", "-u", udid, "-n")
+
+	data, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("%s%s", string(data), err.Error())
+	}
+
+	device := new(model.UsbmuxdDevice)
+	output := string(data)
+	lines := strings.Split(output, "\n")
+	for _, v := range lines {
+		arr := strings.Split(v, ":")
+		// fmt.Println(arr)
+		if len(arr) == 2 {
+			switch strings.TrimSpace(arr[0]) {
+			case "ProductVersion":
+				device.ProductVersion = strings.TrimSpace(arr[1])
+			case "ProductName":
+				device.ProductName = strings.TrimSpace(arr[1])
+			case "DeviceName":
+				device.DeviceName = strings.TrimSpace(arr[1])
 			}
-
-			imageSignatures, err := dev.Images()
-			if err != nil {
-				log.Err(err).Msg("Cannot get image signatures: ")
-				return nil, err
-			}
-
-			imageInfo := model.NewUsbmuxdImage(*devInfo, config.Settings.DeveloperDiskImage.ImageSource)
-			imageInfo.ImageMounted = len(imageSignatures) > 0
-			return imageInfo, nil
 		}
 	}
 
-	return nil, fmt.Errorf("Device pairing state not valid. Please try to pair again.")
+	return device, nil
+}
+
+func (dm *DeviceManager) CheckHasMountImage(udid string) (bool, error) {
+	cmd := exec.Command("ideviceimagemounter", "-u", udid, "-n", "-l")
+
+	data, err := cmd.CombinedOutput()
+	if err != nil {
+		return false, fmt.Errorf("%s%s", string(data), err.Error())
+	}
+
+	output := string(data)
+	// fmt.Println(output)
+	return strings.Contains(output, "ImageSignature") && !strings.Contains(output, "ImageSignature[0]"), nil
 }

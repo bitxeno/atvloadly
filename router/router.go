@@ -214,11 +214,11 @@ func Create(app *fiber.App, f fs.FS) {
 	})
 
 	api.Get("/apps", func(c *fiber.Ctx) error {
-		tasks, err := service.GetAppList()
+		apps, err := service.GetAppList()
 		if err != nil {
 			return c.Status(500).JSON(apiError(err.Error()))
 		} else {
-			return c.Status(http.StatusOK).JSON(apiSuccess(tasks))
+			return c.Status(http.StatusOK).JSON(apiSuccess(apps))
 		}
 	})
 

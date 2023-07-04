@@ -15,7 +15,7 @@ type InstalledApp struct {
 	Device           string     `json:"device"`
 	UDID             string     `gorm:"column:udid" json:"udid"`
 	Account          string     `json:"account"`
-	Password         string     `json:"-"`
+	Password         string     `json:"password"`
 	InstalledDate    *time.Time `json:"installed_date"`
 	RefreshedDate    *time.Time `json:"refreshed_date"`
 	RefreshedResult  bool       `json:"refreshed_result"`
