@@ -258,11 +258,8 @@ export default {
   created() {
     this.fetchData();
   },
-  mounted() {
-    this.checkInstallingTimer = setInterval(this.checkInstallingApp, 30 * 1000);
-  },
   unmounted() {
-    clearInterval(this.checkInstallingTimer);
+    this.checkInstallingTimer && clearTimeout(this.checkInstallingTimer);
   },
   methods: {
     fetchData() {
@@ -295,8 +292,24 @@ export default {
         if (_this.installingApp && !res.data) {
           _this.fetchAppList();
         }
+
         _this.installingApp = res.data;
+        if (_this.installingApp) {
+          // 重复检测直到完成
+          _this.checkInstallingAppDelay();
+        }
       });
+    },
+    checkInstallingAppDelay() {
+      let _this = this;
+
+      if (this.checkInstallingTimer) {
+        clearTimeout(this.checkInstallingTimer);
+      }
+
+      this.checkInstallingTimer = setTimeout(function() {
+        _this.checkInstallingApp();
+      }, 10 * 1000);
     },
     deleteApp(item, closePopper) {
       let _this = this;
@@ -313,6 +326,7 @@ export default {
       _this.installingApp = item;
 
       api.refreshApp(item.ID).then((res) => {
+        _this.checkInstallingAppDelay();
         toast.success(`已启动刷新${item.ipa_name}`);
       });
     },
