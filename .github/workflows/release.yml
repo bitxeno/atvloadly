@@ -73,7 +73,7 @@ jobs:
       # step 6: Upload binary to GitHub Release
       - name: Generate Changelog
         id: changelog
-        uses: yuk1ty/conventional-release-note@v1
+        uses: yuk1ty/conventional-release-note@v1.1.1
         with:
           kind: default
           tag-pattern: v*
