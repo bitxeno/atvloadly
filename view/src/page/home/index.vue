@@ -125,7 +125,7 @@
                     >
                     <div class="inline-flex">
                       <div class="w-32 rounded relative">
-                        <img :src="iconUrl(item)" />
+                        <img :src="iconUrl(item)" class="rounded-md"/>
                         <div
                           class="absolute w-full h-full top-0 flex items-center justify-center bg-[#00000066]"
                           v-show="isInstalling(item)"
@@ -383,7 +383,12 @@ export default {
       return item.ID == this.installingApp.ID;
     },
     iconUrl(app) {
-      return `/apps/${app.ID}/icon`;
+      if (app.icon) {
+        return `/apps/${app.ID}/icon`;
+      } else {
+        return '/img/dummy.jpg';
+      }
+      
     },
     logUrl(item) {
       return `/apps/${item.ID}/log`;

@@ -55,11 +55,11 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 
 		now := time.Now()
 		cur.IpaPath = app.IpaPath
-		cur.BundleIdentifier = app.BundleIdentifier
 		cur.Icon = app.Icon
 		cur.Version = app.Version
 		cur.RefreshedDate = &now
 		cur.RefreshedResult = app.RefreshedResult
+		cur.Password = app.Password
 
 		// 把ipa/icon移动到id目录
 		saveDir := filepath.Join(cfg.Server.WorkDir, "ipa", fmt.Sprintf("%d", app.ID))
@@ -81,12 +81,12 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 		}
 
 		updateData := map[string]interface{}{
-			"ipa_path":          cur.IpaPath,
-			"bundle_identifier": cur.BundleIdentifier,
-			"icon":              cur.Icon,
-			"version":           cur.Version,
-			"refreshed_date":    cur.RefreshedDate,
-			"refreshed_result":  cur.RefreshedResult,
+			"ipa_path":         cur.IpaPath,
+			"icon":             cur.Icon,
+			"version":          cur.Version,
+			"refreshed_date":   cur.RefreshedDate,
+			"refreshed_result": cur.RefreshedResult,
+			"password":         cur.Password,
 		}
 		if result := db.Store().Model(&cur).Updates(updateData); result.Error != nil {
 			return nil, result.Error

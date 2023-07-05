@@ -88,4 +88,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/iineva/bom v0.0.0-20210605043415-7d45ba1bcca3 => github.com/bitxeno/bom v0.0.0-20230701072117-ab2406090127
+replace github.com/iineva/bom v0.0.0-20210605043415-7d45ba1bcca3 => github.com/bitxeno/bom v0.0.0-20230705034132-b3d31612b8ac

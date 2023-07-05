@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"time"
 
 	"gorm.io/gorm"
@@ -23,4 +24,16 @@ type InstalledApp struct {
 	BundleIdentifier string     `json:"bundle_identifier"`
 	Version          string     `json:"version"`
 	Enabled          bool       `json:"enabled,omitempty"`
+}
+
+// 输出json时，清空密码字段，提高安全性
+func (t InstalledApp) MarshalJSON() ([]byte, error) {
+	type Alias InstalledApp
+	return json.Marshal(&struct {
+		*Alias
+		Password string `json:"password"`
+	}{
+		Alias:    (*Alias)(&t),
+		Password: "",
+	})
 }
