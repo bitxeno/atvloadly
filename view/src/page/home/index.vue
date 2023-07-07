@@ -125,7 +125,7 @@
                     >
                     <div class="inline-flex">
                       <div class="w-32 rounded relative">
-                        <img :src="iconUrl(item)" class="rounded-md"/>
+                        <img :src="iconUrl(item)" class="rounded-md" />
                         <div
                           class="absolute w-full h-full top-0 flex items-center justify-center bg-[#00000066]"
                           v-show="isInstalling(item)"
@@ -153,10 +153,10 @@
                   </div>
                 </div>
               </td>
-              <td>
+              <td class="lg:break-all">
                 {{ formatDeviceName(item) }}
               </td>
-              <td>{{ item.account }}</td>
+              <td class="lg:break-all">{{ item.account }}</td>
               <td>
                 <div class="badge badge-ghost w-16">
                   {{ formatExpiredTime(item) }}
@@ -307,7 +307,7 @@ export default {
         clearTimeout(this.checkInstallingTimer);
       }
 
-      this.checkInstallingTimer = setTimeout(function() {
+      this.checkInstallingTimer = setTimeout(function () {
         _this.checkInstallingApp();
       }, 10 * 1000);
     },
@@ -400,9 +400,8 @@ export default {
       if (app.icon) {
         return `/apps/${app.ID}/icon`;
       } else {
-        return '/img/dummy.jpg';
+        return "/img/dummy.jpg";
       }
-      
     },
     logUrl(item) {
       return `/apps/${item.ID}/log`;

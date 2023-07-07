@@ -37,13 +37,9 @@ import SettingsIcon from "@/assets/icons/settings.svg";
 <style lang="postcss" scoped>
 .app-container {
   width: 100%;
-  /**width: 100vw;
-    min-width: 600px; **/
-  left: 50%;
-  transform: translateX(-50%);
-  position: absolute;
-  top: 0;
-  bottom: 0;
+  min-height: 100vh;
+  background-attachment: fixed;
+  background-size: cover;
   background-repeat: no-repeat;
   background-image: radial-gradient(
       circle 800px at 700px 200px,
