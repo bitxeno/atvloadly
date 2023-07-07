@@ -73,10 +73,16 @@ jobs:
       # step 6: Upload binary to GitHub Release
       - name: Generate Changelog
         id: changelog
-        uses: bitxeno/changelogithub-action@v0.0.2
+        uses: bitxeno/changelogithub-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            tweak
       - name: Upload binary to GitHub Release
         uses: softprops/action-gh-release@v1
         if: "startsWith(github.ref, 'refs/tags/')"
@@ -84,7 +90,7 @@ jobs:
           files: |
             ./build/*.tar.gz
           prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
-          body: ${{ steps.changelog.outputs.summary }}
+          body: ${{ steps.changelog.outputs.changelog }}
           fail_on_unmatched_files: true
 
       # step 7.1: push to DockerHub
