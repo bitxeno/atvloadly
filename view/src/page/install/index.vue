@@ -191,25 +191,25 @@ export default {
         formData.append("files", file);
       }
       _this.log.output += "IPA uploading...\n";
-      api.upload(formData).then((res) => {
-        let ipa = res.data[0];
-        _this.ipa = ipa;
+      api
+        .upload(formData)
+        .then((res) => {
+          let ipa = res.data[0];
+          _this.ipa = ipa;
 
-        // 为每个appleid创建对应的工作目录，用于存储AltServer生成的签名证书
-        let dirName = _this.form.account
-          .toLowerCase()
-          .replace(/[^0-9a-zA-Z]+/gi, "");
-        let workdir = `./AltServer/${dirName}`;
-        _this.websocketsend(
-          `mkdir -p ${workdir} && cd ${workdir} && AltServer -u ${_this.device.udid} -a '${_this.form.account}' -p '${_this.form.password}' '${ipa.path}'`
-        );
-      });
-    },
-    onCancel() {
-      this.$message({
-        message: "cancel!",
-        type: "warning",
-      });
+          // 为每个appleid创建对应的工作目录，用于存储AltServer生成的签名证书
+          let dirName = _this.form.account
+            .toLowerCase()
+            .replace(/[^0-9a-zA-Z]+/gi, "");
+          let workdir = `./AltServer/${dirName}`;
+          _this.websocketsend(
+            `mkdir -p ${workdir} && cd ${workdir} && AltServer -u ${_this.device.udid} -a '${_this.form.account}' -p '${_this.form.password}' '${ipa.path}'`
+          );
+        })
+        .catch((error) => {
+          console.log(error);
+          _this.log.output += error;
+        });
     },
     reset() {
       document.getElementById("form").reset();

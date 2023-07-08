@@ -105,7 +105,7 @@ func Create(app *fiber.App, f fs.FS) {
 
 		devices, err := manager.GetDevices()
 		if err != nil {
-			return c.Status(500).JSON(apiError(err.Error()))
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		} else {
 			return c.Status(http.StatusOK).JSON(apiSuccess(devices))
 		}
@@ -135,7 +135,7 @@ func Create(app *fiber.App, f fs.FS) {
 
 		devices, err := manager.GetDevices()
 		if err != nil {
-			return c.Status(500).JSON(apiError(err.Error()))
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		} else {
 			return c.Status(http.StatusOK).JSON(apiSuccess(devices))
 		}
@@ -150,7 +150,7 @@ func Create(app *fiber.App, f fs.FS) {
 	api.Post("/pair", func(c *fiber.Ctx) error {
 		devices, err := manager.GetDevices()
 		if err != nil {
-			return c.Status(500).JSON(apiError(err.Error()))
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		} else {
 			return c.Status(http.StatusOK).JSON(apiSuccess(devices))
 		}
@@ -164,7 +164,7 @@ func Create(app *fiber.App, f fs.FS) {
 		for _, file := range files {
 			saveDir := filepath.Join(cfg.Server.WorkDir, "tmp")
 			if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
-				return c.Status(500).JSON(apiError("failed to create directory :" + saveDir))
+				return c.Status(http.StatusOK).JSON(apiError("failed to create directory :" + saveDir))
 			}
 
 			name := service.GetValidName(utils.FileNameWithoutExt(file.Filename))
@@ -173,7 +173,7 @@ func Create(app *fiber.App, f fs.FS) {
 
 			// Upload the file to specific dst.
 			if err := c.SaveFile(file, dst); err != nil {
-				return c.Status(500).JSON(apiError(err.Error()))
+				return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 			}
 
 			ipaFile := model.IpaFile{
@@ -183,14 +183,14 @@ func Create(app *fiber.App, f fs.FS) {
 
 			info, err := ipa.ParseFile(dst)
 			if err != nil {
-				return c.Status(500).JSON(apiError(err.Error()))
+				return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 			}
 
 			ipaFile.Name = info.Name()
 			ipaFile.BundleIdentifier = info.Identifier()
 			ipaFile.Version = info.Version()
 			if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
-				return c.Status(500).JSON(apiError("failed to create directory :" + saveDir))
+				return c.Status(http.StatusOK).JSON(apiError("failed to create directory :" + saveDir))
 			}
 
 			// 保存icon
@@ -216,7 +216,7 @@ func Create(app *fiber.App, f fs.FS) {
 	api.Get("/apps", func(c *fiber.Ctx) error {
 		apps, err := service.GetAppList()
 		if err != nil {
-			return c.Status(500).JSON(apiError(err.Error()))
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		} else {
 			return c.Status(http.StatusOK).JSON(apiSuccess(apps))
 		}
@@ -230,12 +230,12 @@ func Create(app *fiber.App, f fs.FS) {
 	api.Post("/apps", func(c *fiber.Ctx) error {
 		var installApp model.InstalledApp
 		if err := c.BodyParser(&installApp); err != nil {
-			return c.Status(500).JSON(apiError(err.Error()))
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 
 		ipa, err := service.SaveApp(installApp)
 		if err != nil {
-			return c.Status(500).JSON(apiError(err.Error()))
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		} else {
 			return c.Status(http.StatusOK).JSON(apiSuccess(ipa))
 		}

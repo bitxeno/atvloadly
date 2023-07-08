@@ -38,8 +38,8 @@ service.interceptors.response.use(
 
     // if the custom code is not 200, it is judged as an error.
     if (res.code !== 200) {
-      const msg = `${res.msg} (code: ${res.code})` || `Error (code: ${res.code})`;
-      toast.error(msg, {autoClose: 5000});
+      const msg = res.msg ? `${res.msg} (code: ${res.code})` : `Error (code: ${res.code})`;
+      toast.error(msg, { autoClose: 5000 });
       return Promise.reject(new Error(msg));
     } else {
       return res;
@@ -47,7 +47,7 @@ service.interceptors.response.use(
   },
   (error) => {
     console.log("err" + error); // for debug
-    toast.error(error.message, {autoClose: 5000});
+    toast.error(error.message, { autoClose: 5000 });
     return Promise.reject(error);
   }
 );
