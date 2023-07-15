@@ -10,7 +10,7 @@
 atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通过使用 [AltServer](https://github.com/NyaMisty/AltServer-Linux) 实现侧载，并会自动刷新 App 以保证其长期可用性。
 
 
-## 特点
+## 主要功能
 
 * docker 运行 (只支持 Linux/OpenWrt x86 平台)
 * 支持 AppleTV 配对
