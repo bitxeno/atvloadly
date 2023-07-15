@@ -61,7 +61,7 @@ jobs:
           go_version: ${{ matrix.go_version }}
           dest: build
           prefix: ${{steps.vars.outputs.APP_NAME}}
-          targets: linux/amd64
+          targets: linux/amd64,linux/arm64
           v: true
           x: false
           ldflags: -w -s -X ${{steps.vars.outputs.REPO}}/internal/version.Version=${{steps.vars.outputs.VERSION}} -X ${{steps.vars.outputs.REPO}}/internal/version.BuildDate=${{steps.vars.outputs.BUILDDATE}} -X ${{steps.vars.outputs.REPO}}/internal/version.Commit=${{steps.vars.outputs.COMMIT}} -X ${{steps.vars.outputs.REPO}}/internal/mode.Mode=production
@@ -106,7 +106,7 @@ jobs:
         with:
           context: .
           push: true
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           tags: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPOSITORY }}:latest
           build-args: |
             APP_NAME=${{steps.vars.outputs.APP_NAME}}
@@ -131,7 +131,7 @@ jobs:
         with:
           context: .
           push: true
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |

@@ -9,9 +9,8 @@ on:
 
 # jobs
 jobs:
-  # generate build cross-platform build files
-  release:
-    name: Generate cross-platform builds
+  beta:
+    name: Generate beta builds
     strategy:
       matrix:
         go_version: [1.18.x]
@@ -58,7 +57,7 @@ jobs:
           go_version: ${{ matrix.go_version }}
           dest: build
           prefix: ${{steps.vars.outputs.APP_NAME}}
-          targets: linux/amd64
+          targets: linux/amd64,linux/arm64
           v: true
           x: false
           ldflags: -w -s -X ${{steps.vars.outputs.REPO}}/internal/version.Version=${{steps.vars.outputs.VERSION}} -X ${{steps.vars.outputs.REPO}}/internal/version.BuildDate=${{steps.vars.outputs.BUILDDATE}} -X ${{steps.vars.outputs.REPO}}/internal/version.Commit=${{steps.vars.outputs.COMMIT}} -X ${{steps.vars.outputs.REPO}}/internal/mode.Mode=production
@@ -86,7 +85,7 @@ jobs:
         with:
           context: .
           push: true
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           tags: ghcr.io/${{ github.repository }}:beta
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |

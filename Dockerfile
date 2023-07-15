@@ -10,33 +10,41 @@ RUN echo "I'm building for $TARGETPLATFORM"
 
 # 安装依赖
 RUN apt-get update && apt-get -y install \
-    libusb-1.0 wget libavahi-compat-libdnssd-dev curl
+    wget libavahi-compat-libdnssd-dev curl
 
-# 安装libssl 1.1
-RUN cd /tmp \
-    && wget http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_amd64.deb \
-    && dpkg -i ./libssl1.1_1.1.0g-2ubuntu4_amd64.deb
-
-RUN cd /tmp \
-    && wget https://github.com/bitxeno/usbmuxd2/releases/download/v0.0.1/usbmuxd2-ubuntu-x86_64.tar.gz \
-    && tar zxf usbmuxd2-ubuntu-x86_64.tar.gz \
-    && dpkg -i ./libgeneral_1.0.0-1_amd64.deb \
-    && dpkg -i ./libplist_2.3.0-1_amd64.deb \
-    && dpkg -i ./libimobiledevice-glue_1.0.0-1_amd64.deb \
-    && dpkg -i ./libusbmuxd_2.3.0-1_amd64.deb \
-    && dpkg -i ./libimobiledevice_1.3.1-1_amd64.deb \
-    && dpkg -i ./usbmuxd2_1.0.0-1_amd64.deb
+RUN case ${TARGETARCH} in \
+         "amd64")  PKG_ARCH=x86_64  ;; \
+         "arm64")  PKG_ARCH=aarch64  ;; \
+    esac \
+    && cd /tmp \
+    && wget https://github.com/bitxeno/usbmuxd2/releases/download/v0.0.2/usbmuxd2-ubuntu-${PKG_ARCH}.tar.gz \
+    && tar zxf usbmuxd2-ubuntu-${PKG_ARCH}.tar.gz \
+    && dpkg -i --force-architecture ./libusb_1.0.26-1_${PKG_ARCH}.deb \
+    && dpkg -i --force-architecture ./libgeneral_1.0.0-1_${PKG_ARCH}.deb \
+    && dpkg -i --force-architecture ./libplist_2.3.0-1_${PKG_ARCH}.deb \
+    && dpkg -i --force-architecture ./libimobiledevice-glue_1.0.0-1_${PKG_ARCH}.deb \
+    && dpkg -i --force-architecture ./libusbmuxd_2.3.0-1_${PKG_ARCH}.deb \
+    && dpkg -i --force-architecture ./libimobiledevice_1.3.1-1_${PKG_ARCH}.deb \
+    && dpkg -i --force-architecture ./usbmuxd2_1.0.0-1_${PKG_ARCH}.deb
 
 # 安装anisette-server，用于模拟本机为MacBook
-RUN cd /tmp \
-    && wget https://github.com/Dadoum/Provision/releases/download/2.1.0/anisette-server-x86_64 \
-    && mv anisette-server-x86_64 /usr/bin/anisette-server \
+RUN case ${TARGETARCH} in \
+         "amd64")  PKG_ARCH=x86_64  ;; \
+         "arm64")  PKG_ARCH=aarch64  ;; \
+    esac \
+    && cd /tmp \
+    && wget https://github.com/Dadoum/Provision/releases/download/2.1.0/anisette-server-${PKG_ARCH} \
+    && mv anisette-server-${PKG_ARCH} /usr/bin/anisette-server \
     && chmod +x /usr/bin/anisette-server
 
 # 安装AltStore
-RUN cd /tmp \
-    && wget https://github.com/NyaMisty/AltServer-Linux/releases/download/v0.0.5/AltServer-x86_64 \
-    && mv AltServer-x86_64 /usr/bin/AltServer \
+RUN case ${TARGETARCH} in \
+         "amd64")  PKG_ARCH=x86_64  ;; \
+         "arm64")  PKG_ARCH=aarch64  ;; \
+    esac \
+    && cd /tmp \
+    && wget https://github.com/NyaMisty/AltServer-Linux/releases/download/v0.0.5/AltServer-${PKG_ARCH} \
+    && mv AltServer-${PKG_ARCH} /usr/bin/AltServer \
     && chmod +x /usr/bin/AltServer
 
 # 安装tzdata支持更新时区
