@@ -66,9 +66,9 @@ RUN rm -rf /var/lib/lockdown && mkdir -p /data/lockdown && ln -s /data/lockdown 
 
 
 # 生成启动脚本
-COPY ./scripts/anisette-server /etc/init.d/anisette-server
+COPY ./doc/scripts/anisette-server /etc/init.d/anisette-server
 RUN chmod +x /etc/init.d/anisette-server
-COPY ./scripts/usbmuxd /etc/init.d/usbmuxd
+COPY ./doc/scripts/usbmuxd /etc/init.d/usbmuxd
 RUN chmod +x /etc/init.d/usbmuxd
 RUN printf '#!/bin/sh \n\n\
 
