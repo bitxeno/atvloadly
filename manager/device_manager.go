@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/bitxeno/atvloadly/config"
 	"github.com/bitxeno/atvloadly/internal/log"
@@ -93,14 +94,25 @@ func (dm *DeviceManager) GetMountImageInfo(udid string) (*model.UsbmuxdImage, er
 
 	imageInfo := model.NewUsbmuxdImage(*devInfo, config.Settings.DeveloperDiskImage.ImageSource)
 	imageMounted, err := dm.CheckHasMountImage(udid)
-	if err != nil {
-		log.Err(err).Msg("Cannot get image signature: ")
-		return nil, err
+	if err == nil {
+		imageInfo.ImageMounted = imageMounted
+		return imageInfo, nil
 	}
-	imageInfo.ImageMounted = imageMounted
-	return imageInfo, nil
 
-	// return nil, fmt.Errorf("Device pairing state not valid. Please try to pair again.")
+	// AppleTV system has reboot, need restart usbmuxd？？？？
+	// Error: lookup_image returned -256
+	if strings.Contains(err.Error(), "lookup_image returned -256") {
+		if err = dm.RestartUsbmuxd(); err == nil {
+			time.Sleep(5 * time.Second)
+			if imageMounted, err = dm.CheckHasMountImage(udid); err != nil {
+				imageInfo.ImageMounted = imageMounted
+				return imageInfo, nil
+			}
+		}
+	}
+
+	log.Err(err).Msg("Cannot get image signature: ")
+	return nil, err
 }
 
 func (dm *DeviceManager) GetUsbmuxdDevice(udid string) (*model.UsbmuxdDevice, error) {
@@ -141,6 +153,17 @@ func (dm *DeviceManager) CheckHasMountImage(udid string) (bool, error) {
 	}
 
 	output := string(data)
+
+	if strings.Contains(output, "ERROR") {
+		return false, fmt.Errorf("%s", output)
+	}
+
 	// fmt.Println(output)
 	return strings.Contains(output, "ImageSignature") && !strings.Contains(output, "ImageSignature[0]"), nil
+}
+
+func (dm *DeviceManager) RestartUsbmuxd() error {
+	cmd := exec.Command("/etc/init.d/usbmuxd", "restart")
+	_, err := cmd.CombinedOutput()
+	return err
 }

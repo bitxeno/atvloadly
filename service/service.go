@@ -87,23 +87,10 @@ func MountDeveloperDiskImage(ctx context.Context, id string) error {
 
 	// 尝试挂载
 	// 对应版本的DeveloperDiskImage不存在的话，尝试下载
-	imageDir := filepath.Join(cfg.Server.WorkDir, "DeveloperDiskImage")
 	imageVersionDir := filepath.Join(cfg.Server.WorkDir, "DeveloperDiskImage", imageInfo.DeveloperDiskImageVersion)
 	if _, err := os.Stat(imageVersionDir); os.IsNotExist(err) {
-		tmpPath := filepath.Join(cfg.Server.WorkDir, "tmp", "DeveloperDiskImage.zip")
-		resp, err := http.NewClient().R().SetOutput(tmpPath).Get(imageInfo.DeveloperDiskImageUrl)
-		if err != nil {
+		if err := downloadDeveloperDiskImage(imageInfo, imageVersionDir); err != nil {
 			log.Err(err).Msg("Download Developer disk image error: ")
-			return err
-		}
-		if !resp.IsSuccess() {
-			return fmt.Errorf("Developer disk image could not found. os: tvOS %s url: %s status: %d", imageInfo.Device.ProductVersion, imageInfo.DeveloperDiskImageUrl, resp.StatusCode())
-		}
-
-		// unzip
-		uz := unzip.New()
-		if _, err = uz.Extract(tmpPath, imageDir); err != nil {
-			log.Err(err).Msg("Unzip Developer disk image error: ")
 			return err
 		}
 	}
@@ -121,6 +108,62 @@ func MountDeveloperDiskImage(ctx context.Context, id string) error {
 	output := string(data)
 	if strings.Contains(output, "ERROR") {
 		return fmt.Errorf("%s\n%s", "Run ideviceimagemounter error: ", output)
+	}
+
+	return nil
+}
+
+func downloadDeveloperDiskImage(imageInfo *model.UsbmuxdImage, imageVersionDir string) error {
+	tmpPath := filepath.Join(cfg.Server.WorkDir, "tmp", "DeveloperDiskImage.zip")
+	tmpUnzipPath := filepath.Join(cfg.Server.WorkDir, "tmp", "DeveloperDiskImage")
+	_ = os.RemoveAll(tmpUnzipPath)
+
+	resp, err := http.NewClient().R().SetOutput(tmpPath).Get(imageInfo.DeveloperDiskImageUrl)
+	if err == nil && resp.IsSuccess() {
+		// unzip
+		uz := unzip.New()
+		files, err := uz.Extract(tmpPath, tmpUnzipPath)
+		if err != nil {
+			log.Err(err).Msg("Unzip Developer disk image error: ")
+			return err
+		}
+		_ = os.MkdirAll(imageVersionDir, os.ModePerm)
+		for _, f := range files {
+			if filepath.Base(f) == "DeveloperDiskImage.dmg" || filepath.Base(f) == "DeveloperDiskImage.dmg.signature" {
+				_ = os.Rename(f, filepath.Join(imageVersionDir, filepath.Base(f)))
+			}
+		}
+		return nil
+	}
+
+	// 镜像找不到，尝试降级获取上一版本（有时可以使用前一版本的镜像进行mount）
+	if resp.StatusCode() == 404 {
+		log.Warnf("try downgrade Developer disk image to version: %s", imageInfo.DowngradeDeveloperDiskImageVersion)
+		resp, err = http.NewClient().R().SetOutput(tmpPath).Get(imageInfo.DowngradeDeveloperDiskImageUrl)
+		if err == nil && resp.IsSuccess() {
+			// unzip
+			uz := unzip.New()
+			files, err := uz.Extract(tmpPath, tmpUnzipPath)
+			if err != nil {
+				log.Err(err).Msg("Unzip Developer disk image error: ")
+				return err
+			}
+			_ = os.MkdirAll(imageVersionDir, os.ModePerm)
+			for _, f := range files {
+				if filepath.Base(f) == "DeveloperDiskImage.dmg" || filepath.Base(f) == "DeveloperDiskImage.dmg.signature" {
+					_ = os.Rename(f, filepath.Join(imageVersionDir, filepath.Base(f)))
+				}
+			}
+			return nil
+		}
+	}
+
+	if err != nil {
+		log.Err(err).Msg("Download Developer disk image error: ")
+		return err
+	}
+	if !resp.IsSuccess() {
+		return fmt.Errorf("Developer disk image could not found. os: tvOS %s url: %s status: %d", imageInfo.Device.ProductVersion, imageInfo.DeveloperDiskImageUrl, resp.StatusCode())
 	}
 
 	return nil

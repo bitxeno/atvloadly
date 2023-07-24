@@ -16,6 +16,7 @@ import (
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/cfg"
 	"github.com/bitxeno/atvloadly/internal/log"
+	"github.com/bitxeno/atvloadly/manager"
 	"github.com/bitxeno/atvloadly/model"
 	"github.com/bitxeno/atvloadly/notify"
 	"github.com/bitxeno/atvloadly/service"
@@ -173,6 +174,18 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 	if v.Account == "" || v.Password == "" || v.UDID == "" {
 		log.Info("任务帐号，密码，UDID为空")
 		return fmt.Errorf("任务帐号，密码，UDID为空")
+	}
+
+	// 检查developer disk image是否已mounted
+	imageInfo, err := manager.GetDeviceMountImageInfo(v.UDID)
+	if err != nil {
+		log.Err(err).Msg("Check DeveloperDiskImage mounted error: ")
+		return err
+	}
+
+	if !imageInfo.ImageMounted {
+		log.Error("DeveloperDiskImage not mounted.")
+		return err
 	}
 
 	// 为每个appleid创建对应的工作目录，用于存储AltServer生成的签名证书

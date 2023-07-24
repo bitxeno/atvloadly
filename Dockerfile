@@ -64,7 +64,12 @@ RUN chmod +x /usr/bin/${APP_NAME}
 RUN rm -rf /var/lib/lockdown && mkdir -p /data/lockdown && ln -s /data/lockdown /var/lib/lockdown
 
 
+
 # 生成启动脚本
+COPY ./scripts/anisette-server /etc/init.d/anisette-server
+RUN chmod +x /etc/init.d/anisette-server
+COPY ./scripts/usbmuxd /etc/init.d/usbmuxd
+RUN chmod +x /etc/init.d/usbmuxd
 RUN printf '#!/bin/sh \n\n\
 
 mkdir -p /data/lockdown \n\
@@ -74,8 +79,8 @@ if [ ! -f "/data/config.yaml" ]; then  \n\
     cp /doc/config.yaml /data/config.yaml \n\
 fi  \n\
 
-nohup /usr/sbin/usbmuxd & \n\
-nohup /usr/bin/anisette-server --adi-path /data/Provision &  \n\
+/etc/init.d/usbmuxd start \n\
+/etc/init.d/anisette-server start  \n\
 
 /usr/bin/%s server -p ${SERVICE_PORT:-80} -c /data/config.yaml  \n\
 \n\
