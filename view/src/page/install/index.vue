@@ -184,6 +184,7 @@ export default {
         toast.error("安装失败，请查看日志了解详细信息");
         return;
       }
+      _this.log.output += "DeveloperDiskImage has mounted.\n";
 
       let formData = new FormData();
       for (let i = 0; i < _this.files.length; i++) {

@@ -88,7 +88,10 @@ func MountDeveloperDiskImage(ctx context.Context, id string) error {
 	// 尝试挂载
 	// 对应版本的DeveloperDiskImage不存在的话，尝试下载
 	imageVersionDir := filepath.Join(cfg.Server.WorkDir, "DeveloperDiskImage", imageInfo.DeveloperDiskImageVersion)
-	if _, err := os.Stat(imageVersionDir); os.IsNotExist(err) {
+	dmg := filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg")
+	signature := filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg.signature")
+
+	if _, err := os.Stat(dmg); os.IsNotExist(err) {
 		if err := downloadDeveloperDiskImage(imageInfo, imageVersionDir); err != nil {
 			log.Err(err).Msg("Download Developer disk image error: ")
 			return err
@@ -96,8 +99,6 @@ func MountDeveloperDiskImage(ctx context.Context, id string) error {
 	}
 
 	// 开始执行挂载
-	dmg := filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg")
-	signature := filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg.signature")
 	cmd := exec.CommandContext(ctx, "ideviceimagemounter", "-u", device.UDID, "-n", dmg, signature)
 	data, err := cmd.CombinedOutput()
 	if err != nil {
@@ -130,7 +131,9 @@ func downloadDeveloperDiskImage(imageInfo *model.UsbmuxdImage, imageVersionDir s
 		_ = os.MkdirAll(imageVersionDir, os.ModePerm)
 		for _, f := range files {
 			if filepath.Base(f) == "DeveloperDiskImage.dmg" || filepath.Base(f) == "DeveloperDiskImage.dmg.signature" {
-				_ = os.Rename(f, filepath.Join(imageVersionDir, filepath.Base(f)))
+				if err = os.Rename(filepath.Join(tmpUnzipPath, f), filepath.Join(imageVersionDir, filepath.Base(f))); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -151,7 +154,9 @@ func downloadDeveloperDiskImage(imageInfo *model.UsbmuxdImage, imageVersionDir s
 			_ = os.MkdirAll(imageVersionDir, os.ModePerm)
 			for _, f := range files {
 				if filepath.Base(f) == "DeveloperDiskImage.dmg" || filepath.Base(f) == "DeveloperDiskImage.dmg.signature" {
-					_ = os.Rename(f, filepath.Join(imageVersionDir, filepath.Base(f)))
+					if err = os.Rename(filepath.Join(tmpUnzipPath, f), filepath.Join(imageVersionDir, filepath.Base(f))); err != nil {
+						return err
+					}
 				}
 			}
 			return nil

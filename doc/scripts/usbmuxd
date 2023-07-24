@@ -14,7 +14,7 @@ start_it_up()
 
 shut_it_down()
 {
-  start-stop-daemon --stop --pidfile $PIDFILE
+  start-stop-daemon --stop --pidfile $PIDFILE --retry 5 --remove-pidfile
 }
 
 

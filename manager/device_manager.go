@@ -104,7 +104,7 @@ func (dm *DeviceManager) GetMountImageInfo(udid string) (*model.UsbmuxdImage, er
 	if strings.Contains(err.Error(), "lookup_image returned -256") {
 		if err = dm.RestartUsbmuxd(); err == nil {
 			time.Sleep(5 * time.Second)
-			if imageMounted, err = dm.CheckHasMountImage(udid); err != nil {
+			if imageMounted, err = dm.CheckHasMountImage(udid); err == nil {
 				imageInfo.ImageMounted = imageMounted
 				return imageInfo, nil
 			}
@@ -149,11 +149,10 @@ func (dm *DeviceManager) CheckHasMountImage(udid string) (bool, error) {
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
-		return false, fmt.Errorf("%s%s", string(data), err.Error())
+		return false, fmt.Errorf("%s\n%s", string(data), err.Error())
 	}
 
 	output := string(data)
-
 	if strings.Contains(output, "ERROR") {
 		return false, fmt.Errorf("%s", output)
 	}
@@ -164,6 +163,10 @@ func (dm *DeviceManager) CheckHasMountImage(udid string) (bool, error) {
 
 func (dm *DeviceManager) RestartUsbmuxd() error {
 	cmd := exec.Command("/etc/init.d/usbmuxd", "restart")
-	_, err := cmd.CombinedOutput()
-	return err
+	data, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s\n%s", string(data), err.Error())
+	}
+
+	return nil
 }
