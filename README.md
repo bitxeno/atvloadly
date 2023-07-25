@@ -5,7 +5,7 @@
 [![image size](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/size)](https://github.com/bitxeno/atvloadly/pkgs/container/atvloadly)
 [![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/blob/master/LICENSE) 
 
-> ⚠️ **不支持 tvOS 16.5以上系统** ⚠️
+> ⚠️ **不支持 tvOS 17.0 以上系统** ⚠️
 
 atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通过使用 [AltServer](https://github.com/NyaMisty/AltServer-Linux) 实现侧载，并会自动刷新 App 以保证其长期可用性。
 
