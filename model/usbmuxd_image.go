@@ -10,17 +10,16 @@ import (
 type UsbmuxdImage struct {
 	Device UsbmuxdDevice
 
-	ImageMounted                      bool   `json:"ImageMounted,omitempty"`
-	DeveloperDiskImageUrl             string `json:"DeveloperDiskImageUrl,omitempty"`
-	DeveloperDiskImageVersion         string `json:"DeveloperDiskImageVersion,omitempty"`
-	DeveloperDiskImageFallbackUrl     string `json:"DeveloperDiskImageFallbackUrl,omitempty"`
-	DeveloperDiskImageFallbackVersion string `json:"DeveloperDiskImageFallbackVersion,omitempty"`
+	VersionMajor              int    `json:"VersionMajor"`
+	VersionMinor              int    `json:"VersionMinor"`
+	ImageMounted              bool   `json:"ImageMounted,omitempty"`
+	DeveloperDiskImageUrl     string `json:"DeveloperDiskImageUrl,omitempty"`
+	DeveloperDiskImageVersion string `json:"DeveloperDiskImageVersion,omitempty"`
 }
 
 func NewUsbmuxdImage(device UsbmuxdDevice, imageSource string) *UsbmuxdImage {
 	arr := strings.Split(device.ProductVersion, ".")
 	version := ""
-	FallbackVersion := ""
 	major := 0
 	minor := 0
 	if len(arr) < 2 {
@@ -33,17 +32,12 @@ func NewUsbmuxdImage(device UsbmuxdDevice, imageSource string) *UsbmuxdImage {
 		version = fmt.Sprintf("%d.%d", major, minor)
 	}
 
-	// Newest system lack DeveloperDiskImage, try fallback to last minor version
-	if minor > 0 {
-		FallbackVersion = fmt.Sprintf("%d.%d", major, minor-1)
-	}
-
 	return &UsbmuxdImage{
-		Device:                            device,
-		ImageMounted:                      false,
-		DeveloperDiskImageUrl:             strings.Replace(imageSource, "{0}", version, -1),
-		DeveloperDiskImageVersion:         version,
-		DeveloperDiskImageFallbackUrl:     strings.Replace(imageSource, "{0}", FallbackVersion, -1),
-		DeveloperDiskImageFallbackVersion: FallbackVersion,
+		Device:                    device,
+		VersionMajor:              major,
+		VersionMinor:              minor,
+		ImageMounted:              false,
+		DeveloperDiskImageUrl:     strings.Replace(imageSource, "{0}", version, -1),
+		DeveloperDiskImageVersion: version,
 	}
 }

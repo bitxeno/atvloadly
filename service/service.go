@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/artdarek/go-unzip/pkg/unzip"
+	"github.com/bitxeno/atvloadly/config"
 	"github.com/bitxeno/atvloadly/internal/cfg"
 	"github.com/bitxeno/atvloadly/internal/http"
 	"github.com/bitxeno/atvloadly/internal/log"
@@ -87,18 +88,10 @@ func MountDeveloperDiskImage(ctx context.Context, id string) error {
 	}
 
 	// Download DeveloperDiskImage
-	imageVersionDir := filepath.Join(cfg.Server.WorkDir, "DeveloperDiskImage", imageInfo.DeveloperDiskImageVersion)
-	dmg := filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg")
-	signature := filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg.signature")
-	fallback, err := downloadDeveloperDiskImage(imageInfo)
+	dmg, signature, err := downloadDeveloperDiskImage(imageInfo)
 	if err != nil {
 		log.Err(err).Msg("Download Developer disk image error: ")
 		return err
-	}
-	if fallback {
-		imageVersionDir = filepath.Join(cfg.Server.WorkDir, "DeveloperDiskImage", imageInfo.DeveloperDiskImageFallbackVersion)
-		dmg = filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg")
-		signature = filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg.signature")
 	}
 
 	// Start executing mounting DeveloperDiskImage
@@ -112,15 +105,27 @@ func MountDeveloperDiskImage(ctx context.Context, id string) error {
 	return nil
 }
 
-func downloadDeveloperDiskImage(imageInfo *model.UsbmuxdImage) (fallback bool, reterr error) {
+func downloadDeveloperDiskImage(imageInfo *model.UsbmuxdImage) (dmg string, signature string, reterr error) {
 	// download current version DeveloperDiskImage
 	err := downloadDeveloperDiskImageByVersion(imageInfo.DeveloperDiskImageUrl, imageInfo.DeveloperDiskImageVersion)
-	if err != nil && imageInfo.DeveloperDiskImageFallbackVersion != "" {
-		log.Warnf("try downgrade developer disk image to version: %s", imageInfo.DeveloperDiskImageFallbackVersion)
-		// current version DeveloperDiskImage not exist, fallback to last minor version
-		reterr = downloadDeveloperDiskImageByVersion(imageInfo.DeveloperDiskImageFallbackUrl, imageInfo.DeveloperDiskImageFallbackVersion)
-		fallback = true
+	if err == nil {
+		dmg = filepath.Join(cfg.Server.WorkDir, "DeveloperDiskImage", imageInfo.DeveloperDiskImageVersion, "DeveloperDiskImage.dmg")
+		signature = filepath.Join(cfg.Server.WorkDir, "DeveloperDiskImage", imageInfo.DeveloperDiskImageVersion, "DeveloperDiskImage.dmg.signature")
 		return
+	}
+
+	if err != nil && imageInfo.VersionMinor > 0 {
+		// current version DeveloperDiskImage not found, try fallback to last minor version
+		for fallbackMinor := imageInfo.VersionMinor - 1; fallbackMinor > 0; fallbackMinor-- {
+			fallbackVersion := fmt.Sprintf("%d.%d", imageInfo.VersionMajor, fallbackMinor)
+			fallbackImageUrl := strings.Replace(config.App.DeveloperDiskImage.ImageSource, "{0}", fallbackVersion, -1)
+			log.Warnf("try downgrade developer disk image to version: %s", fallbackVersion)
+			if err := downloadDeveloperDiskImageByVersion(fallbackImageUrl, fallbackVersion); err == nil {
+				dmg = filepath.Join(cfg.Server.WorkDir, "DeveloperDiskImage", fallbackVersion, "DeveloperDiskImage.dmg")
+				signature = filepath.Join(cfg.Server.WorkDir, "DeveloperDiskImage", fallbackVersion, "DeveloperDiskImage.dmg.signature")
+				return
+			}
+		}
 	}
 
 	if err != nil {

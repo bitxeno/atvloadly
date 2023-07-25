@@ -24,9 +24,6 @@ const (
 type TaskMode string
 
 type SettingsConfiguration struct {
-	DeveloperDiskImage struct {
-		ImageSource string `koanf:"image_source" json:"image_source" default:"https://ghproxy.com/https://github.com/haikieu/xcode-developer-disk-image-all-platforms/raw/master/DiskImages/AppleTVOS.platform/DeviceSupport/{0}.zip"`
-	} `koanf:"developer_disk_image" json:"developer_disk_image"`
 	Task struct {
 		Enabled  bool     `koanf:"enabled" json:"enabled" default:"true"`
 		Mode     TaskMode `koanf:"mode" json:"mode" default:"1"`

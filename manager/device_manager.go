@@ -92,7 +92,7 @@ func (dm *DeviceManager) GetMountImageInfo(udid string) (*model.UsbmuxdImage, er
 		return nil, err
 	}
 
-	imageInfo := model.NewUsbmuxdImage(*devInfo, config.Settings.DeveloperDiskImage.ImageSource)
+	imageInfo := model.NewUsbmuxdImage(*devInfo, config.App.DeveloperDiskImage.ImageSource)
 	imageMounted, err := dm.CheckHasMountImage(udid)
 	if err == nil {
 		imageInfo.ImageMounted = imageMounted

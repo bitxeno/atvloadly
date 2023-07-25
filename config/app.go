@@ -8,7 +8,10 @@ import (
 var App AppConfiguration
 
 type AppConfiguration struct {
-	LockdownDir string `koanf:"lockdown_dir" default:"/var/lib/lockdown"`
+	LockdownDir        string `koanf:"lockdown_dir" default:"/var/lib/lockdown"`
+	DeveloperDiskImage struct {
+		ImageSource string `koanf:"image_source" json:"image_source" default:"https://ghproxy.com/https://github.com/haikieu/xcode-developer-disk-image-all-platforms/raw/master/DiskImages/AppleTVOS.platform/DeviceSupport/{0}.zip"`
+	} `koanf:"developer_disk_image" json:"developer_disk_image"`
 }
 
 func loadApp() error {
