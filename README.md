@@ -12,7 +12,7 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 
 ## 主要功能
 
-* docker 运行 (只支持 Linux/OpenWrt x86 平台)
+* docker 运行 (只支持 Linux/OpenWrt 平台)
 * 支持 AppleTV 配对
 * 支持自动刷新 app
 * 支持同时使用多个 Apple ID 帐号
@@ -28,7 +28,7 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 
 ## 安装
 
-> :pensive: **只支持 Linux/OpenWrt 等 x86 系统，不支持 Mac/Windws/ARM Linux 系统**
+> :pensive: **只支持 Linux/OpenWrt 系统，不支持 Mac/Windws 系统**
 
 1. Linux/OpenWrt 宿主机需要安装 `avahi-deamon` 服务
    
