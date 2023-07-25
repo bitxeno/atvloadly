@@ -14,6 +14,7 @@ import (
 	"github.com/bitxeno/atvloadly/internal/cfg"
 	"github.com/bitxeno/atvloadly/internal/http"
 	"github.com/bitxeno/atvloadly/internal/log"
+	"github.com/bitxeno/atvloadly/internal/utils"
 	"github.com/bitxeno/atvloadly/manager"
 	"github.com/bitxeno/atvloadly/model"
 	"github.com/shirou/gopsutil/v3/process"
@@ -80,95 +81,91 @@ func MountDeveloperDiskImage(ctx context.Context, id string) error {
 		return err
 	}
 
-	// 已挂载直接返回
+	// Already mounted, return directly.
 	if imageInfo.ImageMounted {
 		return nil
 	}
 
-	// 尝试挂载
-	// 对应版本的DeveloperDiskImage不存在的话，尝试下载
+	// Download DeveloperDiskImage
 	imageVersionDir := filepath.Join(cfg.Server.WorkDir, "DeveloperDiskImage", imageInfo.DeveloperDiskImageVersion)
 	dmg := filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg")
 	signature := filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg.signature")
-
-	if _, err := os.Stat(dmg); os.IsNotExist(err) {
-		if err := downloadDeveloperDiskImage(imageInfo, imageVersionDir); err != nil {
-			log.Err(err).Msg("Download Developer disk image error: ")
-			return err
-		}
+	fallback, err := downloadDeveloperDiskImage(imageInfo)
+	if err != nil {
+		log.Err(err).Msg("Download Developer disk image error: ")
+		return err
+	}
+	if fallback {
+		imageVersionDir = filepath.Join(cfg.Server.WorkDir, "DeveloperDiskImage", imageInfo.DeveloperDiskImageFallbackVersion)
+		dmg = filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg")
+		signature = filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg.signature")
 	}
 
-	// 开始执行挂载
+	// Start executing mounting DeveloperDiskImage
 	cmd := exec.CommandContext(ctx, "ideviceimagemounter", "-u", device.UDID, "-n", dmg, signature)
 	data, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Err(err).Msg("Run ideviceimagemounter error: ")
+		log.Err(err).Msgf("Run ideviceimagemounter error: %s", string(data))
 		return fmt.Errorf("%s%s", string(data), err.Error())
-	}
-
-	output := string(data)
-	if strings.Contains(output, "ERROR") {
-		return fmt.Errorf("%s\n%s", "Run ideviceimagemounter error: ", output)
 	}
 
 	return nil
 }
 
-func downloadDeveloperDiskImage(imageInfo *model.UsbmuxdImage, imageVersionDir string) error {
+func downloadDeveloperDiskImage(imageInfo *model.UsbmuxdImage) (fallback bool, reterr error) {
+	// download current version DeveloperDiskImage
+	err := downloadDeveloperDiskImageByVersion(imageInfo.DeveloperDiskImageUrl, imageInfo.DeveloperDiskImageVersion)
+	if err != nil && imageInfo.DeveloperDiskImageFallbackVersion != "" {
+		log.Warnf("try downgrade developer disk image to version: %s", imageInfo.DeveloperDiskImageFallbackVersion)
+		// current version DeveloperDiskImage not exist, fallback to last minor version
+		reterr = downloadDeveloperDiskImageByVersion(imageInfo.DeveloperDiskImageFallbackUrl, imageInfo.DeveloperDiskImageFallbackVersion)
+		fallback = true
+		return
+	}
+
+	if err != nil {
+		log.Err(err).Msg("Download developer disk image error: ")
+		reterr = err
+	}
+
+	return
+}
+
+func downloadDeveloperDiskImageByVersion(url string, version string) error {
+	imageVersionDir := filepath.Join(cfg.Server.WorkDir, "DeveloperDiskImage", version)
+	dmg := filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg")
+	signature := filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg.signature")
+	if utils.Exists(dmg) && utils.Exists(signature) {
+		return nil
+	}
+
 	tmpPath := filepath.Join(cfg.Server.WorkDir, "tmp", "DeveloperDiskImage.zip")
 	tmpUnzipPath := filepath.Join(cfg.Server.WorkDir, "tmp", "DeveloperDiskImage")
 	_ = os.RemoveAll(tmpUnzipPath)
 
-	resp, err := http.NewClient().R().SetOutput(tmpPath).Get(imageInfo.DeveloperDiskImageUrl)
-	if err == nil && resp.IsSuccess() {
-		// unzip
-		uz := unzip.New()
-		files, err := uz.Extract(tmpPath, tmpUnzipPath)
-		if err != nil {
-			log.Err(err).Msg("Unzip Developer disk image error: ")
-			return err
-		}
-		_ = os.MkdirAll(imageVersionDir, os.ModePerm)
-		for _, f := range files {
-			if filepath.Base(f) == "DeveloperDiskImage.dmg" || filepath.Base(f) == "DeveloperDiskImage.dmg.signature" {
-				if err = os.Rename(filepath.Join(tmpUnzipPath, f), filepath.Join(imageVersionDir, filepath.Base(f))); err != nil {
-					return err
-				}
-			}
-		}
-		return nil
-	}
-
-	// 镜像找不到，尝试降级获取上一版本（有时可以使用前一版本的镜像进行mount）
-	if resp.StatusCode() == 404 {
-		log.Warnf("try downgrade Developer disk image to version: %s", imageInfo.DowngradeDeveloperDiskImageVersion)
-		resp, err = http.NewClient().R().SetOutput(tmpPath).Get(imageInfo.DowngradeDeveloperDiskImageUrl)
-		if err == nil && resp.IsSuccess() {
-			// unzip
-			uz := unzip.New()
-			files, err := uz.Extract(tmpPath, tmpUnzipPath)
-			if err != nil {
-				log.Err(err).Msg("Unzip Developer disk image error: ")
-				return err
-			}
-			_ = os.MkdirAll(imageVersionDir, os.ModePerm)
-			for _, f := range files {
-				if filepath.Base(f) == "DeveloperDiskImage.dmg" || filepath.Base(f) == "DeveloperDiskImage.dmg.signature" {
-					if err = os.Rename(filepath.Join(tmpUnzipPath, f), filepath.Join(imageVersionDir, filepath.Base(f))); err != nil {
-						return err
-					}
-				}
-			}
-			return nil
-		}
-	}
-
+	// download current version DeveloperDiskImage
+	resp, err := http.NewClient().R().SetOutput(tmpPath).Get(url)
 	if err != nil {
-		log.Err(err).Msg("Download Developer disk image error: ")
 		return err
 	}
 	if !resp.IsSuccess() {
-		return fmt.Errorf("Developer disk image could not found. os: tvOS %s url: %s status: %d", imageInfo.Device.ProductVersion, imageInfo.DeveloperDiskImageUrl, resp.StatusCode())
+		return fmt.Errorf("Developer disk image download failed.  url: %s status: %d", url, resp.StatusCode())
+	}
+
+	// unzip
+	uz := unzip.New()
+	files, err := uz.Extract(tmpPath, tmpUnzipPath)
+	if err != nil {
+		log.Err(err).Msg("Unzip Developer disk image error: ")
+		return err
+	}
+	_ = os.MkdirAll(imageVersionDir, os.ModePerm)
+	for _, f := range files {
+		if filepath.Base(f) == "DeveloperDiskImage.dmg" || filepath.Base(f) == "DeveloperDiskImage.dmg.signature" {
+			if err = os.Rename(filepath.Join(tmpUnzipPath, f), filepath.Join(imageVersionDir, filepath.Base(f))); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

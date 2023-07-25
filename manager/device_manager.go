@@ -83,10 +83,10 @@ func (dm *DeviceManager) ReloadDevices() {
 	})
 }
 
-// 获取DeveloperDiskImage绑定信息，install/screenshot等功能
-// 都需要先绑定DeveloperDiskImage才有权限操作
+// Get AppleTV mounted information of DeveloperDiskImage
+// install/screenshot function need mounted DeveloperDiskImage to operate.
 func (dm *DeviceManager) GetMountImageInfo(udid string) (*model.UsbmuxdImage, error) {
-	devInfo, err := dm.GetUsbmuxdDevice(udid)
+	devInfo, err := dm.GetUsbmuxdDeviceInfo(udid)
 	if err != nil {
 		log.Err(err).Msg("Cannot get device info: ")
 		return nil, err
@@ -99,8 +99,7 @@ func (dm *DeviceManager) GetMountImageInfo(udid string) (*model.UsbmuxdImage, er
 		return imageInfo, nil
 	}
 
-	// AppleTV system has reboot, need restart usbmuxd？？？？
-	// Error: lookup_image returned -256
+	// AppleTV system has reboot, need restart usbmuxd to fix lookup_image error
 	if strings.Contains(err.Error(), "lookup_image returned -256") {
 		if err = dm.RestartUsbmuxd(); err == nil {
 			time.Sleep(5 * time.Second)
@@ -115,7 +114,7 @@ func (dm *DeviceManager) GetMountImageInfo(udid string) (*model.UsbmuxdImage, er
 	return nil, err
 }
 
-func (dm *DeviceManager) GetUsbmuxdDevice(udid string) (*model.UsbmuxdDevice, error) {
+func (dm *DeviceManager) GetUsbmuxdDeviceInfo(udid string) (*model.UsbmuxdDevice, error) {
 	cmd := exec.Command("ideviceinfo", "-u", udid, "-n")
 
 	data, err := cmd.CombinedOutput()
@@ -128,7 +127,6 @@ func (dm *DeviceManager) GetUsbmuxdDevice(udid string) (*model.UsbmuxdDevice, er
 	lines := strings.Split(output, "\n")
 	for _, v := range lines {
 		arr := strings.Split(v, ":")
-		// fmt.Println(arr)
 		if len(arr) == 2 {
 			switch strings.TrimSpace(arr[0]) {
 			case "ProductVersion":
@@ -149,7 +147,7 @@ func (dm *DeviceManager) CheckHasMountImage(udid string) (bool, error) {
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
-		return false, fmt.Errorf("%s\n%s", string(data), err.Error())
+		return false, fmt.Errorf("%s%s", string(data), err.Error())
 	}
 
 	output := string(data)
@@ -157,7 +155,6 @@ func (dm *DeviceManager) CheckHasMountImage(udid string) (bool, error) {
 		return false, fmt.Errorf("%s", output)
 	}
 
-	// fmt.Println(output)
 	return strings.Contains(output, "ImageSignature") && !strings.Contains(output, "ImageSignature[0]"), nil
 }
 
@@ -165,7 +162,7 @@ func (dm *DeviceManager) RestartUsbmuxd() error {
 	cmd := exec.Command("/etc/init.d/usbmuxd", "restart")
 	data, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%s\n%s", string(data), err.Error())
+		return fmt.Errorf("%s%s", string(data), err.Error())
 	}
 
 	return nil
