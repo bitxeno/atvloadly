@@ -5,16 +5,48 @@
         <a href="/" class="btn btn-ghost normal-case text-xl">atvloadly</a>
       </div>
       <div class="flex-none">
-        <ul class="menu menu-horizontal px-1">
-          <li>
+        <nav class="navbar w-full">
+          <div>
             <router-link :to="{ name: 'settings' }">
+              <label tabindex="0" class="btn btn-ghost rounded-btn">
+                <span class="w-5">
+                  <SettingsIcon />
+                </span>
+                {{ $t("nav.settings") }}</label
+              >
+            </router-link>
+          </div>
+
+          <div class="dropdown dropdown-hover">
+            <label tabindex="0" class="btn btn-ghost rounded-btn">
               <span class="w-5">
-                <SettingsIcon />
+                <LanguageIcon />
               </span>
-              设置</router-link
+              {{ $t("nav.language") }}</label
             >
-          </li>
-        </ul>
+            <ul
+              tabindex="0"
+              class="dropdown-content z-[1] menu menu-sm p-2 shadow bg-base-200 rounded-box w-36 gap-1"
+            >
+              <li v-for="item in languages" :key="item.key">
+                <button
+                  :class="[{ active: $i18next.language == item.key }]"
+                  v-on:click="changeLanguage(item.key)"
+                >
+                  {{ item.name }}
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <a href="https://github.com/bitxeno/atvloadly" target="_blank">
+              <label tabindex="0" class="btn btn-ghost rounded-btn">
+                <span class="w-5"> <GithubIcon /> </span
+              ></label>
+            </a>
+          </div>
+        </nav>
       </div>
     </header>
 
@@ -27,11 +59,32 @@
   <script>
 export default {
   name: "App",
+  data() {
+    return {
+      languages: [],
+    };
+  },
+  created() {
+    let keys = Object.keys(this.$i18next.options.resources);
+    for (const key of keys) {
+      this.languages.push({
+        key: key,
+        name: this.$i18next.options.resources[key].name,
+      });
+    }
+  },
+  methods: {
+    changeLanguage(lang) {
+      this.$i18next.changeLanguage(lang);
+    },
+  },
 };
 </script>
 
 <script setup>
 import SettingsIcon from "@/assets/icons/settings.svg";
+import LanguageIcon from "@/assets/icons/language.svg";
+import GithubIcon from "@/assets/icons/github.svg";
 </script>
 
 <style lang="postcss" scoped>

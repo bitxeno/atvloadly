@@ -1,34 +1,51 @@
 <template>
   <div class="max-w-screen-md mx-auto flex flex-col gap-y-8">
     <ul class="steps w-full">
-      <li class="step step-primary">开始</li>
-      <li :class="['step', { 'step-primary': active > 0 }]">输入PIN码</li>
-      <li :class="['step', { 'step-primary': active > 1 }]">配对完成</li>
+      <li class="step step-primary">{{ $t("pair.step.start.title") }}</li>
+      <li :class="['step', { 'step-primary': active > 0 }]">
+        {{ $t("pair.step.pin.title") }}
+      </li>
+      <li :class="['step', { 'step-primary': active > 1 }]">
+        {{ $t("pair.step.completed.title") }}
+      </li>
     </ul>
 
-    <div class="border rounded p-6">
+    <div class="border rounded p-6 bg-base-100">
       <div v-show="active === 0" class="flex flex-col gap-y-4">
-        <p><label class="inline-block w-16">设备：</label>{{ device.name }}</p>
+        <p>
+          <label class="inline-block w-16"
+            >{{ $t("pair.step.start.device") }}：</label
+          >{{ device.name }}
+        </p>
         <p><label class="inline-block w-16">IP：</label>{{ device.ip }}</p>
         <p>
           <label class="inline-block w-16">MAC：</label>{{ device.mac_addr }}
         </p>
-        <button class="btn btn-primary" @click="start">开始配对</button>
+        <button class="btn btn-primary" @click="start">
+          {{ $t("pair.step.start.button") }}
+        </button>
       </div>
 
       <div v-show="active === 1">
         <div v-show="loading" class="flex flex-row justify-center gap-x-1">
-          <span class="loading loading-spinner loading-sm"></span>连接中...
+          <span class="loading loading-spinner loading-sm"></span
+          >{{ $t("pair.step.pin.loading") }}
         </div>
         <div v-show="!loading" class="flex flex-col gap-y-4">
           <input
             type="number"
-            placeholder="请输入 AppleTV 上显示的 PIN 码"
+            :placeholder="$t('pair.step.pin.placeholder')"
             class="input input-bordered input-primary w-full"
             v-model="pin"
           />
-          <button class="btn btn-primary" @click="confirmPin" :disabled="status.confirm">
-            <span class="loading loading-spinner" v-show="status.confirm"></span>确定</button>
+          <button
+            class="btn btn-primary"
+            @click="confirmPin"
+            :disabled="status.confirm"
+          >
+            <span class="loading loading-spinner" v-show="status.confirm"></span
+            >{{ $t("pair.step.pin.button") }}
+          </button>
         </div>
       </div>
 
@@ -37,10 +54,12 @@
           <div class="w-16 text-green-500">
             <CheckMarkIcon />
           </div>
-          配对成功
+          {{ $t("pair.step.completed.msg") }}
         </div>
 
-        <button class="btn" @click="goback">返回</button>
+        <button class="btn" @click="goback">
+          {{ $t("pair.step.completed.button") }}
+        </button>
       </div>
     </div>
   </div>
@@ -62,7 +81,7 @@ export default {
         line: "",
       },
       success: false,
-      status : {
+      status: {
         confirm: false,
       },
       msg: "",
@@ -109,11 +128,10 @@ export default {
       this.$router.push("/");
     },
     initWebSocket() {
-      //初始化weosocket
       const wsuri =
         (location.protocol === "https:" ? "wss://" : "ws://") +
         location.host +
-        "/ws/tty"; //ws地址
+        "/ws/tty";
       console.log(wsuri);
       this.websock = new WebSocket(wsuri);
       this.websock.onopen = this.websocketonopen;
@@ -121,19 +139,15 @@ export default {
       this.websock.onmessage = this.websocketonmessage;
       this.websock.onclose = this.websocketclose;
     },
-
     websocketonopen() {
-      console.log("WebSocket连接成功");
+      console.log("WebSocket connect success.");
     },
     websocketonerror(e) {
-      //错误
-      console.log("WebSocket连接发生错误");
+      console.log("WebSocket connect failed.");
     },
     websocketonmessage(e) {
       let _this = this;
 
-      //数据接收
-      // const redata = JSON.parse(e.data); // 接收数据
       _this.cmd.output += e.data;
       _this.cmd.line += e.data;
       if (e.data.indexOf("\n") >= 0) {
@@ -142,38 +156,36 @@ export default {
       }
 
       if (_this.active === 1) {
-        // 提示输入PIN
+        // show Enter PIN
         if (_this.cmd.output.indexOf("Enter PIN") !== -1) {
           _this.loading = false;
           _this.cmd.output = "";
           return;
         }
 
-        // 配对出错
+        // pairing error
         if (_this.cmd.output.indexOf("Invalid PIN") !== -1) {
-          // 配对出错，显示出错消息
           _this.cmd.output = "";
           _this.active = 2;
-          toast.error("PIN码不正确");
+          toast.error(this.$t("pair.toast.pin_incorrect"));
           return;
         }
         if (_this.cmd.output.indexOf("ERROR") !== -1) {
-          // 配对出错，显示出错消息
           _this.cmd.output = "";
           _this.active = 2;
-          toast.error("配对出错，请到控制台查看详细信息");
+          toast.error(this.$t("pair.toast.pair_error"));
           return;
         }
 
         if (_this.cmd.output.indexOf("No device found") !== -1) {
-          // usbmuxd未启动
+          // usbmuxd service not started
           _this.cmd.output = "";
           _this.active = 2;
-          toast.error("找不到设备，请确认 usbmuxd 服务已启动");
+          toast.error(this.$t("pair.toast.no_device_found"));
           return;
         }
 
-        // 配对成功
+        // pairing successful.
         if (_this.cmd.output.indexOf("SUCCESS") !== -1) {
           _this.cmd.output = "";
           _this.active++;
@@ -185,7 +197,6 @@ export default {
 
     websocketsend(cmd) {
       let _this = this;
-      //数据发送
       _this.cmd.output = "";
       const json = JSON.stringify({ t: 1, d: `${cmd}\n` });
       console.log("--> ", json);
@@ -193,7 +204,6 @@ export default {
     },
 
     websocketclose(e) {
-      //关闭
       console.log(`connection closed (${e.code})`);
     },
   },

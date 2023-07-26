@@ -1,0 +1,14 @@
+{
+    "i18n-ally.enabledFrameworks": [
+        "vue",
+        "i18next"
+    ],
+    "i18n-ally.enabledParsers": [
+        "js",
+        "json"
+    ],
+    "i18n-ally.localesPaths": [
+        "view/src/locales"
+    ],
+    "i18n-ally.keystyle": "nested"
+}

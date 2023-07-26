@@ -1,11 +1,13 @@
 <template>
   <div class="max-w-screen-lg mx-auto">
-    <fieldset class="section">
-      <legend>通知</legend>
+    <fieldset class="section bg-base-100">
+      <legend>{{ $t("settings.notification.title") }}</legend>
       <form>
         <div class="form-item">
           <label class="form-item-label">
-            <span class="label-text">启用</span>
+            <span class="label-text">{{
+              $t("settings.notification.toggle.label")
+            }}</span>
           </label>
           <input
             type="checkbox"
@@ -15,7 +17,9 @@
         </div>
         <div class="form-item">
           <label class="form-item-label">
-            <span class="label-text">通知方式</span>
+            <span class="label-text">{{
+              $t("settings.notification.type.label")
+            }}</span>
           </label>
 
           <div class="flex gap-x-2">
@@ -44,13 +48,17 @@
                 v-model="settings.notification.type"
                 value="weixin"
               />
-              <span class="label-text">企业微信</span>
+              <span class="label-text">{{
+                $t("settings.notification.weixin.title")
+              }}</span>
             </label>
           </div>
         </div>
         <div class="form-item" v-show="settings.notification.type == 'weixin'">
           <label class="form-item-label">
-            <span class="label-text">企业ID (CorpId)</span>
+            <span class="label-text">{{
+              $t("settings.notification.weixin.corp_id")
+            }}</span>
           </label>
           <input
             v-model="settings.notification.weixin.corp_id"
@@ -61,7 +69,9 @@
         </div>
         <div class="form-item" v-show="settings.notification.type == 'weixin'">
           <label class="form-item-label">
-            <span class="label-text">密钥 (Corpsecret)</span>
+            <span class="label-text">{{
+              $t("settings.notification.weixin.corp_secret")
+            }}</span>
           </label>
           <input
             v-model="settings.notification.weixin.corp_secret"
@@ -72,7 +82,9 @@
         </div>
         <div class="form-item" v-show="settings.notification.type == 'weixin'">
           <label class="form-item-label">
-            <span class="label-text">应用ID (AgentId)</span>
+            <span class="label-text">{{
+              $t("settings.notification.weixin.agent_id")
+            }}</span>
           </label>
           <input
             v-model="settings.notification.weixin.agent_id"
@@ -83,7 +95,9 @@
         </div>
         <div class="form-item" v-show="settings.notification.type == 'weixin'">
           <label class="form-item-label">
-            <span class="label-text">指定成员 (touser)</span>
+            <span class="label-text">{{
+              $t("settings.notification.weixin.touser")
+            }}</span>
           </label>
           <input
             v-model="settings.notification.weixin.to_user"
@@ -152,26 +166,28 @@
               class="btn btn-primary w-32"
               @click.prevent="saveNotification"
             >
-              保 存
+              {{ $t("settings.notification.button.submit") }}
             </button>
 
             <a
               class="link"
               @click.prevent="testNotification"
               v-show="settings.notification.enabled"
-              >推送测试通知</a
+              >{{ $t("settings.notification.button.send_test") }}</a
             >
           </div>
         </div>
       </form>
     </fieldset>
 
-    <fieldset class="section">
-      <legend>自动刷新 App</legend>
+    <fieldset class="section bg-base-100">
+      <legend>{{ $t("settings.refresh.title") }}</legend>
       <form>
         <div class="form-item">
           <label class="form-item-label">
-            <span class="label-text">启用</span>
+            <span class="label-text">{{
+              $t("settings.refresh.toggle.label")
+            }}</span>
           </label>
           <input
             type="checkbox"
@@ -182,7 +198,9 @@
 
         <div class="form-item">
           <label class="form-item-label">
-            <span class="label-text">刷新模式</span>
+            <span class="label-text">{{
+              $t("settings.refresh.mode.label")
+            }}</span>
           </label>
 
           <div class="flex gap-x-2">
@@ -193,7 +211,9 @@
                 v-model="settings.task.mode"
                 value="1"
               />
-              <span class="label-text">过期前一天</span>
+              <span class="label-text">{{
+                $t("settings.refresh.mode.day_before_expired")
+              }}</span>
             </label>
             <label class="label cursor-pointer flex gap-x-1">
               <input
@@ -202,14 +222,18 @@
                 v-model="settings.task.mode"
                 value="2"
               />
-              <span class="label-text">每天</span>
+              <span class="label-text">{{
+                $t("settings.refresh.mode.daily")
+              }}</span>
             </label>
           </div>
         </div>
 
         <div class="form-item">
           <label class="form-item-label">
-            <span class="label-text mb-8">运行时间段</span>
+            <span class="label-text mb-8">{{
+              $t("settings.refresh.run_time.label")
+            }}</span>
           </label>
           <div class="flex flex-col grow">
             <input
@@ -219,9 +243,9 @@
               class="input input-bordered"
             />
             <label class="label">
-              <span class="label-text-alt"
-                >linux crontab格式，受刷新模式限制</span
-              >
+              <span class="label-text-alt">{{
+                $t("settings.refresh.run_time.format_tips")
+              }}</span>
             </label>
           </div>
         </div>
@@ -230,7 +254,7 @@
           <label class="form-item-label"></label>
           <div class="flex-1 flex justify-between">
             <button class="btn btn-primary w-32" @click.prevent="saveTask">
-              保 存
+              {{ $t("settings.refresh.button.submit") }}
             </button>
           </div>
         </div>
@@ -276,7 +300,7 @@ export default {
 
       api.saveNotificationSettings(_this.settings).then((res) => {
         if (res.data) {
-          toast.success("保存成功");
+          toast.success(this.$t("settings.toast.save_success"));
         }
       });
     },
@@ -286,7 +310,7 @@ export default {
 
       api.saveTaskSettings(_this.settings).then((res) => {
         if (res.data) {
-          toast.success("保存成功");
+          toast.success(this.$t("settings.toast.save_success"));
         }
       });
     },
@@ -296,7 +320,7 @@ export default {
 
       api.sendTestNotify(_this.settings).then((res) => {
         if (res.data) {
-          toast.success("推送成功");
+          toast.success(this.$t("settings.toast.notify_success"));
         }
       });
     },
