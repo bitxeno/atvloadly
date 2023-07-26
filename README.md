@@ -5,19 +5,21 @@
 [![image size](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/size)](https://github.com/bitxeno/atvloadly/pkgs/container/atvloadly)
 [![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/blob/master/LICENSE) 
 
-> ⚠️ **不支持 tvOS 17.0 以上系统** ⚠️
-
-atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通过使用 [AltServer](https://github.com/NyaMisty/AltServer-Linux) 实现侧载，并会自动刷新 App 以保证其长期可用性。
+English | [中文](./README_cn.md)
 
 
-## 主要功能
+> ⚠️ **Not supported on tvOS 17.0 and above systems.** ⚠️
 
-* docker 运行 (只支持 Linux/OpenWrt 平台)
-* 支持 AppleTV 配对
-* 支持自动刷新 app
-* 支持同时使用多个 Apple ID 帐号
+atvloadly is a web service that supports sideloading app on Apple TV. It uses [AltServer](https://github.com/NyaMisty/AltServer-Linux) as the underlying technology for sideloading and automatically refreshes the app to ensure its long-term availability.
 
-## 截图
+## Features
+
+* Docker running (only supports Linux/OpenWrt platforms)
+* Supports AppleTV pairing
+* Supports automatic app refresh
+* Supports use of multiple Apple ID accounts
+
+## Screenshot
 
 <p align="center">
   <img width="600" src="./doc/preview/1.png">
@@ -26,11 +28,11 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
   <img width="600" src="./doc/preview/2.png">
 </p>
 
-## 安装
+## Installation
 
-> :pensive: **只支持 Linux/OpenWrt 系统，不支持 Mac/Windws 系统**
+> :pensive: **Only supports Linux/OpenWrt systems, does not support Mac/Windows systems.**
 
-1. Linux/OpenWrt 宿主机需要安装 `avahi-deamon` 服务
+1. The Linux/OpenWrt host needs to install `avahi-deamon`.
    
    OpenWrt：
    ```
@@ -44,58 +46,53 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
    sudo systemctl restart avahi-daemon
    ```
 
-2. 请参考下面的命令进行安装，记得修改下 mount 目录
+2. Please refer to the following command for installation, remember to modify the mount directory.
    
    ```
    docker run -d --name=atvloadly --restart=always -p 5533:80 -v /path/to/mount/dir:/data -v /var/run/dbus:/var/run/dbus -v /var/run/avahi-daemon:/var/run/avahi-daemon  ghcr.io/bitxeno/atvloadly:latest
    ```
    
-   镜像名称：`ghcr.io/bitxeno/atvloadly:latest`，需要使用这个带域名的完整名称才能pull下来。
+   Image name: `ghcr.io/bitxeno/atvloadly:latest`, you need to use this full name with the domain in order to pull it down.
    
-   宿主机的 `/var/run/dbus` 和`/var/run/avahi-daemon` 需要共享给 docker 容器使用
+   The `/var/run/dbus` and `/var/run/avahi-daemon` of the host machine need to be shared with the docker container for use.
 
 
 
-## 使用方法
+## Getting Started
 
-### 前期准备 (非常重要:bangbang:)
+### Preparation (very important:bangbang:)
 
-* 专用的 Apple ID 安装帐号，免费或开发者帐号都可以（**为了安全考虑，请不要使用常用帐号安装！**)
-* 登录了安装帐号的 iPhone 手机（用于授权信任 atvloadly，会虚拟为一台 MacBook，**超时不验证授权验证码，会导致帐号被临时冻结！需要重置密码才能恢复**）
+* Dedicated Apple ID installation account, both free or developer accounts are acceptable (**For security reasons, please do not use commonly used accounts for installation!**)
+* Login with the installed account on the iPhone (used to authorize trust in atvloadly, will be virtualized as a MacBook, **failure to verify the authorization verification code within timeout will result in temporary account freeze! Password reset is required for recovery**)
 
+### Operation process
 
-### 操作流程
+1. Open the Apple TV settings menu, select `Remote and Devices -> Remote App and Devices`, enter pairing mode.
+2. Open the web management page, normally it will display the pairable `AppleTV`.
+3. Click on the `AppleTV` device to enter the pairing page and complete the pairing operation.
+4. After successful pairing, return to the home page, where the connected `AppleTV` will be displayed.
+5. Click on the connected `AppleTV` to enter the sideload installation page, select the IPA file that needs to be sideloaded, and click `Install`.
 
-1. 打开 Apple TV 设置菜单，选择 `遥控器与设备 -> 遥控器App与设备`，进入配对模式
-1. 打开 Web 管理页面，正常会显示可配对的 `AppleTV`
-1. 点击 `AppleTV` 设备进入配对页面，并完成配对操作。
-1. 配对成功后返回首页，将显示已连接的 `AppleTV` 
-1. 点击已连接的 `AppleTV` 进入侧载安装页面，选择需要侧载的 IPA 文件并点击`安装`。
+## FAQ
 
-## 常见问题
+1. How many apps can be installed with a free account?
 
-1、免费帐号可以安装多少个应用
+> Each Apple ID can activate up to 3 apps simultaneously. Installing more than 3 will cause previously installed apps to become unavailable.
 
-> 每个 Apple ID 最多可以同时激活 3 个应用，安装超过 3 个后，会导致前面已安装的 App 变为不可用
+2. Installation failure after system upgrade.
 
-2、升级系统后安装失败
+> After upgrading the system, re-pairing is required. Generally, newly released systems are not supported. It is recommended to disable automatic system updates.
 
-> 升级系统后需要重新配对，一般新出的系统都不支持，建议关闭系统自动更新
+3. Can App-specific passwords be used for passwords? Is it more secure this way?
 
-3、密码可以使用App-specific password吗，这样安全些
-
-> AltServer 目前不支持
-
-
-## 推荐开源 App
-
-[>> wiki](https://github.com/bitxeno/atvloadly/wiki/AppleTV-App)
+> AltServer currently does not support it.
 
 
-## 如何开发编译
+## How to build
 
 [>> wiki](https://github.com/bitxeno/atvloadly/wiki/How-to-build)
 
-## 免责声明
+## Disclaimer
 
-本软件仅供学习交流使用，作者不对用户因使用本软件造成的安全风险或损失承担任何法律责任。请在操作过程中保持小心谨慎！
+* This software is only for learning and communication purposes. The author does not assume any legal responsibility for the security risks or losses caused by the use of this software.
+* Before using this software, you should understand and bear corresponding risks, including but not limited to account freezing, which are unrelated to this software.
