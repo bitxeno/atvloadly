@@ -2,7 +2,7 @@
   <div class="lg:flex lg:flex-row lg:gap-x-12">
     <div class="lg:basis-3/12 flex gap-x-16 flex-col gap-y-8 mb-8">
       <div v-show="pairableDevices.length > 0">
-        <h4 class="mb-2">待配对设备</h4>
+        <h4 class="mb-2">{{ $t("home.heading.pairable_devices") }}</h4>
         <div class="flex flex-col w-full border-opacity-50">
           <div class="grid card bg-base-300 rounded-box p-4">
             <a
@@ -29,7 +29,7 @@
       </div>
 
       <div>
-        <h4 class="mb-2">已连接设备</h4>
+        <h4 class="mb-2">{{ $t("home.heading.paired_devices") }}</h4>
         <div class="flex flex-col w-full border-opacity-50">
           <div
             class="grid card bg-base-300 rounded-box p-4"
@@ -60,19 +60,19 @@
             class="grid card bg-base-300 rounded-box p-4 h-36 overflow-hidden"
             v-show="pairedDevices.length == 0"
           >
-            <h4 class="flex justify-center items-center">没有连接设备</h4>
+            <h4 class="flex justify-center items-center">
+              {{ $t("home.sidebar.tips.no_paired_devices") }}
+            </h4>
 
             <div class="stat-title whitespace-normal text-sm content-center">
-              AppleTV 请转到『<span class="font-medium italic"
-                >设置 -> 遥控器与设备 -> 遥控器App与设备</span
-              >』，进入配对模式完成配对
+              {{ $t("home.sidebar.tips.how_pair_device") }}
             </div>
           </div>
         </div>
       </div>
 
       <div>
-        <h4 class="mb-2">服务状态</h4>
+        <h4 class="mb-2">{{ $t("home.heading.service_status") }}</h4>
         <div class="flex flex-col w-full border-opacity-50">
           <div
             class="grid card bg-base-300 rounded-box p-4 h-32 overflow-hidden"
@@ -98,18 +98,17 @@
     </div>
 
     <div class="lg:basis-9/12 flex flex-col gap-y-2">
-      <h4>已安装 Apps</h4>
+      <h4>{{ $t("home.heading.installed_app") }}</h4>
       <div class="overflow-x-auto">
         <table class="table table-auto static">
           <!-- head -->
           <thead>
             <tr>
-              <th>app</th>
-              <th>设备</th>
-              <th>帐号</th>
-              <th>过期时间</th>
-              <th v-show="false">最近刷新时间</th>
-              <th>操作</th>
+              <th>{{ $t("home.table.header.app") }}</th>
+              <th>{{ $t("home.table.header.device") }}</th>
+              <th>{{ $t("home.table.header.account") }}</th>
+              <th>{{ $t("home.table.header.expired_date") }}</th>
+              <th>{{ $t("home.table.header.operate") }}</th>
             </tr>
           </thead>
           <tbody class="bg-base-100">
@@ -145,7 +144,7 @@
                       <a
                         class="link link-hover stat-title font-normal"
                         :href="logUrl(item)"
-                        title="点击查看安装日志"
+                        :title="$t('home.table.tips.view_log')"
                         target="_blank"
                         >{{ formatRefreshDate(item) }}</a
                       >
@@ -158,38 +157,47 @@
               </td>
               <td class="lg:break-all">{{ item.account }}</td>
               <td>
-                <div class="badge badge-ghost w-16">
+                <div class="badge badge-ghost min-w-max">
                   {{ formatExpiredTime(item) }}
                 </div>
               </td>
-              <td v-show="false">
-                {{ formatRefreshDate(item) }}
-              </td>
               <td>
                 <div class="flex gap-x-2">
-                  <a class="link link-primary" @click="refreshApp(item)"
-                    >刷新</a
-                  >
+                  <a class="link link-primary" @click="refreshApp(item)">{{
+                    $t("home.table.button.refresh")
+                  }}</a>
                   <Popper placement="top" arrow="true">
                     <template #content="{ close }">
                       <div class="flex flex-col gap-y-2">
                         <div class="py-2">
-                          确定要删除 {{ item.ipa_name }} 吗？
+                          {{
+                            $t("home.dialog.delete_confirm.title", {
+                              name: item.ipa_name,
+                            })
+                          }}
                         </div>
                         <div class="flex gap-x-2 justify-end items-center">
-                          <a class="link link-primary link-hover" @click="close"
-                            >取消</a
+                          <a
+                            class="link link-primary link-hover"
+                            @click="close"
+                            >{{
+                              $t("home.dialog.delete_confirm.button.cancel")
+                            }}</a
                           >
                           <button
                             class="btn btn-primary btn-xs"
                             @click="deleteApp(item, close)"
                           >
-                            确定
+                            {{
+                              $t("home.dialog.delete_confirm.button.confirm")
+                            }}
                           </button>
                         </div>
                       </div>
                     </template>
-                    <a class="link link-error">删除</a>
+                    <a class="link link-error">{{
+                      $t("home.table.button.delete")
+                    }}</a>
                   </Popper>
                 </div>
               </td>
@@ -197,14 +205,16 @@
           </tbody>
         </table>
 
-        <div class="empty" v-show="list.length == 0">没有数据</div>
+        <div class="empty" v-show="list.length == 0">
+          {{ $t("home.table.tips.no_data") }}
+        </div>
       </div>
 
       <div
         class="stat-title text-sm flex flex-row items-center gap-x-1 whitespace-break-spaces"
       >
         <div class="w-4"><HelpIcon /></div>
-        默认当app过期时间小于1天时，会在凌晨3～6点钟自动进行刷新操作
+        {{ $t("home.table.tips.footer") }}
       </div>
     </div>
   </div>
@@ -266,7 +276,6 @@ export default {
       let _this = this;
 
       api.getDevices().then((res) => {
-        // 为空的话，等待5秒再获取一次
         _this.devices = res.data;
       });
 
@@ -288,14 +297,14 @@ export default {
       let _this = this;
 
       api.getInstallingApp().then((res) => {
-        // res.data返回为空表示已安装执行完成
+        // res.data returns empty, indicating that the installation has been completed.
         if (_this.installingApp && !res.data) {
           _this.fetchAppList();
         }
 
         _this.installingApp = res.data;
         if (_this.installingApp) {
-          // 重复检测直到完成
+          // Repeat the detection until it is completed.
           _this.checkInstallingAppDelay();
         }
       });
@@ -327,7 +336,11 @@ export default {
 
       api.refreshApp(item.ID).then((res) => {
         _this.checkInstallingAppDelay();
-        toast.success(`已启动刷新${item.ipa_name}`);
+        toast.info(
+          this.$t("home.toast.refresh_app_started", {
+            name: item.ipa_name,
+          })
+        );
       });
     },
     startPair(device) {
@@ -341,45 +354,58 @@ export default {
       if (!time) return "-";
 
       let diff = dayjs(time).add(7, "day").diff(dayjs(), "day");
-      if (diff < 0) return "已过期";
+      if (diff < 0)
+        return this.$t("home.table.expired_time_format.expired_tips");
 
-      return `${diff}天后`;
+      return this.$t("home.table.expired_time_format.days", {
+        num: diff,
+      });
     },
     formatStatus(status) {
       if (status == "paired") {
-        return "已连接";
+        return this.$t("home.sidebar.device_status.paired");
       } else if (status == "pairable") {
-        return "待配对";
+        return this.$t("home.sidebar.device_status.pairable");
       } else {
-        return "未连接";
+        return this.$t("home.sidebar.device_status.unpaired");
       }
     },
     formatRefreshDate(item) {
       if (this.installingApp && this.installingApp.ID == item.ID) {
-        return "安装中...";
+        return this.$t("home.table.refresh_date_format.installing_tips");
       }
 
       if (!item.refreshed_date) return "-";
 
       let seconds = dayjs().diff(dayjs(item.refreshed_date), "second");
       if (seconds < 60) {
-        return `${seconds}秒前`;
+        return this.$t("home.table.refresh_date_format.seconds", {
+          num: seconds,
+        });
       }
       let miniutes = parseInt(seconds / 60, 10);
       if (miniutes < 60) {
-        return `${miniutes}分钟前`;
+        return this.$t("home.table.refresh_date_format.miniutes", {
+          num: miniutes,
+        });
       }
       let hours = parseInt(seconds / 3600, 10);
       if (hours < 24) {
-        return `${hours}小时前`;
+        return this.$t("home.table.refresh_date_format.hours", {
+          num: hours,
+        });
       }
       let days = parseInt(seconds / 24 / 3600, 10);
-      return `${days}天前`;
+      return this.$t("home.table.refresh_date_format.days", {
+        num: days,
+      });
     },
     formatRefreshResult(item) {
       if (!item.refreshed_date) return "";
 
-      return item.refreshed_result ? "成功" : "失败";
+      return item.refreshed_result
+        ? this.$t("result.success")
+        : this.$t("result.fail");
     },
     formatDeviceName(item) {
       let _this = this;
@@ -389,7 +415,7 @@ export default {
           return `${dev.ip}`;
         }
       }
-      return "未连接";
+      return this.$t("home.sidebar.device_status.unpaired");
     },
     isInstalling(item) {
       if (!this.installingApp) return false;

@@ -4,13 +4,10 @@
       <div class="w-8">
         <WarningIcon />
       </div>
-      <span class="text-sm"
-        >首次安装时，需要授权信任本设备。请确保身边有已登录了安装帐号的 iPhone
-        手机，并及时输入显示的验证码。如果超时未验证，将导致帐号被临时冻结，需重置密码才能解除冻结状态。</span
-      >
+      <span class="text-sm">{{ $t("install.tips.warning") }}</span>
     </div>
 
-    <div class="border rounded p-6">
+    <div class="border rounded p-6 bg-base-100">
       <div class="lg:flex lg:flex-row">
         <div class="flex flex-col justify-center place-items-center gap-y-4">
           <div class="w-32 rounded">
@@ -28,7 +25,9 @@
           <form id="form" class="flex flex-col gap-y-4">
             <div class="form-control w-full">
               <label class="label">
-                <span class="label-text">选择ipa:</span>
+                <span class="label-text">{{
+                  $t("install.form.choose_ipa.label")
+                }}</span>
               </label>
               <input
                 type="file"
@@ -41,7 +40,9 @@
 
             <div class="form-control w-full">
               <label class="label">
-                <span class="label-text">Apple帐号:</span>
+                <span class="label-text">{{
+                  $t("install.form.account.label")
+                }}</span>
               </label>
               <input
                 type="email"
@@ -51,15 +52,17 @@
                 required
               />
               <label class="label">
-                <span class="label-text-alt stat-title"
-                  >为了帐号安全，请不要使用常用帐号安装</span
-                >
+                <span class="label-text-alt stat-title">{{
+                  $t("install.form.account.alt")
+                }}</span>
               </label>
             </div>
 
             <div class="form-control w-full">
               <label class="label">
-                <span class="label-text">Apple密码:</span>
+                <span class="label-text">{{
+                  $t("install.form.password.label")
+                }}</span>
               </label>
               <input
                 type="password"
@@ -71,14 +74,16 @@
           </form>
 
           <div class="flex flex-row gap-x-4">
-            <button class="btn flex-1" @click="goBack">返 回</button>
+            <button class="btn flex-1" @click="goBack">
+              {{ $t("install.form.button.back") }}
+            </button>
             <button
               class="btn btn-primary flex-1"
               @click="onSubmit"
               :disabled="loading"
             >
-              <span class="loading loading-spinner" v-show="loading"></span>安
-              装
+              <span class="loading loading-spinner" v-show="loading"></span
+              >{{ $t("install.form.button.submit") }}
             </button>
           </div>
         </div>
@@ -89,18 +94,22 @@
         :class="['modal', { 'modal-open': dialogVisible }]"
       >
         <form id="dialog" method="dialog" class="modal-box">
-          <h3 class="font-bold text-lg">请输入 iPhone 上显示的验证码</h3>
+          <h3 class="font-bold text-lg">
+            {{ $t("install.dialog.input_pin.title") }}
+          </h3>
           <p class="py-4">
             <input
               type="number"
               class="input input-bordered input-primary w-full"
-              placeholder="请在 iPhone 上允许设备并输入显示的验证码"
+              :placeholder="$t('install.dialog.input_pin.input.placeholder')"
               v-model="form.authcode"
               required
             />
           </p>
           <div class="modal-action">
-            <button class="btn btn-primary" @click="onSubmit2FA">确 定</button>
+            <button class="btn btn-primary" @click="onSubmit2FA">
+              {{ $t("install.dialog.input_pin.button.submit") }}
+            </button>
           </div>
         </form>
       </dialog>
@@ -181,7 +190,7 @@ export default {
         _this.log.output += data;
         _this.cmd.output = "";
         _this.loading = false;
-        toast.error("安装失败，请查看日志了解详细信息");
+        toast.error(this.$t("install.toast.install_failed"));
         return;
       }
       _this.log.output += "DeveloperDiskImage has mounted.\n";
@@ -260,20 +269,18 @@ export default {
     },
 
     websocketonopen() {
-      console.log("WebSocket连接成功");
+      console.log("WebSocket connect success.");
     },
     websocketonerror(e) {
-      //错误
-      console.log("WebSocket连接发生错误");
+      console.log("WebSocket connect failed.");
     },
     websocketonmessage(e) {
       let _this = this;
-      //数据接收
-      // const redata = JSON.parse(e.data); // 接收数据
+
       _this.cmd.output += e.data;
       _this.cmd.line += e.data;
       if (e.data.indexOf("\n") >= 0) {
-        // 打码密码字符串
+        // hide password string for security
         _this.cmd.output = _this.cmd.output.replace(
           _this.form.password,
           "******"
@@ -285,7 +292,7 @@ export default {
           _this.cmd.line.indexOf("AltServer -u") === -1
         ) {
           _this.log.output += _this.cmd.line;
-          // 文本框跟随滚动到底部
+          // The textbox follows the scroll to the bottom
           _this.$nextTick(() => {
             const textarea = document.querySelector("#log");
             textarea.scrollTop = textarea.scrollHeight;
@@ -295,14 +302,14 @@ export default {
         _this.cmd.line = "";
       }
 
-      // 2FA认证码输入
+      // input 2FA authentication code
       if (_this.cmd.output.indexOf("Enter two factor code") !== -1) {
         _this.cmd.output = "";
         _this.dialogVisible = true;
         return;
       }
 
-      // 覆盖之前同一appleid安装
+      // override innstall with the same Apple ID as before.
       if (
         _this.cmd.output.indexOf(
           "Installing AltStore with Multiple AltServers Not Supported"
@@ -315,24 +322,23 @@ export default {
         }
       }
 
-      // 配对出错
+      // pairing error
       if (
         _this.cmd.output.indexOf("Could not install") !== -1 ||
         _this.cmd.output.indexOf("command not found") !== -1
       ) {
-        // 配对出错，显示出错消息
         _this.cmd.output = "";
         _this.loading = false;
-        toast.error("安装失败，请查看日志了解详细信息");
+        toast.error(this.$t("install.toast.install_failed"));
         return;
       }
 
-      // 安装成功
+      // Installation successful.
       if (_this.cmd.output.indexOf("Installation Succeeded") !== -1) {
         _this.cmd.output = "";
         _this.loading = false;
 
-        // 保存安装记录
+        // Save installation data.
         api
           .saveApp({
             ID: 0,
@@ -348,7 +354,7 @@ export default {
             version: _this.ipa.version,
           })
           .then((res) => {
-            toast.success("安装成功");
+            toast.success(this.$t("install.toast.install_success"));
           });
 
         return;
@@ -357,7 +363,6 @@ export default {
 
     websocketsend(cmd) {
       let _this = this;
-      //数据发送
       _this.cmd.output = "";
       const json = JSON.stringify({ t: 1, d: `${cmd}\n` });
       console.log("--> ", json);
@@ -365,7 +370,6 @@ export default {
     },
 
     websocketclose(e) {
-      //关闭
       console.log(`connection closed (${e.code})`);
     },
   },

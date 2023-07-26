@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "settings": "设置",
+    "language": "中文"
+  },
+  "home": {
+    "heading": {
+      "pairable_devices": "待配对设备",
+      "paired_devices": "已连接设备",
+      "service_status": "服务状态",
+      "installed_app": "已安装 Apps"
+    },
+    "dialog": {
+      "delete_confirm": {
+        "title": "确定要删除 {{name}} 吗?",
+        "button": {
+          "cancel": "取消",
+          "confirm": "确定"
+        }
+      }
+    },
+    "toast": {
+      "refresh_app_started": "已启动刷新 {{name}}",
+      "installing_app": "安装中..."
+    },
+    "sidebar": {
+      "device_status": {
+        "pairable": "待配对",
+        "paired": "已连接",
+        "unpaired": "未连接"
+      },
+      "tips": {
+        "no_paired_devices": "没有连接设备",
+        "how_pair_device": "AppleTV 请转到『设置 -> 遥控器与设备 -> 遥控器App与设备』，进入配对模式完成配对"
+      }
+    },
+    "table": {
+      "header": {
+        "app": "app",
+        "device": "设备",
+        "account": "帐号",
+        "expired_date": "过期时间",
+        "operate": "操作"
+      },
+      "expired_time_format": {
+        "expired_tips": "已过期",
+        "days": "{{num}} 天后"
+      },
+      "refresh_date_format": {
+        "installing_tips": "安装中...",
+        "seconds": "{{num}} 秒前",
+        "miniutes": "{{num}} 分钟前",
+        "hours": "{{num}} 小时前",
+        "days": "{{num}} 天前"
+      },
+      "button": {
+        "refresh": "刷新",
+        "delete": "删除"
+      },
+      "tips": {
+        "view_log": "点击查看安装日志",
+        "no_data": "没有数据",
+        "footer": "默认当app过期时间小于1天时，会在凌晨3～6点钟自动进行刷新操作"
+      }
+    }
+  },
+  "pair": {
+    "toast": {
+      "pin_incorrect": "PIN码不正确",
+      "pair_error": "配对出错，请到控制台查看详细信息",
+      "no_device_found": "找不到设备，请确认 usbmuxd 服务已启动"
+    },
+    "step": {
+      "start": {
+        "title": "开始",
+        "device": "设备",
+        "button": "开始配对"
+      },
+      "pin": {
+        "title": "输入PIN码",
+        "loading": "连接中...",
+        "placeholder": "请输入 AppleTV 上显示的 PIN 码",
+        "button": "确定"
+      },
+      "completed": {
+        "title": "配对完成",
+        "msg": "配对成功",
+        "button": "返回"
+      }
+    }
+  },
+  "install": {
+    "tips": {
+      "warning": "首次安装时，需要授权信任本设备。请确保身边有已登录了安装帐号的 iPhone 手机，并及时输入显示的验证码。如果超时未验证，将导致帐号被临时冻结，需重置密码才能解除冻结状态。"
+    },
+    "dialog": {
+      "input_pin": {
+        "title": "请输入 iPhone 上显示的验证码",
+        "input": {
+          "placeholder": "请在 iPhone 上允许设备并输入显示的验证码"
+        },
+        "button": {
+          "submit": "确 定"
+        }
+      }
+    },
+    "toast": {
+      "install_success": "安装成功",
+      "install_failed": "安装失败，请查看日志了解详细信息"
+    },
+    "form": {
+      "choose_ipa": {
+        "label": "选择ipa:"
+      },
+      "account": {
+        "label": "Apple帐号:",
+        "alt": "为了帐号安全，请不要使用常用帐号安装"
+      },
+      "password": {
+        "label": "Apple密码:"
+      },
+      "button": {
+        "back": "返 回",
+        "submit": "安装"
+      }
+    }
+  },
+  "settings": {
+    "toast": {
+      "save_success": "保存成功",
+      "notify_success": "推送成功"
+    },
+    "notification": {
+      "title": "通知",
+      "toggle": {
+        "label": "启用"
+      },
+      "type": {
+        "label": "通知方式"
+      },
+      "weixin": {
+        "title": "企业微信",
+        "corp_id": "企业ID (CorpId)",
+        "corp_secret": "密钥 (Corpsecret)",
+        "agent_id": "应用ID (AgentId)",
+        "touser": "指定成员 (touser)"
+      },
+      "button": {
+        "submit": "保 存",
+        "send_test": "推送测试通知"
+      }
+    },
+    "refresh": {
+      "title": "自动刷新 App",
+      "toggle": {
+        "label": "启用"
+      },
+      "mode": {
+        "label": "刷新模式",
+        "day_before_expired": "过期前一天",
+        "daily": "每天"
+      },
+      "run_time": {
+        "label": "运行时间段",
+        "format_tips": "linux crontab格式，受刷新模式限制"
+      },
+      "button": {
+        "submit": "保 存"
+      }
+    }
+  }
+}
