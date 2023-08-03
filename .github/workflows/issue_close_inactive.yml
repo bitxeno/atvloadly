@@ -1,21 +1,23 @@
 name: "🚫 Close Inactive"
 
 on:
-  # schedule:
-  #   - cron: "0 0 * * 1"
+  schedule:
+    - cron: "0 0 * * 1"
   workflow_dispatch:
 
 jobs:
   close-inactive:
+    permissions:
+      issues: write
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - name: close-issues
-        uses: actions-cool/issues-helper@v3
+        uses: actions/stale@v7
         with:
-          actions: "close-issues"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          inactive-day: 30
-          exclude-labels: "enhancement,bug"
-          close-reason: "not_planned"
-          body: |
-            This issue was closed due to inactive more than 30 days. You can reopen it if you think it should continue.
+          stale-issue-message: "This issue was closed due to inactive more than 30 days. You can reopen it if you think it should continue."
+          exempt-issue-labels: "FAQ,question,bug,enhancement"
+          days-before-stale: 30
+          days-before-close: 0
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
