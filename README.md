@@ -1,11 +1,22 @@
-# atvloadly
+<p align="center">
+  <img width="600" src="./doc/preview/logo.svg">
+</p>
+
+
+<p align="center">
 
 [![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt-989898)](https://github.com/bitxeno/atvloadly/releases)
 [![release](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/latest_tag?label=docker%20latest)](https://github.com/bitxeno/atvloadly/pkgs/container/atvloadly)
 [![image size](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/size)](https://github.com/bitxeno/atvloadly/pkgs/container/atvloadly)
-[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/blob/master/LICENSE) 
+[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/blob/master/LICENSE)
+
+</p>
+
+<p align="center">
 
 English | [中文](./README_cn.md)
+
+</p>
 
 
 > ⚠️ **Not supported on tvOS 17.0 and above systems.** ⚠️
