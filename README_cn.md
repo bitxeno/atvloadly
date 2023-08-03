@@ -1,11 +1,24 @@
-# atvloadly
+<p align="center">
+  <img width="500" src="./doc/preview/logo.svg">
+</p>
+
+
+<div align="center">
 
 [![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt-989898)](https://github.com/bitxeno/atvloadly/releases)
 [![release](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/latest_tag?label=docker%20latest)](https://github.com/bitxeno/atvloadly/pkgs/container/atvloadly)
 [![image size](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/size)](https://github.com/bitxeno/atvloadly/pkgs/container/atvloadly)
-[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/blob/master/LICENSE) 
+[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/blob/master/LICENSE)
+[![Telegram](https://img.shields.io/badge/telegram-2CA5E0?logo=telegram&logoColor=white)](https://t.me/atvloadly)
+
+
+</div>
+
+<div align="center">
 
 [English](./README.md) | 中文
+
+</div>
 
 > ⚠️ **不支持 tvOS 17.0 以上系统** ⚠️
 
@@ -18,14 +31,15 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 * 支持 AppleTV 配对
 * 支持自动刷新 app
 * 支持同时使用多个 Apple ID 帐号
+* i18n 多语言支持
 
 ## 截图
 
 <p align="center">
-  <img width="600" src="./doc/preview/1.png">
+  <img width="600" src="./doc/preview/home.png">
 </p>
 <p align="center">
-  <img width="600" src="./doc/preview/2.png">
+  <img width="600" src="./doc/preview/install.png">
 </p>
 
 ## 安装
@@ -97,6 +111,13 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 ## 如何开发编译
 
 [>> wiki](https://github.com/bitxeno/atvloadly/wiki/How-to-build)
+
+## 赞助
+
+如果觉得项目对您有帮助，欢迎赞助以支持我们的工作 ❤️
+
+<img width="150" src="./doc/preview/weixin_donate.png" alt="微信赞助码">
+
 
 ## 免责声明
 

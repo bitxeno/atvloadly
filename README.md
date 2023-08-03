@@ -9,6 +9,7 @@
 [![release](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/latest_tag?label=docker%20latest)](https://github.com/bitxeno/atvloadly/pkgs/container/atvloadly)
 [![image size](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/size)](https://github.com/bitxeno/atvloadly/pkgs/container/atvloadly)
 [![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/blob/master/LICENSE)
+[![Telegram](https://img.shields.io/badge/telegram-2CA5E0?logo=telegram&logoColor=white)](https://t.me/atvloadly)
 
 </div>
 
@@ -29,14 +30,15 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [A
 * Supports AppleTV pairing
 * Supports automatic app refresh
 * Supports use of multiple Apple ID accounts
+* I18n support
 
-## Screenshot
+## Screenshots
 
 <p align="center">
-  <img width="600" src="./doc/preview/1.png">
+  <img width="600" src="./doc/preview/home_en.png">
 </p>
 <p align="center">
-  <img width="600" src="./doc/preview/2.png">
+  <img width="600" src="./doc/preview/install_en.png">
 </p>
 
 ## Installation
@@ -102,6 +104,14 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [A
 ## How to build
 
 [>> wiki](https://github.com/bitxeno/atvloadly/wiki/How-to-build)
+
+## Donation
+
+**atvloadly** is a free open source software that benefits from the open source community, if you appreciate my current work, you can buy me a cup of coffee ☕️.
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/H2H8NU37J)
+
+Thanks for all the love and support ❤️
 
 ## Disclaimer
 
