@@ -265,7 +265,7 @@ func (t *Task) writeLog(v model.InstalledApp, data []byte) {
 		return
 	}
 
-	path := filepath.Join(saveDir, fmt.Sprintf("task_%d_%s.log", v.ID, v.BundleIdentifier))
+	path := filepath.Join(saveDir, fmt.Sprintf("task_%d.log", v.ID))
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		log.Error("write task log failed :" + path)
 		return
