@@ -149,12 +149,22 @@ func downloadDeveloperDiskImageByVersion(url string, version string) error {
 	_ = os.RemoveAll(tmpUnzipPath)
 
 	// download current version DeveloperDiskImage
-	resp, err := http.NewClient().R().SetOutput(tmpPath).Get(url)
-	if err != nil {
-		return err
+	hasDownloaded := false
+	if config.App.DeveloperDiskImage.CNProxy != "" {
+		// download by proxy
+		cnProxyUrl := strings.TrimSuffix(config.App.DeveloperDiskImage.CNProxy, "/") + "/" + url
+		if resp, err := http.NewClient().R().SetOutput(tmpPath).Get(cnProxyUrl); err == nil && resp.IsSuccess() {
+			hasDownloaded = true
+		}
 	}
-	if !resp.IsSuccess() {
-		return fmt.Errorf("Developer disk image download failed.  url: %s status: %d", url, resp.StatusCode())
+	if !hasDownloaded {
+		resp, err := http.NewClient().R().SetOutput(tmpPath).Get(url)
+		if err != nil {
+			return err
+		}
+		if !resp.IsSuccess() {
+			return fmt.Errorf("developer disk image download failed.  url: %s status: %d", url, resp.StatusCode())
+		}
 	}
 
 	// unzip
