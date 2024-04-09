@@ -4,6 +4,7 @@ services:
     container_name: atvloadly
     hostname: atvloadly
     image: ghcr.io/bitxeno/atvloadly:latest
+    privileged: true
     volumes:
       - /etc/atvloadly:/data
       - /var/run/dbus:/var/run/dbus
