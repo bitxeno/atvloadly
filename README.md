@@ -62,7 +62,7 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [A
 2. Please refer to the following command for installation, remember to modify the mount directory.
    
    ```
-   docker run --privileged	-d --name=atvloadly --restart=always -p 5533:80 -v /path/to/mount/dir:/data -v /var/run/dbus:/var/run/dbus -v /var/run/avahi-daemon:/var/run/avahi-daemon  ghcr.io/bitxeno/atvloadly:latest
+   docker run --privileged -d --name=atvloadly --restart=always -p 5533:80 -v /path/to/mount/dir:/data -v /var/run/dbus:/var/run/dbus -v /var/run/avahi-daemon:/var/run/avahi-daemon  ghcr.io/bitxeno/atvloadly:latest
    ```
    
    Image name: `ghcr.io/bitxeno/atvloadly:latest`, you need to use this full name with the domain in order to pull it down.
