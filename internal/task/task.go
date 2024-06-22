@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -21,10 +20,6 @@ import (
 )
 
 var instance = new()
-
-var (
-	regValidName = regexp.MustCompile("(?i)[^0-9a-zA-Z]+")
-)
 
 type Task struct {
 	c             *cron.Cron
