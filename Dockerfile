@@ -27,28 +27,19 @@ RUN case ${TARGETARCH} in \
     && dpkg -i ./libimobiledevice_1.3.1-1_${PKG_ARCH}.deb \
     && dpkg -i ./usbmuxd2_1.0.0-1_${PKG_ARCH}.deb
 
-# 安装anisette-server，用于模拟本机为MacBook
+# 安装Sideloader
 RUN case ${TARGETARCH} in \
          "amd64")  PKG_ARCH=x86_64  ;; \
          "arm64")  PKG_ARCH=aarch64  ;; \
     esac \
     && cd /tmp \
-    && wget https://github.com/Dadoum/Provision/releases/download/2.1.0/anisette-server-${PKG_ARCH} \
-    && mv anisette-server-${PKG_ARCH} /usr/bin/anisette-server \
-    && chmod +x /usr/bin/anisette-server
-
-# 安装AltStore
-RUN case ${TARGETARCH} in \
-         "amd64")  PKG_ARCH=x86_64  ;; \
-         "arm64")  PKG_ARCH=aarch64  ;; \
-    esac \
-    && cd /tmp \
-    && wget https://github.com/NyaMisty/AltServer-Linux/releases/download/v0.0.5/AltServer-${PKG_ARCH} \
-    && mv AltServer-${PKG_ARCH} /usr/bin/AltServer \
-    && chmod +x /usr/bin/AltServer
+    && wget https://github.com/bitxeno/Sideloader/releases/download/1.0-alpha/sideloader-cli-${PKG_ARCH}-linux-gnu.tar.gz \
+    && tar zxf sideloader-cli-${PKG_ARCH}-linux-gnu.tar.gz \
+    && mv sideloader-cli-${PKG_ARCH}-linux-gnu /usr/bin/sideloader \
+    && chmod +x /usr/bin/sideloader
 
 # 安装tzdata支持更新时区
-RUN DEBIAN_FRONTEND=noninteractive TZ=Asia/Shanghai apt-get -y install tzdata
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y install tzdata
 
 # 清空apt缓存和临时数据，减小镜像大小
 RUN apt-get clean
@@ -66,21 +57,18 @@ RUN rm -rf /var/lib/lockdown && mkdir -p /data/lockdown && ln -s /data/lockdown 
 
 
 # 生成启动脚本
-COPY ./doc/scripts/anisette-server /etc/init.d/anisette-server
-RUN chmod +x /etc/init.d/anisette-server
 COPY ./doc/scripts/usbmuxd /etc/init.d/usbmuxd
 RUN chmod +x /etc/init.d/usbmuxd
 RUN printf '#!/bin/sh \n\n\
 
 mkdir -p /data/lockdown \n\
-mkdir -p /data/AltServer \n\
+mkdir -p /data/Sideloader \n\
 
 if [ ! -f "/data/config.yaml" ]; then  \n\
     cp /doc/config.yaml /data/config.yaml \n\
 fi  \n\
 
 /etc/init.d/usbmuxd start \n\
-/etc/init.d/anisette-server start  \n\
 
 /usr/bin/%s server -p ${SERVICE_PORT:-80} -c /data/config.yaml  \n\
 \n\

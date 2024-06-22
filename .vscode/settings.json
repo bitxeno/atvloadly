@@ -8,7 +8,7 @@
         "json"
     ],
     "i18n-ally.localesPaths": [
-        "view/src/locales"
+        "web/static/src/locales"
     ],
     "i18n-ally.keystyle": "nested"
 }

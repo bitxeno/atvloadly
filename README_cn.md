@@ -5,10 +5,10 @@
 
 <div align="center">
 
-[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt-989898)](https://github.com/bitxeno/atvloadly/releases)
-[![release](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/latest_tag?label=docker%20latest)](https://github.com/bitxeno/atvloadly/pkgs/container/atvloadly)
-[![image size](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/size)](https://github.com/bitxeno/atvloadly/pkgs/container/atvloadly)
-[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/blob/master/LICENSE)
+[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt-989898)](https://github.com/bitxeno/atvloadly/internal/releases)
+[![release](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/latest_tag?label=docker%20latest)](https://github.com/bitxeno/atvloadly/internal/pkgs/container/atvloadly)
+[![image size](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/size)](https://github.com/bitxeno/atvloadly/internal/pkgs/container/atvloadly)
+[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/internal/blob/master/LICENSE)
 [![Telegram](https://img.shields.io/badge/telegram-2CA5E0?logo=telegram&logoColor=white)](https://t.me/atvloadly)
 
 
@@ -22,7 +22,7 @@
 
 > ⚠️ **不支持 tvOS 17.0 以上系统** ⚠️
 
-atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通过使用 [AltServer](https://github.com/NyaMisty/AltServer-Linux) 实现侧载，并会自动刷新 App 以保证其长期可用性。
+atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通过使用 [Sideloader](https://github.com/Dadoum/Sideloader) 实现侧载，并会自动刷新 App 以保证其长期可用性。
 
 
 ## 主要功能
@@ -100,17 +100,17 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 
 3、密码可以使用App-specific password吗，这样安全些
 
-> AltServer 目前不支持
+> Sideloader 目前不支持
 
 
 ## 推荐开源 App
 
-[>> wiki](https://github.com/bitxeno/atvloadly/wiki/AppleTV-App)
+[>> wiki](https://github.com/bitxeno/atvloadly/internal/wiki/AppleTV-App)
 
 
 ## 如何开发编译
 
-[>> wiki](https://github.com/bitxeno/atvloadly/wiki/How-to-build)
+[>> wiki](https://github.com/bitxeno/atvloadly/internal/wiki/How-to-build)
 
 ## 赞助
 

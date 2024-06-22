@@ -7,7 +7,7 @@ tmp_dir = "tmp"
 
 [build]
 # Just plain old shell command. You could use `make` as well.
-cmd = "go build -tags dev -o ./tmp/main ."
+cmd = "go build -o ./tmp/main ."
 # Binary file yields from `cmd`.
 bin = "tmp/main"
 # Customize binary.
@@ -15,7 +15,7 @@ full_bin = "APP_ENV=dev APP_USER=air ./tmp/main server -vv"
 # Watch these filename extensions.
 include_ext = ["go", "tpl", "tmpl", "html", "vue", "js", "css", "woff", "ttf"]
 # Ignore these filename extensions or directories.
-exclude_dir = ["tmp", "libs", "vendor", "view"]
+exclude_dir = ["tmp", "libs", "vendor", "view", "web/static"]
 # Watch these directories if you specified.
 include_dir = []
 # Exclude files.

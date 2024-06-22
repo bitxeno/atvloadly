@@ -5,10 +5,10 @@
 
 <div align="center">
 
-[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt-989898)](https://github.com/bitxeno/atvloadly/releases)
-[![release](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/latest_tag?label=docker%20latest)](https://github.com/bitxeno/atvloadly/pkgs/container/atvloadly)
-[![image size](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/size)](https://github.com/bitxeno/atvloadly/pkgs/container/atvloadly)
-[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/blob/master/LICENSE)
+[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt-989898)](https://github.com/bitxeno/atvloadly/internal/releases)
+[![release](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/latest_tag?label=docker%20latest)](https://github.com/bitxeno/atvloadly/internal/pkgs/container/atvloadly)
+[![image size](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/size)](https://github.com/bitxeno/atvloadly/internal/pkgs/container/atvloadly)
+[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/internal/blob/master/LICENSE)
 [![Telegram](https://img.shields.io/badge/telegram-2CA5E0?logo=telegram&logoColor=white)](https://t.me/atvloadly)
 
 </div>
@@ -22,7 +22,7 @@ English | [中文](./README_cn.md)
 
 > ⚠️ **Not supported on tvOS 17.0 and above systems.** ⚠️
 
-atvloadly is a web service that supports sideloading app on Apple TV. It uses [AltServer](https://github.com/NyaMisty/AltServer-Linux) as the underlying technology for sideloading and automatically refreshes the app to ensure its long-term availability.
+atvloadly is a web service that supports sideloading app on Apple TV. It uses [Sideloader](https://github.com/Dadoum/Sideloader) as the underlying technology for sideloading and automatically refreshes the app to ensure its long-term availability.
 
 ## Features
 
@@ -98,12 +98,16 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [A
 
 3. Can App-specific passwords be used for passwords? Is it more secure this way?
 
-> AltServer currently does not support it.
+> Sideloader currently does not support it.
+
+4. 2 Step Verification
+> When your Apple account has 2 factor verification enabled, you'll automatically be asked to verify your identity. If you have a trusted device configured for your account, then a code will appear on the device. If you don't have any devices configured, but have trusted a phone number, then a code will be sent to your phone. 
+> https://github.com/fastlane/fastlane/tree/master/spaceship#2-step-verification
 
 
 ## How to build
 
-[>> wiki](https://github.com/bitxeno/atvloadly/wiki/How-to-build)
+[>> wiki](https://github.com/bitxeno/atvloadly/internal/wiki/How-to-build)
 
 ## Donation
 

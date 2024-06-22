@@ -17,9 +17,9 @@
 vendor/
 tmp/
 dist/
-build/
+/build
 node_modules/
-go-docker-skeleton
+atvloadly
 main
 AltServerData/
 atvloadly

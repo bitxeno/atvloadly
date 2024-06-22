@@ -5,10 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/bitxeno/atvloadly/internal/cfg"
 	"github.com/bitxeno/atvloadly/internal/log"
-	"github.com/bitxeno/atvloadly/internal/mode"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -18,18 +16,20 @@ var instance *sqliteDb
 type sqliteDb struct {
 	db   *gorm.DB
 	path string
+	conf Config
 }
 
-func New() *sqliteDb {
-	dbDir := cfg.Server.WorkDir
+func new(conf Config) *sqliteDb {
+	dbDir := conf.Path
 	if _, err := os.Stat(dbDir); err != nil {
 		if err := os.MkdirAll(dbDir, os.ModePerm); err != nil {
-			panic("failed to create database directory")
+			log.Panicf("failed to create database directory. path: %s", dbDir)
 		}
 	}
 
 	return &sqliteDb{
-		path: filepath.Join(dbDir, "app.db"),
+		path: filepath.Join(dbDir, conf.FileName),
+		conf: conf,
 	}
 }
 
@@ -44,11 +44,11 @@ func (s *sqliteDb) Open() *sqliteDb {
 	}
 
 	conf := &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)}
-	if mode.Get() == mode.DevelopmentMode {
+	if s.conf.Debug {
 		conf.Logger = logger.Default.LogMode(logger.Info)
 	}
 
-	fmt.Printf("Load db path: %s\n", s.path)
+	fmt.Printf("Load database from path: %s\n", s.path)
 	db, err := gorm.Open(sqlite.Open(s.path), conf)
 	if err != nil {
 		panic("failed to open database")
@@ -79,8 +79,8 @@ func Store() *gorm.DB {
 	return instance.db
 }
 
-func Open() *sqliteDb {
-	instance = New().Open()
+func Open(conf Config) *sqliteDb {
+	instance = new(conf).Open()
 
 	return instance
 }
