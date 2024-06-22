@@ -30,7 +30,7 @@ type Configuration struct {
 
 	Server struct {
 		ListenAddr string `koanf:"listen_addr" default:"0.0.0.0"`
-		Port       int    `koanf:"port" default:"9000"`
+		Port       int    `koanf:"port" default:"9400"`
 		DataDir    string `koanf:"data_dir"`
 	} `koanf:"app" json:"app"`
 

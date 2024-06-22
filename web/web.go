@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/log"
@@ -10,7 +11,9 @@ import (
 )
 
 func Run(addr string, port int) error {
-	server := fiber.New()
+	server := fiber.New(fiber.Config{
+		BodyLimit: math.MaxInt,
+	})
 	route(server)
 
 	// set fiber web server access log

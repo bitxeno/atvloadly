@@ -17,7 +17,7 @@ RUN case ${TARGETARCH} in \
          "arm64")  PKG_ARCH=aarch64  ;; \
     esac \
     && cd /tmp \
-    && wget https://github.com/bitxeno/usbmuxd2/releases/download/v0.0.2/usbmuxd2-ubuntu-${PKG_ARCH}.tar.gz \
+    && wget https://github.com/bitxeno/usbmuxd2/releases/download/v0.0.3/usbmuxd2-ubuntu-${PKG_ARCH}.tar.gz \
     && tar zxf usbmuxd2-ubuntu-${PKG_ARCH}.tar.gz \
     && dpkg -i ./libusb_1.0.26-1_${PKG_ARCH}.deb \
     && dpkg -i ./libgeneral_1.0.0-1_${PKG_ARCH}.deb \

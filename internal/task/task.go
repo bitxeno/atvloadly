@@ -14,7 +14,6 @@ import (
 
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/log"
-	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/notify"
 	"github.com/bitxeno/atvloadly/internal/service"
@@ -175,18 +174,18 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 	}
 
 	// 检查developer disk image是否已mounted
-	imageInfo, err := manager.GetDeviceMountImageInfo(v.UDID)
-	if err != nil {
-		log.Err(err).Msg("Check DeveloperDiskImage mounted error: ")
-		return err
-	}
+	// imageInfo, err := manager.GetDeviceMountImageInfo(v.UDID)
+	// if err != nil {
+	// 	log.Err(err).Msg("Check DeveloperDiskImage mounted error: ")
+	// 	return err
+	// }
 
-	if !imageInfo.ImageMounted {
-		log.Error("DeveloperDiskImage not mounted.")
-		return err
-	}
+	// if !imageInfo.ImageMounted {
+	// 	log.Error("DeveloperDiskImage not mounted.")
+	// 	return err
+	// }
 
-	cmd := exec.Command("sideloader", "install", "--quiet", "--udid", v.UDID, "-a", v.Account, "-p", v.Password, v.IpaPath)
+	cmd := exec.Command("sideloader", "install", "--quiet", "--nocolor", "--udid", v.UDID, "-a", v.Account, "-p", v.Password, v.IpaPath)
 	cmd.Dir = app.Config.Server.DataDir
 	cmd.Env = []string{"SIDELOADER_CONFIG_DIR=" + app.SideloaderDataDir()}
 	stdin, err := cmd.StdinPipe()
@@ -199,21 +198,21 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 		log.Err(err).Msg("Error obtaining stdout: ")
 		return err
 	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		log.Err(err).Msg("Error obtaining stdout: ")
+		return err
+	}
 
 	var output strings.Builder
 	reader := bufio.NewReader(stdout)
+	readerErr := bufio.NewReader(stderr)
 	go func(reader io.Reader) {
 		defer stdin.Close()
 		scanner := bufio.NewScanner(reader)
 
 		for scanner.Scan() {
 			lineText := scanner.Text()
-
-			// 忽略 Signing 消息，日志太多
-			if strings.Contains(lineText, "Signing Progress") {
-				continue
-			}
-
 			_, _ = output.WriteString(lineText)
 			_, _ = output.WriteString("\n")
 
@@ -223,13 +222,32 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 			}
 		}
 	}(reader)
+	go func(reader io.Reader) {
+		defer stdin.Close()
+		scanner := bufio.NewScanner(reader)
+
+		for scanner.Scan() {
+			lineText := scanner.Text()
+			_, _ = output.WriteString(lineText)
+			_, _ = output.WriteString("\n")
+
+			// 处理中途需要输入才能继续的，如 Installing AltStore with Multiple AltServers Not Supported 消息
+			if strings.Contains(lineText, "Press any key to continue") {
+				_, _ = stdin.Write([]byte("\n"))
+			}
+		}
+	}(readerErr)
 	if err := cmd.Start(); nil != err {
+		data := []byte(output.String())
+		t.writeLog(v, data)
 		log.Err(err).Msg("执行安装脚本出错")
 		return err
 	}
 
 	err = cmd.Wait()
 	if err != nil {
+		data := []byte(output.String())
+		t.writeLog(v, data)
 		log.Err(err).Msg("执行安装脚本出错")
 		return err
 	}

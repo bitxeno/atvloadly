@@ -183,18 +183,7 @@ export default {
       _this.log.output = "";
       _this.log.show = true;
 
-      // 挂载DeveloperDiskImage
-      _this.log.output += "Prepare to mount DeveloperDiskImage...\n";
-      let data = await api.mountDeviceImageAsync(_this.id);
-      if (data != "success") {
-        _this.log.output += data;
-        _this.cmd.output = "";
-        _this.loading = false;
-        toast.error(this.$t("install.toast.install_failed"));
-        return;
-      }
-      _this.log.output += "DeveloperDiskImage has mounted.\n";
-
+  
       let formData = new FormData();
       for (let i = 0; i < _this.files.length; i++) {
         let file = _this.files[i];
@@ -207,7 +196,7 @@ export default {
           let ipa = res.data[0];
           _this.ipa = ipa;
           _this.websocketsend(
-            `sideloader --udid ${_this.device.udid} -a '${_this.form.account}' -p '${_this.form.password}' '${ipa.path}'`
+            `sideloader install --nocolor --udid ${_this.device.udid} -a '${_this.form.account}' -p '${_this.form.password}' '${ipa.path}'`
           );
         })
         .catch((error) => {
@@ -281,16 +270,17 @@ export default {
         );
         _this.cmd.line = _this.cmd.line.replace(_this.form.password, "******");
 
-        // if (
-        //   _this.cmd.line.indexOf("slideloader") === -1
-        // ) {
+        // ignore slideloader command output
+        if (
+          _this.cmd.line.indexOf("sideloader") === -1
+        ) {
           _this.log.output += _this.cmd.line;
           // The textbox follows the scroll to the bottom
           _this.$nextTick(() => {
             const textarea = document.querySelector("#log");
             textarea.scrollTop = textarea.scrollHeight;
           });
-        // }
+        }
 
         _this.cmd.line = "";
       }

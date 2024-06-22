@@ -1,14 +1,35 @@
-name: "🚀 Release"
+name: "🚀 Release Nightly"
 
 # on events
 on:
-  push:
-    tags: ["v*"]
+  # schedule:
+  #   - cron: '0 0 * * *' # runs daily at 00:00
+  workflow_dispatch:
+  # push:
+  #   branches: [main, master, release/v*]
 
 # jobs
 jobs:
+  check:
+    name: Check has new commits today
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    outputs:
+      new_commit_count: ${{steps.commit_check.outputs.new_commit_count}}
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Check for new commits
+        id: commit_check
+        run: echo "new_commit_count=$(git log --oneline --since '24 hours ago' | wc -l)" >> $GITHUB_OUTPUT
+
   build:
     name: Generate cross-platform builds
+    if: ${{needs.check.outputs.new_commit_count > 0}}
+    needs: [check]
     permissions:
       contents: write
     strategy:
@@ -81,46 +102,6 @@ jobs:
           name: ${{steps.vars.outputs.APP_NAME}}
           path: build
           retention-days: 1
-
-      # step 6: Generate Changelog
-      - name: Generate Changelog
-        id: changelog
-        uses: bitxeno/changelogithub-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
-          # output-file: ./docs/CHANGELOG.md
-          types: |
-            feat
-            fix
-            perf
-            refactor
-            chore
-            docs
-          #   build
-          #   test
-          #   style
-          #   ci
-      # - name: Git commit changelog
-      #   uses: EndBug/add-and-commit@v9
-      #   with:
-      #     default_author: github_actions
-      #     add: "docs/"
-      #     message: "docs: release notes for ${{ github.ref_name }}"
-      #     push: "origin HEAD:${{ steps.vars.outputs.BRANCH }}"
-
-      # step 7: Upload binary to GitHub Release
-      - name: Compress build files
-        run: cd ./build && for i in *; do tar -czf $i.tar.gz $i; done && cd ..
-      - name: Upload binary to GitHub Release
-        uses: softprops/action-gh-release@v2
-        if: "startsWith(github.ref, 'refs/tags/')"
-        with:
-          files: |
-            ./build/*.tar.gz
-          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
-          body: ${{ steps.changelog.outputs.changelog }}
-          fail_on_unmatched_files: true
 
   dockerhub:
     name: Push to DockerHub
@@ -209,16 +190,3 @@ jobs:
             BUILDDATE=${{needs.build.outputs.BUILDDATE}}
             COMMIT=${{needs.build.outputs.COMMIT}}
 
-  clean:
-    name: Delete temp artifacts
-    # ignore dockerhub job skipped
-    if: always() && (needs.dockerhub.result == 'success' || needs.dockerhub.result == 'skipped') && (needs.ghcr.result == 'success')
-    needs: [build, dockerhub, ghcr]
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-    steps:
-      - uses: geekyeggo/delete-artifact@v5
-        with:
-          name: ${{needs.build.outputs.APP_NAME}}
-          failOnError: false

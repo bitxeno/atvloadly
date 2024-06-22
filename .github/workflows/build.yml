@@ -11,22 +11,23 @@ jobs:
   build:
     strategy:
       matrix:
-        go_version: [1.18.x]
+        go_version: [1.21.x]
 
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go_version }}
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v4
         with:
-          node-version: "16"
-      - uses: actions/checkout@v3
+          node-version: "20"
+      - uses: actions/checkout@v4
       - name: build frontend
-        run: cd ./view && npm install && npm run build
-      - uses: golangci/golangci-lint-action@v3
+        run: cd ./web/static && npm install && npm run build
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.53.2
-          args: --out-format=colored-line-number --timeout=5m
+          version: v1.58
+          args: --timeout=5m
       - run: go mod download
-      # - run: go test -coverprofile=coverage.txt -covermode=atomic ./...
+      - run: go test -coverprofile=coverage.txt -covermode=atomic ./...
