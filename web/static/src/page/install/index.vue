@@ -202,6 +202,9 @@ export default {
         .catch((error) => {
           console.log(error);
           _this.log.output += error;
+          _this.loading = false;
+          toast.error(this.$t("install.toast.install_failed"));
+          return;
         });
     },
     reset() {
@@ -294,11 +297,7 @@ export default {
 
 
       // pairing error
-      if (
-        _this.cmd.output.indexOf("Could not install") !== -1 ||
-        _this.cmd.output.indexOf("Error:") !== -1 ||
-        _this.cmd.output.indexOf("command not found") !== -1
-      ) {
+      if (_this.cmd.output.indexOf("ERROR") !== -1) {
         _this.cmd.output = "";
         _this.loading = false;
         toast.error(this.$t("install.toast.install_failed"));
