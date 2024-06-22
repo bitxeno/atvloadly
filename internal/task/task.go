@@ -180,6 +180,7 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 	// 	return err
 	// }
 
+	// sideloader 会处理特殊字符"$"，对于带有这特殊字符的，需要加单引号包括
 	cmd := exec.Command("sideloader", "install", "--quiet", "--nocolor", "--udid", v.UDID, "-a", v.Account, "-p", v.Password, v.IpaPath)
 	cmd.Dir = app.Config.Server.DataDir
 	cmd.Env = []string{"SIDELOADER_CONFIG_DIR=" + app.SideloaderDataDir()}

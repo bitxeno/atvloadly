@@ -65,6 +65,8 @@ func route(fi *fiber.App) {
 		id := utils.MustParseInt(c.Params("id"))
 
 		path := filepath.Join(app.Config.Server.DataDir, "log", fmt.Sprintf("task_%d.log", id))
+		c.Set("Cache-Control", "no-cache, no-store, must-revalidate;")
+		c.Set("pragma", "no-cache")
 		return c.Status(http.StatusOK).SendFile(path, false)
 
 	})
