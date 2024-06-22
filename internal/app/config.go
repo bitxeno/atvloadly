@@ -19,7 +19,7 @@ type Configuration struct {
 			ImageSource string `koanf:"image_source" json:"image_source" default:"https://github.com/haikieu/xcode-developer-disk-image-all-platforms/raw/master/DiskImages/AppleTVOS.platform/DeviceSupport/{0}.zip"`
 			CNProxy     string `koanf:"cn_proxy" json:"cn_proxy" default:"https://mirror.ghproxy.com"`
 		} `koanf:"developer_disk_image" json:"developer_disk_image"`
-	}
+	} `koanf:"app" json:"app"`
 
 	Log struct {
 		Level      string `koanf:"level" default:"info"`
@@ -30,9 +30,9 @@ type Configuration struct {
 
 	Server struct {
 		ListenAddr string `koanf:"listen_addr" default:"0.0.0.0"`
-		Port       int    `koanf:"port" default:"9400"`
+		Port       int    `koanf:"port" default:"9000"`
 		DataDir    string `koanf:"work_dir"`
-	} `koanf:"app" json:"app"`
+	} `koanf:"server" json:"server"`
 
 	Db db.Config `koanf:"db" json:"db"`
 }
