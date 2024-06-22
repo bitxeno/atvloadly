@@ -201,6 +201,7 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 	}
 
 	var output strings.Builder
+	var outputErr strings.Builder
 	reader := bufio.NewReader(stdout)
 	readerErr := bufio.NewReader(stderr)
 	go func(reader io.Reader) {
@@ -227,6 +228,9 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 			_, _ = output.WriteString(lineText)
 			_, _ = output.WriteString("\n")
 
+			_, _ = outputErr.WriteString(lineText)
+			_, _ = outputErr.WriteString("\n")
+
 			// 处理中途需要输入才能继续的，如 Installing AltStore with Multiple AltServers Not Supported 消息
 			if strings.Contains(lineText, "Press any key to continue") {
 				_, _ = stdin.Write([]byte("\n"))
@@ -237,7 +241,7 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 		data := []byte(output.String())
 		t.writeLog(v, data)
 		log.Err(err).Msg("执行安装脚本出错")
-		return err
+		return fmt.Errorf(outputErr.String(), err)
 	}
 
 	err = cmd.Wait()
@@ -245,7 +249,7 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 		data := []byte(output.String())
 		t.writeLog(v, data)
 		log.Err(err).Msg("执行安装脚本出错")
-		return err
+		return fmt.Errorf(outputErr.String(), err)
 	}
 
 	data := []byte(output.String())
@@ -254,12 +258,8 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 		log.Info("执行安装脚本成功")
 		return nil
 	} else {
-		if len(data) > 200 {
-			data = data[len(data)-200:]
-		}
-
 		log.Info("执行安装脚本失败")
-		return fmt.Errorf(string(data))
+		return fmt.Errorf(outputErr.String())
 	}
 }
 

@@ -55,7 +55,7 @@ export default {
     return request({
       url: "/api/upload",
       method: "post",
-      timeout: 1200000,
+      timeout: 300000,
       headers: {
         "Content-Type": "multipart/form-data",
       },
