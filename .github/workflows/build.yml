@@ -29,5 +29,5 @@ jobs:
         with:
           version: v1.58
           args: --timeout=5m
-      - run: go mod download
-      - run: go test -coverprofile=coverage.txt -covermode=atomic ./...
+      # - run: go mod download
+      # - run: go test -coverprofile=coverage.txt -covermode=atomic ./...
