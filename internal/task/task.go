@@ -13,6 +13,7 @@ import (
 
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/log"
+	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/notify"
 	"github.com/bitxeno/atvloadly/internal/service"
@@ -81,28 +82,29 @@ func (t *Task) Run() {
 		}
 
 		log.Infof("开始执行安装ipa：%s", v.IpaName)
-		tryTimes := 1
-		for i := 0; i < tryTimes; i++ {
-			err := t.runInternal(v)
-			if err == nil {
-				v.RefreshedDate = &now
-				v.RefreshedResult = true
-				_ = service.UpdateAppRefreshResult(v)
-				break
+		if err := t.runInternal(v); err != nil {
+			// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
+			if strings.Contains(err.Error(), "LOCKDOWN_E_MUX_ERROR") {
+				log.Infof("尝试重启 usbmuxd 修复 LOCKDOWN_E_MUX_ERROR 错误. %s", v.IpaName)
+				if err = manager.RestartUsbmuxd(); err == nil {
+					log.Infof("usbmuxd 重启完成，再次尝试安装ipa：%s", v.IpaName)
+					time.Sleep(5 * time.Second)
+					err = t.runInternal(v)
+				}
 			}
+		}
+		if err != nil {
+			now := time.Now()
+			v.RefreshedDate = &now
+			v.RefreshedResult = false
+			_ = service.UpdateAppRefreshResult(v)
 
-			if i == (tryTimes - 1) {
-				now := time.Now()
-				v.RefreshedDate = &now
-				v.RefreshedResult = false
-				_ = service.UpdateAppRefreshResult(v)
-
-				failedList = append(failedList, v)
-				failedMsg += fmt.Sprintf("app: %s\n 错误日志：%s\n\n", v.IpaName, err.Error())
-			} else {
-				log.Infof("1分钟后再次重新尝试执行")
-				time.Sleep(1 * time.Minute)
-			}
+			failedList = append(failedList, v)
+			failedMsg += fmt.Sprintf("app: %s\n 错误日志：%s\n\n", v.IpaName, err.Error())
+		} else {
+			v.RefreshedDate = &now
+			v.RefreshedResult = true
+			_ = service.UpdateAppRefreshResult(v)
 		}
 		log.Infof("安装ipa执行完成.任务：%s", v.IpaName)
 

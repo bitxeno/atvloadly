@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -24,6 +25,7 @@ func AddFileOutput(logPath string) {
 		return
 	}
 
+	fmt.Printf("Log file path: %s\n", logPath)
 	consoleWriter := newConsoleWriter(os.Stderr)
 	// output log to file
 	logFileWriter := CreateRollingLogFile(logPath)

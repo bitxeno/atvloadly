@@ -25,3 +25,7 @@ func ReloadDevices() {
 func ScanDevices() {
 	deviceManager.Scan()
 }
+
+func RestartUsbmuxd() error {
+	return deviceManager.RestartUsbmuxd()
+}
