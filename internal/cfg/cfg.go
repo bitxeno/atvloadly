@@ -37,7 +37,6 @@ func (c *configuration) load(path string) error {
 	}
 
 	// read config from file
-	ko := koanf.New(".")
 	if !utils.Exists(c.path) {
 		fmt.Printf("[WARN] Config file not exists. path: %s\n", c.path)
 		return nil
@@ -46,17 +45,17 @@ func (c *configuration) load(path string) error {
 	fmt.Printf("Load config from path: %s\n", c.path)
 	ext := filepath.Ext(c.path)
 	if ext == ".yaml" || ext == ".yml" {
-		if err := ko.Load(file.Provider(c.path), yaml.Parser()); err != nil {
+		if err := c.ko.Load(file.Provider(c.path), yaml.Parser()); err != nil {
 			log.Panicf("Yaml config file read failed. error: %s \n", err)
 		}
 	}
 	if ext == ".json" {
-		if err := ko.Load(file.Provider(c.path), json.Parser()); err != nil {
+		if err := c.ko.Load(file.Provider(c.path), json.Parser()); err != nil {
 			log.Panicf("Json config file read failed. error: %s \n", err)
 		}
 	}
 
-	return ko.Unmarshal("", &c)
+	return nil
 }
 
 func (c *configuration) BindStruct(dst any) error {
