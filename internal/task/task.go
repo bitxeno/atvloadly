@@ -82,7 +82,8 @@ func (t *Task) Run() {
 		}
 
 		log.Infof("开始执行安装ipa：%s", v.IpaName)
-		if err := t.runInternal(v); err != nil {
+		var err error
+		if err = t.runInternal(v); err != nil {
 			// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
 			if strings.Contains(err.Error(), "LOCKDOWN_E_MUX_ERROR") {
 				log.Infof("尝试重启 usbmuxd 修复 LOCKDOWN_E_MUX_ERROR 错误. %s", v.IpaName)
