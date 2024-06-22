@@ -82,18 +82,7 @@ func (t *Task) Run() {
 		}
 
 		log.Infof("开始执行安装ipa：%s", v.IpaName)
-		var err error
-		if err = t.runInternal(v); err != nil {
-			// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
-			if strings.Contains(err.Error(), "LOCKDOWN_E_MUX_ERROR") {
-				log.Infof("尝试重启 usbmuxd 修复 LOCKDOWN_E_MUX_ERROR 错误. %s", v.IpaName)
-				if err = manager.RestartUsbmuxd(); err == nil {
-					log.Infof("usbmuxd 重启完成，再次尝试安装ipa：%s", v.IpaName)
-					time.Sleep(5 * time.Second)
-					err = t.runInternal(v)
-				}
-			}
-		}
+		err := t.runInternalRetry(v)
 		if err != nil {
 			now := time.Now()
 			v.RefreshedDate = &now
@@ -148,7 +137,7 @@ func (t *Task) RunImmediately(v model.InstalledApp) {
 	defer t.completedState()
 
 	now := time.Now()
-	err := t.runInternal(v)
+	err := t.runInternalRetry(v)
 	if err == nil {
 		v.RefreshedDate = &now
 		v.RefreshedResult = true
@@ -161,6 +150,20 @@ func (t *Task) RunImmediately(v model.InstalledApp) {
 		// 发送安装失败通知
 		_ = notify.Send(fmt.Sprintf("[%s]刷新任务执行失败", v.IpaName), fmt.Sprintf("帐号：%s\n错误日志：%s", v.Account, err.Error()))
 	}
+}
+
+func (t *Task) runInternalRetry(v model.InstalledApp) error {
+	err := t.runInternal(v)
+	// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
+	if err != nil && strings.Contains(err.Error(), "LOCKDOWN_E_MUX_ERROR") {
+		log.Infof("尝试重启 usbmuxd 修复 LOCKDOWN_E_MUX_ERROR 错误. %s", v.IpaName)
+		if err = manager.RestartUsbmuxd(); err == nil {
+			log.Infof("usbmuxd 重启完成，再次尝试安装ipa：%s", v.IpaName)
+			time.Sleep(5 * time.Second)
+			err = t.runInternal(v)
+		}
+	}
+	return err
 }
 
 func (t *Task) runInternal(v model.InstalledApp) error {
@@ -243,16 +246,16 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 	if err := cmd.Start(); nil != err {
 		data := []byte(output.String())
 		t.writeLog(v, data)
-		log.Err(err).Msg("执行安装脚本出错")
-		return fmt.Errorf(outputErr.String(), err)
+		log.Err(err).Msgf("执行安装脚本出错. %s", outputErr.String())
+		return fmt.Errorf("%s %v", outputErr.String(), err)
 	}
 
 	err = cmd.Wait()
 	if err != nil {
 		data := []byte(output.String())
 		t.writeLog(v, data)
-		log.Err(err).Msg("执行安装脚本出错")
-		return fmt.Errorf(outputErr.String(), err)
+		log.Err(err).Msgf("执行安装脚本出错. %s", outputErr.String())
+		return fmt.Errorf("%s %v", outputErr.String(), err)
 	}
 
 	data := []byte(output.String())
