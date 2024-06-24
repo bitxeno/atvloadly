@@ -104,6 +104,7 @@ func CheckAfcService(ctx context.Context, id string) error {
 
 	var err error
 	if err = manager.CheckAfcServiceStatus(device.UDID); err != nil {
+		log.Infof("check afc service status error: %s", err)
 		// try restart usbmuxd to fix afc connect issue
 		if err = manager.RestartUsbmuxd(); err == nil {
 			time.Sleep(5 * time.Second)

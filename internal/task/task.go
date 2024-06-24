@@ -159,7 +159,8 @@ func (t *Task) RunImmediately(v model.InstalledApp) {
 func (t *Task) runInternalRetry(v model.InstalledApp) error {
 	err := t.runInternal(v)
 	// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
-	if err != nil && (strings.Contains(err.Error(), "LOCKDOWN_E_MUX_ERROR") || strings.Contains(err.Error(), "AFC_E_MUX_ERROR")) {
+	// LOCKDOWN_E_MUX_ERROR / AFC_E_MUX_ERROR /
+	if err != nil {
 		log.Info(i18n.LocalizeF("task.try_restart_usbmuxd", map[string]interface{}{"name": v.IpaName}))
 		if err = manager.RestartUsbmuxd(); err == nil {
 			log.Info(i18n.LocalizeF("task.try_restart_usbmuxd_success", map[string]interface{}{"name": v.IpaName}))
