@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/artdarek/go-unzip/pkg/unzip"
 	"github.com/bitxeno/atvloadly/internal/app"
@@ -93,6 +94,19 @@ func MountDeveloperDiskImage(ctx context.Context, id string) error {
 	}
 
 	return nil
+}
+
+func CheckAfcService(ctx context.Context, id string) error {
+	var err error
+	if err = manager.CheckAfcServiceStatus(id); err != nil {
+		// try restart usbmuxd to fix afc connect issue
+		if err = manager.RestartUsbmuxd(); err == nil {
+			time.Sleep(5 * time.Second)
+			err = manager.CheckAfcServiceStatus(id)
+		}
+	}
+
+	return err
 }
 
 func downloadDeveloperDiskImage(imageInfo *model.UsbmuxdImage) (dmg string, signature string, reterr error) {

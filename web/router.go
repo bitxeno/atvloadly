@@ -130,6 +130,16 @@ func route(fi *fiber.App) {
 		}
 	})
 
+	api.Post("/devices/:id/check/afc", func(c *fiber.Ctx) error {
+		id := c.Params("id")
+
+		if err := service.CheckAfcService(c.Context(), id); err != nil {
+			return c.Status(http.StatusOK).JSON(apiSuccess(err.Error()))
+		} else {
+			return c.Status(http.StatusOK).JSON(apiSuccess("success"))
+		}
+	})
+
 	api.Get("/scan", func(c *fiber.Ctx) error {
 		manager.ScanDevices()
 

@@ -22,6 +22,21 @@ export default {
         });
     });
   },
+  checkAfcService: (id) => {
+    return new Promise((resolve, reject) => {
+      request({
+        url: `/api/devices/${id}/check/afc`,
+        timeout: 60000,
+        method: "Post",
+      })
+        .then((res) => {
+          resolve(res.data);
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  },
   getDevices: (params) => {
     return request({
       url: "/api/devices",

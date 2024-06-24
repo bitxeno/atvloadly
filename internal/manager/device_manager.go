@@ -158,6 +158,26 @@ func (dm *DeviceManager) CheckHasMountImage(udid string) (bool, error) {
 	return strings.Contains(output, "ImageSignature") && !strings.Contains(output, "ImageSignature[0]"), nil
 }
 
+func (dm *DeviceManager) CheckAfcServiceStatus(udid string) error {
+	cmd := exec.Command("sideloader", "check", "afc", "--nocolor", "--udid", udid)
+
+	data, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s%s", string(data), err.Error())
+	}
+
+	output := string(data)
+	if strings.Contains(output, "ERROR") {
+		return fmt.Errorf("%s", output)
+	}
+
+	if !strings.Contains(output, "SUCCESS") {
+		return fmt.Errorf("%s", output)
+	}
+
+	return nil
+}
+
 func (dm *DeviceManager) RestartUsbmuxd() error {
 	cmd := exec.Command("/etc/init.d/usbmuxd", "restart")
 	data, err := cmd.CombinedOutput()

@@ -26,6 +26,10 @@ func ScanDevices() {
 	deviceManager.Scan()
 }
 
+func CheckAfcServiceStatus(udid string) error {
+	return deviceManager.CheckAfcServiceStatus(udid)
+}
+
 func RestartUsbmuxd() error {
 	return deviceManager.RestartUsbmuxd()
 }

@@ -183,6 +183,17 @@ export default {
       _this.log.output = "";
       _this.log.show = true;
 
+      _this.log.output += "Checking afc service status...\n";
+      let data = await api.checkAfcService(_this.id);
+      if (data != "success") {
+        _this.log.output += data;
+        _this.cmd.output = "";
+        _this.loading = false;
+        toast.error(this.$t("install.toast.install_failed"));
+        return;
+      }
+      _this.log.output += "afc service OK!\n";
+
   
       let formData = new FormData();
       for (let i = 0; i < _this.files.length; i++) {
