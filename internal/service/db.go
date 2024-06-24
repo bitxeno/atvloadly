@@ -45,7 +45,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 	var cur model.InstalledApp
 	result := db.Store().Where("udid=? and bundle_identifier=? and account=?", app.UDID, app.BundleIdentifier, app.Account).First(&cur)
 	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
-		log.Err(result.Error).Msg("保存安装记录时出错.")
+		log.Err(result.Error).Msg("SaveApp error.")
 		return nil, result.Error
 	}
 

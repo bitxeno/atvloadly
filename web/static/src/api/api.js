@@ -1,6 +1,13 @@
 import request from "@/utils/request";
 
 export default {
+  syncLang: (params) => {
+    return request({
+      url: '/api/lang/sync',
+      method: "post",
+      params
+    });
+  },
   getDevice: (id) => {
     return request({
       url: `/api/devices/${id}`,

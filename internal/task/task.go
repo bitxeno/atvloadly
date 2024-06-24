@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/i18n"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/model"
@@ -39,18 +40,18 @@ func (t *Task) RunSchedule() error {
 	}
 
 	if !app.Settings.Task.Enabled {
-		log.Info("app刷新定时任务未启用")
+		log.Info(i18n.Localize("task.task_disabled"))
 		return nil
 	}
 
 	t.c = cron.New()
 	if _, err := t.c.AddFunc(app.Settings.Task.CrodTime, t.Run); err != nil {
-		log.Err(err).Msgf("app刷新定时任务启动失败，定时格式错误：%s", app.Settings.Task.CrodTime)
+		log.Err(err).Msg(i18n.LocalizeF("task.error_invalid_crod_time_format", map[string]interface{}{"time": app.Settings.Task.CrodTime}))
 		t.c = nil
 		return err
 	}
 
-	log.Infof("app刷新定时任务已启动，时间: %s", app.Settings.Task.CrodTime)
+	log.Info(i18n.LocalizeF("task.task_started", map[string]interface{}{"time": app.Settings.Task.CrodTime}))
 	t.c.Start()
 
 	return nil
@@ -69,7 +70,7 @@ func (t *Task) Run() {
 
 	installedApps, err := service.GetEnableAppList()
 	if err != nil {
-		log.Err(err).Msg("获取安装列表失败")
+		log.Err(err).Msg(i18n.Localize("task.error_get_app_list"))
 		return
 	}
 
@@ -81,7 +82,7 @@ func (t *Task) Run() {
 			continue
 		}
 
-		log.Infof("开始执行安装ipa：%s", v.IpaName)
+		log.Info(i18n.LocalizeF("task.app_install_started", map[string]interface{}{"name": v.IpaName}))
 		err := t.runInternalRetry(v)
 		if err != nil {
 			now := time.Now()
@@ -90,21 +91,22 @@ func (t *Task) Run() {
 			_ = service.UpdateAppRefreshResult(v)
 
 			failedList = append(failedList, v)
-			failedMsg += fmt.Sprintf("app: %s\n 错误日志：%s\n\n", v.IpaName, err.Error())
+			failedMsg += i18n.LocalizeF("notify.batch_content", map[string]interface{}{"name": v.IpaName, "error": err.Error()})
 		} else {
 			v.RefreshedDate = &now
 			v.RefreshedResult = true
 			_ = service.UpdateAppRefreshResult(v)
 		}
-		log.Infof("安装ipa执行完成.任务：%s", v.IpaName)
+		log.Info(i18n.LocalizeF("task.app_install_completed", map[string]interface{}{"name": v.IpaName}))
 
-		// 下一个执行延迟10秒
+		// Next execution delayed by 10 seconds.
 		time.Sleep(10 * time.Second)
 	}
 
-	// 发送安装失败通知
+	// Send installation failure notification.
 	if len(failedList) > 0 {
-		_ = notify.Send("atvloadly 自动刷新任务执行失败", failedMsg)
+		title := i18n.LocalizeF("notify.title", map[string]interface{}{"name": "atvloadly"})
+		_ = notify.Send(title, failedMsg)
 	}
 }
 
@@ -147,8 +149,10 @@ func (t *Task) RunImmediately(v model.InstalledApp) {
 		v.RefreshedResult = false
 		_ = service.UpdateAppRefreshResult(v)
 
-		// 发送安装失败通知
-		_ = notify.Send(fmt.Sprintf("[%s]刷新任务执行失败", v.IpaName), fmt.Sprintf("帐号：%s\n错误日志：%s", v.Account, err.Error()))
+		// Send installation failure notification
+		title := i18n.LocalizeF("notify.title", map[string]interface{}{"name": v.IpaName})
+		message := i18n.LocalizeF("notify.content", map[string]interface{}{"account": v.Account, "error": err.Error()})
+		_ = notify.Send(title, message)
 	}
 }
 
@@ -156,9 +160,9 @@ func (t *Task) runInternalRetry(v model.InstalledApp) error {
 	err := t.runInternal(v)
 	// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
 	if err != nil && (strings.Contains(err.Error(), "LOCKDOWN_E_MUX_ERROR") || strings.Contains(err.Error(), "AFC_E_MUX_ERROR")) {
-		log.Infof("尝试重启 usbmuxd 修复 LOCKDOWN_E_MUX_ERROR 错误. %s", v.IpaName)
+		log.Info(i18n.LocalizeF("task.try_restart_usbmuxd", map[string]interface{}{"name": v.IpaName}))
 		if err = manager.RestartUsbmuxd(); err == nil {
-			log.Infof("usbmuxd 重启完成，再次尝试安装ipa：%s", v.IpaName)
+			log.Info(i18n.LocalizeF("task.try_restart_usbmuxd_success", map[string]interface{}{"name": v.IpaName}))
 			time.Sleep(5 * time.Second)
 			err = t.runInternal(v)
 		}
@@ -170,23 +174,11 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 	t.InstallingApp = &v
 
 	if v.Account == "" || v.Password == "" || v.UDID == "" {
-		log.Info("任务帐号，密码，UDID为空")
-		return fmt.Errorf("任务帐号，密码，UDID为空")
+		log.Info(i18n.Localize("task.error_invalid_arguments"))
+		return fmt.Errorf(i18n.Localize("task.error_invalid_arguments"))
 	}
 
-	// 检查developer disk image是否已mounted
-	// imageInfo, err := manager.GetDeviceMountImageInfo(v.UDID)
-	// if err != nil {
-	// 	log.Err(err).Msg("Check DeveloperDiskImage mounted error: ")
-	// 	return err
-	// }
-
-	// if !imageInfo.ImageMounted {
-	// 	log.Error("DeveloperDiskImage not mounted.")
-	// 	return err
-	// }
-
-	// sideloader 会处理特殊字符"$"，对于带有这特殊字符的，需要加单引号包括
+	// The sideloader will handle special character "$". For those with this special character, it needs to be enclosed in single quotation marks.
 	cmd := exec.Command("sideloader", "install", "--quiet", "--nocolor", "--udid", v.UDID, "-a", v.Account, "-p", v.Password, v.IpaPath)
 	cmd.Dir = app.Config.Server.DataDir
 	cmd.Env = []string{"SIDELOADER_CONFIG_DIR=" + app.SideloaderDataDir()}
@@ -219,7 +211,7 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 			_, _ = output.WriteString(lineText)
 			_, _ = output.WriteString("\n")
 
-			// 处理中途需要输入才能继续的，如 Installing AltStore with Multiple AltServers Not Supported 消息
+			// Processing interaction to continue, such as [the Installing AltStore with Multiple AltServers the Not Supported] message.
 			if strings.Contains(lineText, "Press any key to continue") {
 				_, _ = stdin.Write([]byte("\n"))
 			}
@@ -237,7 +229,7 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 			_, _ = outputErr.WriteString(lineText)
 			_, _ = outputErr.WriteString("\n")
 
-			// 处理中途需要输入才能继续的，如 Installing AltStore with Multiple AltServers Not Supported 消息
+			// Processing interaction to continue, such as [the Installing AltStore with Multiple AltServers the Not Supported] message.
 			if strings.Contains(lineText, "Press any key to continue") {
 				_, _ = stdin.Write([]byte("\n"))
 			}
@@ -246,7 +238,7 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 	if err := cmd.Start(); nil != err {
 		data := []byte(output.String())
 		t.writeLog(v, data)
-		log.Err(err).Msgf("执行安装脚本出错. %s", outputErr.String())
+		log.Err(err).Msg(i18n.LocalizeF("install_failed", map[string]interface{}{"error": outputErr.String()}))
 		return fmt.Errorf("%s %v", outputErr.String(), err)
 	}
 
@@ -254,23 +246,21 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 	if err != nil {
 		data := []byte(output.String())
 		t.writeLog(v, data)
-		log.Err(err).Msgf("执行安装脚本出错. %s", outputErr.String())
+		log.Err(err).Msg(i18n.LocalizeF("install_failed", map[string]interface{}{"error": outputErr.String()}))
 		return fmt.Errorf("%s %v", outputErr.String(), err)
 	}
 
 	data := []byte(output.String())
 	t.writeLog(v, data)
 	if strings.Contains(string(data), "Installation Succeeded") {
-		log.Info("执行安装脚本成功")
 		return nil
 	} else {
-		log.Info("执行安装脚本失败")
 		return fmt.Errorf(outputErr.String())
 	}
 }
 
 func (t *Task) writeLog(v model.InstalledApp, data []byte) {
-	// 打码密码字符串
+	// Hide log password string
 	data = bytes.Replace(data, []byte(v.Password), []byte("******"), -1)
 
 	saveDir := filepath.Join(app.Config.Server.DataDir, "log")
@@ -288,13 +278,13 @@ func (t *Task) writeLog(v model.InstalledApp, data []byte) {
 
 func (t *Task) startedState() {
 	t.Running = true
-	log.Info("开始执行定时任务...")
+	log.Info(i18n.Localize("task.started"))
 }
 
 func (t *Task) completedState() {
 	t.Running = false
 	t.InstallingApp = nil
-	log.Warn("定时任务执行完成")
+	log.Info(i18n.Localize("task.completed"))
 }
 
 func ScheduleRefreshApps() error {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/i18n"
 	"github.com/bitxeno/atvloadly/internal/ipa"
 	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/model"
@@ -71,10 +72,20 @@ func route(fi *fiber.App) {
 
 	})
 
-	// api路由
+	// API route
 	api := fi.Group("/api")
 	api.Get("/hello", func(c *fiber.Ctx) error {
 		return c.SendString("hello world.")
+	})
+	api.Post("/lang/sync", func(c *fiber.Ctx) error {
+		lang := c.Params("lang")
+		accept := c.Get("Accept-Language")
+		if lang != "" {
+			i18n.SetLanguage(lang)
+		} else {
+			i18n.SetLanguage(accept)
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(i18n.Localize("language")))
 	})
 	api.Get("/settings", func(c *fiber.Ctx) error {
 		return c.Status(http.StatusOK).JSON(apiSuccess(app.Settings))

@@ -1,0 +1,23 @@
+{
+    "language": "zh_cn",
+    "notify": {
+        "title": "[{{.name}}]刷新任务执行失败",
+        "content": "帐号：{{.account}}\n错误日志：{{.error}}",
+        "batch_title": "atvloadly 刷新任务执行失败",
+        "batch_content": "app: {{.name}}\n 错误日志：{{.error}}\n\n"
+    },
+    "task": {
+        "started": "开始执行安装任务...",
+        "completed": "安装任务执行完成。",
+        "app_install_started": "开始执行安装ipa：{{.name}}",
+        "app_install_completed": "安装ipa执行完成.{{.name}}",
+        "task_disabled": "app刷新定时任务未启用",
+        "task_started": "app刷新定时任务已启动，时间: {{.time}}",
+        "install_failed": "执行安装脚本出错。{{.error}}",
+        "error_get_app_list": "获取安装列表失败",
+        "error_invalid_arguments": "任务帐号，密码，UDID 为空",
+        "error_invalid_crod_time_format": "app刷新定时任务启动失败，定时格式错误：{{.time}}",
+        "try_restart_usbmuxd": "尝试重启 usbmuxd 修复 LOCKDOWN_E_MUX_ERROR 错误. {{.error}}",
+        "try_restart_usbmuxd_success": "usbmuxd 重启完成，再次尝试安装ipa：{{.name}}"
+    }
+}

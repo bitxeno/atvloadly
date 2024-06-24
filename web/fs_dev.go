@@ -8,5 +8,5 @@ import (
 )
 
 func StaticAssets() fs.FS {
-	return os.DirFS("static/dist")
+	return os.DirFS("web/static/dist")
 }

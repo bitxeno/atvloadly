@@ -57,6 +57,7 @@
 </template>
   
   <script>
+import api from "@/api/api";
 export default {
   name: "App",
   data() {
@@ -65,6 +66,7 @@ export default {
     };
   },
   created() {
+    api.syncLang({lang: this.$i18next.language})
     let keys = Object.keys(this.$i18next.options.resources);
     for (const key of keys) {
       this.languages.push({
@@ -76,6 +78,7 @@ export default {
   methods: {
     changeLanguage(lang) {
       this.$i18next.changeLanguage(lang);
+      api.syncLang({lang: lang})
     },
   },
 };
