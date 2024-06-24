@@ -25,11 +25,9 @@ jobs:
         run: |
           echo "APP_NAME=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_OUTPUT
       - name: Delete old images
-        uses: snok/container-retention-policy@v2
+        uses: dataaxiom/ghcr-cleanup-action@v1
         with:
-          image-names: ${{steps.vars.outputs.APP_NAME}}
-          cut-off: A month ago UTC
-          keep-at-least: 10
-          skip-tags: latest, beta, alpha, main, master
-          account-type: personal
+          exclude-tags: 'v*,dev,latest,main,master'
+          keep-n-tagged: 10
+          package: ${{steps.vars.outputs.APP_NAME}}
           token: ${{ secrets.PAT }}
