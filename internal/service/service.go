@@ -103,11 +103,11 @@ func CheckAfcService(ctx context.Context, id string) error {
 	}
 
 	var err error
-	if err = manager.CheckAfcServiceStatus(device.ID); err != nil {
+	if err = manager.CheckAfcServiceStatus(device.UDID); err != nil {
 		// try restart usbmuxd to fix afc connect issue
 		if err = manager.RestartUsbmuxd(); err == nil {
 			time.Sleep(5 * time.Second)
-			err = manager.CheckAfcServiceStatus(device.ID)
+			err = manager.CheckAfcServiceStatus(device.UDID)
 		}
 	}
 
