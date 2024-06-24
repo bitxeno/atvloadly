@@ -97,12 +97,17 @@ func MountDeveloperDiskImage(ctx context.Context, id string) error {
 }
 
 func CheckAfcService(ctx context.Context, id string) error {
+	device, ok := manager.GetDeviceByID(id)
+	if !ok {
+		return fmt.Errorf("device not found: %s", id)
+	}
+
 	var err error
-	if err = manager.CheckAfcServiceStatus(id); err != nil {
+	if err = manager.CheckAfcServiceStatus(device.ID); err != nil {
 		// try restart usbmuxd to fix afc connect issue
 		if err = manager.RestartUsbmuxd(); err == nil {
 			time.Sleep(5 * time.Second)
-			err = manager.CheckAfcServiceStatus(id)
+			err = manager.CheckAfcServiceStatus(device.ID)
 		}
 	}
 
