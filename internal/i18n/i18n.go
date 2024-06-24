@@ -26,7 +26,9 @@ func init() {
 	}
 	for _, v := range files {
 		path := filepath.Join(root, v.Name())
-		i18nBundle.LoadMessageFileFS(localesFs, path)
+		if _, err := i18nBundle.LoadMessageFileFS(localesFs, path); err != nil {
+			panic(err)
+		}
 	}
 
 	i18nLocalizer = i18n.NewLocalizer(i18nBundle, currentLang)
