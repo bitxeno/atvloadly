@@ -136,16 +136,19 @@ func (t *Task) StartInstallApp(v model.InstalledApp) {
 func (t *Task) tryInstallApp(v model.InstalledApp) {
 	log.Infof("Start installing ipa: %s", v.IpaName)
 	var err error
-	err = t.runInternal(v)
 	// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
 	// LOCKDOWN_E_MUX_ERROR / AFC_E_MUX_ERROR /
+	err = manager.CheckAfcServiceStatus(v.UDID)
 	if err != nil {
-		log.Infof("Try restarting usbmuxd to fix connect issue. %s", v.IpaName)
+		log.Err(err).Msgf("Afc service can't connect. %s", v.IpaName)
+		log.Infof("Try restarting usbmuxd to fix afc connect issue. %s", v.IpaName)
 		if err = manager.RestartUsbmuxd(); err == nil {
 			log.Infof("Restart usbmuxd complete, try install ipa again. %s", v.IpaName)
 			time.Sleep(5 * time.Second)
 			err = t.runInternal(v)
 		}
+	} else {
+		err = t.runInternal(v)
 	}
 
 	now := time.Now()
