@@ -1,14 +1,17 @@
+//go:build linux
+
 package cfg
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 )
 
-func defaultConfigDir() string {
+func DefaultConfigDir() string {
 	execPath, err := os.Executable()
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	execName := filepath.Base(execPath)

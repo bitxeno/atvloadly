@@ -5,10 +5,11 @@
 
 <div align="center">
 
-[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt-989898)](https://github.com/bitxeno/atvloadly/releases)
-[![release](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/latest_tag?label=docker%20latest)](https://github.com/bitxeno/atvloadly/pkgs/container/atvloadly)
-[![image size](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/size)](https://github.com/bitxeno/atvloadly/pkgs/container/atvloadly)
-[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/blob/master/LICENSE)
+[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt-989898)](https://github.com/bitxeno/atvloadly/internal/releases)
+[![release](https://img.shields.io/docker/v/bitxeno/atvloadly?label=docker%20latest)](https://hub.docker.com/r/bitxeno/atvloadly)
+![Docker Image Size](https://img.shields.io/docker/image-size/bitxeno/atvloadly)
+![Docker Pulls](https://img.shields.io/docker/pulls/bitxeno/atvloadly)
+[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/internal/blob/master/LICENSE)
 [![Telegram](https://img.shields.io/badge/telegram-2CA5E0?logo=telegram&logoColor=white)](https://t.me/atvloadly)
 
 </div>
@@ -19,10 +20,7 @@ English | [中文](./README_cn.md)
 
 </div>
 
-
-> ⚠️ **Not supported on tvOS 17.0 and above systems.** ⚠️
-
-atvloadly is a web service that supports sideloading app on Apple TV. It uses [AltServer](https://github.com/NyaMisty/AltServer-Linux) as the underlying technology for sideloading and automatically refreshes the app to ensure its long-term availability.
+atvloadly is a web service that supports sideloading app on Apple TV. It uses [Sideloader](https://github.com/Dadoum/Sideloader) as the underlying technology for sideloading and automatically refreshes the app to ensure its long-term availability.
 
 ## Features
 
@@ -43,7 +41,7 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [A
 
 ## Installation
 
-> :pensive: **Only supports Linux/OpenWrt systems, does not support Mac/Windows systems.**
+> 😔 **Only supports Linux/OpenWrt systems, does not support Mac/Windows systems.**
 
 1. The Linux/OpenWrt host needs to install `avahi-deamon`.
    
@@ -62,21 +60,21 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [A
 2. Please refer to the following command for installation, remember to modify the mount directory.
    
    ```
-   docker run --privileged -d --name=atvloadly --restart=always -p 5533:80 -v /path/to/mount/dir:/data -v /var/run/dbus:/var/run/dbus -v /var/run/avahi-daemon:/var/run/avahi-daemon  ghcr.io/bitxeno/atvloadly:latest
+   docker run --privileged -d --name=atvloadly --restart=always -p 5533:80 -v /path/to/mount/dir:/data -v /var/run/dbus:/var/run/dbus -v /var/run/avahi-daemon:/var/run/avahi-daemon bitxeno/atvloadly:latest
    ```
-   
-   Image name: `ghcr.io/bitxeno/atvloadly:latest`, you need to use this full name with the domain in order to pull it down.
-   
+
    The `/var/run/dbus` and `/var/run/avahi-daemon` of the host machine need to be shared with the docker container for use.
 
 
 
 ## Getting Started
 
-### Preparation (very important:bangbang:)
+### Preparation (very important‼️)
 
-* Dedicated Apple ID installation account, both free or developer accounts are acceptable (**For security reasons, please do not use commonly used accounts for installation!**)
-* Login with the installed account on the iPhone (used to authorize trust in atvloadly, will be virtualized as a MacBook, **failure to verify the authorization verification code within timeout will result in temporary account freeze! Password reset is required for recovery**)
+1. a burned account
+> Dedicated Apple ID installation account, both free or developer accounts are acceptable (**For security reasons, avoid using commonly used accounts. Instead, create a burned account for installation!**)
+2. A phone to 2FA Verification
+> atvloadly needs to be authorized as a trusted device (it will be virtualized as a MacBook). During the installation process, Apple will send a 2FA code either to your phone number associated with installation account or trusted device where you're logged into your installation account. (**failure to verify the authorization verification code within timeout will result in temporary account freeze! Password reset is required for recovery**)
 
 ### Operation process
 
@@ -90,7 +88,7 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [A
 
 1. How many apps can be installed with a free account?
 
-> Each Apple ID can activate up to 3 apps simultaneously. Installing more than 3 will cause previously installed apps to become unavailable.
+> Each free Apple ID can register up to 10 apps and activate up to 3 apps simultaneously. Installing more than 3 will cause previously installed apps to become unavailable.
 
 2. Installation failure after system upgrade.
 
@@ -98,12 +96,11 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [A
 
 3. Can App-specific passwords be used for passwords? Is it more secure this way?
 
-> AltServer currently does not support it.
-
+> Currently does not support it.
 
 ## How to build
 
-[>> wiki](https://github.com/bitxeno/atvloadly/wiki/How-to-build)
+[>> wiki](https://github.com/bitxeno/atvloadly/internal/wiki/How-to-build)
 
 ## Donation
 

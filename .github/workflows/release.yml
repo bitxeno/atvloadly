@@ -1,6 +1,3 @@
-# Attention:
-#  - Need goto [Settings -> Actions -> general]
-#  - Set [workflow permissions] to "Read and write permissions"
 name: "🚀 Release"
 
 # on events
@@ -10,17 +7,24 @@ on:
 
 # jobs
 jobs:
-  # generate build cross-platform build files
-  release:
+  build:
     name: Generate cross-platform builds
+    permissions:
+      contents: write
     strategy:
       matrix:
-        go_version: [1.18.x]
+        go_version: [1.21.x]
     runs-on: ubuntu-latest
+    outputs:
+      VERSION: ${{steps.vars.outputs.VERSION}}
+      BUILDDATE: ${{steps.vars.outputs.BUILDDATE}}
+      COMMIT: ${{steps.vars.outputs.COMMIT}}
+      APP_NAME: ${{steps.vars.outputs.APP_NAME}}
+      PUSH_DOCKERHUB: ${{steps.vars.outputs.PUSH_DOCKERHUB}}
     steps:
       # step 1: checkout repository code
       - name: Checkout the repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -28,63 +32,88 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go_version }}
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v4
         with:
-          node-version: "16"
+          node-version: "20"
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
       # step 3: set workflow variables
-      - name: Initialize workflow variables
+      - id: metadata
+        uses: ahmadnassri/action-metadata@v2
+      - name: Initialize workflow environments variables
         id: vars
         run: |
-          echo "VERSION=${GITHUB_REF/refs\/tags\/v/}" >> $GITHUB_OUTPUT
+          echo "VERSION=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           echo "BUILDDATE=$(date '+%F-%T')" >> $GITHUB_OUTPUT
           echo "COMMIT=$(git rev-parse --verify HEAD)" >> $GITHUB_OUTPUT
-          echo "APP_NAME=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_OUTPUT
+          echo "APP_NAME=${{ steps.metadata.outputs.repository_name }}" >> $GITHUB_OUTPUT
           echo "REPO=$(echo 'github.com/${{ github.repository }}')" >> $GITHUB_OUTPUT
-          echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_OUTPUT
+          echo "BRANCH=${{ steps.metadata.outputs.repository_default_branch }}" >> $GITHUB_OUTPUT
 
-          if [ ! -z $DOCKER_TOKEN ]; then echo "HAS_DOCKER_TOKEN=${HAS_DOCKER_TOKEN}" >> $GITHUB_OUTPUT; fi
+          if [ ! -z $DOCKER_TOKEN ]; then echo "PUSH_DOCKERHUB=1" >> $GITHUB_OUTPUT; fi
         env:
           DOCKER_TOKEN: "${{ secrets.DOCKER_TOKEN }}"
 
       # step 4: generate build files
       - name: build frontend
-        run: cd ./view && npm install && npm run build
+        run: cd ./web/static && npm install && npm run build
       - name: Generate build files
         uses: crazy-max/ghaction-xgo@v2
+        env:
+          CGO_ENABLED: "0"
         with:
           xgo_version: latest
           go_version: ${{ matrix.go_version }}
           dest: build
           prefix: ${{steps.vars.outputs.APP_NAME}}
-          targets: linux/amd64,linux/arm64
+          targets: windows/amd64,linux/amd64,darwin/amd64,linux/arm64
           v: true
           x: false
-          ldflags: -w -s -X ${{steps.vars.outputs.REPO}}/internal/version.Version=${{steps.vars.outputs.VERSION}} -X ${{steps.vars.outputs.REPO}}/internal/version.BuildDate=${{steps.vars.outputs.BUILDDATE}} -X ${{steps.vars.outputs.REPO}}/internal/version.Commit=${{steps.vars.outputs.COMMIT}} -X ${{steps.vars.outputs.REPO}}/internal/mode.Mode=production
+          ldflags: -w -s -X ${{steps.vars.outputs.REPO}}/internal/app/build.Version=${{steps.vars.outputs.VERSION}} -X ${{steps.vars.outputs.REPO}}/internal/app/build.BuildDate=${{steps.vars.outputs.BUILDDATE}} -X ${{steps.vars.outputs.REPO}}/internal/app/build.Commit=${{steps.vars.outputs.COMMIT}} -X ${{steps.vars.outputs.REPO}}/internal/app/build.Mode=production
 
-      # step 5: compress build files
-      - name: Compress build files
-        run: cd ./build && for i in *; do tar -czf $i.tar.gz $i; done && cd ..
+      # step 5: Upload binary to artifact
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{steps.vars.outputs.APP_NAME}}
+          path: build
+          retention-days: 1
 
-      # step 6: Upload binary to GitHub Release
+      # step 6: Generate Changelog
       - name: Generate Changelog
         id: changelog
         uses: bitxeno/changelogithub-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
+          # output-file: ./docs/CHANGELOG.md
           types: |
             feat
             fix
             perf
             refactor
-            tweak
+            chore
+            docs
+          #   build
+          #   test
+          #   style
+          #   ci
+      # - name: Git commit changelog
+      #   uses: EndBug/add-and-commit@v9
+      #   with:
+      #     default_author: github_actions
+      #     add: "docs/"
+      #     message: "docs: release notes for ${{ github.ref_name }}"
+      #     push: "origin HEAD:${{ steps.vars.outputs.BRANCH }}"
+
+      # step 7: Upload binary to GitHub Release
+      - name: Compress build files
+        run: cd ./build && for i in *; do tar -czf $i.tar.gz $i; done && cd ..
       - name: Upload binary to GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: "startsWith(github.ref, 'refs/tags/')"
         with:
           files: |
@@ -93,28 +122,70 @@ jobs:
           body: ${{ steps.changelog.outputs.changelog }}
           fail_on_unmatched_files: true
 
-      # step 7.1: push to DockerHub
+  dockerhub:
+    name: Push to DockerHub
+    if: ${{needs.build.outputs.PUSH_DOCKERHUB}}
+    needs: [build]
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{needs.build.outputs.APP_NAME}}
+          path: build
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Login to DockerHub
-        if: ${{ steps.vars.outputs.HAS_DOCKER_TOKEN == 'true' }}
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPOSITORY }}
       - name: Build and push Docker images to DockerHub
-        if: ${{ steps.vars.outputs.HAS_DOCKER_TOKEN == 'true' }}
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: true
+          provenance: false
           platforms: linux/amd64,linux/arm64
-          tags: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPOSITORY }}:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            APP_NAME=${{steps.vars.outputs.APP_NAME}}
-            VERSION=${{steps.vars.outputs.VERSION}}
-            BUILDDATE=${{steps.vars.outputs.BUILDDATE}}
-            COMMIT=${{steps.vars.outputs.COMMIT}}
+            APP_NAME=${{needs.build.outputs.APP_NAME}}
+            VERSION=${{needs.build.outputs.VERSION}}
+            BUILDDATE=${{needs.build.outputs.BUILDDATE}}
+            COMMIT=${{needs.build.outputs.COMMIT}}
 
-      # step 7.2: push to GitHub Container Registry
+  ghcr:
+    name: Push to GitHub Container Registry
+    needs: [build]
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{needs.build.outputs.APP_NAME}}
+          path: build
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -123,19 +194,34 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
       - name: Build and push Docker images to ghci
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: true
+          provenance: false
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            APP_NAME=${{steps.vars.outputs.APP_NAME}}
-            VERSION=${{steps.vars.outputs.VERSION}}
-            BUILDDATE=${{steps.vars.outputs.BUILDDATE}}
-            COMMIT=${{steps.vars.outputs.COMMIT}}
+            APP_NAME=${{needs.build.outputs.APP_NAME}}
+            VERSION=${{needs.build.outputs.VERSION}}
+            BUILDDATE=${{needs.build.outputs.BUILDDATE}}
+            COMMIT=${{needs.build.outputs.COMMIT}}
+
+  clean:
+    name: Delete temp artifacts
+    # ignore dockerhub job skipped
+    if: always() && (needs.dockerhub.result == 'success' || needs.dockerhub.result == 'skipped') && (needs.ghcr.result == 'success')
+    needs: [build, dockerhub, ghcr]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: geekyeggo/delete-artifact@v5
+        with:
+          name: ${{needs.build.outputs.APP_NAME}}
+          failOnError: false

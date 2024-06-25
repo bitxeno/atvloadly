@@ -1,5 +1,7 @@
+//go:build windows
+
 package cfg
 
-func defaultConfigDir() string {
+func DefaultConfigDir() string {
 	return "."
 }

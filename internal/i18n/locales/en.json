@@ -1,0 +1,9 @@
+{
+    "language": "en",
+    "notify": {
+        "title": "[{{.name}}] Refresh task execution failed.",
+        "content": "Account: {{.account}}\nError log: {{.error}}",
+        "batch_title": "atvloadly Refresh Task Execution Failed",
+        "batch_content": "app: {{.name}}\n Error Log: {{.error}}\n\n"
+    }
+}
