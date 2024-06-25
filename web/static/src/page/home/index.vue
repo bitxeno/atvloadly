@@ -298,11 +298,11 @@ export default {
 
       api.getInstallingApps().then((res) => {
         // res.data returns empty, indicating that the installation has been completed.
-        if (_this.installingApps && !res.data) {
+        if (_this.installingApps && (res.data || []).length == 0) {
           _this.fetchAppList();
         }
 
-        _this.installingApps = res.data;
+        _this.installingApps = res.data || [];
         if (_this.installingApps && _this.installingApps.length > 0) {
           // Repeat the detection until it is completed.
           _this.checkInstallingAppDelay();
