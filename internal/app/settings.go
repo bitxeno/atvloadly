@@ -22,6 +22,9 @@ const (
 type TaskMode string
 
 type SettingsConfiguration struct {
+	App struct {
+		Language string `koanf:"language" json:"language"`
+	} `koanf:"app" json:"app"`
 	Task struct {
 		Enabled  bool     `koanf:"enabled" json:"enabled" default:"true"`
 		Mode     TaskMode `koanf:"mode" json:"mode" default:"1"`

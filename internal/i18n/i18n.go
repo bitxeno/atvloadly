@@ -13,7 +13,6 @@ import (
 var localesFs embed.FS
 var i18nBundle *i18n.Bundle
 var i18nLocalizer *i18n.Localizer
-var currentLang = "en"
 
 func init() {
 	i18nBundle = i18n.NewBundle(language.English)
@@ -31,17 +30,14 @@ func init() {
 		}
 	}
 
-	i18nLocalizer = i18n.NewLocalizer(i18nBundle, currentLang)
+	i18nLocalizer = i18n.NewLocalizer(i18nBundle, "en")
 }
 
 func SetLanguage(lang string) {
 	if lang == "" {
 		return
 	}
-	if currentLang != lang {
-		currentLang = lang
-		i18nLocalizer = i18n.NewLocalizer(i18nBundle, currentLang)
-	}
+	i18nLocalizer = i18n.NewLocalizer(i18nBundle, lang)
 }
 
 func Localize(key string) string {

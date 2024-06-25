@@ -14,7 +14,6 @@ func Run(addr string, port int) error {
 	server := fiber.New(fiber.Config{
 		BodyLimit: math.MaxInt,
 	})
-	route(server)
 
 	// set fiber web server access log
 	server.Use(logger.New())
@@ -26,6 +25,7 @@ func Run(addr string, port int) error {
 		log.Infof("Web access log file path: %s", app.Config.Log.AccessLog)
 	}
 
+	route(server)
 	if err := server.Listen(fmt.Sprintf("%s:%d", addr, port)); err != nil {
 		log.Error(err.Error())
 		return err

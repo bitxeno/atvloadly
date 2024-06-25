@@ -78,12 +78,12 @@ func route(fi *fiber.App) {
 		return c.SendString("hello world.")
 	})
 	api.Post("/lang/sync", func(c *fiber.Ctx) error {
-		lang := c.Params("lang")
+		lang := c.Query("lang")
 		accept := c.Get("Accept-Language")
 		if lang != "" {
-			i18n.SetLanguage(lang)
+			service.SetLanguage(lang)
 		} else {
-			i18n.SetLanguage(accept)
+			service.SetLanguage(accept)
 		}
 		return c.Status(http.StatusOK).JSON(apiSuccess(i18n.Localize("language")))
 	})

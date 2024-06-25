@@ -14,6 +14,7 @@ import (
 	"github.com/artdarek/go-unzip/pkg/unzip"
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/http"
+	"github.com/bitxeno/atvloadly/internal/i18n"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/model"
@@ -198,4 +199,24 @@ func downloadDeveloperDiskImageByVersion(url string, version string) error {
 
 func GetValidName(name string) string {
 	return strings.ToLower(regValidName.ReplaceAllString(name, ""))
+}
+
+func SetLanguage(lang string) {
+	if lang == "" {
+		return
+	}
+	lang = strings.ToLower(lang)
+	// get first one language from http [Accept-Language] header
+	if strings.Contains(lang, ",") {
+		lang = strings.Split(lang, ",")[0]
+	}
+	if strings.Contains(lang, ";") {
+		lang = strings.Split(lang, ";")[0]
+	}
+	if app.Settings.App.Language != lang {
+		app.Settings.App.Language = lang
+		app.SaveSettings()
+
+		i18n.SetLanguage(lang)
+	}
 }

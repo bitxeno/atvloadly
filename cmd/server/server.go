@@ -52,7 +52,8 @@ func action(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	if err = app.InitSettings(conf, debug); err != nil {
+	setttings, err := app.InitSettings(conf, debug)
+	if err != nil {
 		return err
 	}
 
@@ -68,6 +69,9 @@ func action(c *cli.Context) error {
 	if err := app.InitLogger(conf); err != nil {
 		return err
 	}
+
+	// init i18n
+	app.InitLanguage(setttings.App.Language)
 
 	// init db
 	if err := app.InitDb(conf); err != nil {

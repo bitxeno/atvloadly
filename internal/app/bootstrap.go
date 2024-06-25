@@ -5,6 +5,7 @@ import (
 
 	"github.com/bitxeno/atvloadly/internal/cfg"
 	"github.com/bitxeno/atvloadly/internal/db"
+	"github.com/bitxeno/atvloadly/internal/i18n"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/creasty/defaults"
@@ -39,10 +40,10 @@ func InitConfig(path string, debug bool) (*Configuration, error) {
 }
 
 // load settings from file
-func InitSettings(conf *Configuration, debug bool) error {
+func InitSettings(conf *Configuration, debug bool) (*SettingsConfiguration, error) {
 	var settings SettingsConfiguration
 	if err := defaults.Set(&settings); err != nil {
-		return err
+		return nil, err
 	}
 
 	confDir := conf.Server.DataDir
@@ -52,10 +53,10 @@ func InitSettings(conf *Configuration, debug bool) error {
 	path := filepath.Join(confDir, "settings.json")
 	c, err := cfg.Load(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := c.BindStruct(&settings); err != nil {
-		return err
+		return nil, err
 	}
 	go startSaveSettingsJob(path)
 	Settings = &settings
@@ -64,7 +65,7 @@ func InitSettings(conf *Configuration, debug bool) error {
 		c.PrintConfig()
 	}
 
-	return nil
+	return &settings, nil
 }
 
 func InitLogger(conf *Configuration) error {
@@ -97,4 +98,8 @@ func InitDb(conf *Configuration) error {
 	}
 
 	return nil
+}
+
+func InitLanguage(lang string) {
+	i18n.SetLanguage(lang)
 }
