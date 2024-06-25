@@ -5,19 +5,5 @@
         "content": "Account: {{.account}}\nError log: {{.error}}",
         "batch_title": "atvloadly Refresh Task Execution Failed",
         "batch_content": "app: {{.name}}\n Error Log: {{.error}}\n\n"
-    },
-    "task": {
-        "started": "Start executing installation task...",
-        "completed": "Installation task completed.",
-        "app_install_started": "Start installing ipa: {{.name}}",
-        "app_install_completed": "Ipa installation completed.{{.name}}",
-        "task_disabled": "App refresh scheduled task is not enabled",
-        "task_started": "App refresh scheduled task has started, time: {{.time}}",
-        "install_failed": "Error executing installation script.{{.error}}",
-        "error_get_app_list": "Failed to get the installation list",
-        "error_invalid_arguments": "Task account, password, UDID are empty",
-        "error_invalid_crod_time_format": "Failed to start app refresh scheduled task due to incorrect timing format: {{.time}}",
-        "try_restart_usbmuxd": "Try restarting usbmuxd to fix LOCKDOWN_E_MUX_ERROR error. {{.error}}",
-        "try_restart_usbmuxd_success": "usbmuxd restart complete, try installing ipa again: {{.name}}"
     }
 }

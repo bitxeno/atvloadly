@@ -40,18 +40,18 @@ func (t *Task) RunSchedule() error {
 	}
 
 	if !app.Settings.Task.Enabled {
-		log.Info(i18n.Localize("task.task_disabled"))
+		log.Info("App refresh scheduled task is not enabled")
 		return nil
 	}
 
 	t.c = cron.New()
 	if _, err := t.c.AddFunc(app.Settings.Task.CrodTime, t.Run); err != nil {
-		log.Err(err).Msg(i18n.LocalizeF("task.error_invalid_crod_time_format", map[string]interface{}{"time": app.Settings.Task.CrodTime}))
+		log.Err(err).Msgf("Failed to start app refresh scheduled task due to incorrect timing format: %s", app.Settings.Task.CrodTime)
 		t.c = nil
 		return err
 	}
 
-	log.Info(i18n.LocalizeF("task.task_started", map[string]interface{}{"time": app.Settings.Task.CrodTime}))
+	log.Infof("App refresh scheduled task has started, time: %s", app.Settings.Task.CrodTime)
 	t.c.Start()
 
 	return nil
@@ -70,7 +70,7 @@ func (t *Task) Run() {
 
 	installedApps, err := service.GetEnableAppList()
 	if err != nil {
-		log.Err(err).Msg(i18n.Localize("task.error_get_app_list"))
+		log.Err(err).Msg("Failed to get the installation list")
 		return
 	}
 
@@ -82,7 +82,7 @@ func (t *Task) Run() {
 			continue
 		}
 
-		log.Info(i18n.LocalizeF("task.app_install_started", map[string]interface{}{"name": v.IpaName}))
+		log.Infof("Start installing ipa: %s", v.IpaName)
 		err := t.runInternalRetry(v)
 		if err != nil {
 			now := time.Now()
@@ -97,7 +97,7 @@ func (t *Task) Run() {
 			v.RefreshedResult = true
 			_ = service.UpdateAppRefreshResult(v)
 		}
-		log.Info(i18n.LocalizeF("task.app_install_completed", map[string]interface{}{"name": v.IpaName}))
+		log.Infof("Ipa installation completed. %s", v.IpaName)
 
 		// Next execution delayed by 10 seconds.
 		time.Sleep(10 * time.Second)
@@ -161,9 +161,9 @@ func (t *Task) runInternalRetry(v model.InstalledApp) error {
 	// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
 	// LOCKDOWN_E_MUX_ERROR / AFC_E_MUX_ERROR /
 	if err != nil {
-		log.Info(i18n.LocalizeF("task.try_restart_usbmuxd", map[string]interface{}{"name": v.IpaName}))
+		log.Infof("Try restarting usbmuxd to fix LOCKDOWN_E_MUX_ERROR error. %s", v.IpaName)
 		if err = manager.RestartUsbmuxd(); err == nil {
-			log.Info(i18n.LocalizeF("task.try_restart_usbmuxd_success", map[string]interface{}{"name": v.IpaName}))
+			log.Infof("usbmuxd restart complete, try installing ipa again. %s", v.IpaName)
 			time.Sleep(5 * time.Second)
 			err = t.runInternal(v)
 		}
@@ -175,8 +175,8 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 	t.InstallingApp = &v
 
 	if v.Account == "" || v.Password == "" || v.UDID == "" {
-		log.Info(i18n.Localize("task.error_invalid_arguments"))
-		return fmt.Errorf(i18n.Localize("task.error_invalid_arguments"))
+		log.Info("account or password or UDID is empty")
+		return fmt.Errorf("account or password or UDID is empty")
 	}
 
 	// The sideloader will handle special character "$". For those with this special character, it needs to be enclosed in single quotation marks.
@@ -239,7 +239,7 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 	if err := cmd.Start(); nil != err {
 		data := []byte(output.String())
 		t.writeLog(v, data)
-		log.Err(err).Msg(i18n.LocalizeF("install_failed", map[string]interface{}{"error": outputErr.String()}))
+		log.Err(err).Msgf("Error executing installation script. %s", outputErr.String())
 		return fmt.Errorf("%s %v", outputErr.String(), err)
 	}
 
@@ -247,7 +247,7 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 	if err != nil {
 		data := []byte(output.String())
 		t.writeLog(v, data)
-		log.Err(err).Msg(i18n.LocalizeF("install_failed", map[string]interface{}{"error": outputErr.String()}))
+		log.Err(err).Msgf("Error executing installation script. %s", outputErr.String())
 		return fmt.Errorf("%s %v", outputErr.String(), err)
 	}
 
@@ -279,13 +279,13 @@ func (t *Task) writeLog(v model.InstalledApp, data []byte) {
 
 func (t *Task) startedState() {
 	t.Running = true
-	log.Info(i18n.Localize("task.started"))
+	log.Info("Start executing installation task...")
 }
 
 func (t *Task) completedState() {
 	t.Running = false
 	t.InstallingApp = nil
-	log.Info(i18n.Localize("task.completed"))
+	log.Info("Installation task completed.")
 }
 
 func ScheduleRefreshApps() error {
