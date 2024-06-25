@@ -94,10 +94,8 @@ func (t *Task) runQueue() {
 	for {
 		select {
 		case v := <-t.InstallAppQueue:
-			log.Infof("Start installing ipa: %s", v.IpaName)
 			t.tryInstallApp(v)
 			t.InstallingApps.Delete(v.ID)
-			log.Infof("Installing ipa completed: %s", v.IpaName)
 
 			// Next execution delayed by 5 seconds.
 			time.Sleep(5 * time.Second)
@@ -136,6 +134,7 @@ func (t *Task) StartInstallApp(v model.InstalledApp) {
 }
 
 func (t *Task) tryInstallApp(v model.InstalledApp) {
+	log.Infof("Start installing ipa: %s", v.IpaName)
 	var err error
 	err = t.runInternal(v)
 	// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
@@ -154,6 +153,7 @@ func (t *Task) tryInstallApp(v model.InstalledApp) {
 		v.RefreshedDate = &now
 		v.RefreshedResult = true
 		_ = service.UpdateAppRefreshResult(v)
+		log.Infof("Installing ipa success: %s", v.IpaName)
 	} else {
 		v.RefreshedDate = &now
 		v.RefreshedResult = false
@@ -163,6 +163,7 @@ func (t *Task) tryInstallApp(v model.InstalledApp) {
 		title := i18n.LocalizeF("notify.title", map[string]interface{}{"name": v.IpaName})
 		message := i18n.LocalizeF("notify.content", map[string]interface{}{"account": v.Account, "error": err.Error()})
 		_ = notify.Send(title, message)
+		log.Infof("Installing ipa failed: %s error: %s", v.IpaName, err.Error())
 	}
 }
 
