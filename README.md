@@ -6,7 +6,7 @@
 <div align="center">
 
 [![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt-989898)](https://github.com/bitxeno/atvloadly/internal/releases)
-[![release](https://img.shields.io/docker/v/bitxeno/atvloadly?label=docker%20latest)](https://hub.docker.com/r/bitxeno/atvloadly)
+[![release](https://img.shields.io/docker/v/bitxeno/atvloadly?label=docker%20latest&sort=semver)](https://hub.docker.com/r/bitxeno/atvloadly)
 ![Docker Image Size](https://img.shields.io/docker/image-size/bitxeno/atvloadly)
 ![Docker Pulls](https://img.shields.io/docker/pulls/bitxeno/atvloadly)
 [![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/internal/blob/master/LICENSE)
