@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
@@ -24,19 +25,22 @@ import (
 var instance = new()
 
 type Task struct {
-	c             *cron.Cron
-	Running       bool `json:"running"`
-	InstallingApp *model.InstalledApp
+	c               *cron.Cron
+	InstallingApps  sync.Map
+	InstallAppQueue chan model.InstalledApp
+	chExitQueue     chan bool
 }
 
 func new() *Task {
-	return &Task{}
+	return &Task{
+		InstallAppQueue: make(chan model.InstalledApp, 100),
+		chExitQueue:     make(chan bool, 1),
+	}
 }
 
 func (t *Task) RunSchedule() error {
 	if t.c != nil {
-		t.c.Stop()
-		t.c = nil
+		t.Stop()
 	}
 
 	if !app.Settings.Task.Enabled {
@@ -52,61 +56,52 @@ func (t *Task) RunSchedule() error {
 	}
 
 	log.Infof("App refresh scheduled task has started, time: %s", app.Settings.Task.CrodTime)
-	t.c.Start()
+	t.Start()
 
 	return nil
 }
 
+func (t *Task) Start() {
+	t.c.Start()
+	go t.runQueue()
+}
+
 func (t *Task) Stop() {
-	t.c.Stop()
+	t.chExitQueue <- true
+	<-t.c.Stop().Done()
+	t.c = nil
 }
 
 func (t *Task) Run() {
-	if t.Running {
-		return
-	}
-	t.startedState()
-	defer t.completedState()
-
 	installedApps, err := service.GetEnableAppList()
 	if err != nil {
 		log.Err(err).Msg("Failed to get the installation list")
 		return
 	}
 
-	now := time.Now()
-	failedList := []model.InstalledApp{}
-	failedMsg := ""
 	for _, v := range installedApps {
 		if !t.checkNeedRefresh(v) {
 			continue
 		}
 
-		log.Infof("Start installing ipa: %s", v.IpaName)
-		err := t.runInternalRetry(v)
-		if err != nil {
-			now := time.Now()
-			v.RefreshedDate = &now
-			v.RefreshedResult = false
-			_ = service.UpdateAppRefreshResult(v)
-
-			failedList = append(failedList, v)
-			failedMsg += i18n.LocalizeF("notify.batch_content", map[string]interface{}{"name": v.IpaName, "error": err.Error()})
-		} else {
-			v.RefreshedDate = &now
-			v.RefreshedResult = true
-			_ = service.UpdateAppRefreshResult(v)
-		}
-		log.Infof("Ipa installation completed. %s", v.IpaName)
-
-		// Next execution delayed by 10 seconds.
-		time.Sleep(10 * time.Second)
+		t.StartInstallApp(v)
 	}
+}
 
-	// Send installation failure notification.
-	if len(failedList) > 0 {
-		title := i18n.LocalizeF("notify.title", map[string]interface{}{"name": "atvloadly"})
-		_ = notify.Send(title, failedMsg)
+func (t *Task) runQueue() {
+	for {
+		select {
+		case v := <-t.InstallAppQueue:
+			log.Infof("Start installing ipa: %s", v.IpaName)
+			t.tryInstallApp(v)
+			t.InstallingApps.Delete(v.ID)
+
+			// Next execution delayed by 5 seconds.
+			time.Sleep(5 * time.Second)
+		case <-t.chExitQueue:
+			log.Info("Install app queue exit.")
+			return
+		}
 	}
 }
 
@@ -131,15 +126,25 @@ func (t *Task) checkNeedRefresh(v model.InstalledApp) bool {
 	return false
 }
 
-func (t *Task) RunImmediately(v model.InstalledApp) {
-	if t.Running {
-		return
+func (t *Task) StartInstallApp(v model.InstalledApp) {
+	t.InstallAppQueue <- v
+}
+
+func (t *Task) tryInstallApp(v model.InstalledApp) {
+	var err error
+	err = t.runInternal(v)
+	// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
+	// LOCKDOWN_E_MUX_ERROR / AFC_E_MUX_ERROR /
+	if err != nil {
+		log.Infof("Try restarting usbmuxd to fix LOCKDOWN_E_MUX_ERROR error. %s", v.IpaName)
+		if err = manager.RestartUsbmuxd(); err == nil {
+			log.Infof("usbmuxd restart complete, try installing ipa again. %s", v.IpaName)
+			time.Sleep(5 * time.Second)
+			err = t.runInternal(v)
+		}
 	}
-	t.startedState()
-	defer t.completedState()
 
 	now := time.Now()
-	err := t.runInternalRetry(v)
 	if err == nil {
 		v.RefreshedDate = &now
 		v.RefreshedResult = true
@@ -156,24 +161,7 @@ func (t *Task) RunImmediately(v model.InstalledApp) {
 	}
 }
 
-func (t *Task) runInternalRetry(v model.InstalledApp) error {
-	err := t.runInternal(v)
-	// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
-	// LOCKDOWN_E_MUX_ERROR / AFC_E_MUX_ERROR /
-	if err != nil {
-		log.Infof("Try restarting usbmuxd to fix LOCKDOWN_E_MUX_ERROR error. %s", v.IpaName)
-		if err = manager.RestartUsbmuxd(); err == nil {
-			log.Infof("usbmuxd restart complete, try installing ipa again. %s", v.IpaName)
-			time.Sleep(5 * time.Second)
-			err = t.runInternal(v)
-		}
-	}
-	return err
-}
-
 func (t *Task) runInternal(v model.InstalledApp) error {
-	t.InstallingApp = &v
-
 	if v.Account == "" || v.Password == "" || v.UDID == "" {
 		log.Info("account or password or UDID is empty")
 		return fmt.Errorf("account or password or UDID is empty")
@@ -277,41 +265,26 @@ func (t *Task) writeLog(v model.InstalledApp, data []byte) {
 	}
 }
 
-func (t *Task) startedState() {
-	t.Running = true
-	log.Info("Start executing installation task...")
-}
-
-func (t *Task) completedState() {
-	t.Running = false
-	t.InstallingApp = nil
-	log.Info("Installation task completed.")
-}
-
 func ScheduleRefreshApps() error {
 	return instance.RunSchedule()
 }
 
 func RunInstallApp(v model.InstalledApp) {
-	go instance.RunImmediately(v)
+	if _, loaded := instance.InstallingApps.LoadOrStore(v.ID, v); !loaded {
+		instance.StartInstallApp(v)
+	}
 }
 
-func GetCurrentInstallingApp() *model.InstalledApp {
-	if instance.InstallingApp == nil {
-		return nil
-	}
-	if !instance.Running {
-		return nil
-	}
+func GetCurrentInstallingApps() []model.InstalledApp {
+	installingApps := []model.InstalledApp{}
 
-	return instance.InstallingApp
+	instance.InstallingApps.Range(func(key, value interface{}) bool {
+		installingApps = append(installingApps, value.(model.InstalledApp))
+		return true
+	})
+	return installingApps
 }
 
 func ReloadTask() error {
-	if instance.c != nil {
-		<-instance.c.Stop().Done()
-		instance.c = nil
-	}
-
 	return instance.RunSchedule()
 }

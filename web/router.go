@@ -244,8 +244,7 @@ func route(fi *fiber.App) {
 	})
 
 	api.Get("/apps/installing", func(c *fiber.Ctx) error {
-		app := task.GetCurrentInstallingApp()
-		return c.Status(http.StatusOK).JSON(apiSuccess(app))
+		return c.Status(http.StatusOK).JSON(apiSuccess(task.GetCurrentInstallingApps()))
 	})
 
 	api.Post("/apps", func(c *fiber.Ctx) error {

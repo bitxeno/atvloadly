@@ -93,7 +93,7 @@ export default {
     });
   },
 
-  getInstallingApp: (params) => {
+  getInstallingApps: (params) => {
     return request({
       url: "/api/apps/installing",
       method: "get",

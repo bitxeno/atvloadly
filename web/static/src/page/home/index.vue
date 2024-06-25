@@ -249,7 +249,7 @@ export default {
         // },
       ],
       services: [],
-      installingApp: null,
+      installingApps: [],
       checkInstallingTimer: null,
     };
   },
@@ -296,14 +296,14 @@ export default {
     checkInstallingApp() {
       let _this = this;
 
-      api.getInstallingApp().then((res) => {
+      api.getInstallingApps().then((res) => {
         // res.data returns empty, indicating that the installation has been completed.
-        if (_this.installingApp && !res.data) {
+        if (_this.installingApps && !res.data) {
           _this.fetchAppList();
         }
 
-        _this.installingApp = res.data;
-        if (_this.installingApp) {
+        _this.installingApps = res.data;
+        if (_this.installingApps && _this.installingApps.length > 0) {
           // Repeat the detection until it is completed.
           _this.checkInstallingAppDelay();
         }
@@ -332,7 +332,7 @@ export default {
     refreshApp(item) {
       let _this = this;
 
-      _this.installingApp = item;
+      _this.installingApps.push(item);
 
       api.refreshApp(item.ID).then((res) => {
         _this.checkInstallingAppDelay();
@@ -371,32 +371,33 @@ export default {
       }
     },
     formatRefreshDate(item) {
-      if (this.installingApp && this.installingApp.ID == item.ID) {
-        return this.$t("home.table.refresh_date_format.installing_tips");
+      let _this = this;
+      if (_this.isInstalling(item)) {
+        return _this.$t("home.table.refresh_date_format.installing_tips");
       }
 
       if (!item.refreshed_date) return "-";
 
       let seconds = dayjs().diff(dayjs(item.refreshed_date), "second");
       if (seconds < 60) {
-        return this.$t("home.table.refresh_date_format.seconds", {
+        return _this.$t("home.table.refresh_date_format.seconds", {
           num: seconds,
         });
       }
       let miniutes = parseInt(seconds / 60, 10);
       if (miniutes < 60) {
-        return this.$t("home.table.refresh_date_format.miniutes", {
+        return _this.$t("home.table.refresh_date_format.miniutes", {
           num: miniutes,
         });
       }
       let hours = parseInt(seconds / 3600, 10);
       if (hours < 24) {
-        return this.$t("home.table.refresh_date_format.hours", {
+        return _this.$t("home.table.refresh_date_format.hours", {
           num: hours,
         });
       }
       let days = parseInt(seconds / 24 / 3600, 10);
-      return this.$t("home.table.refresh_date_format.days", {
+      return _this.$t("home.table.refresh_date_format.days", {
         num: days,
       });
     },
@@ -418,9 +419,14 @@ export default {
       return this.$t("home.sidebar.device_status.unpaired");
     },
     isInstalling(item) {
-      if (!this.installingApp) return false;
+      if (!this.installingApps || this.installingApps.length == 0) return false;
 
-      return item.ID == this.installingApp.ID;
+      for (let i = 0; i < this.installingApps.length; i++) {
+        if( this.installingApps[i].ID == item.ID) {
+          return true;
+        }
+      }
+      return false;
     },
     iconUrl(app) {
       if (app.icon) {
