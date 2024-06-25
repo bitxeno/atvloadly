@@ -104,12 +104,12 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 
 ## 推荐开源 App
 
-[>> wiki](https://github.com/bitxeno/atvloadly/internal/wiki/AppleTV-App)
+[>> wiki](https://github.com/bitxeno/atvloadly/wiki/AppleTV-App)
 
 
 ## 如何开发编译
 
-[>> wiki](https://github.com/bitxeno/atvloadly/internal/wiki/How-to-build)
+[>> wiki](https://github.com/bitxeno/atvloadly/wiki/How-to-build)
 
 ## 赞助
 

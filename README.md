@@ -71,7 +71,7 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [S
 
 ### Preparation (very important‼️)
 
-1. a burned account
+1. A burned account
 > Dedicated Apple ID installation account, both free or developer accounts are acceptable (**For security reasons, avoid using commonly used accounts. Instead, create a burned account for installation!**)
 2. A phone to 2FA Verification
 > atvloadly needs to be authorized as a trusted device (it will be virtualized as a MacBook). During the installation process, Apple will send a 2FA code either to your phone number associated with installation account or trusted device where you're logged into your installation account. (**failure to verify the authorization verification code within timeout will result in temporary account freeze! Password reset is required for recovery**)
@@ -100,7 +100,7 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [S
 
 ## How to build
 
-[>> wiki](https://github.com/bitxeno/atvloadly/internal/wiki/How-to-build)
+[>> wiki](https://github.com/bitxeno/atvloadly/wiki/How-to-build)
 
 ## Donation
 
