@@ -97,6 +97,7 @@ func (t *Task) runQueue() {
 			log.Infof("Start installing ipa: %s", v.IpaName)
 			t.tryInstallApp(v)
 			t.InstallingApps.Delete(v.ID)
+			log.Infof("Installing ipa completed: %s", v.IpaName)
 
 			// Next execution delayed by 5 seconds.
 			time.Sleep(5 * time.Second)
@@ -140,9 +141,9 @@ func (t *Task) tryInstallApp(v model.InstalledApp) {
 	// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
 	// LOCKDOWN_E_MUX_ERROR / AFC_E_MUX_ERROR /
 	if err != nil {
-		log.Infof("Try restarting usbmuxd to fix LOCKDOWN_E_MUX_ERROR error. %s", v.IpaName)
+		log.Infof("Try restarting usbmuxd to fix connect issue. %s", v.IpaName)
 		if err = manager.RestartUsbmuxd(); err == nil {
-			log.Infof("usbmuxd restart complete, try installing ipa again. %s", v.IpaName)
+			log.Infof("Restart usbmuxd complete, try install ipa again. %s", v.IpaName)
 			time.Sleep(5 * time.Second)
 			err = t.runInternal(v)
 		}
