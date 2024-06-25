@@ -96,7 +96,7 @@ jobs:
             perf
             refactor
             chore
-            docs
+          #   docs
           #   build
           #   test
           #   style
