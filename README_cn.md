@@ -6,8 +6,9 @@
 <div align="center">
 
 [![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt-989898)](https://github.com/bitxeno/atvloadly/internal/releases)
-[![release](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/latest_tag?label=docker%20latest)](https://github.com/bitxeno/atvloadly/internal/pkgs/container/atvloadly)
-[![image size](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/size)](https://github.com/bitxeno/atvloadly/internal/pkgs/container/atvloadly)
+[![release](https://ghcr-badge.egpl.dev/bitxeno/atvloadly/latest_tag?label=docker%20latest)](https://hub.docker.com/r/bitxeno/atvloadly)
+![Docker Image Size](https://img.shields.io/docker/image-size/bitxeno/atvloadly)
+![Docker Pulls](https://img.shields.io/docker/pulls/bitxeno/atvloadly)
 [![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/internal/blob/master/LICENSE)
 [![Telegram](https://img.shields.io/badge/telegram-2CA5E0?logo=telegram&logoColor=white)](https://t.me/atvloadly)
 
@@ -19,8 +20,6 @@
 [English](./README.md) | 中文
 
 </div>
-
-> ⚠️ **不支持 tvOS 17.0 以上系统** ⚠️
 
 atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通过使用 [Sideloader](https://github.com/Dadoum/Sideloader) 实现侧载，并会自动刷新 App 以保证其长期可用性。
 
@@ -44,7 +43,7 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 
 ## 安装
 
-> :pensive: **只支持 Linux/OpenWrt 系统，不支持 Mac/Windows 系统**
+> 😔 **只支持 Linux/OpenWrt 系统，不支持 Mac/Windows 系统**
 
 1. Linux/OpenWrt 宿主机需要安装 `avahi-deamon` 服务
    
@@ -63,10 +62,8 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 2. 请参考下面的命令进行安装，记得修改下 mount 目录
    
    ```
-   docker run --privileged	-d --name=atvloadly --restart=always -p 5533:80 -v /path/to/mount/dir:/data -v /var/run/dbus:/var/run/dbus -v /var/run/avahi-daemon:/var/run/avahi-daemon  ghcr.io/bitxeno/atvloadly:latest
+   docker run --privileged	-d --name=atvloadly --restart=always -p 5533:80 -v /path/to/mount/dir:/data -v /var/run/dbus:/var/run/dbus -v /var/run/avahi-daemon:/var/run/avahi-daemon  bitxeno/atvloadly:latest
    ```
-   
-   镜像名称：`ghcr.io/bitxeno/atvloadly:latest`，需要使用这个带域名的完整名称才能pull下来。
    
    宿主机的 `/var/run/dbus` 和`/var/run/avahi-daemon` 需要共享给 docker 容器使用
 
@@ -74,10 +71,12 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 
 ## 使用方法
 
-### 前期准备 (非常重要:bangbang:)
+### 前期准备 (非常重要‼️)
 
-* 专用的 Apple ID 安装帐号，免费或开发者帐号都可以（**为了安全考虑，请不要使用常用帐号安装！**)
-* 登录了安装帐号的 iPhone 手机（用于授权信任 atvloadly，会虚拟为一台 MacBook，**超时不验证授权验证码，会导致帐号被临时冻结！需要重置密码才能恢复**）
+1. 专用的 Apple ID 安装帐号
+> 免费或开发者帐号都可以（**为了安全考虑，请不要使用常用帐号安装！**)
+2. 用于接收 2FA 验证码的手机
+> atvloadly 需要授权才能正常使用（会虚拟为一台 MacBook），安装时苹果会向你安装帐号的注册手机号或已登陆了安装帐号的设备发送授权验证码，请及时授权验证。（**超时不验证授权验证码，会导致帐号被临时冻结！需要重置密码才能恢复**）
 
 
 ### 操作流程
@@ -92,15 +91,15 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 
 1、免费帐号可以安装多少个应用
 
-> 每个 Apple ID 最多可以同时激活 3 个应用，安装超过 3 个后，会导致前面已安装的 App 变为不可用
+> 每个免费帐号最多注册 10 个 App，而且只能同时激活 3 个 App，安装超过 3 个后，会导致前面已安装的 App 变为不可用
 
 2、升级系统后安装失败
 
 > 升级系统后需要重新配对，一般新出的系统都不支持，建议关闭系统自动更新
 
-3、密码可以使用App-specific password吗，这样安全些
+3、密码可以使用 App-specific password 吗，这样安全些
 
-> Sideloader 目前不支持
+> 目前不支持
 
 
 ## 推荐开源 App
@@ -114,7 +113,7 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 
 ## 赞助
 
-如果觉得项目对您有帮助，欢迎赞助以支持我们的工作 ❤️
+如果觉得项目对您有帮助，欢迎赞助一杯咖啡 ❤️
 
 <img width="150" src="./doc/preview/weixin_donate.png" alt="微信赞助码">
 
