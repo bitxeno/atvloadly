@@ -79,6 +79,7 @@ func (t *Task) Run() {
 		return
 	}
 
+	log.Info("Start executing installation task...")
 	for _, v := range installedApps {
 		if !t.checkNeedRefresh(v) {
 			continue
