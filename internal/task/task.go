@@ -33,7 +33,7 @@ type Task struct {
 
 func new() *Task {
 	return &Task{
-		InstallAppQueue: make(chan model.InstalledApp, 100),
+		InstallAppQueue: make(chan model.InstalledApp, 1),
 		chExitQueue:     make(chan bool, 1),
 	}
 }
@@ -87,6 +87,7 @@ func (t *Task) Run() {
 
 		t.StartInstallApp(v)
 	}
+	log.Info("Installation task completed.")
 }
 
 func (t *Task) runQueue() {
@@ -128,7 +129,9 @@ func (t *Task) checkNeedRefresh(v model.InstalledApp) bool {
 }
 
 func (t *Task) StartInstallApp(v model.InstalledApp) {
-	t.InstallAppQueue <- v
+	go func() {
+		t.InstallAppQueue <- v
+	}()
 }
 
 func (t *Task) tryInstallApp(v model.InstalledApp) {
