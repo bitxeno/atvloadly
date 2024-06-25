@@ -119,8 +119,11 @@ jobs:
         with:
           name: ${{needs.build.outputs.APP_NAME}}
           path: build
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Login to DockerHub
-        if: ${{ steps.vars.outputs.HAS_DOCKER_TOKEN }}
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -131,13 +134,12 @@ jobs:
         with:
           images: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPOSITORY }}
       - name: Build and push Docker images to DockerHub
-        if: ${{ steps.vars.outputs.HAS_DOCKER_TOKEN }}
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           provenance: false
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
@@ -161,9 +163,10 @@ jobs:
         with:
           name: ${{needs.build.outputs.APP_NAME}}
           path: build
-      - name: Display structure of downloaded files
-        run: ls -R
-        working-directory: build
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -181,7 +184,7 @@ jobs:
           context: .
           push: true
           provenance: false
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
