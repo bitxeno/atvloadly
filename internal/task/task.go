@@ -117,8 +117,8 @@ func (t *Task) checkNeedRefresh(v model.InstalledApp) bool {
 		}
 	}
 
-	// 每天安装
-	if app.Settings.Task.Mode == app.DailyMode {
+	// today has refreshed will ignore
+	if app.Settings.Task.Mode == app.CustomMode {
 		if v.RefreshedDate.Format("2006-01-02") != now.Format("2006-01-02") {
 			return true
 		}

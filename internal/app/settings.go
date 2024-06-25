@@ -16,7 +16,7 @@ var saveTimer *time.Timer = time.NewTimer(math.MaxInt64)
 
 const (
 	OneDayAgoMode TaskMode = "1"
-	DailyMode     TaskMode = "2"
+	CustomMode    TaskMode = "2"
 )
 
 type TaskMode string

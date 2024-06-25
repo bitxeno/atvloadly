@@ -183,7 +183,7 @@ export default {
       _this.log.output = "";
       _this.log.show = true;
 
-      _this.log.output += "Checking afc service status...\n";
+      _this.log.output += "checking afc service status...\n";
       let data = await api.checkAfcService(_this.id);
       if (data != "success") {
         _this.log.output += data;

@@ -131,7 +131,7 @@
       "notify_success": "Notification Sent Successfully"
     },
     "notification": {
-      "title": "Notifications",
+      "title": "Installation Failure Notification",
       "toggle": {
         "label": "Enable"
       },
@@ -158,7 +158,7 @@
       "mode": {
         "label": "Refresh Mode",
         "day_before_expired": "One day before expiration",
-        "daily": "Daily"
+        "custom": "Custom"
       },
       "run_time": {
         "label": "Running Time Period",

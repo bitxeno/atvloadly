@@ -131,7 +131,7 @@
       "notify_success": "推送成功"
     },
     "notification": {
-      "title": "通知",
+      "title": "安装失败通知",
       "toggle": {
         "label": "启用"
       },
@@ -158,7 +158,7 @@
       "mode": {
         "label": "刷新模式",
         "day_before_expired": "过期前一天",
-        "daily": "每天"
+        "custom": "自定义"
       },
       "run_time": {
         "label": "运行时间段",

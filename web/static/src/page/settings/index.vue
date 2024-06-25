@@ -223,7 +223,7 @@
                 value="2"
               />
               <span class="label-text">{{
-                $t("settings.refresh.mode.daily")
+                $t("settings.refresh.mode.custom")
               }}</span>
             </label>
           </div>
