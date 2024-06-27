@@ -182,7 +182,10 @@ func route(fi *fiber.App) {
 		files := form.File["files"]
 
 		result := []model.IpaFile{}
-		saveDir := "/tmp"
+		saveDir := filepath.Join(app.Config.Server.DataDir, "tmp")
+		if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("failed to create directory :" + saveDir))
+		}
 		for _, file := range files {
 			timestamp := time.Now().UnixMicro()
 			name := service.GetValidName(utils.FileNameWithoutExt(file.Filename))
@@ -207,9 +210,6 @@ func route(fi *fiber.App) {
 			ipaFile.Name = info.Name()
 			ipaFile.BundleIdentifier = info.Identifier()
 			ipaFile.Version = info.Version()
-			if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
-				return c.Status(http.StatusOK).JSON(apiError("failed to create directory :" + saveDir))
-			}
 
 			// 保存icon
 			if info.Icon() != nil {
