@@ -45,7 +45,7 @@ func route(fi *fiber.App) {
 		defer term.Close()
 
 		term.SetCWD(app.Config.Server.DataDir)
-		term.SetENV([]string{"SIDELOADER_CONFIG_DIR=" + app.SideloaderDataDir()})
+		term.SetENV([]string{fmt.Sprintf("SIDELOADER_CONFIG_DIR='%s'", app.SideloaderDataDir())})
 		term.Start()
 	}))
 	fi.Get("/apps/:id/icon", func(c *fiber.Ctx) error {
@@ -182,14 +182,11 @@ func route(fi *fiber.App) {
 		files := form.File["files"]
 
 		result := []model.IpaFile{}
+		saveDir := "/tmp"
 		for _, file := range files {
-			saveDir := filepath.Join(app.Config.Server.DataDir, "tmp")
-			if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
-				return c.Status(http.StatusOK).JSON(apiError("failed to create directory :" + saveDir))
-			}
-
+			timestamp := time.Now().UnixMicro()
 			name := service.GetValidName(utils.FileNameWithoutExt(file.Filename))
-			dstName := fmt.Sprintf("%s_%d%s", name, time.Now().Unix(), filepath.Ext(file.Filename))
+			dstName := fmt.Sprintf("%s_%d%s", name, timestamp, filepath.Ext(file.Filename))
 			dst := filepath.Join(saveDir, dstName)
 
 			// Upload the file to specific dst.
@@ -216,7 +213,7 @@ func route(fi *fiber.App) {
 
 			// 保存icon
 			if info.Icon() != nil {
-				iconName := fmt.Sprintf("%s_%d%s", name, time.Now().Unix(), ".png")
+				iconName := fmt.Sprintf("%s_%d%s", name, timestamp, ".png")
 				iconDst := filepath.Join(saveDir, iconName)
 				out, err := os.Create(iconDst)
 				if err == nil {
@@ -259,7 +256,23 @@ func route(fi *fiber.App) {
 		} else {
 			return c.Status(http.StatusOK).JSON(apiSuccess(ipa))
 		}
+	})
 
+	api.Post("/clean", func(c *fiber.Ctx) error {
+		var ipa model.IpaFile
+		if err := c.BodyParser(&ipa); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+
+		// clean upload temp file
+		if ipa.Path != "" {
+			_ = os.RemoveAll(ipa.Path)
+		}
+		if ipa.Icon != "" {
+			_ = os.RemoveAll(ipa.Icon)
+		}
+
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
 	})
 
 	api.Post("/apps/:id/delete", func(c *fiber.Ctx) error {

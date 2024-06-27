@@ -307,11 +307,14 @@ export default {
       }
 
 
-      // pairing error
+      // Installation error
       if (_this.cmd.output.indexOf("ERROR") !== -1) {
         _this.cmd.output = "";
         _this.loading = false;
         toast.error(this.$t("install.toast.install_failed"));
+
+        // clean upload temp file
+        api.clean(_this.ipa)
         return;
       }
 
@@ -352,6 +355,8 @@ export default {
     },
 
     websocketclose(e) {
+      // clean upload temp file
+      api.clean(this.ipa)
       console.log(`connection closed (${e.code})`);
     },
   },

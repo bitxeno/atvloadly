@@ -61,7 +61,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 		cur.RefreshedResult = app.RefreshedResult
 		cur.Password = app.Password
 
-		// 把ipa/icon移动到id目录
+		// 把 ipa/icon 移动到 ipa 保存目录
 		saveDir := filepath.Join(conf.Config.Server.DataDir, "ipa", fmt.Sprintf("%d", app.ID))
 		if cur.IpaPath != "" {
 			ipaPath := filepath.Join(saveDir, "app.ipa")
@@ -102,10 +102,10 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 			return nil, result.Error
 		}
 
-		// 把ipa/icon移动到id目录
+		// 把 ipa/icon 移动到 ipa 保存目录
 		saveDir := filepath.Join(conf.Config.Server.DataDir, "ipa", fmt.Sprintf("%d", app.ID))
 		if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
-			panic("failed to create directory :" + saveDir)
+			return nil, fmt.Errorf("failed to create directory : %s, error: %s", saveDir, err)
 		}
 		if app.IpaPath != "" {
 			ipaPath := filepath.Join(saveDir, "app.ipa")
