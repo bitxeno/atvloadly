@@ -3,7 +3,7 @@ services:
   atvloadly:
     container_name: atvloadly
     hostname: atvloadly
-    image: ghcr.io/bitxeno/atvloadly:latest
+    image: bitxeno/atvloadly:latest
     privileged: true
     volumes:
       - /etc/atvloadly:/data
