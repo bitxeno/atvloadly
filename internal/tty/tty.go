@@ -36,6 +36,7 @@ func (t *TTY) SetENV(environ []string) {
 }
 
 func (t *TTY) Close() {
+	fmt.Println("tty close")
 	t.pl.Close()
 }
 

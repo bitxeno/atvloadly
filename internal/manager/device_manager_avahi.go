@@ -38,31 +38,31 @@ func (dm *DeviceManager) Start() {
 	if err != nil {
 		log.Err(err).Msgf("GetHostName() failed: ")
 	}
-	log.Println("GetHostName()", host)
+	log.Tracef("GetHostName(): %s", host)
 
 	fqdn, err := server.GetHostNameFqdn()
 	if err != nil {
 		log.Err(err).Msgf("GetHostNameFqdn() failed: ")
 	}
-	log.Println("GetHostNameFqdn()", fqdn)
+	log.Tracef("GetHostNameFqdn(): %s", fqdn)
 
 	s, err := server.GetAlternativeHostName(host)
 	if err != nil {
 		log.Err(err).Msgf("GetAlternativeHostName() failed: ")
 	}
-	log.Println("GetAlternativeHostName()", s)
+	log.Tracef("GetAlternativeHostName(): %s", s)
 
 	i, err := server.GetAPIVersion()
 	if err != nil {
 		log.Err(err).Msgf("GetAPIVersion() failed: ")
 	}
-	log.Println("GetAPIVersion()", i)
+	log.Tracef("GetAPIVersion(): %s", i)
 
 	hn, err := server.ResolveHostName(avahi.InterfaceUnspec, avahi.ProtoUnspec, fqdn, avahi.ProtoUnspec, 0)
 	if err != nil {
 		log.Err(err).Msgf("ResolveHostName() failed: ")
 	}
-	log.Println("ResolveHostName:", hn)
+	log.Tracef("ResolveHostName: %s", hn)
 
 	sb, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsService, mdnsServiceDomain, 0)
 	if err != nil {
@@ -81,19 +81,19 @@ func (dm *DeviceManager) Start() {
 	for {
 		select {
 		case service = <-sb.AddChannel:
-			log.Println("ServiceBrowser ADD: ", service)
+			log.Tracef("ServiceBrowser ADD: %s", service)
 
 			service, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
 				service.Type, service.Domain, avahi.ProtoUnspec, 0)
 			if err == nil {
-				log.Println(" RESOLVED >>", service.Address)
+				log.Tracef(" RESOLVED >> %s", service.Address)
 
 				macAddr := strings.Split(service.Name, "@")[0]
 				name := strings.TrimSuffix(service.Host, ".local")
 				// 检查是否已连接
 				lockdownDevices, err := loadLockdownDevices()
 				if err != nil {
-					log.Println(err)
+					log.Err(err).Msg("loadLockdownDevices error: ")
 					continue
 				}
 
@@ -112,14 +112,14 @@ func (dm *DeviceManager) Start() {
 				}
 			}
 		case service = <-sb.RemoveChannel:
-			log.Println("ServiceBrowser REMOVE: ", service)
+			log.Tracef("ServiceBrowser REMOVE: %s", service)
 		case service = <-sbPairable.AddChannel:
-			log.Println("ServiceBrowser ADD: ", service)
+			log.Tracef("ServiceBrowser ADD: %s", service)
 
 			service, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
 				service.Type, service.Domain, avahi.ProtoUnspec, 0)
 			if err == nil {
-				log.Println(" RESOLVED >>", service.Address)
+				log.Tracef(" RESOLVED >> %s", service.Address)
 
 				// 添加可配对设备
 				macAddr := strings.Split(service.Name, "@")[0]
@@ -138,7 +138,7 @@ func (dm *DeviceManager) Start() {
 			}
 
 		case service = <-sbPairable.RemoveChannel:
-			log.Println("ServiceBrowser REMOVE: ", service)
+			log.Tracef("ServiceBrowser REMOVE: %s", service)
 			macAddr := strings.Split(service.Name, "@")[0]
 			udid := fmt.Sprintf("fff%sfff", macAddr)
 			dm.devices.Delete(udid)

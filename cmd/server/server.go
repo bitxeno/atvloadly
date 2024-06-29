@@ -5,6 +5,7 @@ import (
 	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/task"
 	"github.com/bitxeno/atvloadly/web"
+	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
 )
 
@@ -82,9 +83,15 @@ func action(c *cli.Context) error {
 	_ = task.ScheduleRefreshApps()
 	manager.StartDeviceManager()
 
+	printVersion()
 	port := conf.Server.Port
 	if c.Int("port") > 0 {
 		port = c.Int("port")
 	}
 	return web.Run(conf.Server.ListenAddr, port)
+}
+
+func printVersion() {
+	color.New(color.FgGreen).Print("Starting server version: ")
+	color.New(color.FgCyan).Printf("%s@%s@%v\n", app.Version.Version, app.Version.BuildDate, app.Mode)
 }

@@ -295,5 +295,6 @@ func GetCurrentInstallingApps() []model.InstalledApp {
 }
 
 func ReloadTask() error {
+	log.Info("Reload task...")
 	return instance.RunSchedule()
 }

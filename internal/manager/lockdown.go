@@ -6,17 +6,17 @@ import (
 	"os"
 
 	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/utils"
 	"howett.net/plist"
 )
 
 func loadLockdownDevices() (map[string]model.LockdownDevice, error) {
+	log.Infof("Load lockdown from path: %s", app.Config.App.LockdownDir)
 	files, err := os.ReadDir(app.Config.App.LockdownDir)
 	if err != nil {
-		fmt.Println(err)
-		// return nil, err
-
+		log.Err(err).Msg("Read lockdown dir error: ")
 		devices := map[string]model.LockdownDevice{}
 		return devices, nil
 	}
