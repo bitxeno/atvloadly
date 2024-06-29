@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bitxeno/atvloadly/cmd/gen"
 	"github.com/bitxeno/atvloadly/cmd/server"
 	"github.com/bitxeno/atvloadly/internal/app/build"
 	"github.com/go-errors/errors"
@@ -25,7 +24,6 @@ func main() {
 		Usage:   AppDesc,
 		Version: build.Version,
 		Commands: []*cli.Command{
-			gen.Command,
 			server.Command,
 		},
 	}
