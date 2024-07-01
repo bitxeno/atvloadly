@@ -139,7 +139,6 @@ func (t *Task) tryInstallApp(v model.InstalledApp) {
 		_ = service.UpdateAppRefreshResult(v)
 		log.Infof("Installing ipa success: %s", v.IpaName)
 	} else {
-		v.RefreshedDate = &now
 		v.RefreshedResult = false
 		_ = service.UpdateAppRefreshResult(v)
 
