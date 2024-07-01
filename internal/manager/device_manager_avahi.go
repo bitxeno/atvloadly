@@ -96,9 +96,11 @@ func (dm *DeviceManager) Start() {
 					log.Err(err).Msg("loadLockdownDevices error: ")
 					continue
 				}
+				log.Tracef("lockdown devices count >> %v", len(lockdownDevices))
 
 				// 添加已连接设备，TODO：handshake检测是否可真实连接
 				if lockdownDev, ok := lockdownDevices[macAddr]; ok {
+					log.Tracef("add lockdown device >> %v", lockdownDev)
 					udid := lockdownDev.Name
 					dm.devices.Store(udid, model.Device{
 						ID:          utils.Md5(udid),

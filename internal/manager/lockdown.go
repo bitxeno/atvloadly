@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/log"
@@ -22,7 +23,7 @@ func loadLockdownDevices() (map[string]model.LockdownDevice, error) {
 
 	devices := map[string]model.LockdownDevice{}
 	for _, file := range files {
-		if file.IsDir() || file.Name() == "SystemConfiguration.plist" {
+		if file.IsDir() || strings.HasPrefix(file.Name(), ".") || file.Name() == "SystemConfiguration.plist" {
 			continue
 		}
 
