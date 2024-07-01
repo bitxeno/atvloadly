@@ -1,7 +1,5 @@
 package model
 
-import "encoding/json"
-
 // Message.Type
 const (
 	MessageTypeInstall = 1
@@ -13,6 +11,6 @@ const (
 
 // Message Websocket Communication data format
 type Message struct {
-	Type int             `json:"t"`
-	Data json.RawMessage `json:"d"`
+	Type int    `json:"t"`
+	Data string `json:"d"`
 }
