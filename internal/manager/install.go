@@ -101,7 +101,7 @@ func (t *InstallManager) Close() {
 		t.cancel = nil
 	}
 	if t.em != nil {
-		t.em.CloseWait()
+		_ = t.em.CloseWait()
 	}
 }
 

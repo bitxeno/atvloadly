@@ -56,13 +56,13 @@ func (dm *DeviceManager) Start() {
 	if err != nil {
 		log.Err(err).Msgf("GetAPIVersion() failed: ")
 	}
-	log.Tracef("GetAPIVersion(): %s", i)
+	log.Tracef("GetAPIVersion(): %v", i)
 
 	hn, err := server.ResolveHostName(avahi.InterfaceUnspec, avahi.ProtoUnspec, fqdn, avahi.ProtoUnspec, 0)
 	if err != nil {
 		log.Err(err).Msgf("ResolveHostName() failed: ")
 	}
-	log.Tracef("ResolveHostName: %s", hn)
+	log.Tracef("ResolveHostName: %v", hn)
 
 	sb, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsService, mdnsServiceDomain, 0)
 	if err != nil {
@@ -81,7 +81,7 @@ func (dm *DeviceManager) Start() {
 	for {
 		select {
 		case service = <-sb.AddChannel:
-			log.Tracef("ServiceBrowser ADD: %s", service)
+			log.Tracef("ServiceBrowser ADD: %v", service)
 
 			service, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
 				service.Type, service.Domain, avahi.ProtoUnspec, 0)
@@ -112,9 +112,9 @@ func (dm *DeviceManager) Start() {
 				}
 			}
 		case service = <-sb.RemoveChannel:
-			log.Tracef("ServiceBrowser REMOVE: %s", service)
+			log.Tracef("ServiceBrowser REMOVE: %v", service)
 		case service = <-sbPairable.AddChannel:
-			log.Tracef("ServiceBrowser ADD: %s", service)
+			log.Tracef("ServiceBrowser ADD: %v", service)
 
 			service, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
 				service.Type, service.Domain, avahi.ProtoUnspec, 0)
@@ -138,7 +138,7 @@ func (dm *DeviceManager) Start() {
 			}
 
 		case service = <-sbPairable.RemoveChannel:
-			log.Tracef("ServiceBrowser REMOVE: %s", service)
+			log.Tracef("ServiceBrowser REMOVE: %v", service)
 			macAddr := strings.Split(service.Name, "@")[0]
 			udid := fmt.Sprintf("fff%sfff", macAddr)
 			dm.devices.Delete(udid)
