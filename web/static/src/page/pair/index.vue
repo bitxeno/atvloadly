@@ -106,13 +106,13 @@ export default {
 
       _this.loading = true;
       const uuid = _this.device.udid;
-      _this.websocketsend(`idevicepair pair -u ${uuid} -w`);
+      _this.websocketsend(1, uuid);
     },
     confirmPin() {
       let _this = this;
       _this.status.confirm = true;
 
-      _this.websocketsend(_this.pin);
+      _this.websocketsend(2, _this.pin);
       return;
     },
     onSubmit() {
@@ -131,7 +131,7 @@ export default {
       const wsuri =
         (location.protocol === "https:" ? "wss://" : "ws://") +
         location.host +
-        "/ws/tty";
+        "/ws/pair";
       console.log(wsuri);
       this.websock = new WebSocket(wsuri);
       this.websock.onopen = this.websocketonopen;
@@ -148,46 +148,38 @@ export default {
     websocketonmessage(e) {
       let _this = this;
 
-      _this.cmd.output += e.data;
-      _this.cmd.line += e.data;
-      if (e.data.indexOf("\n") >= 0) {
-        console.log("<--", _this.cmd.line);
-        _this.cmd.line = "";
-      }
+      let line = e.data
 
       if (_this.active === 1) {
         // show Enter PIN
-        if (_this.cmd.output.indexOf("Enter PIN") !== -1) {
+        if (line.indexOf("Enter PIN") !== -1) {
+          _this.pin = "";
           _this.loading = false;
-          _this.cmd.output = "";
+          line = "";
           return;
         }
 
         // pairing error
-        if (_this.cmd.output.indexOf("Invalid PIN") !== -1) {
-          _this.cmd.output = "";
+        if (line.indexOf("Invalid PIN") !== -1) {
           _this.active = 2;
           toast.error(this.$t("pair.toast.pin_incorrect"));
           return;
         }
-        if (_this.cmd.output.indexOf("ERROR") !== -1) {
-          _this.cmd.output = "";
+        if (line.indexOf("ERROR") !== -1) {
           _this.active = 2;
           toast.error(this.$t("pair.toast.pair_error"));
           return;
         }
 
-        if (_this.cmd.output.indexOf("No device found") !== -1) {
+        if (line.indexOf("No device found") !== -1) {
           // usbmuxd service not started
-          _this.cmd.output = "";
           _this.active = 2;
           toast.error(this.$t("pair.toast.no_device_found"));
           return;
         }
 
         // pairing successful.
-        if (_this.cmd.output.indexOf("SUCCESS") !== -1) {
-          _this.cmd.output = "";
+        if (line.indexOf("SUCCESS") !== -1) {
           _this.active++;
           _this.success = true;
           return;
@@ -195,10 +187,12 @@ export default {
       }
     },
 
-    websocketsend(cmd) {
+    websocketsend(t, data) {
       let _this = this;
-      _this.cmd.output = "";
-      const json = JSON.stringify({ t: 1, d: `${cmd}\n` });
+      if (typeof data !== 'string') {
+        data = JSON.stringify(data);
+      }
+      const json = JSON.stringify({ t: t, d: data });
       console.log("--> ", json);
       _this.websock.send(json);
     },

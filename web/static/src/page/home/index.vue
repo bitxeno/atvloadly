@@ -152,8 +152,7 @@
                   </div>
                 </div>
               </td>
-              <td class="lg:break-all">
-                {{ formatDeviceName(item) }}
+              <td class="lg:break-all" v-html="formatDeviceName(item)">
               </td>
               <td class="lg:break-all">{{ item.account }}</td>
               <td>
@@ -413,7 +412,7 @@ export default {
       for (let i = 0; i < _this.devices.length; i++) {
         const dev = _this.devices[i];
         if (dev.udid == item.udid && dev.status == "paired") {
-          return `${dev.ip}`;
+          return `${dev.name}<br/>(${dev.ip})`;
         }
       }
       return this.$t("home.sidebar.device_status.unpaired");

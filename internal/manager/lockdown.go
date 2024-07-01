@@ -13,7 +13,6 @@ import (
 )
 
 func loadLockdownDevices() (map[string]model.LockdownDevice, error) {
-	log.Infof("Load lockdown from path: %s", app.Config.App.LockdownDir)
 	files, err := os.ReadDir(app.Config.App.LockdownDir)
 	if err != nil {
 		log.Err(err).Msg("Read lockdown dir error: ")

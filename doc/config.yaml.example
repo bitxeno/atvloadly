@@ -1,3 +1,4 @@
 server:
-  log: /data/app.log
   work_dir: /data
+log:
+  log_file: /data/app.log

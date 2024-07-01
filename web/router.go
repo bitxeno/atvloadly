@@ -39,7 +39,8 @@ func route(fi *fiber.App) {
 	fi.Get("/ws/tty", websocket.New(func(c *websocket.Conn) {
 		term, err := tty.New(c, "bash")
 		if err != nil {
-			_ = c.WriteMessage(websocket.TextMessage, []byte(err.Error()))
+			msg := fmt.Sprintf("ERROR: %s", err.Error())
+			_ = c.WriteMessage(websocket.TextMessage, []byte(msg))
 			return
 		}
 		defer term.Close()
@@ -48,6 +49,8 @@ func route(fi *fiber.App) {
 		term.SetENV([]string{fmt.Sprintf("SIDELOADER_CONFIG_DIR='%s'", app.SideloaderDataDir())})
 		term.Start()
 	}))
+	fi.Get("/ws/pair", websocket.New(service.HandlePairMessage))
+	fi.Get("/ws/install", websocket.New(service.HandleInstallMessage))
 	fi.Get("/apps/:id/icon", func(c *fiber.Ctx) error {
 		id := utils.MustParseInt(c.Params("id"))
 
@@ -145,7 +148,7 @@ func route(fi *fiber.App) {
 		id := c.Params("id")
 
 		if err := service.CheckAfcService(c.Context(), id); err != nil {
-			return c.Status(http.StatusOK).JSON(apiSuccess(err.Error()))
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		} else {
 			return c.Status(http.StatusOK).JSON(apiSuccess("success"))
 		}

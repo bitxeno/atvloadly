@@ -74,14 +74,21 @@ export default {
   },
 
   upload: (data) => {
-    return request({
-      url: "/api/upload",
-      method: "post",
-      timeout: 300000,
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-      data,
+    return new Promise((resolve, reject) => {
+      request({
+        url: "/api/upload",
+        method: "post",
+        timeout: 300000,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        data,
+      }) .then((res) => {
+        resolve(res.data);
+      })
+      .catch((err) => {
+        reject(err);
+      });
     });
   },
 

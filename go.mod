@@ -13,6 +13,7 @@ require (
 	github.com/godbus/dbus/v5 v5.0.4
 	github.com/gofiber/contrib/websocket v1.0.0
 	github.com/gofiber/fiber/v2 v2.46.0
+	github.com/gookit/event v1.1.2
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/holoplot/go-avahi v1.0.1
 	github.com/iineva/CgbiPngFix v0.0.0-20210523041253-b8869b346914

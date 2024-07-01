@@ -143,15 +143,13 @@ export default {
         password: "",
         authcode: "",
       },
-      cmd: {
-        output: "",
-        line: "",
-      },
       log: {
+        newcontent : "",
         output: "",
         show: false,
       },
       dialogVisible: false,
+      refreshLogInterval: null,
     };
   },
   created() {
@@ -164,6 +162,7 @@ export default {
   },
   unmounted() {
     this.closeWebSocket();
+    this.stopUpdateLog();
   },
   methods: {
     fetchData() {
@@ -179,44 +178,38 @@ export default {
         return;
       }
 
+     
       _this.loading = true;
       _this.log.output = "";
+      _this.log.newcontent = "";
       _this.log.show = true;
 
+      _this.stopUpdateLog();
+      _this.startUpdateLog();
       _this.log.output += "checking afc service status...\n";
-      let data = await api.checkAfcService(_this.id);
-      if (data != "success") {
-        _this.log.output += data;
-        _this.cmd.output = "";
+      try {
+        await api.checkAfcService(_this.id);
+        _this.log.output += "afc service OK!\n";
+
+        let formData = new FormData();
+        for (let i = 0; i < _this.files.length; i++) {
+          let file = _this.files[i];
+          formData.append("files", file);
+        }
+        _this.log.output += "IPA uploading...\n";
+        let data = await api.upload(formData)
+        let ipa = data[0];
+        _this.ipa = ipa;
+        // send start install msg
+        _this.websocketsend(1, {'udid': _this.device.udid, 'account': _this.form.account, 'password': _this.form.password, 'ipa_path': ipa.path});
+      } catch (error) {
+        console.log(error);
+        _this.log.output += error;
         _this.loading = false;
+        _this.startUpdateLog();
         toast.error(this.$t("install.toast.install_failed"));
         return;
       }
-      _this.log.output += "afc service OK!\n";
-
-  
-      let formData = new FormData();
-      for (let i = 0; i < _this.files.length; i++) {
-        let file = _this.files[i];
-        formData.append("files", file);
-      }
-      _this.log.output += "IPA uploading...\n";
-      api
-        .upload(formData)
-        .then((res) => {
-          let ipa = res.data[0];
-          _this.ipa = ipa;
-          _this.websocketsend(
-            `sideloader install --nocolor --udid ${_this.device.udid} -a '${_this.form.account}' -p '${_this.form.password}' '${ipa.path}'`
-          );
-        })
-        .catch((error) => {
-          console.log(error);
-          _this.log.output += error;
-          _this.loading = false;
-          toast.error(this.$t("install.toast.install_failed"));
-          return;
-        });
     },
     reset() {
       document.getElementById("form").reset();
@@ -243,7 +236,7 @@ export default {
       const wsuri =
         (location.protocol === "https:" ? "wss://" : "ws://") +
         location.host +
-        "/ws/tty"; //ws地址
+        "/ws/install"; //ws地址
       console.log(wsuri);
       this.websock = new WebSocket(wsuri);
       this.websock.onopen = this.websocketonopen;
@@ -261,7 +254,7 @@ export default {
         return;
       }
 
-      _this.websocketsend(_this.form.authcode);
+      _this.websocketsend(2, _this.form.authcode);
       _this.dialogVisible = false;
     },
 
@@ -273,43 +266,24 @@ export default {
     },
     websocketonmessage(e) {
       let _this = this;
-
-      _this.cmd.output += e.data;
-      _this.cmd.line += e.data;
-      if (e.data.indexOf("\n") >= 0) {
-        // hide password string for security
-        _this.cmd.output = _this.cmd.output.replace(
-          _this.form.password,
-          "******"
-        );
-        _this.cmd.line = _this.cmd.line.replace(_this.form.password, "******");
-
-        // ignore slideloader command output
-        if (
-          _this.cmd.line.indexOf("sideloader") === -1
-        ) {
-          _this.log.output += _this.cmd.line;
-          // The textbox follows the scroll to the bottom
-          _this.$nextTick(() => {
-            const textarea = document.querySelector("#log");
-            textarea.scrollTop = textarea.scrollHeight;
-          });
-        }
-
-        _this.cmd.line = "";
+      // hide password string for security
+      let line = e.data.replace(_this.form.password, "******");
+      
+      // ignore slideloader command output
+      if (line.indexOf("sideloader") === -1) {
+        _this.log.newcontent += line;
       }
 
       // input 2FA authentication code
-      if (_this.cmd.output.indexOf("A code has been sent to your devices, please type it here") !== -1) {
-        _this.cmd.output = "";
+      if (line.indexOf("A code has been sent to your devices") !== -1) {
+        _this.form.authcode = "";
         _this.dialogVisible = true;
         return;
       }
 
 
       // Installation error
-      if (_this.cmd.output.indexOf("ERROR") !== -1) {
-        _this.cmd.output = "";
+      if (line.indexOf("ERROR") !== -1) {
         _this.loading = false;
         toast.error(this.$t("install.toast.install_failed"));
 
@@ -319,8 +293,7 @@ export default {
       }
 
       // Installation successful.
-      if (_this.cmd.output.indexOf("Installation Succeeded") !== -1) {
-        _this.cmd.output = "";
+      if (line.indexOf("Installation Succeeded") !== -1) {
         _this.loading = false;
 
         // Save installation data.
@@ -346,18 +319,39 @@ export default {
       }
     },
 
-    websocketsend(cmd) {
+    websocketsend(t, data) {
       let _this = this;
-      _this.cmd.output = "";
-      const json = JSON.stringify({ t: 1, d: `${cmd}\n` });
+      if (typeof data !== 'string') {
+        data = JSON.stringify(data);
+      }
+      const json = JSON.stringify({ t: t, d: data });
       console.log("--> ", json);
       _this.websock.send(json);
     },
 
     websocketclose(e) {
-      // clean upload temp file
-      api.clean(this.ipa)
       console.log(`connection closed (${e.code})`);
+    },
+    startUpdateLog() {
+      let _this = this;
+      _this.refreshLogInterval = setInterval(() => {
+        if (_this.log.newcontent !== '') {
+          _this.log.output += _this.log.newcontent;
+          _this.log.newcontent = '';
+          // The textbox follows the scroll to the bottom
+          _this.$nextTick(() => {
+            const textarea = document.querySelector("#log");
+            textarea.scrollTop = textarea.scrollHeight;
+          });
+        }
+      }, 500);
+    },
+    stopUpdateLog() {
+      let _this = this;
+      if (_this.refreshLogInterval) {
+        clearInterval(_this.refreshLogInterval);
+        _this.refreshLogInterval = null;
+      }
     },
   },
 };

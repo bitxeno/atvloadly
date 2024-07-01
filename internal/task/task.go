@@ -1,12 +1,9 @@
 package task
 
 import (
-	"bufio"
-	"bytes"
+	"context"
 	"fmt"
-	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -135,21 +132,7 @@ func (t *Task) StartInstallApp(v model.InstalledApp) {
 
 func (t *Task) tryInstallApp(v model.InstalledApp) {
 	log.Infof("Start installing ipa: %s", v.IpaName)
-	var err error
-	// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
-	// LOCKDOWN_E_MUX_ERROR / AFC_E_MUX_ERROR /
-	err = manager.CheckAfcServiceStatus(v.UDID)
-	if err != nil {
-		log.Err(err).Msgf("Afc service can't connect. %s", v.IpaName)
-		log.Infof("Try restarting usbmuxd to fix afc connect issue. %s", v.IpaName)
-		if err = manager.RestartUsbmuxd(); err == nil {
-			log.Infof("Restart usbmuxd complete, try install ipa again. %s", v.IpaName)
-			time.Sleep(5 * time.Second)
-			err = t.runInternal(v)
-		}
-	} else {
-		err = t.runInternal(v)
-	}
+	err := t.runInternal(v)
 
 	now := time.Now()
 	if err == nil {
@@ -176,90 +159,28 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 		return fmt.Errorf("account or password or UDID is empty")
 	}
 
-	// The sideloader will handle special character "$". For those with this special character, it needs to be enclosed in single quotation marks.
-	cmd := exec.Command("sideloader", "install", "--quiet", "--nocolor", "--udid", v.UDID, "-a", v.Account, "-p", v.Password, v.IpaPath)
-	cmd.Dir = app.Config.Server.DataDir
-	cmd.Env = []string{"SIDELOADER_CONFIG_DIR=" + app.SideloaderDataDir()}
-	stdin, err := cmd.StdinPipe()
+	installMgr := manager.NewInstallManager()
+	defer installMgr.Close()
+	err := installMgr.TryStart(context.Background(), v.UDID, v.Account, v.Password, v.IpaPath)
 	if err != nil {
-		log.Err(err).Msg("Error obtaining stdin: ")
-		return err
-	}
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Err(err).Msg("Error obtaining stdout: ")
-		return err
-	}
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		log.Err(err).Msg("Error obtaining stdout: ")
 		return err
 	}
 
-	var output strings.Builder
-	var outputErr strings.Builder
-	reader := bufio.NewReader(stdout)
-	readerErr := bufio.NewReader(stderr)
-	go func(reader io.Reader) {
-		defer stdin.Close()
-		scanner := bufio.NewScanner(reader)
-
-		for scanner.Scan() {
-			lineText := scanner.Text()
-			_, _ = output.WriteString(lineText)
-			_, _ = output.WriteString("\n")
-
-			// Processing interaction to continue, such as [the Installing AltStore with Multiple AltServers the Not Supported] message.
-			if strings.Contains(lineText, "Press any key to continue") {
-				_, _ = stdin.Write([]byte("\n"))
-			}
-		}
-	}(reader)
-	go func(reader io.Reader) {
-		defer stdin.Close()
-		scanner := bufio.NewScanner(reader)
-
-		for scanner.Scan() {
-			lineText := scanner.Text()
-			_, _ = output.WriteString(lineText)
-			_, _ = output.WriteString("\n")
-
-			_, _ = outputErr.WriteString(lineText)
-			_, _ = outputErr.WriteString("\n")
-
-			// Processing interaction to continue, such as [the Installing AltStore with Multiple AltServers the Not Supported] message.
-			if strings.Contains(lineText, "Press any key to continue") {
-				_, _ = stdin.Write([]byte("\n"))
-			}
-		}
-	}(readerErr)
-	if err := cmd.Start(); nil != err {
-		data := []byte(output.String())
-		t.writeLog(v, data)
-		log.Err(err).Msgf("Error executing installation script. %s", outputErr.String())
-		return fmt.Errorf("%s %v", outputErr.String(), err)
-	}
-
-	err = cmd.Wait()
+	t.writeLog(v, installMgr.OutputLog())
 	if err != nil {
-		data := []byte(output.String())
-		t.writeLog(v, data)
-		log.Err(err).Msgf("Error executing installation script. %s", outputErr.String())
-		return fmt.Errorf("%s %v", outputErr.String(), err)
+		log.Err(err).Msgf("Error executing installation script. %s", installMgr.ErrorLog())
+		return err
 	}
-
-	data := []byte(output.String())
-	t.writeLog(v, data)
-	if strings.Contains(string(data), "Installation Succeeded") {
+	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") {
 		return nil
 	} else {
-		return fmt.Errorf(outputErr.String())
+		return fmt.Errorf(installMgr.ErrorLog())
 	}
 }
 
-func (t *Task) writeLog(v model.InstalledApp, data []byte) {
+func (t *Task) writeLog(v model.InstalledApp, data string) {
 	// Hide log password string
-	data = bytes.Replace(data, []byte(v.Password), []byte("******"), -1)
+	data = strings.Replace(data, v.Password, "******", -1)
 
 	saveDir := filepath.Join(app.Config.Server.DataDir, "log")
 	if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
@@ -268,7 +189,7 @@ func (t *Task) writeLog(v model.InstalledApp, data []byte) {
 	}
 
 	path := filepath.Join(saveDir, fmt.Sprintf("task_%d.log", v.ID))
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, []byte(data), 0644); err != nil {
 		log.Error("write task log failed :" + path)
 		return
 	}
