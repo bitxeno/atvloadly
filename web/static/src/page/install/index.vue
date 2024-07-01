@@ -201,7 +201,18 @@ export default {
         let ipa = data[0];
         _this.ipa = ipa;
         // send start install msg
-        _this.websocketsend(1, {'udid': _this.device.udid, 'account': _this.form.account, 'password': _this.form.password, 'ipa_path': ipa.path});
+        _this.websocketsend(1, {
+            ID: 0,
+            ipa_name: _this.ipa.name,
+            ipa_path: _this.ipa.path,
+            device: _this.device.mac_addr,
+            udid: _this.device.udid,
+            account: _this.form.account,
+            password: _this.form.password,
+            icon: _this.ipa.icon,
+            bundle_identifier: _this.ipa.bundle_identifier,
+            version: _this.ipa.version,
+        });
       } catch (error) {
         console.log(error);
         _this.log.output += error;
@@ -286,35 +297,13 @@ export default {
       if (line.indexOf("ERROR") !== -1) {
         _this.loading = false;
         toast.error(this.$t("install.toast.install_failed"));
-
-        // clean upload temp file
-        api.clean(_this.ipa)
         return;
       }
 
       // Installation successful.
       if (line.indexOf("Installation Succeeded") !== -1) {
         _this.loading = false;
-
-        // Save installation data.
-        api
-          .saveApp({
-            ID: 0,
-            ipa_name: _this.ipa.name,
-            ipa_path: _this.ipa.path,
-            device: _this.device.mac_addr,
-            udid: _this.device.udid,
-            account: _this.form.account,
-            password: _this.form.password,
-            refreshed_result: true,
-            icon: _this.ipa.icon,
-            bundle_identifier: _this.ipa.bundle_identifier,
-            version: _this.ipa.version,
-          })
-          .then((res) => {
-            toast.success(this.$t("install.toast.install_success"));
-          });
-
+        toast.success(this.$t("install.toast.install_success"));
         return;
       }
     },

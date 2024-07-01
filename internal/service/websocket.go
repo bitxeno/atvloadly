@@ -3,6 +3,8 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/manager"
@@ -59,11 +61,28 @@ func HandleInstallMessage(c *websocket.Conn) {
 func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.InstallManager, v model.InstalledApp) {
 	err := installMgr.Start(mgr.Context(), v.UDID, v.Account, v.Password, v.IpaPath)
 	if err != nil {
+		installMgr.CleanTempFiles(v.IpaPath)
 		msg := fmt.Sprintf("ERROR: %s", err.Error())
 		mgr.WriteMessage(msg)
 		return
 	}
-	log.Infof("install exit: %s", v.IpaPath)
+
+	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") {
+		now := time.Now()
+		v.RefreshedDate = &now
+		v.RefreshedResult = true
+		app, err := SaveApp(v)
+		if err != nil {
+			installMgr.CleanTempFiles(v.IpaPath)
+			msg := fmt.Sprintf("ERROR: save app to db failed. %s", err.Error())
+			mgr.WriteMessage(msg)
+			return
+		} else {
+			installMgr.WriteLog(app.ID)
+		}
+	}
+
+	installMgr.CleanTempFiles(v.IpaPath)
 }
 
 func HandlePairMessage(c *websocket.Conn) {

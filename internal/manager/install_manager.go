@@ -3,9 +3,12 @@ package manager
 import (
 	"context"
 	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
+	"fmt"
 
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/log"
@@ -58,6 +61,9 @@ func (t *InstallManager) TryStart(ctx context.Context, udid, account, password, 
 }
 
 func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipaPath string) error {
+	t.outputStdout.Reset()
+	t.outputStderr.Reset()
+
 	// set execute timeout 5 miniutes
 	timeout := 5 * time.Minute
 	ctx, cancel := context.WithTimeout(ctx, timeout)
@@ -95,6 +101,14 @@ func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipa
 	return err
 }
 
+func (t *InstallManager) CleanTempFiles(ipaPath string) {
+	ipaName := filepath.Base(ipaPath)
+	fileNameWithoutExt := strings.TrimSuffix(ipaName, filepath.Ext(ipaName))
+	os.RemoveAll(filepath.Join(app.Config.Server.DataDir, "tmp", fileNameWithoutExt+".ipa"))
+	os.RemoveAll(filepath.Join(app.Config.Server.DataDir, "tmp", fileNameWithoutExt+".png"))
+	os.RemoveAll(filepath.Join(os.TempDir(), fileNameWithoutExt+".ipa"))
+}
+
 func (t *InstallManager) Close() {
 	if t.cancel != nil {
 		t.cancel()
@@ -124,6 +138,26 @@ func (t *InstallManager) OutputLog() string {
 	return t.outputStdout.String()
 }
 
+func (t *InstallManager) WriteLog(id uint) {
+	data := t.OutputLog()
+
+	// Hide log password string
+	// data = strings.Replace(data, v.Password, "******", -1)
+
+	saveDir := filepath.Join(app.Config.Server.DataDir, "log")
+	if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
+		log.Error("failed to create directory :" + saveDir)
+		return
+	}
+
+	path := filepath.Join(saveDir, fmt.Sprintf("task_%d.log", id))
+	if err := os.WriteFile(path, []byte(data), 0644); err != nil {
+		log.Error("write log failed :" + path)
+		return
+	}
+}
+
+
 type outputWriter struct {
 	data []byte
 	em   *event.Manager
@@ -145,4 +179,8 @@ func (w *outputWriter) Write(p []byte) (n int, err error) {
 
 func (w *outputWriter) String() string {
 	return string(w.data)
+}
+
+func (w *outputWriter) Reset() {
+	w.data = []byte{}
 }

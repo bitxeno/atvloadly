@@ -3,8 +3,6 @@ package task
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -162,11 +160,7 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 	installMgr := manager.NewInstallManager()
 	defer installMgr.Close()
 	err := installMgr.TryStart(context.Background(), v.UDID, v.Account, v.Password, v.IpaPath)
-	if err != nil {
-		return err
-	}
-
-	t.writeLog(v, installMgr.OutputLog())
+	installMgr.WriteLog(v.ID)
 	if err != nil {
 		log.Err(err).Msgf("Error executing installation script. %s", installMgr.ErrorLog())
 		return err
@@ -178,22 +172,6 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 	}
 }
 
-func (t *Task) writeLog(v model.InstalledApp, data string) {
-	// Hide log password string
-	data = strings.Replace(data, v.Password, "******", -1)
-
-	saveDir := filepath.Join(app.Config.Server.DataDir, "log")
-	if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
-		log.Error("failed to create directory :" + saveDir)
-		return
-	}
-
-	path := filepath.Join(saveDir, fmt.Sprintf("task_%d.log", v.ID))
-	if err := os.WriteFile(path, []byte(data), 0644); err != nil {
-		log.Error("write task log failed :" + path)
-		return
-	}
-}
 
 func ScheduleRefreshApps() error {
 	return instance.RunSchedule()
