@@ -7,9 +7,11 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "axios": "^1.4.0",
+    "axios": "^1.6.0",
+    "braces": "^3.0.3",
     "crypto-js": "^4.1.1",
     "dayjs": "^1.11.8",
+    "follow-redirects": "^1.15.6",
     "i18next": "^23.2.11",
     "i18next-browser-languagedetector": "^7.1.0",
     "i18next-vue": "^3.0.0-rc.1",
@@ -26,9 +28,9 @@
     "@vue/compiler-sfc": "^3.2.31",
     "autoprefixer": "^10.4.2",
     "daisyui": "^3.0.20",
-    "postcss": "^8.4.7",
+    "postcss": "^8.4.31",
     "tailwindcss": "^3.0.23",
-    "vite": "^2.8.6",
+    "vite": "^2.9.18",
     "vite-svg-loader": "^4.0.0"
   }
 }
