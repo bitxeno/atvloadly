@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/manager"
@@ -67,6 +68,8 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 	}
 
 	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") {
+		now := time.Now()
+		v.RefreshedDate = &now
 		v.RefreshedResult = true
 		app, err := SaveApp(v)
 		if err != nil {

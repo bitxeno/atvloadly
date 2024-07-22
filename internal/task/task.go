@@ -104,7 +104,12 @@ func (t *Task) runQueue() {
 func (t *Task) checkNeedRefresh(v model.InstalledApp) bool {
 	now := time.Now()
 
-	// 过期时间少于一天时，再安装
+	// fix RefreshedDate is nil
+	if v.RefreshedDate == nil {
+		return true
+	}
+
+	// refresh when the expiration time is less than one day.
 	if app.Settings.Task.Mode == app.OneDayAgoMode {
 		expireTime := v.RefreshedDate.AddDate(0, 0, 6)
 		if expireTime.Before(now) {
@@ -170,7 +175,6 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 		return fmt.Errorf(installMgr.ErrorLog())
 	}
 }
-
 
 func ScheduleRefreshApps() error {
 	return instance.RunSchedule()
