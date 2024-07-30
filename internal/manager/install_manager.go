@@ -2,13 +2,13 @@ package manager
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
-	"fmt"
 
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/log"
@@ -69,9 +69,9 @@ func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipa
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	t.cancel = cancel
 
-	cmd := exec.CommandContext(ctx, "sideloader", "install", "--quiet", "--nocolor", "--udid", udid, "-a", account, "-p", password, ipaPath)
+	cmd := exec.CommandContext(ctx, "sideloader", "install", "--singlethread", "--quiet", "--nocolor", "--udid", udid, "-a", account, "-p", password, ipaPath)
 	if !t.quietMode {
-		cmd = exec.CommandContext(ctx, "sideloader", "install", "--nocolor", "--udid", udid, "-a", account, "-p", password, ipaPath)
+		cmd = exec.CommandContext(ctx, "sideloader", "install", "--singlethread", "--nocolor", "--udid", udid, "-a", account, "-p", password, ipaPath)
 	}
 	cmd.Dir = app.Config.Server.DataDir
 	cmd.Env = []string{"SIDELOADER_CONFIG_DIR=" + app.SideloaderDataDir()}
@@ -156,7 +156,6 @@ func (t *InstallManager) WriteLog(id uint) {
 		return
 	}
 }
-
 
 type outputWriter struct {
 	data []byte
