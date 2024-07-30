@@ -133,6 +133,9 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPOSITORY }}
+          tags: |
+            type=ref,event=branch
+            type=raw,value=nightly
       - name: Build and push Docker images to DockerHub
         uses: docker/build-push-action@v5
         with:
@@ -178,6 +181,9 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=raw,value=nightly
       - name: Build and push Docker images to ghci
         uses: docker/build-push-action@v5
         with:
