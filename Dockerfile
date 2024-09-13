@@ -33,7 +33,7 @@ RUN case ${TARGETARCH} in \
          "arm64")  PKG_ARCH=aarch64  ;; \
     esac \
     && cd /tmp \
-    && wget https://github.com/bitxeno/Sideloader/releases/download/1.0-alpha.3/sideloader-cli-${PKG_ARCH}-linux-gnu.tar.gz \
+    && wget https://github.com/bitxeno/Sideloader/releases/download/1.0-alpha.5/sideloader-cli-${PKG_ARCH}-linux-gnu.tar.gz \
     && tar zxf sideloader-cli-${PKG_ARCH}-linux-gnu.tar.gz \
     && mv sideloader-cli-${PKG_ARCH}-linux-gnu /usr/bin/sideloader \
     && chmod +x /usr/bin/sideloader
