@@ -65,7 +65,7 @@ func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipa
 	t.outputStderr.Reset()
 
 	// set execute timeout 5 miniutes
-	timeout := 5 * time.Minute
+	timeout := 10 * time.Minute
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	t.cancel = cancel
 
@@ -89,8 +89,9 @@ func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipa
 	if err := cmd.Start(); err != nil {
 		if err == context.DeadlineExceeded {
 			_ = cmd.Process.Kill()
+			log.Err(err).Msgf("Installation exceeded %d-minute timeout limit. %s", int(timeout.Minutes()), t.ErrorLog())
+			err = fmt.Errorf("Installation exceeded %d-minute timeout limit. %s", int(timeout.Minutes()), err.Error())
 		}
-		log.Err(err).Msg("Error start installation script.")
 		return err
 	}
 
