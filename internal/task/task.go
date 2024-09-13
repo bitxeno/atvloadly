@@ -158,7 +158,7 @@ func (t *Task) tryInstallApp(v model.InstalledApp) {
 func (t *Task) runInternal(v model.InstalledApp) error {
 	if v.Account == "" || v.Password == "" || v.UDID == "" {
 		log.Info("account or password or UDID is empty")
-		return fmt.Errorf("account or password or UDID is empty")
+		return fmt.Errorf("%s", "account or password or UDID is empty")
 	}
 
 	installMgr := manager.NewInstallManager()
@@ -172,7 +172,7 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") {
 		return nil
 	} else {
-		return fmt.Errorf(installMgr.ErrorLog())
+		return fmt.Errorf("%s", installMgr.ErrorLog())
 	}
 }
 
