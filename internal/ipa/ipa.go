@@ -229,7 +229,7 @@ func parseIconAssets(assetFile *zip.File) (image.Image, error) {
 
 	var img image.Image
 	err = a.ImageWalker(func(name string, i image.Image) (end bool) {
-		if strings.Contains(name, "Icon") {
+		if strings.Contains(strings.ToLower(name), "icon") {
 			img = i
 			return true
 		}
