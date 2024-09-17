@@ -25,7 +25,7 @@ RUN case ${TARGETARCH} in \
     && dpkg -i ./libtatsu_1.0.3-1_${PKG_ARCH}.deb \
     && dpkg -i ./libimobiledevice-glue_1.3.0-1_${PKG_ARCH}.deb \
     && dpkg -i ./libusbmuxd_2.3.0-1_${PKG_ARCH}.deb \
-    && dpkg -i ./libimobiledevice_1.3.2-1_${PKG_ARCH}.deb \
+    && dpkg -i ./libimobiledevice_1.3.1-1_${PKG_ARCH}.deb \
     && dpkg -i ./usbmuxd2_1.0.0-1_${PKG_ARCH}.deb
 
 # 安装Sideloader
