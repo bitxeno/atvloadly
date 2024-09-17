@@ -17,14 +17,15 @@ RUN case ${TARGETARCH} in \
          "arm64")  PKG_ARCH=aarch64  ;; \
     esac \
     && cd /tmp \
-    && wget https://github.com/bitxeno/usbmuxd2/releases/download/v0.0.3/usbmuxd2-ubuntu-${PKG_ARCH}.tar.gz \
+    && wget https://github.com/bitxeno/usbmuxd2/releases/download/v0.0.4/usbmuxd2-ubuntu-${PKG_ARCH}.tar.gz \
     && tar zxf usbmuxd2-ubuntu-${PKG_ARCH}.tar.gz \
     && dpkg -i ./libusb_1.0.26-1_${PKG_ARCH}.deb \
     && dpkg -i ./libgeneral_1.0.0-1_${PKG_ARCH}.deb \
-    && dpkg -i ./libplist_2.3.0-1_${PKG_ARCH}.deb \
-    && dpkg -i ./libimobiledevice-glue_1.0.0-1_${PKG_ARCH}.deb \
+    && dpkg -i ./libplist_2.6.0-1_${PKG_ARCH}.deb \
+    && dpkg -i ./libtatsu_1.0.3-1_${PKG_ARCH}.deb \
+    && dpkg -i ./libimobiledevice-glue_1.3.0-1_${PKG_ARCH}.deb \
     && dpkg -i ./libusbmuxd_2.3.0-1_${PKG_ARCH}.deb \
-    && dpkg -i ./libimobiledevice_1.3.1-1_${PKG_ARCH}.deb \
+    && dpkg -i ./libimobiledevice_1.3.2-1_${PKG_ARCH}.deb \
     && dpkg -i ./usbmuxd2_1.0.0-1_${PKG_ARCH}.deb
 
 # 安装Sideloader
