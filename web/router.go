@@ -128,6 +128,7 @@ func route(fi *fiber.App) {
 	api.Get("/devices/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		if device, ok := manager.GetDeviceByID(id); ok {
+			manager.AppendDeviceProductInfo(device)
 			return c.Status(http.StatusOK).JSON(apiSuccess(device))
 		}
 
@@ -142,6 +143,16 @@ func route(fi *fiber.App) {
 		} else {
 			return c.Status(http.StatusOK).JSON(apiSuccess("success"))
 		}
+	})
+
+	api.Post("/devices/:id/check/devmode", func(c *fiber.Ctx) error {
+		id := c.Params("id")
+
+		enabled, err := service.CheckDeveloperMode(c.Context(), id)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiSuccess(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(enabled))
 	})
 
 	api.Post("/devices/:id/check/afc", func(c *fiber.Ctx) error {

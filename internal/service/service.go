@@ -97,6 +97,15 @@ func MountDeveloperDiskImage(ctx context.Context, id string) error {
 	return nil
 }
 
+func CheckDeveloperMode(ctx context.Context, id string) (bool, error) {
+	device, ok := manager.GetDeviceByID(id)
+	if !ok {
+		return false, fmt.Errorf("device not found: %s", id)
+	}
+
+	return manager.CheckDeveloperMode(device.UDID)
+}
+
 func CheckAfcService(ctx context.Context, id string) error {
 	device, ok := manager.GetDeviceByID(id)
 	if !ok {

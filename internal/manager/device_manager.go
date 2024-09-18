@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -50,6 +51,38 @@ func (dm *DeviceManager) GetDeviceByUDID(udid string) (*model.Device, bool) {
 	}
 
 	return nil, false
+}
+
+func (dm *DeviceManager) AppendProductInfo(dev *model.Device) {
+	timeout := 10 * time.Second
+	ctx, _ := context.WithTimeout(context.Background(), timeout)
+	cmd := exec.CommandContext(ctx, "ideviceinfo", "-u", dev.UDID, "-n")
+	cmd.Dir = app.Config.Server.DataDir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Err(err).Msgf("Error execute ideviceinfo: %s", dev.UDID)
+		return
+	}
+	lines := strings.Split(string(output), "\n")
+
+	for _, line := range lines {
+		var parts = strings.Split(line, ":")
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+		switch key {
+		case "ProductType":
+			dev.ProductType = value
+		case "ProductVersion":
+			dev.ProductVersion = value
+		case "DeviceClass":
+			dev.ProductClass = value
+		case "DeviceName":
+			dev.Name = value
+		}
+	}
 }
 
 func (dm *DeviceManager) ReloadDevices() {
@@ -176,6 +209,22 @@ func (dm *DeviceManager) CheckAfcServiceStatus(udid string) error {
 	}
 
 	return nil
+}
+
+func (dm *DeviceManager) CheckDeveloperMode(udid string) (bool, error) {
+	cmd := exec.Command("idevicedevmodectl", "list", "-u", udid, "-n")
+
+	data, err := cmd.CombinedOutput()
+	if err != nil {
+		return false, fmt.Errorf("%s%s", string(data), err.Error())
+	}
+
+	output := string(data)
+	if strings.Contains(output, "enabled") {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (dm *DeviceManager) RestartUsbmuxd() error {

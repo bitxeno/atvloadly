@@ -186,10 +186,15 @@ export default {
 
       _this.stopUpdateLog();
       _this.startUpdateLog();
-      _this.log.output += "checking afc service status...\n";
+      _this.log.output += "checking device status...\n";
       try {
+        _this.log.output += `product type: ${_this.device.product_type}\n`;
+        _this.log.output += `product version: ${_this.device.product_version}\n`;
+        let devmode = await api.checkDeveloperMode(_this.id);
+        _this.log.output += `developer mode: ${devmode}\n`;
+
         await api.checkAfcService(_this.id);
-        _this.log.output += "afc service OK!\n";
+        _this.log.output += "afc service: OK!\n";
 
         let formData = new FormData();
         for (let i = 0; i < _this.files.length; i++) {

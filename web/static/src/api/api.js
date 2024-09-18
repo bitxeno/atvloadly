@@ -44,6 +44,22 @@ export default {
         });
     });
   },
+  checkDeveloperMode: (id) => {
+    return new Promise((resolve, reject) => {
+      request({
+        url: `/api/devices/${id}/check/devmode`,
+        timeout: 30000,
+        method: "Post",
+      })
+        .then((res) => {
+          resolve(res.data ? "enabled" : "disabled");
+        })
+        .catch((err) => {
+          console.log(err);
+          resolve("-");
+        });
+    });
+  },
   getDevices: (params) => {
     return request({
       url: "/api/devices",
