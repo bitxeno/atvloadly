@@ -55,7 +55,8 @@ func (dm *DeviceManager) GetDeviceByUDID(udid string) (*model.Device, bool) {
 
 func (dm *DeviceManager) AppendProductInfo(dev *model.Device) {
 	timeout := 10 * time.Second
-	ctx, _ := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 	cmd := exec.CommandContext(ctx, "ideviceinfo", "-u", dev.UDID, "-n")
 	cmd.Dir = app.Config.Server.DataDir
 	output, err := cmd.CombinedOutput()
