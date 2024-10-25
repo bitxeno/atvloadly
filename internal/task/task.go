@@ -178,12 +178,15 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 	if err != nil {
 		log.Err(err).Msgf("Error executing installation script. %s", installMgr.ErrorLog())
 		installMgr.WriteLog(err.Error())
+		if strings.Contains(installMgr.ErrorLog(), "Can't log-in") || strings.Contains(installMgr.ErrorLog(), "DeveloperSession creation failed") {
+			t.InvalidAccounts[v.Account] = true
+		}
 		return err
 	}
 	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") {
 		return nil
 	} else {
-		if strings.Contains(installMgr.ErrorLog(), "Can't log-in") {
+		if strings.Contains(installMgr.ErrorLog(), "Can't log-in") || strings.Contains(installMgr.ErrorLog(), "DeveloperSession creation failed") {
 			t.InvalidAccounts[v.Account] = true
 		}
 		return fmt.Errorf("%s", installMgr.ErrorLog())
