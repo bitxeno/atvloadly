@@ -183,7 +183,7 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") {
 		return nil
 	} else {
-		if strings.Contains(installMgr.OutputLog(), "ERROR") && strings.Contains(installMgr.OutputLog(), "Can't log-in") {
+		if strings.Contains(installMgr.ErrorLog(), "Can't log-in") {
 			t.InvalidAccounts[v.Account] = true
 		}
 		return fmt.Errorf("%s", installMgr.ErrorLog())
