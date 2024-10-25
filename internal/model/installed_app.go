@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	masker "github.com/ggwhite/go-masker/v2"
 	"gorm.io/gorm"
 )
 
@@ -36,4 +37,9 @@ func (t InstalledApp) MarshalJSON() ([]byte, error) {
 		Alias:    (*Alias)(&t),
 		Password: "",
 	})
+}
+
+func (t InstalledApp) MaskAccount() string {
+	m := masker.EmailMasker{}
+	return m.Marshal("*", t.Account)
 }

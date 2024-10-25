@@ -139,8 +139,12 @@ func (t *InstallManager) OutputLog() string {
 	return t.outputStdout.String()
 }
 
-func (t *InstallManager) WriteLog(id uint) {
-	data := t.OutputLog()
+func (t *InstallManager) WriteLog(msg string) {
+	t.outputStdout.Write([]byte(msg))
+}
+
+func (t *InstallManager) SaveLog(id uint) {
+	data := t.OutputLog() + t.ErrorLog()
 
 	// Hide log password string
 	// data = strings.Replace(data, v.Password, "******", -1)

@@ -24,6 +24,7 @@ type Task struct {
 	InstallingApps  sync.Map
 	InstallAppQueue chan model.InstalledApp
 	chExitQueue     chan bool
+	InvalidAccounts map[string]bool
 }
 
 func new() *Task {
@@ -68,6 +69,7 @@ func (t *Task) Stop() {
 }
 
 func (t *Task) Run() {
+	t.InvalidAccounts = make(map[string]bool)
 	installedApps, err := service.GetEnableAppList()
 	if err != nil {
 		log.Err(err).Msg("Failed to get the installation list")
@@ -156,22 +158,34 @@ func (t *Task) tryInstallApp(v model.InstalledApp) {
 }
 
 func (t *Task) runInternal(v model.InstalledApp) error {
+	installMgr := manager.NewInstallManager()
+	defer func() {
+		installMgr.SaveLog(v.ID)
+		installMgr.Close()
+	}()
+
 	if v.Account == "" || v.Password == "" || v.UDID == "" {
-		log.Info("account or password or UDID is empty")
+		installMgr.WriteLog("account or password or UDID is empty")
 		return fmt.Errorf("%s", "account or password or UDID is empty")
 	}
 
-	installMgr := manager.NewInstallManager()
-	defer installMgr.Close()
+	if _, ok := t.InvalidAccounts[v.Account]; ok {
+		installMgr.WriteLog(fmt.Sprintf("The install account (%s) is invalid, skip install.", v.MaskAccount()))
+		return fmt.Errorf("The install account (%s) is invalid, skip install.", v.MaskAccount())
+	}
+
 	err := installMgr.TryStart(context.Background(), v.UDID, v.Account, v.Password, v.IpaPath)
-	installMgr.WriteLog(v.ID)
 	if err != nil {
 		log.Err(err).Msgf("Error executing installation script. %s", installMgr.ErrorLog())
+		installMgr.WriteLog(err.Error())
 		return err
 	}
 	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") {
 		return nil
 	} else {
+		if strings.Contains(installMgr.OutputLog(), "ERROR") && strings.Contains(installMgr.OutputLog(), "Can't log-in") {
+			t.InvalidAccounts[v.Account] = true
+		}
 		return fmt.Errorf("%s", installMgr.ErrorLog())
 	}
 }

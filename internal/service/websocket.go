@@ -78,7 +78,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 			mgr.WriteMessage(msg)
 			return
 		} else {
-			installMgr.WriteLog(app.ID)
+			installMgr.SaveLog(app.ID)
 		}
 	}
 
