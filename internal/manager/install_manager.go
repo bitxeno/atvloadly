@@ -140,7 +140,7 @@ func (t *InstallManager) OutputLog() string {
 }
 
 func (t *InstallManager) WriteLog(msg string) {
-	t.outputStdout.Write([]byte(msg))
+	_, _ = t.outputStdout.Write([]byte(msg))
 }
 
 func (t *InstallManager) SaveLog(id uint) {
