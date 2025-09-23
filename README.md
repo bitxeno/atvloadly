@@ -44,13 +44,13 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [S
 
 1. The Linux/OpenWrt host needs to install `avahi-deamon`.
    
-   OpenWrt：
+   **OpenWrt：**
    ```
    opkg install avahi-dbus-daemon
    /etc/init.d/avahi-daemon start
    ```
    
-   Ubuntu；
+   **Ubuntu:**
    ```
    sudo apt-get -y install avahi-daemon
    sudo systemctl restart avahi-daemon
@@ -58,11 +58,27 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [S
 
 2. Please refer to the following command for installation, remember to modify the mount directory.
    
+   **Docker:**
    ```
    docker run --privileged -d --name=atvloadly --restart=always -p 5533:80 -v /path/to/mount/dir:/data -v /var/run/dbus:/var/run/dbus -v /var/run/avahi-daemon:/var/run/avahi-daemon bitxeno/atvloadly:latest
    ```
 
    The `/var/run/dbus` and `/var/run/avahi-daemon` of the host machine need to be shared with the docker container for use.
+
+   If you want to use the HOST network and want to modify the listening port, you can add environment variables to container:
+
+   ```
+   SERVICE_PORT=5533
+   ```
+
+   Set envrionment vaa
+
+   **Docker Compose:**
+   ```
+   wget https://raw.githubusercontent.com/bitxeno/atvloadly/refs/heads/master/docker-compose.yml
+   docker compose pull
+   docker compose up -d
+   ```
 
 
 

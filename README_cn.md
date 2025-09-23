@@ -45,13 +45,13 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 
 1. Linux/OpenWrt 宿主机需要安装 `avahi-deamon` 服务
    
-   OpenWrt：
+   **OpenWrt：**
    ```
    opkg install avahi-dbus-daemon
    /etc/init.d/avahi-daemon start
    ```
    
-   Ubuntu；
+   **Ubuntu:**
    ```
    sudo apt-get -y install avahi-daemon
    sudo systemctl restart avahi-daemon
@@ -59,12 +59,25 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 
 2. 请参考下面的命令进行安装，记得修改下 mount 目录
    
+   **Docker:**
    ```
    docker run --privileged	-d --name=atvloadly --restart=always -p 5533:80 -v /path/to/mount/dir:/data -v /var/run/dbus:/var/run/dbus -v /var/run/avahi-daemon:/var/run/avahi-daemon  bitxeno/atvloadly:latest
    ```
    
    宿主机的 `/var/run/dbus` 和`/var/run/avahi-daemon` 需要共享给 docker 容器使用
 
+   假如你想使用 HOST 网络环境，想修改监听端口，可以给容器添加环境变量：
+
+   ```
+   SERVICE_PORT=5533
+   ```
+
+   **Docker Compose:**
+   ```
+   wget https://raw.githubusercontent.com/bitxeno/atvloadly/refs/heads/master/docker-compose.yml
+   docker compose pull
+   docker compose up -d
+   ```
 
 
 ## 使用方法
