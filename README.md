@@ -71,8 +71,6 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [S
    SERVICE_PORT=5533
    ```
 
-   Set envrionment vaa
-
    **Docker Compose:**
    ```
    wget https://raw.githubusercontent.com/bitxeno/atvloadly/refs/heads/master/docker-compose.yml
