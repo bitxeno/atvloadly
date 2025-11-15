@@ -64,6 +64,7 @@ RUN printf '#!/bin/sh \n\n\
 
 mkdir -p /data/lockdown \n\
 mkdir -p /data/Sideloader \n\
+ln -s /data ~/.config \n\
 
 if [ ! -f "/data/config.yaml" ]; then  \n\
     cp /doc/config.yaml /data/config.yaml \n\
