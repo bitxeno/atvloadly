@@ -74,7 +74,27 @@ func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipa
 		cmd = exec.CommandContext(ctx, "sideloader", "install", "--singlethread", "--nocolor", "--udid", udid, "-a", account, "-p", password, ipaPath)
 	}
 	cmd.Dir = app.Config.Server.DataDir
-	cmd.Env = []string{"SIDELOADER_CONFIG_DIR=" + app.SideloaderDataDir()}
+	// 1. 初始化环境变量列表，保留程序核心需要的变量
+	env := []string{"SIDELOADER_CONFIG_DIR=" + app.SideloaderDataDir()}
+
+	// 2. 定义需要透传的代理变量白名单（包含大写和小写形式）
+	proxyVars := []string{
+		"HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "ALL_PROXY",
+		"http_proxy", "https_proxy", "no_proxy", "all_proxy",
+	}
+
+	// 3. 遍历系统环境变量，只追加匹配白名单的变量
+	for _, e := range os.Environ() {
+		for _, k := range proxyVars {
+			// 匹配 "KEY=" 前缀，确保准确匹配变量名
+			if strings.HasPrefix(e, k+"=") {
+				env = append(env, e)
+				break
+			}
+		}
+	}
+
+	cmd.Env = env
 	cmd.Stdout = t.outputStdout
 	cmd.Stderr = t.outputStderr
 
