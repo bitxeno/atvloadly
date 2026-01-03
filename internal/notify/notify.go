@@ -3,12 +3,16 @@ package notify
 import (
 	"context"
 	"errors"
+	stdhttp "net/http"
+	"net/url"
+	"strings"
 
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/notify/wecom"
 	"github.com/bitxeno/atvloadly/internal/utils"
 	"github.com/nikoksr/notify"
 	"github.com/nikoksr/notify/service/bark"
+	"github.com/nikoksr/notify/service/http"
 	"github.com/nikoksr/notify/service/telegram"
 	"github.com/silenceper/wechat/v2/cache"
 )
@@ -55,6 +59,36 @@ func SendWithConfig(title string, message string, settings app.SettingsConfigura
 		})
 		wecomService.AddReceivers(settings.Notification.Weixin.ToUser)
 		no.UseServices(wecomService)
+	case "webhook":
+		if settings.Notification.Webhook.URL == "" {
+			return errors.New("配置错误")
+		}
+		contentType := settings.Notification.Webhook.ContentType
+		if contentType == "" {
+			contentType = "application/json"
+		}
+		method := settings.Notification.Webhook.Method
+		if method == "" {
+			method = "POST"
+		}
+		httpService := http.New()
+		webhookURL := settings.Notification.Webhook.URL
+		webhookURL = strings.ReplaceAll(webhookURL, "{{title}}", url.QueryEscape(title))
+		webhookURL = strings.ReplaceAll(webhookURL, "{{message}}", url.QueryEscape(message))
+		webhook := &http.Webhook{
+			URL:         webhookURL,
+			Header:      stdhttp.Header{},
+			Method:      method,
+			ContentType: contentType,
+			BuildPayload: func(subject, message string) (payload any) {
+				body := settings.Notification.Webhook.Body
+				body = strings.ReplaceAll(body, "{{title}}", subject)
+				body = strings.ReplaceAll(body, "{{message}}", message)
+				return body
+			},
+		}
+		httpService.AddReceivers(webhook)
+		no.UseServices(httpService)
 	}
 
 	return no.Send(

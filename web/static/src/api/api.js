@@ -203,6 +203,7 @@ export default {
     return request({
       url: `/api/notify/send/test`,
       method: "post",
+      timeout: 30000,
       data,
     });
   },

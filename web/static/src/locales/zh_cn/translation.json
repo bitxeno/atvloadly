@@ -148,6 +148,22 @@
         "agent_id": "应用ID (AgentId)",
         "touser": "指定成员 (touser)"
       },
+      "email": {
+        "smtp_host": "SMTP服务器",
+        "smtp_port": "SMTP端口",
+        "username": "用户名",
+        "password": "密码",
+        "from": "发件人邮箱",
+        "to": "收件人邮箱"
+      },
+      "webhook": {
+        "url": "URL",
+        "url_placeholder": "支持 {{title}} 和 {{message}} 模板变量",
+        "method": "请求方法 (Method)",
+        "content_type": "内容类型 (Content-Type)",
+        "body": "请求体",
+        "body_placeholder": "支持 {{title}} 和 {{message}} 模板变量\n示例: {\"title\": \"{{title}}\", \"message\": \"{{message}}\"}"
+      },
       "button": {
         "submit": "保 存",
         "send_test": "推送测试通知"

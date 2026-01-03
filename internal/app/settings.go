@@ -47,6 +47,20 @@ type SettingsConfiguration struct {
 			BarkServer string `koanf:"bark_server" json:"bark_server" default:"https://api.day.app"`
 			DeviceKey  string `koanf:"device_key" json:"device_key"`
 		} `koanf:"bark" json:"bark"`
+		Email struct {
+			SMTPHost string `koanf:"smtp_host" json:"smtp_host"`
+			SMTPPort int    `koanf:"smtp_port" json:"smtp_port" default:"587"`
+			Username string `koanf:"username" json:"username"`
+			Password string `koanf:"password" json:"password"`
+			From     string `koanf:"from" json:"from"`
+			To       string `koanf:"to" json:"to"`
+		} `koanf:"email" json:"email"`
+		Webhook struct {
+			URL         string `koanf:"url" json:"url"`
+			Method      string `koanf:"method" json:"method" default:"POST"`
+			ContentType string `koanf:"content_type" json:"content_type" default:"application/json"`
+			Body        string `koanf:"body" json:"body"`
+		} `koanf:"webhook" json:"webhook"`
 	} `koanf:"notification" json:"notification"`
 }
 

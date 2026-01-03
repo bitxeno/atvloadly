@@ -148,6 +148,22 @@
         "agent_id": "AgentID",
         "touser": "ToUser"
       },
+      "email": {
+        "smtp_host": "SMTP Server",
+        "smtp_port": "SMTP Port",
+        "username": "Username",
+        "password": "Password",
+        "from": "From Email",
+        "to": "To Email"
+      },
+      "webhook": {
+        "url": "URL",
+        "url_placeholder": "Supports {{title}} and {{message}} template variables",
+        "method": "HTTP Method",
+        "content_type": "Content-Type",
+        "body": "Request Body",
+        "body_placeholder": "Supports {{title}} and {{message}} template variables\nExample: {\"title\": \"{{title}}\", \"message\": \"{{message}}\"}"
+      },
       "button": {
         "submit": "Save",
         "send_test": "Send Test Notification"

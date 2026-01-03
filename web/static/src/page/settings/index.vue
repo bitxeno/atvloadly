@@ -52,6 +52,15 @@
                 $t("settings.notification.weixin.title")
               }}</span>
             </label>
+            <label class="label cursor-pointer flex gap-x-1">
+              <input
+                type="radio"
+                class="radio"
+                v-model="settings.notification.type"
+                value="webhook"
+              />
+              <span class="label-text">Webhook</span>
+            </label>
           </div>
         </div>
         <div class="form-item" v-show="settings.notification.type == 'weixin'">
@@ -157,6 +166,61 @@
             placeholder=""
             class="input input-bordered grow"
           />
+        </div>
+
+        <div class="form-item" v-show="settings.notification.type == 'webhook'">
+          <label class="form-item-label">
+            <span class="label-text">{{
+              $t("settings.notification.webhook.url")
+            }}</span>
+          </label>
+          <input
+            v-model="settings.notification.webhook.url"
+            type="url"
+            :placeholder="$t('settings.notification.webhook.url_placeholder')"
+            class="input input-bordered grow"
+          />
+        </div>
+        <div class="form-item" v-show="settings.notification.type == 'webhook'">
+          <label class="form-item-label">
+            <span class="label-text">{{
+              $t("settings.notification.webhook.method")
+            }}</span>
+          </label>
+          <select
+            v-model="settings.notification.webhook.method"
+            class="select select-bordered grow"
+          >
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+          </select>
+        </div>
+        <div class="form-item" v-show="settings.notification.type == 'webhook' && settings.notification.webhook.method == 'POST'">
+          <label class="form-item-label">
+            <span class="label-text">{{
+              $t("settings.notification.webhook.content_type")
+            }}</span>
+          </label>
+          <select
+            v-model="settings.notification.webhook.content_type"
+            class="select select-bordered grow"
+          >
+            <option value="text/plain">text/plain</option>
+            <option value="application/json">application/json</option>
+          </select>
+        </div>
+        <div class="form-item" v-show="settings.notification.type == 'webhook' && settings.notification.webhook.method == 'POST'">
+          <label class="form-item-label">
+            <span class="label-text">{{
+              $t("settings.notification.webhook.body")
+            }}</span>
+          </label>
+          <textarea
+            v-model="settings.notification.webhook.body"
+            :placeholder="$t('settings.notification.webhook.body_placeholder')"
+            class="textarea textarea-bordered grow"
+            rows="4"
+          ></textarea>
         </div>
 
         <div class="form-item">
@@ -279,6 +343,7 @@ export default {
           telegram: {},
           weixin: {},
           bark: {},
+          webhook: {},
         },
       },
     };
