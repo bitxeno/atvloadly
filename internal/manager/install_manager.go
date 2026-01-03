@@ -64,8 +64,8 @@ func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipa
 	t.outputStdout.Reset()
 	t.outputStderr.Reset()
 
-	// set execute timeout 5 miniutes
-	timeout := 10 * time.Minute
+	// set execute timeout 30 miniutes
+	timeout := 30 * time.Minute
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	t.cancel = cancel
 
