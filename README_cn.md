@@ -19,7 +19,7 @@
 
 </div>
 
-atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通过使用 [Sideloader](https://github.com/Dadoum/Sideloader) 实现侧载，并会自动刷新 App 以保证其长期可用性。
+atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通过使用 [PlumeImpactor](https://github.com/khcrysalis/PlumeImpactor) 实现侧载，并会自动刷新 App 以保证其长期可用性。
 
 
 ## 主要功能

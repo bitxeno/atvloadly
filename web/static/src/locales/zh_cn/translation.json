@@ -114,6 +114,9 @@
       },
       "account": {
         "label": "Apple帐号:",
+        "select": {
+          "placeholder": "请选择帐号"
+        },
         "alt": "为了帐号安全，请不要使用常用帐号安装"
       },
       "password": {

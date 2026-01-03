@@ -44,13 +44,25 @@
                   $t("install.form.account.label")
                 }}</span>
               </label>
-              <input
-                type="email"
-                placeholder="xxxx@example.com"
-                class="input input-bordered w-full"
-                v-model="form.account"
-                required
-              />
+              <div class="join">
+                <select
+                  class="select select-bordered join-item  w-full"
+                  v-model="form.account"
+                  required
+                >
+                  <option value="" disabled selected>
+                    {{ $t("install.form.account.select.placeholder") }}
+                  </option>
+                  <option
+                    v-for="account in accounts"
+                    :key="account.email"
+                    :value="account.email"
+                  >
+                    {{ account.email }} ({{ account.status }})
+                  </option>
+                </select>
+                <button class="btn join-item w-16" @click.prevent="showLoginDialog"><PersonIcon /></button>
+              </div>
               <label class="label">
                 <span class="label-text-alt stat-title">{{
                   $t("install.form.account.alt")
@@ -58,19 +70,6 @@
               </label>
             </div>
 
-            <div class="form-control w-full">
-              <label class="label">
-                <span class="label-text">{{
-                  $t("install.form.password.label")
-                }}</span>
-              </label>
-              <input
-                type="password"
-                class="input input-bordered w-full"
-                v-model="form.password"
-                required
-              />
-            </div>
           </form>
 
           <div class="flex flex-row gap-x-4">
@@ -90,8 +89,43 @@
       </div>
 
       <dialog
+        id="login_modal"
+        :class="['modal', { 'modal-open': loginDialogVisible }]"
+      >
+        <div class="modal-box">
+          <h3 class="font-bold text-lg">Login Apple Account</h3>
+          <form id="loginForm" class="flex flex-col gap-y-4">
+             <div class="form-control w-full">
+              <label class="label">
+                <span class="label-text">{{
+                  $t("install.form.account.label")
+                }}</span>
+              </label>
+              <input type="text" class="input input-bordered w-full" v-model="loginForm.account" required />
+            </div>
+             <div class="form-control w-full">
+              <label class="label">
+                <span class="label-text">{{
+                  $t("install.form.password.label")
+                }}</span>
+              </label>
+              <input type="password" class="input input-bordered w-full" v-model="loginForm.password" required />
+            </div>
+  
+          </form>
+          <div class="modal-action">
+             <button class="btn" @click="loginDialogVisible = false">Close</button>
+            <button class="btn btn-primary" @click="onLoginSubmit" :disabled="loginLoading">
+              <span class="loading loading-spinner" v-show="loginLoading"></span>
+              Login
+            </button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog
         id="auth_modal"
-        :class="['modal', { 'modal-open': dialogVisible }]"
+        :class="['modal', { 'modal-open': authDialogVisible }]"
       >
         <form id="dialog" method="dialog" class="modal-box">
           <h3 class="font-bold text-lg">
@@ -129,6 +163,7 @@
   <script>
 import api from "@/api/api";
 import { toast } from "vue3-toastify";
+import { maskEmail } from "@/utils/utils";
 
 export default {
   data() {
@@ -138,6 +173,7 @@ export default {
       ipa: {},
       device: {},
       loading: false,
+        accounts: [],
       form: {
         account: "",
         password: "",
@@ -148,8 +184,17 @@ export default {
         output: "",
         show: false,
       },
-      dialogVisible: false,
+      authDialogVisible: false,
       refreshLogInterval: null,
+      
+      loginWebsock: null,
+      loginDialogVisible: false,
+      loginLoading: false,
+      isLoginFlow: false,
+      loginForm: {
+        account: "",
+        password: "",
+      },
     };
   },
   created() {
@@ -170,9 +215,16 @@ export default {
       api.getDevice(_this.id).then((res) => {
         _this.device = res.data;
       });
+      api.getAccounts().then((res) => {
+        const m = res.data || {};
+        _this.accounts = Object.keys(m).map((k) => m[k]);
+      }).catch(() => {
+        _this.accounts = [];
+      });
     },
     async onSubmit(e) {
       let _this = this;
+      _this.isLoginFlow = false;
 
       if (!_this.validateForm("#form")) {
         return;
@@ -247,6 +299,74 @@ export default {
       }
       return true;
     },
+    showLoginDialog() {
+        this.loginDialogVisible = true;
+        this.loginForm.account = "";
+        this.loginForm.password = "";
+        this.isLoginFlow = true;
+    },
+    onLoginSubmit() {
+        if (!this.validateForm("#loginForm")) {
+          return;
+        }
+        this.loginLoading = true;
+        this.initLoginWebSocket();
+    },
+    initLoginWebSocket() {
+      const wsuri =
+        (location.protocol === "https:" ? "wss://" : "ws://") +
+        location.host +
+        "/ws/login";
+      this.loginWebsock = new WebSocket(wsuri);
+      this.loginWebsock.onopen = this.loginWebsocketonopen;
+      this.loginWebsock.onerror = this.loginWebsocketonerror;
+      this.loginWebsock.onmessage = this.loginWebsocketonmessage;
+      this.loginWebsock.onclose = this.loginWebsocketclose;
+    },
+    loginWebsocketonopen() {
+        console.log("Login WebSocket connect success.");
+        // Send login data
+        this.loginWebsocketsend(1, {
+            account: this.loginForm.account,
+            password: this.loginForm.password
+        });
+    },
+    loginWebsocketonmessage(e) {
+        let _this = this;
+        let line = e.data;
+
+        if (line.indexOf("Enter 2FA code") !== -1) {
+             _this.form.authcode = "";
+             _this.authDialogVisible = true;
+             return;
+        }
+        
+        if (line.indexOf("Successfully logged in") !== -1) {
+             _this.loginLoading = false;
+             toast.success("Login Success");
+             _this.loginDialogVisible = false;
+             _this.fetchData(); // Refresh accounts
+             _this.loginWebsock.close();
+        }
+        if (line.indexOf("ERROR") !== -1 || line.indexOf("Error:") !== -1) {
+            _this.loginLoading = false;
+            toast.error(line);
+         }
+    },
+    loginWebsocketsend(t, data) {
+      let _this = this;
+      if (typeof data !== 'string') {
+        data = JSON.stringify(data);
+      }
+      const json = JSON.stringify({ t: t, d: data });
+      _this.loginWebsock.send(json);
+    },
+    loginWebsocketclose(e) {
+      console.log(`login connection closed (${e.code})`);
+    },
+    loginWebsocketonerror(e) {
+      console.log("Login WebSocket connect failed.");
+    },
     initWebSocket() {
       //初始化weosocket
       const wsuri =
@@ -270,7 +390,11 @@ export default {
         return;
       }
 
-      _this.websocketsend(2, _this.form.authcode);
+      if (_this.isLoginFlow) {
+          _this.loginWebsocketsend(2, _this.form.authcode);
+      } else {
+          _this.websocketsend(2, _this.form.authcode);
+      }
       _this.dialogVisible = false;
     },
 
@@ -282,31 +406,30 @@ export default {
     },
     websocketonmessage(e) {
       let _this = this;
-      // hide password string for security
-      let line = e.data.replace(_this.form.password, "******");
-      
-      // ignore slideloader command output
-      if (line.indexOf("sideloader") === -1) {
-        _this.log.newcontent += line;
-      }
+      // hide password string and mask email for security
+      const maskedAccount = maskEmail(_this.form.account);
+      let line = e.data.replace(_this.form.password, "******").replace(_this.form.account, maskedAccount);
+
+      // append new log content
+      _this.log.newcontent += line;
 
       // input 2FA authentication code
       if (line.indexOf("A code has been sent to your devices") !== -1) {
         _this.form.authcode = "";
-        _this.dialogVisible = true;
+        _this.authDialogVisible = true;
         return;
       }
 
 
       // Installation error
-      if (line.indexOf("ERROR") !== -1) {
+      if (line.indexOf("ERROR") !== -1 || line.indexOf("Error:") !== -1) {
         _this.loading = false;
         toast.error(this.$t("install.toast.install_failed"));
         return;
       }
 
       // Installation successful.
-      if (line.indexOf("Installation Succeeded") !== -1) {
+      if (line.indexOf("Installation Succeeded") !== -1 || line.indexOf("Installation complete") !== -1) {
         _this.loading = false;
         toast.success(this.$t("install.toast.install_success"));
         return;
@@ -354,6 +477,7 @@ export default {
 <script setup>
 import AppleTVIcon from "@/assets/icons/appletv.svg";
 import WarningIcon from "@/assets/icons/warning.svg";
+import PersonIcon from "@/assets/icons/person.badge.plus.svg";
 </script>
   
   <style scoped>

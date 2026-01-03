@@ -14,6 +14,13 @@ export default {
       method: "get",
     });
   },
+  getAccounts: (params) => {
+    return request({
+      url: "/api/accounts",
+      method: "get",
+      params,
+    });
+  },
   mountDeviceImageAsync: (id) => {
     return new Promise((resolve, reject) => {
       request({

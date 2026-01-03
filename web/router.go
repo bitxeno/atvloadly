@@ -46,11 +46,11 @@ func route(fi *fiber.App) {
 		defer term.Close()
 
 		term.SetCWD(app.Config.Server.DataDir)
-		term.SetENV([]string{fmt.Sprintf("SIDELOADER_CONFIG_DIR='%s'", app.SideloaderDataDir())})
 		term.Start()
 	}))
 	fi.Get("/ws/pair", websocket.New(service.HandlePairMessage))
 	fi.Get("/ws/install", websocket.New(service.HandleInstallMessage))
+	fi.Get("/ws/login", websocket.New(service.HandleLoginMessage))
 	fi.Get("/apps/:id/icon", func(c *fiber.Ctx) error {
 		id := utils.MustParseInt(c.Params("id"))
 
@@ -92,6 +92,15 @@ func route(fi *fiber.App) {
 	})
 	api.Get("/settings", func(c *fiber.Ctx) error {
 		return c.Status(http.StatusOK).JSON(apiSuccess(app.Settings))
+	})
+
+	api.Get("/accounts", func(c *fiber.Ctx) error {
+		accounts, err := service.GetAppleAccounts()
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+
+		return c.Status(http.StatusOK).JSON(apiSuccess(accounts.Accounts))
 	})
 	api.Post("/settings/:key", func(c *fiber.Ctx) error {
 		var settings app.SettingsConfiguration

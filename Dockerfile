@@ -28,16 +28,15 @@ RUN case ${TARGETARCH} in \
     && dpkg -i ./libimobiledevice_1.3.1-1_${PKG_ARCH}.deb \
     && dpkg -i ./usbmuxd2_1.0.0-1_${PKG_ARCH}.deb
 
-# Install Sideloader
+# Install PlumeImpactor
 RUN case ${TARGETARCH} in \
          "amd64")  PKG_ARCH=x86_64  ;; \
          "arm64")  PKG_ARCH=aarch64  ;; \
     esac \
     && cd /tmp \
-    && wget https://github.com/bitxeno/Sideloader/releases/download/1.0-alpha.8/sideloader-cli-${PKG_ARCH}-linux-gnu.tar.gz \
-    && tar zxf sideloader-cli-${PKG_ARCH}-linux-gnu.tar.gz \
-    && mv sideloader-cli-${PKG_ARCH}-linux-gnu /usr/bin/sideloader \
-    && chmod +x /usr/bin/sideloader
+    && wget https://github.com/bitxeno/PlumeImpactor/download/v1.4.0-alpha.1/plumesign-linux-${PKG_ARCH} \
+    && mv plumesign-linux-${PKG_ARCH} /usr/bin/plumesign \
+    && chmod +x /usr/bin/plumesign
 
 # Install tzdata to support timezone updates.
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install tzdata
@@ -63,8 +62,8 @@ RUN chmod +x /etc/init.d/usbmuxd
 RUN printf '#!/bin/sh \n\n\
 
 mkdir -p /data/lockdown \n\
-mkdir -p /data/Sideloader \n\
-ln -s /data ~/.config \n\
+mkdir -p /data/PlumeImpactor \n\
+ln -s /data/PlumeImpactor ~/.config/PlumeImpactor \n\
 
 if [ ! -f "/data/config.yaml" ]; then  \n\
     cp /doc/config.yaml /data/config.yaml \n\

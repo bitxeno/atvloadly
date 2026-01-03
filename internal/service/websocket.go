@@ -42,8 +42,8 @@ func HandleInstallMessage(c *websocket.Conn) {
 				continue
 			}
 
-			if v.Account == "" || v.Password == "" || v.UDID == "" {
-				_ = c.WriteMessage(websocket.TextMessage, []byte("account or password or UDID is empty"))
+			if v.Account == "" || v.UDID == "" {
+				_ = c.WriteMessage(websocket.TextMessage, []byte("account or UDID is empty"))
 				continue
 			}
 
@@ -67,7 +67,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		return
 	}
 
-	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") {
+	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") || strings.Contains(installMgr.OutputLog(), "Installation complete") {
 		now := time.Now()
 		v.RefreshedDate = &now
 		v.RefreshedResult = true
@@ -83,6 +83,65 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 	}
 
 	installMgr.CleanTempFiles(v.IpaPath)
+}
+
+func HandleLoginMessage(c *websocket.Conn) {
+	websocketMgr := manager.NewWebsocketManager(c)
+	defer websocketMgr.Cancel()
+	loginMgr := manager.NewLoginManager()
+	loginMgr.OnOutput(func(line string) {
+		websocketMgr.WriteMessage(line)
+	})
+	defer loginMgr.Close()
+
+	for {
+		msg, err := websocketMgr.ReadMessage()
+		if err != nil {
+			// websocket client close
+			if websocket.IsUnexpectedCloseError(err) || websocket.IsCloseError(err) {
+				return
+			}
+			log.Err(err).Msg("Read websocket message error: ")
+			return
+		}
+
+		switch msg.Type {
+		case model.MessageTypeLogin:
+			var v struct {
+				Account  string `json:"account"`
+				Password string `json:"password"`
+			}
+			err := json.Unmarshal([]byte(msg.Data), &v)
+			if err != nil {
+				msg := fmt.Sprintf("ERROR: %s", err.Error())
+				_ = c.WriteMessage(websocket.TextMessage, []byte(msg))
+				continue
+			}
+
+			if v.Account == "" || v.Password == "" {
+				_ = c.WriteMessage(websocket.TextMessage, []byte("account or password is empty"))
+				continue
+			}
+
+			go runLoginMessage(websocketMgr, loginMgr, v.Account, v.Password)
+		case model.MessageType2FA:
+			code := msg.Data
+			loginMgr.Write([]byte(code + "\n"))
+		default:
+			_ = c.WriteMessage(websocket.TextMessage, []byte("ERROR: invalid message type"))
+			continue
+		}
+	}
+}
+
+func runLoginMessage(mgr *manager.WebsocketManager, loginMgr *manager.LoginManager, account, password string) {
+	err := loginMgr.Start(mgr.Context(), account, password)
+	if err != nil {
+		msg := fmt.Sprintf("ERROR: %s", err.Error())
+		mgr.WriteMessage(msg)
+		return
+	}
+	mgr.WriteMessage("Login Succeeded")
 }
 
 func HandlePairMessage(c *websocket.Conn) {

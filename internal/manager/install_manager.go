@@ -19,7 +19,6 @@ type InstallManager struct {
 	quietMode bool
 
 	outputStdout *outputWriter
-	outputStderr *outputWriter
 
 	stdin io.WriteCloser
 
@@ -32,7 +31,6 @@ func NewInstallManager() *InstallManager {
 	return &InstallManager{
 		quietMode:    true,
 		outputStdout: newOutputWriter(em),
-		outputStderr: newOutputWriter(em),
 
 		em: em,
 	}
@@ -62,41 +60,17 @@ func (t *InstallManager) TryStart(ctx context.Context, udid, account, password, 
 
 func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipaPath string) error {
 	t.outputStdout.Reset()
-	t.outputStderr.Reset()
 
 	// set execute timeout 30 miniutes
 	timeout := 30 * time.Minute
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	t.cancel = cancel
 
-	cmd := exec.CommandContext(ctx, "sideloader", "install", "--singlethread", "--quiet", "--nocolor", "--udid", udid, "-a", account, "-p", password, ipaPath)
-	if !t.quietMode {
-		cmd = exec.CommandContext(ctx, "sideloader", "install", "--singlethread", "--nocolor", "--udid", udid, "-a", account, "-p", password, ipaPath)
-	}
+	cmd := exec.CommandContext(ctx, "plumesign", "sign", "--apple-id", "--register-and-install", "--udid", udid, "-u", account, "-p", ipaPath)
 	cmd.Dir = app.Config.Server.DataDir
-	// 1. 初始化环境变量列表，保留程序核心需要的变量
-	env := []string{"SIDELOADER_CONFIG_DIR=" + app.SideloaderDataDir()}
-
-	// 2. 定义需要透传的代理变量白名单（包含大写和小写形式）
-	proxyVars := []string{
-		"HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "ALL_PROXY",
-		"http_proxy", "https_proxy", "no_proxy", "all_proxy",
-	}
-
-	// 3. 遍历系统环境变量，只追加匹配白名单的变量
-	for _, e := range os.Environ() {
-		for _, k := range proxyVars {
-			// 匹配 "KEY=" 前缀，确保准确匹配变量名
-			if strings.HasPrefix(e, k+"=") {
-				env = append(env, e)
-				break
-			}
-		}
-	}
-
-	cmd.Env = env
+	cmd.Env = os.Environ()
 	cmd.Stdout = t.outputStdout
-	cmd.Stderr = t.outputStderr
+	cmd.Stderr = t.outputStdout
 
 	var err error
 	t.stdin, err = cmd.StdinPipe()
@@ -152,7 +126,18 @@ func (t *InstallManager) Write(p []byte) {
 }
 
 func (t *InstallManager) ErrorLog() string {
-	return t.outputStderr.String()
+	data := t.outputStdout.String()
+	if data == "" {
+		return ""
+	}
+
+	var lines []string
+	for _, l := range strings.Split(data, "\n") {
+		if strings.HasPrefix(l, "Error") || strings.HasPrefix(l, "ERROR") {
+			lines = append(lines, l)
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (t *InstallManager) OutputLog() string {
@@ -164,7 +149,7 @@ func (t *InstallManager) WriteLog(msg string) {
 }
 
 func (t *InstallManager) SaveLog(id uint) {
-	data := t.OutputLog() + t.ErrorLog()
+	data := t.OutputLog()
 
 	// Hide log password string
 	// data = strings.Replace(data, v.Password, "******", -1)

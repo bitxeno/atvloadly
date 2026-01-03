@@ -19,7 +19,7 @@ English | [中文](./README_cn.md)
 
 </div>
 
-atvloadly is a web service that supports sideloading app on Apple TV. It uses [Sideloader](https://github.com/Dadoum/Sideloader) as the underlying technology for sideloading and automatically refreshes the app to ensure its long-term availability.
+atvloadly is a web service that supports sideloading app on Apple TV. It uses [PlumeImpactor](https://github.com/khcrysalis/PlumeImpactor) as the underlying technology for sideloading and automatically refreshes the app to ensure its long-term availability.
 
 ## Features
 

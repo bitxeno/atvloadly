@@ -39,11 +39,6 @@ func (t *Task) RunSchedule() error {
 		t.Stop()
 	}
 
-	if !app.Settings.Task.Enabled {
-		log.Info("App refresh scheduled task is not enabled")
-		return nil
-	}
-
 	t.c = cron.New()
 	if _, err := t.c.AddFunc(app.Settings.Task.CrodTime, t.Run); err != nil {
 		log.Err(err).Msgf("Failed to start app refresh scheduled task due to incorrect timing format: %s", app.Settings.Task.CrodTime)
@@ -51,14 +46,19 @@ func (t *Task) RunSchedule() error {
 		return err
 	}
 
-	log.Infof("App refresh scheduled task has started, time: %s", app.Settings.Task.CrodTime)
 	t.Start()
 
 	return nil
 }
 
 func (t *Task) Start() {
-	t.c.Start()
+	if app.Settings.Task.Enabled {
+		log.Infof("App refresh scheduled task has started, time: %s", app.Settings.Task.CrodTime)
+		t.c.Start()
+	} else {
+		log.Warn("App refresh scheduled task is disabled.")
+	}
+
 	go t.runQueue()
 }
 
@@ -164,9 +164,9 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 		installMgr.Close()
 	}()
 
-	if v.Account == "" || v.Password == "" || v.UDID == "" {
-		installMgr.WriteLog("account or password or UDID is empty")
-		return fmt.Errorf("%s", "account or password or UDID is empty")
+	if v.Account == "" || v.UDID == "" {
+		installMgr.WriteLog("account or UDID is empty")
+		return fmt.Errorf("%s", "account or UDID is empty")
 	}
 
 	if _, ok := t.InvalidAccounts[v.Account]; ok {
@@ -178,15 +178,16 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 	if err != nil {
 		log.Err(err).Msgf("Error executing installation script. %s", installMgr.ErrorLog())
 		installMgr.WriteLog(err.Error())
-		if strings.Contains(installMgr.ErrorLog(), "Can't log-in") || strings.Contains(installMgr.ErrorLog(), "DeveloperSession creation failed") {
+		if strings.Contains(installMgr.OutputLog(), "Can't log-in") || strings.Contains(installMgr.OutputLog(), "DeveloperSession creation failed") {
 			t.InvalidAccounts[v.Account] = true
 		}
 		return err
 	}
-	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") {
+
+	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") || strings.Contains(installMgr.OutputLog(), "Installation complete") {
 		return nil
 	} else {
-		if strings.Contains(installMgr.ErrorLog(), "Can't log-in") || strings.Contains(installMgr.ErrorLog(), "DeveloperSession creation failed") {
+		if strings.Contains(installMgr.OutputLog(), "Can't log-in") || strings.Contains(installMgr.OutputLog(), "DeveloperSession creation failed") {
 			t.InvalidAccounts[v.Account] = true
 		}
 		return fmt.Errorf("%s", installMgr.ErrorLog())

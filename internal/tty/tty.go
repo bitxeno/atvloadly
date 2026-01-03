@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/utils"
 	"github.com/gofiber/contrib/websocket"
 )
 
@@ -33,20 +34,7 @@ func (t *TTY) SetCWD(cwd string) {
 }
 
 func (t *TTY) SetENV(environ []string) {
-	proxyVars := []string{
-		"HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "ALL_PROXY",
-		"http_proxy", "https_proxy", "no_proxy", "all_proxy",
-	}
-
-	for _, e := range os.Environ() {
-		for _, k := range proxyVars {
-			if strings.HasPrefix(e, k+"=") {
-				environ = append(environ, e)
-				break
-			}
-		}
-	}
-	t.environ = environ
+	t.environ = utils.MergeEnvs(os.Environ(), environ)
 }
 
 func (t *TTY) Close() {

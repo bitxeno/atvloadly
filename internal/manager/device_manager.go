@@ -193,7 +193,7 @@ func (dm *DeviceManager) CheckHasMountImage(udid string) (bool, error) {
 }
 
 func (dm *DeviceManager) CheckAfcServiceStatus(udid string) error {
-	cmd := exec.Command("sideloader", "check", "afc", "--nocolor", "--udid", udid)
+	cmd := exec.Command("plumesign", "check", "afc", "--udid", udid)
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
