@@ -1,6 +1,14 @@
 package manager
 
-import "github.com/bitxeno/atvloadly/internal/model"
+import (
+	"context"
+	"os"
+	"os/exec"
+	"time"
+
+	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/model"
+)
 
 func StartDeviceManager() {
 	go deviceManager.Start()
@@ -44,4 +52,22 @@ func CheckDeviceStatus(udid string) error {
 
 func RestartUsbmuxd() error {
 	return deviceManager.RestartUsbmuxd()
+}
+
+func ExecuteCommand(name string, args ...string) ([]byte, error) {
+	timeout := 10 * time.Minute
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Dir = app.Config.Server.DataDir
+	cmd.Env = os.Environ()
+	return cmd.CombinedOutput()
+}
+
+func GetAppleAccounts() (*model.Accounts, error) {
+	return accountManager.GetAccounts()
+}
+
+func DeleteAppleAccount(email string) error {
+	return accountManager.DeleteAccount(email)
 }

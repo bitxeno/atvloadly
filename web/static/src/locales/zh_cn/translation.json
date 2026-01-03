@@ -1,7 +1,10 @@
 {
   "nav": {
     "settings": "设置",
-    "language": "中文"
+    "language": "中文",
+    "manager": "管理",
+    "account": "帐号",
+    "certificate": "证书"
   },
   "home": {
     "heading": {
@@ -186,6 +189,21 @@
       "button": {
         "submit": "保 存"
       }
+    }
+  }
+  ,
+  "account": {
+    "table": {
+      "header": {
+        "email": "邮箱",
+        "status": "状态"
+      },
+      "empty": "未找到帐号"
+    }
+    ,
+    "toast": {
+      "delete_success": "帐号删除成功",
+      "delete_failed": "删除帐号失败"
     }
   }
 }

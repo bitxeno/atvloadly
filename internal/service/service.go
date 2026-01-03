@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -216,27 +215,6 @@ func downloadDeveloperDiskImageByVersion(url string, version string) error {
 
 func GetValidName(name string) string {
 	return strings.ToLower(regValidName.ReplaceAllString(name, ""))
-}
-
-// GetAppleAccounts reads account file and returns simplified account info.
-// The accounts.json may be an array or an object; normalize both to a slice.
-func GetAppleAccounts() (*model.Accounts, error) {
-	path := filepath.Join(app.SideloadDataDir(), "accounts.json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return &model.Accounts{}, nil
-		}
-		return nil, err
-	}
-
-	// 1) try as array of accounts
-	var a model.Accounts
-	if err := json.Unmarshal(data, &a); err != nil {
-		return &model.Accounts{}, nil
-	}
-
-	return &a, nil
 }
 
 func SetLanguage(lang string) {

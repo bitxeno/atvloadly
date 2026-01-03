@@ -1,7 +1,6 @@
 package manager
 
 import (
-	"context"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -54,12 +53,7 @@ func (dm *DeviceManager) GetDeviceByUDID(udid string) (*model.Device, bool) {
 }
 
 func (dm *DeviceManager) AppendProductInfo(dev *model.Device) {
-	timeout := 10 * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "ideviceinfo", "-u", dev.UDID, "-n")
-	cmd.Dir = app.Config.Server.DataDir
-	output, err := cmd.CombinedOutput()
+	output, err := ExecuteCommand("ideviceinfo", "-u", dev.UDID, "-n")
 	if err != nil {
 		log.Err(err).Msgf("Error execute ideviceinfo: %s", dev.UDID)
 		return

@@ -1,7 +1,10 @@
 {
   "nav": {
     "settings": "Settings",
-    "language": "English"
+    "language": "English",
+    "manager": "Manager",
+    "account": "Accounts",
+    "certificate": "Certificates"
   },
   "home": {
     "heading": {
@@ -186,6 +189,21 @@
       "button": {
         "submit": "Save"
       }
+    }
+  }
+  ,
+  "account": {
+    "table": {
+      "header": {
+        "email": "Email",
+        "status": "Status"
+      },
+      "empty": "No accounts found"
+    }
+    ,
+    "toast": {
+      "delete_success": "Account deleted successfully",
+      "delete_failed": "Failed to delete account"
     }
   }
 }

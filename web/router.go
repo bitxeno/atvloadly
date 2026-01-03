@@ -95,13 +95,28 @@ func route(fi *fiber.App) {
 	})
 
 	api.Get("/accounts", func(c *fiber.Ctx) error {
-		accounts, err := service.GetAppleAccounts()
+		accounts, err := manager.GetAppleAccounts()
 		if err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 
 		return c.Status(http.StatusOK).JSON(apiSuccess(accounts.Accounts))
 	})
+
+	api.Post("/accounts/delete", func(c *fiber.Ctx) error {
+		var req struct {
+			Email string `json:"email"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument"))
+		}
+
+		if err := manager.DeleteAppleAccount(req.Email); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
 	api.Post("/settings/:key", func(c *fiber.Ctx) error {
 		var settings app.SettingsConfiguration
 		if err := c.BodyParser(&settings); err != nil {

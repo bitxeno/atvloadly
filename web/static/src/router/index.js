@@ -46,7 +46,19 @@ const routes = [
       },
     ],
   },
+  {
+    path: "/account",
+    component: () => import("@/page/layout.vue"),
+    children: [
+      {
+        path: "",
+        name: "account",
+        component: () => import("@/page/account/index.vue"),
+      },
+    ],
+  },
 ];
+
 
 const router = createRouter({
   history: createWebHashHistory(),

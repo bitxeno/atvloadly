@@ -2,19 +2,49 @@
   <div class="app-container">
     <header class="navbar border-b pt-0 pb-0">
       <div class="flex-1">
-        <a href="/" class="btn btn-ghost normal-case text-xl">atvloadly</a>
+        <label tabindex="0" class="btn btn-ghost rounded-btn">
+         <AppIcon class="w-7 h-7"/>
+        <a href="/" class="normal-case text-xl">atvloadly</a>
+        </label>
       </div>
       <div class="flex-none">
         <nav class="navbar w-full">
-          <div>
-            <router-link :to="{ name: 'settings' }">
-              <label tabindex="0" class="btn btn-ghost rounded-btn">
-                <span class="w-5">
+          <div class="dropdown dropdown-hover">
+            <label tabindex="0" class="btn btn-ghost rounded-btn">
+              <span class="w-5">
+                  <OptionIcon />
+                </span>
+              {{ $t("nav.manager") }}</label
+            >
+            <ul
+              tabindex="0"
+              class="dropdown-content z-[1] menu menu-sm p-2 shadow bg-base-200 rounded-box w-36 gap-1"
+            >
+              <li>
+                <router-link :to="{ name: 'account' }">
+                  <span class="w-5">
+                  <AccountIcon />
+                </span>
+                  {{ $t("nav.account") }}
+                  </router-link>
+              </li>
+              <li>
+                <router-link :to="{ name: 'settings' }">
+                  <span class="w-5">
+                  <CertificateIcon />
+                </span>
+                  {{ $t("nav.certificate") }}
+                </router-link>
+              </li>
+              <li>
+                <router-link :to="{ name: 'settings' }">
+                  <span class="w-5">
                   <SettingsIcon />
                 </span>
-                {{ $t("nav.settings") }}</label
-              >
-            </router-link>
+                  {{ $t("nav.settings") }}
+                </router-link>
+              </li>
+            </ul>
           </div>
 
           <div class="dropdown dropdown-hover">
@@ -37,6 +67,16 @@
                 </button>
               </li>
             </ul>
+          </div>
+
+          <div>
+            <a href="https://github.com/bitxeno/atvloadly" target="_blank">
+              <label tabindex="0" class="btn btn-ghost rounded-btn">
+                <span class="w-5"> <GithubIcon /> </span
+              >
+              Donate
+            </label>
+            </a>
           </div>
 
           <div>
@@ -85,9 +125,13 @@ export default {
 </script>
 
 <script setup>
+import AppIcon from "@/assets/icons/app.svg";
 import SettingsIcon from "@/assets/icons/settings.svg";
 import LanguageIcon from "@/assets/icons/language.svg";
 import GithubIcon from "@/assets/icons/github.svg";
+import AccountIcon from "@/assets/icons/person.svg";
+import OptionIcon from "@/assets/icons/slider.svg";
+import CertificateIcon from "@/assets/icons/certificate.svg";
 </script>
 
 <style lang="postcss" scoped>

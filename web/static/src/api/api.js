@@ -21,6 +21,13 @@ export default {
       params,
     });
   },
+  deleteAccount: (data) => {
+    return request({
+      url: "/api/accounts/delete",
+      method: "post",
+      data,
+    });
+  },
   mountDeviceImageAsync: (id) => {
     return new Promise((resolve, reject) => {
       request({
