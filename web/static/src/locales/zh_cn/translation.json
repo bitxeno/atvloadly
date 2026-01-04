@@ -5,7 +5,15 @@
     "preferences": "选项",
     "account": "帐号",
     "certificate": "证书",
-    "devices": "设备"
+    "devices": "设备",
+    "donate": "赞助"
+  },
+  "donate": {
+    "title": "赞助",
+    "desc": "如果您觉得本项目对您有帮助，请考虑赞助支持开发。您的支持是项目持续发展的动力！",
+    "kofi": "在 Ko-fi 上支持",
+    "afdian": "在爱发电上支持",
+    "close": "关闭"
   },
   "home": {
     "heading": {

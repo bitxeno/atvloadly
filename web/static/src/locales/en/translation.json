@@ -5,7 +5,15 @@
     "preferences": "Preferences",
     "account": "Accounts",
     "certificate": "Certificates",
-    "devices": "Devices"
+    "devices": "Devices",
+    "donate": "Donate"
+  },
+  "donate": {
+    "title": "Donate",
+    "desc": "If you find this project helpful, please consider supporting its development. Your support keeps the project alive!",
+    "kofi": "Support on Ko-fi",
+    "afdian": "Support on Afadian",
+    "close": "Close"
   },
   "home": {
     "heading": {

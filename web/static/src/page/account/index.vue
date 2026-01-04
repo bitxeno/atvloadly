@@ -9,7 +9,7 @@
             <th>{{ $t("home.table.header.operate") }}</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody class="bg-base-100">
           <tr v-if="loading">
             <td colspan="3" class="text-center">
               <span class="loading loading-spinner loading-md"></span>
@@ -79,7 +79,7 @@
                 <th>{{ $t("home.table.header.operate") }}</th>
             </tr>
             </thead>
-            <tbody>
+            <tbody class="bg-base-100">
             <tr v-if="certLoading">
                 <td colspan="4" class="text-center">
                   <span class="loading loading-spinner loading-md"></span>
@@ -156,7 +156,7 @@
               <th>{{ $t("home.table.header.operate") }}</th>
             </tr>
             </thead>
-            <tbody>
+            <tbody class="bg-base-100">
             <tr v-if="deviceLoading">
                 <td colspan="5" class="text-center">
                   <span class="loading loading-spinner loading-md"></span>

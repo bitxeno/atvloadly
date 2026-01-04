@@ -10,11 +10,11 @@
       <div class="flex-none">
         <nav class="navbar w-full">
           <div class="dropdown dropdown-hover">
-            <label tabindex="0" class="btn btn-ghost rounded-btn">
+            <label tabindex="0" class="btn btn-ghost rounded-btn px-2 md:px-4">
               <span class="w-5">
                   <OptionIcon />
                 </span>
-              {{ $t("nav.preferences") }}</label
+              <span class="hidden sm:inline">{{ $t("nav.preferences") }}</span></label
             >
             <ul
               tabindex="0"
@@ -40,11 +40,11 @@
           </div>
 
           <div class="dropdown dropdown-hover">
-            <label tabindex="0" class="btn btn-ghost rounded-btn">
+            <label tabindex="0" class="btn btn-ghost rounded-btn px-2 md:px-4">
               <span class="w-5">
                 <LanguageIcon />
               </span>
-              {{ $t("nav.language") }}</label
+              <span class="hidden sm:inline">{{ $t("nav.language") }}</span></label
             >
             <ul
               tabindex="0"
@@ -62,20 +62,16 @@
           </div>
 
           <div>
-            <a href="https://github.com/bitxeno/atvloadly" target="_blank">
-              <label tabindex="0" class="btn btn-ghost rounded-btn">
-                <span class="w-5"> <GithubIcon /> </span
-              >
-              Donate
+            <label tabindex="0" class="btn btn-ghost rounded-btn px-2 md:px-4" @click="showDonateModal = true">
+                <LikeIcon class="w-5 h-5" />
+              <span class="hidden sm:inline">{{ $t("nav.donate") }}</span>
             </label>
-            </a>
           </div>
 
           <div>
             <a href="https://github.com/bitxeno/atvloadly" target="_blank">
               <label tabindex="0" class="btn btn-ghost rounded-btn">
-                <span class="w-5"> <GithubIcon /> </span
-              ></label>
+                <GithubIcon class="w-5 h-5" /></label>
             </a>
           </div>
         </nav>
@@ -84,6 +80,30 @@
 
     <div class="main-container">
       <router-view />
+    </div>
+
+    <!-- Donate Modal -->
+    <div v-if="showDonateModal" class="modal modal-open modal-bottom sm:modal-middle" @click.self="showDonateModal = false">
+      <div class="modal-box relative">
+        <label @click="showDonateModal = false" class="btn btn-sm btn-circle absolute right-2 top-2">✕</label>
+        <h3 class="font-bold text-lg flex items-center gap-2">
+          <LikeIcon class="w-6 h-6 text-red-500" />
+          {{ $t("donate.title") }}
+        </h3>
+        <p class="py-4 text-base-content/70">
+          {{ $t("donate.desc") }}
+        </p>
+        <div class="flex flex-col gap-3 w-full mt-2">
+           <a href="https://ko-fi.com/bitxeno" target="_blank" class="btn border-none w-full normal-case text-lg gap-2 text-white hover:opacity-90" style="background-color: #29abe0;">
+             <img src="https://storage.ko-fi.com/cdn/cup-border.png" class="w-6 h-6" alt="Ko-fi"/>
+             {{ $t("donate.kofi") }}
+           </a>
+           <a href="https://afdian.net/a/bitxeno" target="_blank" class="btn border-none w-full normal-case text-lg gap-2 text-white hover:opacity-90" style="background-color: #946ce6;">
+             <span class="font-bold text-xl">⚡</span>
+             {{ $t("donate.afdian") }}
+           </a>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -95,6 +115,7 @@ export default {
   data() {
     return {
       languages: [],
+      showDonateModal: false,
     };
   },
   created() {
@@ -123,7 +144,7 @@ import LanguageIcon from "@/assets/icons/language.svg";
 import GithubIcon from "@/assets/icons/github.svg";
 import AccountIcon from "@/assets/icons/person.svg";
 import OptionIcon from "@/assets/icons/slider.svg";
-import CertificateIcon from "@/assets/icons/certificate.svg";
+import LikeIcon from "@/assets/icons/like.svg";
 </script>
 
 <style lang="postcss" scoped>
