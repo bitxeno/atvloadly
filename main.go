@@ -1,11 +1,13 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"os"
 
 	"github.com/bitxeno/atvloadly/cmd/server"
 	"github.com/bitxeno/atvloadly/internal/app/build"
+	"github.com/bitxeno/atvloadly/internal/i18n"
 	"github.com/go-errors/errors"
 	"github.com/urfave/cli/v2"
 )
@@ -17,7 +19,11 @@ const (
 	AppDesc = "Publish ipa to AppleTV Easily"
 )
 
+//go:embed locales
+var localesFs embed.FS
+
 func main() {
+	i18n.Init(localesFs)
 
 	cliApp := &cli.App{
 		Name:    AppName,

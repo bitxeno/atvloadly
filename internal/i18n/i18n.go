@@ -1,25 +1,23 @@
 package i18n
 
 import (
-	"embed"
 	"encoding/json"
+	"io/fs"
 	"path/filepath"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
 )
 
-//go:embed all:locales/*
-var localesFs embed.FS
 var i18nBundle *i18n.Bundle
 var i18nLocalizer *i18n.Localizer
 
-func init() {
+func Init(localesFs fs.FS) {
 	i18nBundle = i18n.NewBundle(language.English)
 	i18nBundle.RegisterUnmarshalFunc("json", json.Unmarshal)
 
 	root := "locales"
-	files, err := localesFs.ReadDir(root)
+	files, err := fs.ReadDir(localesFs, root)
 	if err != nil {
 		panic(err)
 	}

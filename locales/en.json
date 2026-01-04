@@ -1,0 +1,265 @@
+{
+    "language": "en",
+    "notify": {
+        "title": "[{{.name}}] Refresh task execution failed.",
+        "content": "Account: {{.account}}\nError log: {{.error}}",
+        "batch_title": "atvloadly Refresh Task Execution Failed",
+        "batch_content": "app: {{.name}}\n Error Log: {{.error}}\n\n"
+    },
+    "nav": {
+        "settings": "Settings",
+        "language": "English",
+        "preferences": "Preferences",
+        "account": "Accounts",
+        "certificate": "Certificates",
+        "devices": "Devices",
+        "donate": "Donate"
+    },
+    "donate": {
+        "title": "Donate",
+        "desc": "If you find this project helpful, please consider supporting its development. Your support keeps the project alive!",
+        "kofi": "Support on Ko-fi",
+        "afdian": "Support on Afadian",
+        "close": "Close"
+    },
+    "home": {
+        "heading": {
+            "pairable_devices": "Pairable Devices",
+            "paired_devices": "Paired Devices",
+            "service_status": "Service Status",
+            "installed_app": "Installed Apps"
+        },
+        "dialog": {
+            "delete_confirm": {
+                "title": "Are you sure you want to delete {{name}}?",
+                "button": {
+                    "cancel": "Cancel",
+                    "confirm": "Confirm"
+                }
+            }
+        },
+        "toast": {
+            "refresh_app_started": "Refresh of {{name}} started",
+            "installing_app": "Installing…"
+        },
+        "sidebar": {
+            "device_status": {
+                "pairable": "Pairable",
+                "paired": "Paired",
+                "unpaired": "Unpaired"
+            },
+            "tips": {
+                "no_paired_devices": "No connected devices",
+                "how_pair_device": "For AppleTV, go to 'Settings -> Remotes and Devices -> Remote App and Devices' to enter pairing mode for completion"
+            }
+        },
+        "table": {
+            "header": {
+                "app": "App",
+                "device": "Device",
+                "account": "Account",
+                "expired_date": "Expiration Date",
+                "operate": "Operation"
+            },
+            "expired_time_format": {
+                "expired_tips": "Expired",
+                "days": "{{num}} DAYS"
+            },
+            "refresh_date_format": {
+                "installing_tips": "Installing...",
+                "seconds": "{{num}} seconds ago",
+                "miniutes": "{{num}} minutes ago",
+                "hours": "{{num}} hours ago",
+                "days": "{{num}} days ago"
+            },
+            "button": {
+                "refresh": "Refresh",
+                "delete": "Delete"
+            },
+            "tips": {
+                "view_log": "Click to view installation log",
+                "no_data": "No data",
+                "footer": "By default, when the app expiration time is less than 1 day, it will automatically refresh between 3-6am."
+            }
+        }
+    },
+    "pair": {
+        "toast": {
+            "pin_incorrect": "Incorrect PIN code",
+            "pair_error": "Pairing error. Please check the console for more information.",
+            "no_device_found": "Device not found. Pleasemake sure the usbmuxd service is running."
+        },
+        "step": {
+            "start": {
+                "title": "Start",
+                "device": "Device",
+                "button": "Start Pairing"
+            },
+            "pin": {
+                "title": "Enter PIN code",
+                "loading": "Connecting…",
+                "placeholder": "Please enter the PIN displayed on AppleTV",
+                "button": "Confirm"
+            },
+            "completed": {
+                "title": "Pairing Completed",
+                "msg": "Pairing successful",
+                "button": "Back"
+            }
+        }
+    },
+    "install": {
+        "tips": {
+            "warning": "During initial installation, you need to authorize and trust this device. Please make sure you have an iPhone with a logged-in installation account nearby and enter the displayed verification code promptly. Failure to verify within the time limit will result in temporary account suspension, requiring password reset to lift the suspension."
+        },
+        "dialog": {
+            "input_pin": {
+                "title": "Please enter the verification code shown on your iPhone",
+                "input": {
+                    "placeholder": "Please allow and enter the verification code shown on your iPhone"
+                },
+                "button": {
+                    "submit": "Submit"
+                }
+            }
+        },
+        "toast": {
+            "install_success": "Installation Successful",
+            "install_failed": "Installation Failed. Please check logs for more information."
+        },
+        "form": {
+            "choose_ipa": {
+                "label": "Choose IPA:"
+            },
+            "account": {
+                "label": "Apple Account:",
+                "select": {
+                    "placeholder": "Select an account"
+                },
+                "alt": "For account security, please do not use your primary account for installation."
+            },
+            "password": {
+                "label": "Apple Password:"
+            },
+            "button": {
+                "back": "Back",
+                "submit": "Install"
+            }
+        }
+    },
+    "settings": {
+        "toast": {
+            "save_success": "Save Successful",
+            "notify_success": "Notification Sent Successfully"
+        },
+        "notification": {
+            "title": "Installation Failure Notification",
+            "toggle": {
+                "label": "Enable"
+            },
+            "type": {
+                "label": "Notification Type"
+            },
+            "weixin": {
+                "title": "Wecom",
+                "corp_id": "CorpID",
+                "corp_secret": "CorpSecret",
+                "agent_id": "AgentID",
+                "touser": "ToUser"
+            },
+            "email": {
+                "smtp_host": "SMTP Server",
+                "smtp_port": "SMTP Port",
+                "username": "Username",
+                "password": "Password",
+                "from": "From Email",
+                "to": "To Email"
+            },
+            "webhook": {
+                "url": "URL",
+                "url_placeholder": "Supports {{title}} and {{message}} template variables",
+                "method": "HTTP Method",
+                "content_type": "Content-Type",
+                "body": "Request Body",
+                "body_placeholder": "Supports {{title}} and {{message}} template variables\nExample: {\"title\": \"{{title}}\", \"message\": \"{{message}}\"}"
+            },
+            "button": {
+                "submit": "Save",
+                "send_test": "Send Test Notification"
+            }
+        },
+        "refresh": {
+            "title": "Auto Refresh App",
+            "toggle": {
+                "label": "Enable"
+            },
+            "mode": {
+                "label": "Refresh Mode",
+                "day_before_expired": "One day before expiration",
+                "custom": "Custom"
+            },
+            "run_time": {
+                "label": "Running Time Period",
+                "format_tips": "Linux crontab format, restricted by refresh mode"
+            },
+            "button": {
+                "submit": "Save"
+            }
+        }
+    },
+    "account": {
+        "select_account": "Select Account",
+        "select_placeholder": "Please select an account",
+        "table": {
+            "header": {
+                "email": "Email",
+                "status": "Status",
+                "machine_name": "Machine Name"
+            },
+            "empty": "No accounts found"
+        },
+        "toast": {
+            "delete_success": "Account deleted successfully",
+            "delete_failed": "Failed to delete account"
+        }
+    },
+    "certificate": {
+        "modal": {
+            "title": "Certificate Management - {{email}}"
+        },
+        "table": {
+            "header": {
+                "serial": "Serial Number",
+                "name": "Name",
+                "machine_name": "Machine Name",
+                "expiration": "Expiration Date"
+            },
+            "button": {
+                "revoke": "Revoke"
+            }
+        },
+        "dialog": {
+            "revoke_confirm": {
+                "title": "Are you sure you want to revoke certificate {{serial}}?"
+            }
+        },
+        "toast": {
+            "revoke_success": "Certificate revoked successfully",
+            "revoke_failed": "Failed to revoke certificate"
+        },
+        "no_certificates": "No certificates found"
+    },
+    "device": {
+        "modal": {
+            "title": "Devices - {{email}}"
+        },
+        "table": {
+            "header": {
+                "name": "Name",
+                "udid": "UDID",
+                "platform": "Platform"
+            },
+            "empty": "No devices found"
+        }
+    }
+}
