@@ -2,7 +2,7 @@
   "nav": {
     "settings": "设置",
     "language": "中文",
-    "manager": "管理",
+    "preferences": "选项",
     "account": "帐号",
     "certificate": "证书"
   },
@@ -193,17 +193,45 @@
   }
   ,
   "account": {
+    "select_account": "选择帐号",
+    "select_placeholder": "请选择一个帐号",
     "table": {
       "header": {
         "email": "邮箱",
-        "status": "状态"
+        "status": "状态",
+        "machine_name": "设备名称"
       },
       "empty": "未找到帐号"
-    }
-    ,
+    },
     "toast": {
       "delete_success": "帐号删除成功",
       "delete_failed": "删除帐号失败"
     }
+  },
+  "certificate": {
+    "modal": {
+      "title": "证书管理 - {{email}}"
+    },
+    "table": {
+      "header": {
+        "serial": "序列号",
+        "name": "名称",
+        "machine_name": "设备名称",
+        "expiration": "过期时间"
+      },
+      "button": {
+        "revoke": "注销"
+      }
+    },
+    "dialog": {
+      "revoke_confirm": {
+        "title": "确定要注销证书 {{serial}} 吗?"
+      }
+    },
+    "toast": {
+      "revoke_success": "注销成功",
+      "revoke_failed": "注销失败"
+    },
+    "no_certificates": "没有找到证书"
   }
 }

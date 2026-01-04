@@ -10,10 +10,17 @@
           </tr>
         </thead>
         <tbody>
+          <tr v-if="loading">
+            <td colspan="3" class="text-center">
+              <span class="loading loading-spinner loading-md"></span>
+            </td>
+          </tr>
+          <template v-else>
           <tr v-for="(account, email) in accounts" :key="email">
             <td class="break-all">{{ email }}</td>
             <td>{{ account.status }}</td>
-            <td>
+            <td class="flex gap-x-4">
+              <a class="link link-primary" @click="openCertModal(email)">{{ $t("nav.certificate") }}</a>
               <Popper placement="top" arrow="true">
                     <template #content="{ close }">
                       <div class="flex flex-col gap-y-2">
@@ -52,9 +59,87 @@
           <tr v-if="Object.keys(accounts).length === 0">
             <td colspan="3" class="text-center">No accounts found</td>
           </tr>
+          </template>
         </tbody>
       </table>
     </div>
+
+    <!-- Certificate Modal -->
+    <dialog id="cert_modal" class="modal" :class="{ 'modal-open': showCertModal }">
+      <div class="modal-box w-11/12 max-w-5xl">
+        <h3 class="font-bold text-lg mb-4">{{ $t("certificate.modal.title", { email: currentAccountEmail }) }}</h3>
+        
+        <table class="table w-full">
+            <thead>
+            <tr>
+                <th>{{ $t("certificate.table.header.name") }}</th>
+                <th>{{ $t("certificate.table.header.machine_name") }}</th>
+                <th class="hidden md:table-cell">{{ $t("certificate.table.header.expiration") }}</th>
+                <th>{{ $t("home.table.header.operate") }}</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-if="certLoading">
+                <td colspan="4" class="text-center">
+                  <span class="loading loading-spinner loading-md"></span>
+                </td>
+            </tr>
+            <template v-else>
+            <tr v-for="cert in certificates" :key="cert.serialNumber">
+                <td>
+                  <div class="font-bold">{{ cert.name }}</div>
+                  <div class="text-sm opacity-50">({{ cert.serialNumber }})</div>
+                </td>
+                <td>{{ cert.machineName }}</td>
+                <td class="hidden md:table-cell">{{ cert.expirationDate }}</td>
+                <td>
+                 <Popper placement="top" arrow="true">
+                    <template #content="{ close }">
+                      <div class="flex flex-col gap-y-2">
+                        <div class="py-2">
+                          {{
+                            $t("certificate.dialog.revoke_confirm.title", {
+                              serial: cert.machineName,
+                            })
+                          }}
+                        </div>
+                        <div class="flex gap-x-2 justify-end items-center">
+                          <a
+                            class="link link-primary link-hover"
+                            @click="close"
+                            >{{
+                              $t("home.dialog.delete_confirm.button.cancel")
+                            }}</a
+                          >
+                          <button
+                            class="btn btn-primary btn-xs"
+                            @click="revokeCertificate(cert.serialNumber, close)"
+                          >
+                            {{
+                              $t("home.dialog.delete_confirm.button.confirm")
+                            }}
+                          </button>
+                        </div>
+                      </div>
+                    </template>
+                    <a class="link link-error">{{
+                      $t("certificate.table.button.revoke")
+                    }}</a>
+                  </Popper>
+                </td>
+            </tr>
+            <tr v-if="certificates.length === 0">
+              <td colspan="4" class="text-center">{{ $t("certificate.no_certificates") }}</td>
+            </tr>
+            </template>
+            </tbody>
+        </table>
+
+        <div class="modal-action">
+          <button class="btn" @click="showCertModal = false">Close</button>
+        </div>
+      </div>
+    </dialog>
   </div>
 </template>
 
@@ -67,6 +152,11 @@ export default {
   data() {
     return {
       accounts: {},
+      loading: false,
+      showCertModal: false,
+      currentAccountEmail: "",
+      certificates: [],
+      certLoading: false,
     };
   },
   created() {
@@ -74,8 +164,11 @@ export default {
   },
   methods: {
     fetchData() {
+      this.loading = true;
       api.getAccounts().then((res) => {
         this.accounts = res.data || {};
+      }).finally(() => {
+        this.loading = false;
       });
     },
     deleteAccount(email, close) {
@@ -86,6 +179,31 @@ export default {
           _this.fetchData();
         } else {
           toast.error(_this.$t("account.toast.delete_failed"));
+        }
+      });
+      close?.();
+    },
+    openCertModal(email) {
+      this.currentAccountEmail = email;
+      this.showCertModal = true;
+      this.fetchCertificates(email);
+    },
+    fetchCertificates(email) {
+      this.certLoading = true;
+      api.getCertificates({ email: email }).then((res) => {
+        this.certificates = res.data || [];
+      }).finally(() => {
+        this.certLoading = false;
+      });
+    },
+    revokeCertificate(serialNumber, close) {
+      let _this = this;
+      api.revokeCertificate({ email: this.currentAccountEmail, serialNumber: serialNumber }).then((res) => {
+        if (res.data) {
+          toast.success(_this.$t("certificate.toast.revoke_success"));
+          _this.fetchCertificates(_this.currentAccountEmail);
+        } else {
+          toast.error(_this.$t("certificate.toast.revoke_failed"));
         }
       });
       close?.();

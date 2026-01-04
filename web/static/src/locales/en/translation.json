@@ -2,7 +2,7 @@
   "nav": {
     "settings": "Settings",
     "language": "English",
-    "manager": "Manager",
+    "preferences": "Preferences",
     "account": "Accounts",
     "certificate": "Certificates"
   },
@@ -193,17 +193,45 @@
   }
   ,
   "account": {
+    "select_account": "Select Account",
+    "select_placeholder": "Please select an account",
     "table": {
       "header": {
         "email": "Email",
-        "status": "Status"
+        "status": "Status",
+        "machine_name": "Machine Name"
       },
       "empty": "No accounts found"
-    }
-    ,
+    },
     "toast": {
       "delete_success": "Account deleted successfully",
       "delete_failed": "Failed to delete account"
     }
+  },
+  "certificate": {
+    "modal": {
+      "title": "Certificate Management - {{email}}"
+    },
+    "table": {
+      "header": {
+        "serial": "Serial Number",
+        "name": "Name",
+        "machine_name": "Machine Name",
+        "expiration": "Expiration Date"
+      },
+      "button": {
+        "revoke": "Revoke"
+      }
+    },
+    "dialog": {
+      "revoke_confirm": {
+        "title": "Are you sure you want to revoke certificate {{serial}}?"
+      }
+    },
+    "toast": {
+      "revoke_success": "Certificate revoked successfully",
+      "revoke_failed": "Failed to revoke certificate"
+    },
+    "no_certificates": "No certificates found"
   }
 }

@@ -236,7 +236,6 @@
             <a
               class="link"
               @click.prevent="testNotification"
-              v-show="settings.notification.enabled"
               >{{ $t("settings.notification.button.send_test") }}</a
             >
           </div>

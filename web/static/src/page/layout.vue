@@ -14,7 +14,7 @@
               <span class="w-5">
                   <OptionIcon />
                 </span>
-              {{ $t("nav.manager") }}</label
+              {{ $t("nav.preferences") }}</label
             >
             <ul
               tabindex="0"
@@ -27,14 +27,6 @@
                 </span>
                   {{ $t("nav.account") }}
                   </router-link>
-              </li>
-              <li>
-                <router-link :to="{ name: 'settings' }">
-                  <span class="w-5">
-                  <CertificateIcon />
-                </span>
-                  {{ $t("nav.certificate") }}
-                </router-link>
               </li>
               <li>
                 <router-link :to="{ name: 'settings' }">

@@ -2,8 +2,10 @@ package manager
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
@@ -61,7 +63,21 @@ func ExecuteCommand(name string, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = app.Config.Server.DataDir
 	cmd.Env = os.Environ()
-	return cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// Parse error output
+		var found []string
+		for _, line := range strings.Split(string(output), "\n") {
+			s := strings.TrimSpace(line)
+			if strings.HasPrefix(s, "Error:") || strings.HasPrefix(s, "ERROR:") {
+				found = append(found, s)
+			}
+		}
+		if len(found) > 0 {
+			return output, errors.New(strings.Join(found, "\n"))
+		}
+	}
+	return output, err
 }
 
 func GetAppleAccounts() (*model.Accounts, error) {
@@ -70,4 +86,12 @@ func GetAppleAccounts() (*model.Accounts, error) {
 
 func DeleteAppleAccount(email string) error {
 	return accountManager.DeleteAccount(email)
+}
+
+func GetCertificates(email string) ([]model.Certificate, error) {
+	return certificateManager.GetCertificates(email)
+}
+
+func RevokeCertificate(email string, serialNumber string) error {
+	return certificateManager.RevokeCertificate(email, serialNumber)
 }

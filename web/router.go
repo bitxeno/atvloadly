@@ -117,6 +117,32 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))
 	})
 
+	api.Get("/certificates", func(c *fiber.Ctx) error {
+		email := c.Query("email")
+		if email == "" {
+			return c.Status(http.StatusOK).JSON(apiError("email is required"))
+		}
+		certs, err := manager.GetCertificates(email)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(certs))
+	})
+
+	api.Post("/certificates/revoke", func(c *fiber.Ctx) error {
+		var req struct {
+			Email        string `json:"email"`
+			SerialNumber string `json:"serialNumber"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument"))
+		}
+		if err := manager.RevokeCertificate(req.Email, req.SerialNumber); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
 	api.Post("/settings/:key", func(c *fiber.Ctx) error {
 		var settings app.SettingsConfiguration
 		if err := c.BodyParser(&settings); err != nil {
@@ -357,8 +383,9 @@ func route(fi *fiber.App) {
 		if err := c.BodyParser(&settings); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError("Invalid argument. error: " + err.Error()))
 		}
+		settings.Notification.Enabled = true
 
-		if err := notify.SendWithConfig("test", "content", settings); err != nil {
+		if err := notify.SendWithConfig("atvloadly", "test message", settings); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		} else {
 			return c.Status(http.StatusOK).JSON(apiSuccess(true))

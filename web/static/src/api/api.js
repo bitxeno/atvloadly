@@ -28,6 +28,20 @@ export default {
       data,
     });
   },
+  getCertificates: (params) => {
+    return request({
+      url: "/api/certificates",
+      method: "get",
+      params,
+    });
+  },
+  revokeCertificate: (data) => {
+    return request({
+      url: "/api/certificates/revoke",
+      method: "post",
+      data,
+    });
+  },
   mountDeviceImageAsync: (id) => {
     return new Promise((resolve, reject) => {
       request({
