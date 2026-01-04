@@ -21,6 +21,7 @@
             <td>{{ account.status }}</td>
             <td class="flex gap-x-4">
               <a class="link link-primary" @click="openCertModal(email)">{{ $t("nav.certificate") }}</a>
+              <a class="link link-primary" @click="openDeviceModal(email)">{{ $t("nav.devices") }}</a>
               <Popper placement="top" arrow="true">
                     <template #content="{ close }">
                       <div class="flex flex-col gap-y-2">
@@ -57,7 +58,7 @@
             </td>
           </tr>
           <tr v-if="Object.keys(accounts).length === 0">
-            <td colspan="3" class="text-center">No accounts found</td>
+            <td colspan="3" class="text-center">{{ $t("account.table.empty") }}</td>
           </tr>
           </template>
         </tbody>
@@ -74,7 +75,7 @@
             <tr>
                 <th>{{ $t("certificate.table.header.name") }}</th>
                 <th>{{ $t("certificate.table.header.machine_name") }}</th>
-                <th class="hidden md:table-cell">{{ $t("certificate.table.header.expiration") }}</th>
+                <th class="hidden md:table-cell">{{ $t("account.table.header.status") }}</th>
                 <th>{{ $t("home.table.header.operate") }}</th>
             </tr>
             </thead>
@@ -91,7 +92,7 @@
                   <div class="text-sm opacity-50">({{ cert.serialNumber }})</div>
                 </td>
                 <td>{{ cert.machineName }}</td>
-                <td class="hidden md:table-cell">{{ cert.expirationDate }}</td>
+                <td class="hidden md:table-cell">{{ cert.status }}</td>
                 <td>
                  <Popper placement="top" arrow="true">
                     <template #content="{ close }">
@@ -140,6 +141,83 @@
         </div>
       </div>
     </dialog>
+
+    <!-- Device Modal -->
+    <dialog id="device_modal" class="modal" :class="{ 'modal-open': showDeviceModal }">
+      <div class="modal-box w-11/12 max-w-5xl">
+        <h3 class="font-bold text-lg mb-4">{{ $t("device.modal.title", { email: currentAccountEmail }) }}</h3>
+        
+        <table class="table w-full">
+            <thead>
+            <tr>
+              <th>{{ $t("device.table.header.name") }}</th>
+              <th class="hidden md:table-cell">{{ $t("device.table.header.udid") }}</th>
+              <th>{{ $t("device.table.header.platform") }}</th>
+              <th>{{ $t("home.table.header.operate") }}</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-if="deviceLoading">
+                <td colspan="5" class="text-center">
+                  <span class="loading loading-spinner loading-md"></span>
+                </td>
+            </tr>
+            <template v-else>
+            <tr v-for="dev in devices" :key="dev.deviceId">
+                <td>
+                  <div class="font-bold">{{ dev.name }}</div>
+                  <div class="text-sm opacity-50">({{ dev.deviceId }})</div>
+                </td>
+                <td class="hidden md:table-cell break-all">{{ dev.deviceNumber }}</td>
+                <td>{{ dev.deviceClass }}</td>
+                <td>
+                 <Popper placement="top" arrow="true">
+                    <template #content="{ close }">
+                      <div class="flex flex-col gap-y-2">
+                        <div class="py-2">
+                          {{
+                            $t("home.dialog.delete_confirm.title", {
+                              name: dev.name,
+                            })
+                          }}
+                        </div>
+                        <div class="flex gap-x-2 justify-end items-center">
+                          <a
+                            class="link link-primary link-hover"
+                            @click="close"
+                            >{{
+                              $t("home.dialog.delete_confirm.button.cancel")
+                            }}</a
+                          >
+                          <button
+                            class="btn btn-primary btn-xs"
+                            @click="deleteDevice(dev.deviceId, close)"
+                          >
+                            {{
+                              $t("home.dialog.delete_confirm.button.confirm")
+                            }}
+                          </button>
+                        </div>
+                      </div>
+                    </template>
+                    <a class="link link-error">{{
+                      $t("home.table.button.delete")
+                    }}</a>
+                  </Popper>
+                </td>
+            </tr>
+            <tr v-if="devices.length === 0">
+              <td colspan="5" class="text-center">{{ $t("device.table.empty") }}</td>
+            </tr>
+            </template>
+            </tbody>
+        </table>
+
+        <div class="modal-action">
+          <button class="btn" @click="showDeviceModal = false">Close</button>
+        </div>
+      </div>
+    </dialog>
   </div>
 </template>
 
@@ -157,6 +235,9 @@ export default {
       currentAccountEmail: "",
       certificates: [],
       certLoading: false,
+      showDeviceModal: false,
+      devices: [],
+      deviceLoading: false,
     };
   },
   created() {
@@ -204,6 +285,31 @@ export default {
           _this.fetchCertificates(_this.currentAccountEmail);
         } else {
           toast.error(_this.$t("certificate.toast.revoke_failed"));
+        }
+      });
+      close?.();
+    },
+    openDeviceModal(email) {
+      this.currentAccountEmail = email;
+      this.showDeviceModal = true;
+      this.fetchDevices(email);
+    },
+    fetchDevices(email) {
+      this.deviceLoading = true;
+      api.getAccountDevices({ email: email }).then((res) => {
+        this.devices = res.data || [];
+      }).finally(() => {
+        this.deviceLoading = false;
+      });
+    },
+    deleteDevice(deviceId, close) {
+      let _this = this;
+      api.deleteAccountDevice({ email: this.currentAccountEmail, deviceId: deviceId }).then((res) => {
+        if (res.data) {
+          toast.success(_this.$t("account.toast.delete_success"));
+          _this.fetchDevices(_this.currentAccountEmail);
+        } else {
+          toast.error(_this.$t("account.toast.delete_failed"));
         }
       });
       close?.();

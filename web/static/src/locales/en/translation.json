@@ -4,7 +4,8 @@
     "language": "English",
     "preferences": "Preferences",
     "account": "Accounts",
-    "certificate": "Certificates"
+    "certificate": "Certificates",
+    "devices": "Devices"
   },
   "home": {
     "heading": {
@@ -233,5 +234,19 @@
       "revoke_failed": "Failed to revoke certificate"
     },
     "no_certificates": "No certificates found"
+  }
+  ,
+  "device": {
+    "modal": {
+      "title": "Devices - {{email}}"
+    },
+    "table": {
+      "header": {
+        "name": "Name",
+        "udid": "UDID",
+        "platform": "Platform"
+      },
+      "empty": "No devices found"
+    }
   }
 }

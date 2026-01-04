@@ -68,8 +68,8 @@ func ExecuteCommand(name string, args ...string) ([]byte, error) {
 		// Parse error output
 		var found []string
 		for _, line := range strings.Split(string(output), "\n") {
-			s := strings.TrimSpace(line)
-			if strings.HasPrefix(s, "Error:") || strings.HasPrefix(s, "ERROR:") {
+			s := strings.ToLower(strings.TrimSpace(line))
+			if strings.HasPrefix(s, "error:") {
 				found = append(found, s)
 			}
 		}
@@ -86,6 +86,14 @@ func GetAppleAccounts() (*model.Accounts, error) {
 
 func DeleteAppleAccount(email string) error {
 	return accountManager.DeleteAccount(email)
+}
+
+func GetAccountDevices(email string) ([]model.AccountDevice, error) {
+	return accountManager.GetAccountDevices(email)
+}
+
+func DeleteAccountDevice(email, deviceID string) error {
+	return accountManager.DeleteAccountDevice(email, deviceID)
 }
 
 func GetCertificates(email string) ([]model.Certificate, error) {

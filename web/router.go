@@ -117,6 +117,32 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))
 	})
 
+	api.Get("/accounts/devices", func(c *fiber.Ctx) error {
+		email := c.Query("email")
+		if email == "" {
+			return c.Status(http.StatusOK).JSON(apiError("email is required"))
+		}
+		devices, err := manager.GetAccountDevices(email)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(devices))
+	})
+
+	api.Post("/accounts/devices/delete", func(c *fiber.Ctx) error {
+		var req struct {
+			Email    string `json:"email"`
+			DeviceID string `json:"deviceId"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument"))
+		}
+		if err := manager.DeleteAccountDevice(req.Email, req.DeviceID); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
 	api.Get("/certificates", func(c *fiber.Ctx) error {
 		email := c.Query("email")
 		if email == "" {

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/log"
@@ -43,6 +45,64 @@ func (am *AccountManager) DeleteAccount(email string) error {
 	_, err := ExecuteCommand("plumesign", "account", "logout", "-u", email)
 	if err != nil {
 		log.Err(err).Msgf("Error delete account: %s", email)
+		return err
+	}
+	return nil
+}
+
+func (am *AccountManager) GetAccountDevices(email string) ([]model.AccountDevice, error) {
+	output, err := ExecuteCommand("plumesign", "account", "devices", "-u", email)
+	if err != nil {
+		log.Err(err).Msgf("Error getting devices for %s", email)
+		return nil, err
+	}
+
+	var devices []model.AccountDevice
+	content := string(output)
+	blocks := strings.Split(content, "Device {")
+	for _, block := range blocks {
+		if strings.TrimSpace(block) == "" || strings.TrimSpace(block) == "[" || strings.TrimSpace(block) == "]" {
+			continue
+		}
+
+		var dev model.AccountDevice
+
+		// Helper to extract value
+		extract := func(key string) string {
+			re := regexp.MustCompile(key + `:\s*"([^"]+)"`)
+			matches := re.FindStringSubmatch(block)
+			if len(matches) > 1 {
+				return matches[1]
+			}
+			return ""
+		}
+
+		dev.DeviceID = extract("device_id")
+		dev.Name = extract("name")
+		dev.DeviceNumber = extract("device_number")
+		dev.DevicePlatform = extract("device_platform")
+		dev.Status = extract("status")
+		dev.DeviceClass = extract("device_class")
+
+		// Expiration date is special: expiration_date: Some(\n 2026-01-08T14:30:04Z,\n ),
+		reDate := regexp.MustCompile(`expiration_date:\s*Some\(\s*([^\s,]+)`)
+		matchesDate := reDate.FindStringSubmatch(block)
+		if len(matchesDate) > 1 {
+			dev.ExpirationDate = matchesDate[1]
+		}
+
+		if dev.DeviceID != "" {
+			devices = append(devices, dev)
+		}
+	}
+
+	return devices, nil
+}
+
+func (am *AccountManager) DeleteAccountDevice(email, deviceID string) error {
+	_, err := ExecuteCommand("plumesign", "account", "delete-device", "-u", email, "--device-id", deviceID)
+	if err != nil {
+		log.Err(err).Msgf("Error deleting device %s for %s", deviceID, email)
 		return err
 	}
 	return nil

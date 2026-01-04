@@ -4,7 +4,8 @@
     "language": "中文",
     "preferences": "选项",
     "account": "帐号",
-    "certificate": "证书"
+    "certificate": "证书",
+    "devices": "设备"
   },
   "home": {
     "heading": {
@@ -233,5 +234,19 @@
       "revoke_failed": "注销失败"
     },
     "no_certificates": "没有找到证书"
+  }
+  ,
+  "device": {
+    "modal": {
+      "title": "设备 - {{email}}"
+    },
+    "table": {
+      "header": {
+        "name": "名称",
+        "udid": "UDID",
+        "platform": "平台"
+      },
+      "empty": "未找到设备"
+    }
   }
 }

@@ -28,6 +28,20 @@ export default {
       data,
     });
   },
+  getAccountDevices: (params) => {
+    return request({
+      url: "/api/accounts/devices",
+      method: "get",
+      params,
+    });
+  },
+  deleteAccountDevice: (data) => {
+    return request({
+      url: "/api/accounts/devices/delete",
+      method: "post",
+      data,
+    });
+  },
   getCertificates: (params) => {
     return request({
       url: "/api/certificates",

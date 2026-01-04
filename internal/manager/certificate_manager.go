@@ -27,17 +27,18 @@ func (m *CertificateManager) GetCertificates(email string) ([]model.Certificate,
 
 	var certs []model.Certificate
 	// Regex to parse the output by extracting contents between backticks
-	re := regexp.MustCompile("-\\s+`([^`]+)`.*`([^`]+)`.*`([^`]+)`.*`([^`]+)`")
+	re := regexp.MustCompile("-\\s+`([^`]+)`.*`([^`]+)`.*`([^`]+)`.*`([^`]+)`.*`([^`]+)`")
 
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
 		matches := re.FindStringSubmatch(line)
-		if len(matches) == 5 {
+		if len(matches) == 6 {
 			cert := model.Certificate{
 				Name:           matches[1],
-				MachineName:    matches[4],
+				MachineName:    matches[5],
+				Status:         matches[3],
 				SerialNumber:   matches[2],
-				ExpirationDate: matches[3],
+				ExpirationDate: matches[4],
 			}
 			certs = append(certs, cert)
 		}
