@@ -110,13 +110,13 @@
     },
     "install": {
         "tips": {
-            "warning": "首次安装时，需要授权信任本设备。请确保身边有已登录了安装帐号的 iPhone 手机，并及时输入显示的验证码。如果超时未验证，将导致帐号被临时冻结，需重置密码才能解除冻结状态。"
+            "warning": "本设备会模拟为一台 MacBook，登陆安装帐号时，请确保身边有 iPhone 手机或已授权设备能正常接收 2FA 验证码。"
         },
         "dialog": {
             "input_pin": {
-                "title": "请输入 iPhone 上显示的验证码",
+                "title": "请输入 2FA 验证码",
                 "input": {
-                    "placeholder": "请在 iPhone 上允许设备并输入显示的验证码"
+                    "placeholder": ""
                 },
                 "button": {
                     "submit": "确 定"
@@ -126,6 +126,8 @@
         "toast": {
             "install_success": "安装成功",
             "install_failed": "安装失败，请查看日志了解详细信息"
+        ,
+            "login_success": "登录成功"
         },
         "form": {
             "choose_ipa": {
@@ -144,6 +146,14 @@
             "button": {
                 "back": "返 回",
                 "submit": "安装"
+            }
+        }
+        ,
+        "login_modal": {
+            "title": "登录 Apple 帐号",
+            "button": {
+                "close": "关闭",
+                "login": "登录"
             }
         }
     },
@@ -205,6 +215,11 @@
             "button": {
                 "submit": "保 存"
             }
+        }
+    },
+    "common": {
+        "button": {
+            "close": "关闭"
         }
     },
     "account": {

@@ -110,22 +110,24 @@
     },
     "install": {
         "tips": {
-            "warning": "During initial installation, you need to authorize and trust this device. Please make sure you have an iPhone with a logged-in installation account nearby and enter the displayed verification code promptly. Failure to verify within the time limit will result in temporary account suspension, requiring password reset to lift the suspension."
+            "warning": "This device will emulate a MacBook. When signing in with the installation account, please ensure you have an iPhone or an authorized device nearby to receive 2FA verification codes."
         },
         "dialog": {
             "input_pin": {
-                "title": "Please enter the verification code shown on your iPhone",
+                "title": "Please enter the 2FA verification code",
                 "input": {
-                    "placeholder": "Please allow and enter the verification code shown on your iPhone"
+                    "placeholder": ""
                 },
                 "button": {
-                    "submit": "Submit"
+                    "submit": "Confirm"
                 }
             }
         },
         "toast": {
             "install_success": "Installation Successful",
             "install_failed": "Installation Failed. Please check logs for more information."
+        ,
+            "login_success": "Login Success"
         },
         "form": {
             "choose_ipa": {
@@ -144,6 +146,14 @@
             "button": {
                 "back": "Back",
                 "submit": "Install"
+            }
+        }
+        ,
+        "login_modal": {
+            "title": "Login Apple Account",
+            "button": {
+                "close": "Close",
+                "login": "Login"
             }
         }
     },
@@ -205,6 +215,11 @@
             "button": {
                 "submit": "Save"
             }
+        }
+    },
+    "common": {
+        "button": {
+            "close": "Close"
         }
     },
     "account": {

@@ -32,6 +32,7 @@ export default {
     return request({
       url: "/api/accounts/devices",
       method: "get",
+      timeout: 30000,
       params,
     });
   },
@@ -39,6 +40,7 @@ export default {
     return request({
       url: "/api/accounts/devices/delete",
       method: "post",
+      timeout: 30000,
       data,
     });
   },
@@ -46,6 +48,7 @@ export default {
     return request({
       url: "/api/certificates",
       method: "get",
+      timeout: 30000,
       params,
     });
   },
@@ -53,6 +56,7 @@ export default {
     return request({
       url: "/api/certificates/revoke",
       method: "post",
+      timeout: 30000,
       data,
     });
   },

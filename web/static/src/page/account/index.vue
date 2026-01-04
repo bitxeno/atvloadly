@@ -137,7 +137,7 @@
         </table>
 
         <div class="modal-action">
-          <button class="btn" @click="showCertModal = false">Close</button>
+          <button class="btn" @click="showCertModal = false">{{ $t("common.button.close") }}</button>
         </div>
       </div>
     </dialog>
@@ -214,7 +214,7 @@
         </table>
 
         <div class="modal-action">
-          <button class="btn" @click="showDeviceModal = false">Close</button>
+          <button class="btn" @click="showDeviceModal = false">{{ $t("common.button.close") }}</button>
         </div>
       </div>
     </dialog>

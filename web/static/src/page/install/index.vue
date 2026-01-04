@@ -93,7 +93,7 @@
         :class="['modal', { 'modal-open': loginDialogVisible }]"
       >
         <div class="modal-box">
-          <h3 class="font-bold text-lg">Login Apple Account</h3>
+          <h3 class="font-bold text-lg">{{ $t("install.login_modal.title") }}</h3>
           <form id="loginForm" class="flex flex-col gap-y-4">
              <div class="form-control w-full">
               <label class="label">
@@ -114,10 +114,10 @@
   
           </form>
           <div class="modal-action">
-             <button class="btn" @click="loginDialogVisible = false">Close</button>
+             <button class="btn" @click="loginDialogVisible = false">{{ $t("install.login_modal.button.close") }}</button>
             <button class="btn btn-primary" @click="onLoginSubmit" :disabled="loginLoading">
               <span class="loading loading-spinner" v-show="loginLoading"></span>
-              Login
+              {{ $t("install.login_modal.button.login") }}
             </button>
           </div>
         </div>
@@ -341,13 +341,13 @@ export default {
              return;
         }
         
-        if (line.indexOf("Successfully logged in") !== -1) {
+           if (line.indexOf("Successfully logged in") !== -1) {
              _this.loginLoading = false;
-             toast.success("Login Success");
+             toast.success(_this.$t("install.toast.login_success"));
              _this.loginDialogVisible = false;
              _this.fetchData(); // Refresh accounts
              _this.loginWebsock.close();
-        }
+           }
         if (line.indexOf("ERROR") !== -1 || line.indexOf("Error:") !== -1) {
             _this.loginLoading = false;
             toast.error(line);
