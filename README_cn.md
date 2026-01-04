@@ -87,7 +87,7 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 1. 专用的 Apple ID 安装帐号
 > 免费或开发者帐号都可以（**为了安全考虑，请不要使用常用帐号安装！**)
 2. 用于接收 2FA 验证码的手机
-> atvloadly 需要授权才能正常使用（会虚拟为一台 MacBook），安装时苹果会向你安装帐号的注册手机号或已登陆了安装帐号的设备发送授权验证码，请及时授权验证。（**超时不验证授权验证码，会导致帐号被临时冻结！需要重置密码才能恢复**）
+> atvloadly 需要授权才能正常使用（会虚拟为一台 MacBook），登陆时苹果会向你安装帐号的注册手机号或已登陆了安装帐号的设备发送 2FA 验证码，请及时授权验证。
 
 
 ### 操作流程
@@ -124,9 +124,11 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 
 ## 赞助
 
-如果觉得项目对您有帮助，欢迎赞助一杯咖啡 ❤️
+如果觉得项目对您有帮助，欢迎赞助 ❤️
 
-<img width="150" src="./doc/preview/weixin_donate.png" alt="微信赞助码">
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/H2H8NU37J)
+
+[![爱发电](./doc/image/afdian.svg)](https://afdian.com/a/bitxeno)
 
 
 ## 免责声明

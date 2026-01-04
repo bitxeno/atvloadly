@@ -98,8 +98,8 @@
              <img src="https://storage.ko-fi.com/cdn/cup-border.png" class="w-6 h-6" alt="Ko-fi"/>
              {{ $t("donate.kofi") }}
            </a>
-           <a href="https://afdian.net/a/bitxeno" target="_blank" class="btn border-none w-full normal-case text-lg gap-2 text-white hover:opacity-90" style="background-color: #946ce6;">
-             <span class="font-bold text-xl">⚡</span>
+           <a href="https://afdian.com/a/bitxeno" target="_blank" class="btn border-none w-full normal-case text-lg gap-2 text-white hover:opacity-90" style="background-color: #946ce6;">
+             <AfdianIcon class="w-6 h-6" />
              {{ $t("donate.afdian") }}
            </a>
         </div>
@@ -145,6 +145,7 @@ import GithubIcon from "@/assets/icons/github.svg";
 import AccountIcon from "@/assets/icons/person.svg";
 import OptionIcon from "@/assets/icons/slider.svg";
 import LikeIcon from "@/assets/icons/like.svg";
+import AfdianIcon from "@/assets/icons/afdian.svg";
 </script>
 
 <style lang="postcss" scoped>
