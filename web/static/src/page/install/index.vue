@@ -340,7 +340,6 @@ export default {
 
         if (line.indexOf("Enter 2FA code") !== -1) {
              _this.form.authcode = "";
-             _this.loginDialogVisible = false;
              _this.authDialogVisible = true;
              return;
         }
