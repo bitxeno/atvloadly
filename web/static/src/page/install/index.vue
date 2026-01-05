@@ -344,15 +344,16 @@ export default {
              return;
         }
         
-           if (line.indexOf("Successfully logged in") !== -1) {
-             _this.loginLoading = false;
-             _this.authLoading = false;
-             toast.success(_this.$t("install.toast.login_success"));
-             _this.loginDialogVisible = false;
-             _this.authDialogVisible = false;
-             _this.fetchData(); // Refresh accounts
-             _this.loginWebsock.close();
-           }
+        if (line.indexOf("Successfully logged in") !== -1) {
+          _this.loginLoading = false;
+          _this.authLoading = false;
+          toast.success(_this.$t("install.toast.login_success"));
+          _this.loginDialogVisible = false;
+          _this.authDialogVisible = false;
+          _this.fetchData(); // Refresh accounts
+          _this.loginWebsock.close();
+        }
+        
         if (line.indexOf("ERROR") !== -1 || line.indexOf("Error:") !== -1) {
             _this.loginLoading = false;
             _this.authLoading = false;

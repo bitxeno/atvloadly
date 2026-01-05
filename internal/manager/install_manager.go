@@ -133,7 +133,7 @@ func (t *InstallManager) ErrorLog() string {
 
 	var lines []string
 	for _, l := range strings.Split(data, "\n") {
-		if strings.HasPrefix(l, "Error") || strings.HasPrefix(l, "ERROR") {
+		if strings.HasPrefix(strings.ToLower(l), "error") {
 			lines = append(lines, l)
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
@@ -14,7 +15,6 @@ import (
 
 type LoginManager struct {
 	outputStdout *outputWriter
-	outputStderr *outputWriter
 
 	stdin io.WriteCloser
 
@@ -26,7 +26,6 @@ func NewLoginManager() *LoginManager {
 	em := event.NewManager("output", event.UsePathMode)
 	return &LoginManager{
 		outputStdout: newOutputWriter(em),
-		outputStderr: newOutputWriter(em),
 
 		em: em,
 	}
@@ -34,7 +33,6 @@ func NewLoginManager() *LoginManager {
 
 func (t *LoginManager) Start(ctx context.Context, account, password string) error {
 	t.outputStdout.Reset()
-	t.outputStderr.Reset()
 
 	// set execute timeout 10 minutes
 	timeout := 10 * time.Minute
@@ -44,7 +42,7 @@ func (t *LoginManager) Start(ctx context.Context, account, password string) erro
 	cmd := exec.CommandContext(ctx, "plumesign", "account", "login", "-u", account, "-p", password)
 	cmd.Dir = app.Config.Server.DataDir
 	cmd.Stdout = t.outputStdout
-	cmd.Stderr = t.outputStderr
+	cmd.Stderr = t.outputStdout
 
 	var err error
 	t.stdin, err = cmd.StdinPipe()
@@ -92,7 +90,18 @@ func (t *LoginManager) Write(p []byte) {
 }
 
 func (t *LoginManager) ErrorLog() string {
-	return t.outputStderr.String()
+	data := t.outputStdout.String()
+	if data == "" {
+		return ""
+	}
+
+	var lines []string
+	for _, l := range strings.Split(data, "\n") {
+		if strings.HasPrefix(strings.ToLower(l), "error") {
+			lines = append(lines, l)
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (t *LoginManager) OutputLog() string {
