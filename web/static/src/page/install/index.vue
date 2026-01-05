@@ -353,7 +353,7 @@ export default {
           _this.fetchData(); // Refresh accounts
           _this.loginWebsock.close();
         }
-        
+
         if (line.indexOf("ERROR") !== -1 || line.indexOf("Error:") !== -1) {
             _this.loginLoading = false;
             _this.authLoading = false;
@@ -419,7 +419,9 @@ export default {
       let line = e.data.replace(_this.form.password, "******").replace(_this.form.account, maskedAccount);
 
       // append new log content
-      _this.log.newcontent += line;
+      if (line.indexOf("sealing regular file") === -1) {
+        _this.log.newcontent += line;
+      }
 
       // input 2FA authentication code
       if (line.indexOf("A code has been sent to your devices") !== -1) {
