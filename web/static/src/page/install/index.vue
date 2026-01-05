@@ -44,9 +44,9 @@
                   $t("install.form.account.label")
                 }}</span>
               </label>
-              <div class="join">
+              <div class="join flex">
                 <select
-                  class="select select-bordered join-item  w-full"
+                  class="select select-bordered join-item flex-1"
                   v-model="form.account"
                   required
                 >
@@ -101,7 +101,7 @@
                   $t("install.form.account.label")
                 }}</span>
               </label>
-              <input type="text" class="input input-bordered w-full" v-model="loginForm.account" required />
+              <input type="text" class="input input-bordered w-full" placeholder="xxxx@example.com" v-model="loginForm.account" required />
             </div>
              <div class="form-control w-full">
               <label class="label">
@@ -141,7 +141,9 @@
             />
           </p>
           <div class="modal-action">
-            <button class="btn btn-primary" @click="onSubmit2FA">
+            <button class="btn" @click="authDialogVisible = false">{{ $t("install.login_modal.button.close") }}</button>
+            <button class="btn btn-primary" @click="onSubmit2FA" :disabled="authLoading">
+              <span class="loading loading-spinner" v-show="authLoading"></span>
               {{ $t("install.dialog.input_pin.button.submit") }}
             </button>
           </div>
@@ -190,6 +192,7 @@ export default {
       loginWebsock: null,
       loginDialogVisible: false,
       loginLoading: false,
+      authLoading: false,
       isLoginFlow: false,
       loginForm: {
         account: "",
@@ -337,19 +340,23 @@ export default {
 
         if (line.indexOf("Enter 2FA code") !== -1) {
              _this.form.authcode = "";
+             _this.loginDialogVisible = false;
              _this.authDialogVisible = true;
              return;
         }
         
            if (line.indexOf("Successfully logged in") !== -1) {
              _this.loginLoading = false;
+             _this.authLoading = false;
              toast.success(_this.$t("install.toast.login_success"));
              _this.loginDialogVisible = false;
+             _this.authDialogVisible = false;
              _this.fetchData(); // Refresh accounts
              _this.loginWebsock.close();
            }
         if (line.indexOf("ERROR") !== -1 || line.indexOf("Error:") !== -1) {
             _this.loginLoading = false;
+            _this.authLoading = false;
             toast.error(line);
          }
     },
@@ -390,12 +397,13 @@ export default {
         return;
       }
 
+      _this.authLoading = true;
       if (_this.isLoginFlow) {
           _this.loginWebsocketsend(2, _this.form.authcode);
       } else {
           _this.websocketsend(2, _this.form.authcode);
       }
-      _this.dialogVisible = false;
+      _this.authDialogVisible = false;
     },
 
     websocketonopen() {
@@ -424,6 +432,7 @@ export default {
       // Installation error
       if (line.indexOf("ERROR") !== -1 || line.indexOf("Error:") !== -1) {
         _this.loading = false;
+        _this.authLoading = false;
         toast.error(this.$t("install.toast.install_failed"));
         return;
       }
@@ -431,6 +440,7 @@ export default {
       // Installation successful.
       if (line.indexOf("Installation Succeeded") !== -1 || line.indexOf("Installation complete") !== -1) {
         _this.loading = false;
+        _this.authLoading = false;
         toast.success(this.$t("install.toast.install_success"));
         return;
       }
