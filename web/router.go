@@ -229,7 +229,17 @@ func route(fi *fiber.App) {
 		if err != nil {
 			return c.Status(http.StatusOK).JSON(apiSuccess(err.Error()))
 		}
-		return c.Status(http.StatusOK).JSON(apiSuccess(enabled))
+		result := map[string]bool{
+			"enabled": enabled,
+			"mounted": false,
+		}
+		if enabled {
+			if imageInfo, err := service.GetDeviceMountImageInfo(c.Context(), id); err == nil {
+				result["mounted"] = imageInfo.ImageMounted
+			}
+		}
+
+		return c.Status(http.StatusOK).JSON(apiSuccess(result))
 	})
 
 	api.Post("/devices/:id/check/afc", func(c *fiber.Ctx) error {

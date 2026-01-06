@@ -246,7 +246,7 @@ export default {
         _this.log.output += `product type: ${_this.device.product_type}\n`;
         _this.log.output += `product version: ${_this.device.product_version}\n`;
         let devmode = await api.checkDeveloperMode(_this.id);
-        _this.log.output += `developer mode: ${devmode}\n`;
+        _this.log.output += `developer mode: ${devmode.enabled}${devmode.mounted ? " (mounted)" : ""}\n`;
 
         await api.checkAfcService(_this.id);
         _this.log.output += "afc service: OK!\n";
@@ -414,9 +414,8 @@ export default {
     },
     websocketonmessage(e) {
       let _this = this;
-      // hide password string and mask email for security
-      const maskedAccount = maskEmail(_this.form.account);
-      let line = e.data.replace(_this.form.password, "******").replace(_this.form.account, maskedAccount);
+      // hide password string
+      let line = e.data.replace(_this.form.password, "******");
 
       // append new log content
       if (line.indexOf("sealing regular file") === -1) {

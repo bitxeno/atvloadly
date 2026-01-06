@@ -171,7 +171,7 @@ func (dm *DeviceManager) GetUsbmuxdDeviceInfo(udid string) (*model.UsbmuxdDevice
 }
 
 func (dm *DeviceManager) CheckHasMountImage(udid string) (bool, error) {
-	cmd := exec.Command("ideviceimagemounter", "-u", udid, "-n", "-l")
+	cmd := exec.Command("ideviceimagemounter", "list", "-u", udid, "-n")
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
