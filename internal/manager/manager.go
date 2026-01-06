@@ -12,6 +12,10 @@ import (
 	"github.com/bitxeno/atvloadly/internal/model"
 )
 
+func ScanServices(ctx context.Context, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) error {
+	return deviceManager.ScanServices(ctx, callback)
+}
+
 func StartDeviceManager() {
 	go deviceManager.Start()
 }

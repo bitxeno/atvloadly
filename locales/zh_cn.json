@@ -8,6 +8,7 @@
     },
     "nav": {
         "settings": "设置",
+        "tools": "工具",
         "language": "中文",
         "preferences": "选项",
         "account": "帐号",
@@ -110,7 +111,7 @@
     },
     "install": {
         "tips": {
-            "warning": "本设备会模拟为一台 MacBook，登陆安装帐号时，请确保身边有 iPhone 手机或已授权设备能正常接收 2FA 验证码。"
+            "warning": "本设备会模拟为一台 MacBook，登陆安装帐号时，请确保身边有 iPhone 手机或已授权设备能正常接收 2FA 验证码，并及时授权验证。"
         },
         "dialog": {
             "input_pin": {
@@ -275,6 +276,12 @@
                 "platform": "平台"
             },
             "empty": "未找到设备"
+        }
+    }
+    ,
+    "tools": {
+        "ssdp": {
+            "title": "SSDP 扫描器"
         }
     }
 }

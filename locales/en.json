@@ -8,6 +8,7 @@
     },
     "nav": {
         "settings": "Settings",
+        "tools": "Tools",
         "language": "English",
         "preferences": "Preferences",
         "account": "Accounts",
@@ -275,6 +276,12 @@
                 "platform": "Platform"
             },
             "empty": "No devices found"
+        }
+    }
+    ,
+    "tools": {
+        "ssdp": {
+            "title": "SSDP Scanner"
         }
     }
 }

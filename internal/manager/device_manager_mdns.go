@@ -121,3 +121,7 @@ func (dm *DeviceManager) Scan() {
 	timer := time.NewTimer(discoverWaitTime)
 	<-timer.C
 }
+
+func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) error {
+	return nil
+}

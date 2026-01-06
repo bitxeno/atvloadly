@@ -36,6 +36,17 @@ const routes = [
     ],
   },
   {
+    path: "/tools",
+    component: () => import("@/page/layout.vue"),
+    children: [
+      {
+        path: "",
+        name: "tools",
+        component: () => import("@/page/tools/index.vue"),
+      },
+    ],
+  },
+  {
     path: "/settings",
     component: () => import("@/page/layout.vue"),
     children: [

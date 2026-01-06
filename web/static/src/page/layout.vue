@@ -8,7 +8,7 @@
         </label>
       </div>
       <div class="flex-none">
-        <nav class="navbar w-full">
+        <nav class="navbar w-full"> 
           <div class="dropdown dropdown-hover">
             <label tabindex="0" class="btn btn-ghost rounded-btn px-2 md:px-4">
               <span class="w-5">
@@ -27,6 +27,14 @@
                 </span>
                   {{ $t("nav.account") }}
                   </router-link>
+              </li>
+              <li>
+                <router-link :to="{ name: 'tools' }">
+                    <span class="w-5">
+                      <ToolsIcon />
+                    </span>
+                    {{ $t("nav.tools") }}
+                </router-link>
               </li>
               <li>
                 <router-link :to="{ name: 'settings' }">
@@ -146,6 +154,7 @@ import AccountIcon from "@/assets/icons/person.svg";
 import OptionIcon from "@/assets/icons/slider.svg";
 import LikeIcon from "@/assets/icons/like.svg";
 import AfdianIcon from "@/assets/icons/afdian.svg";
+import ToolsIcon from "@/assets/icons/tools.svg";
 </script>
 
 <style lang="postcss" scoped>

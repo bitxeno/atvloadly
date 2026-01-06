@@ -3,6 +3,7 @@
 package manager
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/netip"
@@ -94,4 +95,8 @@ func (dm *DeviceManager) parseNetworkAddress(networkAddress []byte) string {
 
 	return ""
 
+}
+
+func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) error {
+	return nil
 }

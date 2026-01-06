@@ -3,6 +3,7 @@
 package manager
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -150,4 +151,63 @@ func (dm *DeviceManager) Start() {
 
 func (dm *DeviceManager) Scan() {
 	// TODO: AppleTV端删除连接后，本地自动删除已连接设备
+}
+
+func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) error {
+	conn, err := dbus.SystemBus()
+	if err != nil {
+		return fmt.Errorf("Cannot get system bus: %v", err)
+	}
+
+	server, err := avahi.ServerNew(conn)
+	if err != nil {
+		return fmt.Errorf("Avahi new failed: %v", err)
+	}
+
+	// Browse all service types
+	stb, err := server.ServiceTypeBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceDomain, 0)
+	if err != nil {
+		return fmt.Errorf("ServiceTypeBrowserNew failed: %w", err)
+	}
+
+	discoveredTypes := make(map[string]bool)
+
+	// Goroutine to handle type discovery and spawn service browsers
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case t := <-stb.AddChannel:
+				if !discoveredTypes[t.Type] {
+					discoveredTypes[t.Type] = true
+					go dm.scanServiceTypeContinuous(ctx, server, t.Type, callback)
+				}
+			}
+		}
+	}()
+
+	<-ctx.Done()
+	return nil
+}
+
+func (dm *DeviceManager) scanServiceTypeContinuous(ctx context.Context, server *avahi.Server, serviceType string, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) {
+	sb, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, serviceType, mdnsServiceDomain, 0)
+	if err != nil {
+		log.Err(err).Msgf("ServiceBrowserNew failed for %s", serviceType)
+		return
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case service := <-sb.AddChannel:
+			resolved, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
+				service.Type, service.Domain, avahi.ProtoUnspec, 0)
+			if err == nil {
+				callback(serviceType, resolved.Name, resolved.Host, resolved.Address, resolved.Port, resolved.Txt)
+			}
+		}
+	}
 }

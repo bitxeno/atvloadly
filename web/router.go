@@ -51,6 +51,7 @@ func route(fi *fiber.App) {
 	fi.Get("/ws/pair", websocket.New(service.HandlePairMessage))
 	fi.Get("/ws/install", websocket.New(service.HandleInstallMessage))
 	fi.Get("/ws/login", websocket.New(service.HandleLoginMessage))
+	fi.Get("/ws/tools/scan", websocket.New(service.HandleScanMessage))
 	fi.Get("/apps/:id/icon", func(c *fiber.Ctx) error {
 		id := utils.MustParseInt(c.Params("id"))
 

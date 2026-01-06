@@ -144,6 +144,38 @@ func runLoginMessage(mgr *manager.WebsocketManager, loginMgr *manager.LoginManag
 	mgr.WriteMessage("Login Succeeded")
 }
 
+func HandleScanMessage(c *websocket.Conn) {
+	websocketMgr := manager.NewWebsocketManager(c)
+	defer websocketMgr.Cancel()
+
+	log.Info("Starting service scan via WebSocket...")
+	ctx := websocketMgr.Context()
+
+	err := manager.ScanServices(ctx, func(serviceType string, name string, host string, address string, port uint16, txt [][]byte) {
+		// Convert txt to string array for JSON
+		txtStrs := make([]string, len(txt))
+		for i, b := range txt {
+			txtStrs[i] = string(b)
+		}
+
+		data := map[string]interface{}{
+			"type":    serviceType,
+			"name":    name,
+			"host":    host,
+			"address": address,
+			"port":    port,
+			"txt":     txtStrs,
+		}
+		bytes, _ := json.Marshal(data)
+		websocketMgr.WriteMessage(string(bytes))
+	})
+
+	if err != nil {
+		log.Err(err).Msg("ScanServices failed")
+		websocketMgr.WriteMessage(fmt.Sprintf("ERROR: %s", err.Error()))
+	}
+}
+
 func HandlePairMessage(c *websocket.Conn) {
 	websocketMgr := manager.NewWebsocketManager(c)
 	defer websocketMgr.Cancel()
