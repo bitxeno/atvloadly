@@ -232,11 +232,21 @@
                 "status": "Status",
                 "machine_name": "Machine Name"
             },
+            "button": {
+                "logout": "Logout"
+            },
             "empty": "No accounts found"
+        },
+        "dialog": {
+            "logout_confirm": {
+                "title": "Are you sure you want to logout {{name}}?"
+            }
         },
         "toast": {
             "delete_success": "Account deleted successfully",
-            "delete_failed": "Failed to delete account"
+            "delete_failed": "Failed to delete account",
+            "logout_success": "Account logged out successfully",
+            "logout_failed": "Failed to logout account"
         }
     },
     "certificate": {

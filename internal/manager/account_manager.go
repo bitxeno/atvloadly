@@ -41,10 +41,10 @@ func (am *AccountManager) GetAccounts() (*model.Accounts, error) {
 	return &a, nil
 }
 
-func (am *AccountManager) DeleteAccount(email string) error {
+func (am *AccountManager) LogoutAccount(email string) error {
 	_, err := ExecuteCommand("plumesign", "account", "logout", "-u", email)
 	if err != nil {
-		log.Err(err).Msgf("Error delete account: %s", email)
+		log.Err(err).Msgf("Error logout account: %s", email)
 		return err
 	}
 	return nil

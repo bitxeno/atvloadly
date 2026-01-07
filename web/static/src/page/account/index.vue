@@ -27,7 +27,7 @@
                       <div class="flex flex-col gap-y-2">
                         <div class="py-2">
                           {{
-                            $t("home.dialog.delete_confirm.title", {
+                            $t("account.dialog.logout_confirm.title", {
                               name: email,
                             })
                           }}
@@ -42,7 +42,7 @@
                           >
                           <button
                             class="btn btn-primary btn-xs"
-                            @click="deleteAccount(email, close)"
+                            @click="logoutAccount(email, close)"
                           >
                             {{
                               $t("home.dialog.delete_confirm.button.confirm")
@@ -52,7 +52,7 @@
                       </div>
                     </template>
                     <a class="link link-error">{{
-                      $t("home.table.button.delete")
+                      $t("account.table.button.logout")
                     }}</a>
                   </Popper>
             </td>
@@ -252,14 +252,14 @@ export default {
         this.loading = false;
       });
     },
-    deleteAccount(email, close) {
+    logoutAccount(email, close) {
       let _this = this;
-      api.deleteAccount({ email: email }).then((res) => {
+      api.logoutAccount({ email: email }).then((res) => {
         if (res.data) {
-          toast.success(_this.$t("account.toast.delete_success"));
+          toast.success(_this.$t("account.toast.logout_success"));
           _this.fetchData();
         } else {
-          toast.error(_this.$t("account.toast.delete_failed"));
+          toast.error(_this.$t("account.toast.logout_failed"));
         }
       });
       close?.();

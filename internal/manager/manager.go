@@ -88,8 +88,8 @@ func GetAppleAccounts() (*model.Accounts, error) {
 	return accountManager.GetAccounts()
 }
 
-func DeleteAppleAccount(email string) error {
-	return accountManager.DeleteAccount(email)
+func LogoutAppleAccount(email string) error {
+	return accountManager.LogoutAccount(email)
 }
 
 func GetAccountDevices(email string) ([]model.AccountDevice, error) {

@@ -21,9 +21,9 @@ export default {
       params,
     });
   },
-  deleteAccount: (data) => {
+  logoutAccount: (data) => {
     return request({
-      url: "/api/accounts/delete",
+      url: "/api/accounts/logout",
       method: "post",
       data,
     });

@@ -232,11 +232,21 @@
                 "status": "状态",
                 "machine_name": "设备名称"
             },
+            "button": {
+                "logout": "登出"
+            },
             "empty": "未找到帐号"
+        },
+        "dialog": {
+            "logout_confirm": {
+                "title": "确定要登出 {{name}} 吗?"
+            }
         },
         "toast": {
             "delete_success": "帐号删除成功",
-            "delete_failed": "删除帐号失败"
+            "delete_failed": "删除帐号失败",
+            "logout_success": "帐号登出成功",
+            "logout_failed": "登出帐号失败"
         }
     },
     "certificate": {

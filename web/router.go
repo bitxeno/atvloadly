@@ -104,7 +104,7 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(accounts.Accounts))
 	})
 
-	api.Post("/accounts/delete", func(c *fiber.Ctx) error {
+	api.Post("/accounts/logout", func(c *fiber.Ctx) error {
 		var req struct {
 			Email string `json:"email"`
 		}
@@ -112,7 +112,7 @@ func route(fi *fiber.App) {
 			return c.Status(http.StatusOK).JSON(apiError("Invalid argument"))
 		}
 
-		if err := manager.DeleteAppleAccount(req.Email); err != nil {
+		if err := manager.LogoutAppleAccount(req.Email); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))
