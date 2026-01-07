@@ -94,8 +94,8 @@ func (t *Task) runQueue() {
 			t.tryInstallApp(v)
 			t.InstallingApps.Delete(v.ID)
 
-			// Next execution delayed by 5 seconds.
-			time.Sleep(5 * time.Second)
+			// Next execution delayed by 10 seconds.
+			time.Sleep(10 * time.Second)
 		case <-t.chExitQueue:
 			log.Info("Install app queue exit.")
 			return
@@ -111,10 +111,15 @@ func (t *Task) checkNeedRefresh(v model.InstalledApp) bool {
 		return true
 	}
 
+	// fix RefreshedDate is nil
+	if v.ExpirationDate == nil {
+		expireTime := v.RefreshedDate.AddDate(0, 0, 7)
+		v.ExpirationDate = &expireTime
+	}
+
 	// refresh when the expiration time is less than one day.
 	if app.Settings.Task.Mode == app.OneDayAgoMode {
-		expireTime := v.RefreshedDate.AddDate(0, 0, 6)
-		if expireTime.Before(now) {
+		if v.ExpirationDate.AddDate(0, 0, -1).Before(now) {
 			return true
 		}
 	}
@@ -137,11 +142,16 @@ func (t *Task) StartInstallApp(v model.InstalledApp) {
 
 func (t *Task) tryInstallApp(v model.InstalledApp) {
 	log.Infof("Start installing ipa: %s", v.IpaName)
-	err := t.runInternal(v)
+	provisioningProfile, err := t.runInternal(v)
 
 	now := time.Now()
+	expirationDate := now.AddDate(0, 0, 7)
+	if provisioningProfile != nil {
+		expirationDate = provisioningProfile.ExpirationDate.Local()
+	}
 	if err == nil {
 		v.RefreshedDate = &now
+		v.ExpirationDate = &expirationDate
 		v.RefreshedResult = true
 		_ = service.UpdateAppRefreshResult(v)
 		log.Infof("Installing ipa success: %s", v.IpaName)
@@ -157,7 +167,7 @@ func (t *Task) tryInstallApp(v model.InstalledApp) {
 	}
 }
 
-func (t *Task) runInternal(v model.InstalledApp) error {
+func (t *Task) runInternal(v model.InstalledApp) (*model.MobileProvisioningProfile, error) {
 	installMgr := manager.NewInstallManager()
 	defer func() {
 		installMgr.SaveLog(v.ID)
@@ -166,12 +176,12 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 
 	if v.Account == "" || v.UDID == "" {
 		installMgr.WriteLog("account or UDID is empty")
-		return fmt.Errorf("%s", "account or UDID is empty")
+		return nil, fmt.Errorf("%s", "account or UDID is empty")
 	}
 
 	if _, ok := t.InvalidAccounts[v.Account]; ok {
 		installMgr.WriteLog(fmt.Sprintf("The install account (%s) is invalid, skip install.", v.MaskAccount()))
-		return fmt.Errorf("The install account (%s) is invalid, skip install.", v.MaskAccount())
+		return nil, fmt.Errorf("The install account (%s) is invalid, skip install.", v.MaskAccount())
 	}
 
 	err := installMgr.TryStart(context.Background(), v.UDID, v.Account, v.Password, v.IpaPath)
@@ -181,16 +191,16 @@ func (t *Task) runInternal(v model.InstalledApp) error {
 		if strings.Contains(installMgr.OutputLog(), "Can't log-in") || strings.Contains(installMgr.OutputLog(), "DeveloperSession creation failed") {
 			t.InvalidAccounts[v.Account] = true
 		}
-		return err
+		return nil, err
 	}
 
 	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") || strings.Contains(installMgr.OutputLog(), "Installation complete") {
-		return nil
+		return installMgr.ProvisioningProfile, nil
 	} else {
 		if strings.Contains(installMgr.OutputLog(), "Can't log-in") || strings.Contains(installMgr.OutputLog(), "DeveloperSession creation failed") {
 			t.InvalidAccounts[v.Account] = true
 		}
-		return fmt.Errorf("%s", installMgr.ErrorLog())
+		return nil, fmt.Errorf("%s", installMgr.ErrorLog())
 	}
 }
 

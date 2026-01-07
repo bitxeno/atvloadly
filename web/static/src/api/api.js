@@ -98,7 +98,7 @@ export default {
         method: "Post",
       })
         .then((res) => {
-          resolve(res.data ? "enabled" : "disabled");
+          resolve(res.data);
         })
         .catch((err) => {
           console.log(err);
@@ -167,14 +167,6 @@ export default {
       url: "/api/apps/installing",
       method: "get",
       params,
-    });
-  },
-
-  saveApp: (data) => {
-    return request({
-      url: "/api/apps",
-      method: "post",
-      data,
     });
   },
 

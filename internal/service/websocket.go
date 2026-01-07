@@ -69,8 +69,14 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 
 	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") || strings.Contains(installMgr.OutputLog(), "Installation complete") {
 		now := time.Now()
+		expirationDate := now.AddDate(0, 0, 7)
+		if installMgr.ProvisioningProfile != nil {
+			expirationDate = installMgr.ProvisioningProfile.ExpirationDate.Local()
+		}
 		v.RefreshedDate = &now
+		v.ExpirationDate = &expirationDate
 		v.RefreshedResult = true
+
 		app, err := SaveApp(v)
 		if err != nil {
 			installMgr.CleanTempFiles(v.IpaPath)

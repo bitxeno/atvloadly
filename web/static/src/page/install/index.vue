@@ -246,7 +246,7 @@ export default {
         _this.log.output += `product type: ${_this.device.product_type}\n`;
         _this.log.output += `product version: ${_this.device.product_version}\n`;
         let devmode = await api.checkDeveloperMode(_this.id);
-        _this.log.output += `developer mode: ${devmode.enabled}${devmode.mounted ? " (mounted)" : ""}\n`;
+        _this.log.output += `developer mode: ${devmode.enabled ? "enabled" : "disabled"}${devmode.mounted ? " (mounted)" : ""}\n`;
 
         await api.checkAfcService(_this.id);
         _this.log.output += "afc service: OK!\n";

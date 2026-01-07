@@ -6,12 +6,14 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/log"
+	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/gookit/event"
 )
 
@@ -22,8 +24,9 @@ type InstallManager struct {
 
 	stdin io.WriteCloser
 
-	cancel context.CancelFunc
-	em     *event.Manager
+	cancel              context.CancelFunc
+	em                  *event.Manager
+	ProvisioningProfile *model.MobileProvisioningProfile
 }
 
 func NewInstallManager() *InstallManager {
@@ -66,7 +69,14 @@ func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipa
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	t.cancel = cancel
 
-	cmd := exec.CommandContext(ctx, "plumesign", "sign", "--apple-id", "--register-and-install", "--udid", udid, "-u", account, "-p", ipaPath)
+	provisionPath := t.GetMobileProvisionPath()
+	defer func() {
+		if _, err := os.Stat(provisionPath); err == nil {
+			_ = os.Remove(provisionPath)
+		}
+	}()
+
+	cmd := exec.CommandContext(ctx, "plumesign", "sign", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--udid", udid, "-u", account, "-p", ipaPath)
 	cmd.Dir = app.Config.Server.DataDir
 	cmd.Env = os.Environ()
 	cmd.Stdout = t.outputStdout
@@ -78,7 +88,9 @@ func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipa
 		log.Err(err).Msg("Error creating stdin pipe: ")
 		return err
 	}
-	defer t.stdin.Close()
+	defer func() {
+		_ = t.stdin.Close()
+	}()
 
 	if err := cmd.Start(); err != nil {
 		if err == context.DeadlineExceeded {
@@ -93,7 +105,16 @@ func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipa
 	if err != nil {
 		log.Err(err).Msgf("Error executing installation script. %s", t.ErrorLog())
 	}
+
+	if provisionProfile, perr := model.ParseMobileProvisioningProfileFile(provisionPath); perr == nil {
+		t.ProvisioningProfile = provisionProfile
+	}
+
 	return err
+}
+
+func (t *InstallManager) GetMobileProvisionPath() string {
+	return path.Join(os.TempDir(), fmt.Sprintf("embedded.mobileprovision.%d", time.Now().UnixNano()))
 }
 
 func (t *InstallManager) CleanTempFiles(ipaPath string) {

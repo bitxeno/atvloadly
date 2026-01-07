@@ -345,20 +345,6 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(task.GetCurrentInstallingApps()))
 	})
 
-	api.Post("/apps", func(c *fiber.Ctx) error {
-		var installApp model.InstalledApp
-		if err := c.BodyParser(&installApp); err != nil {
-			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
-		}
-
-		ipa, err := service.SaveApp(installApp)
-		if err != nil {
-			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
-		} else {
-			return c.Status(http.StatusOK).JSON(apiSuccess(ipa))
-		}
-	})
-
 	api.Post("/clean", func(c *fiber.Ctx) error {
 		var ipa model.IpaFile
 		if err := c.BodyParser(&ipa); err != nil {

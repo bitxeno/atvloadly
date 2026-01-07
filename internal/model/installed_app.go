@@ -20,6 +20,7 @@ type InstalledApp struct {
 	Password         string     `json:"password"`
 	InstalledDate    *time.Time `json:"installed_date"`
 	RefreshedDate    *time.Time `json:"refreshed_date"`
+	ExpirationDate   *time.Time `json:"expiration_date"`
 	RefreshedResult  bool       `json:"refreshed_result"`
 	Icon             string     `json:"icon"`
 	BundleIdentifier string     `json:"bundle_identifier"`

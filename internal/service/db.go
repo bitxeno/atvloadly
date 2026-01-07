@@ -58,6 +58,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 		cur.Icon = app.Icon
 		cur.Version = app.Version
 		cur.RefreshedDate = &now
+		cur.ExpirationDate = app.ExpirationDate
 		cur.RefreshedResult = app.RefreshedResult
 		cur.Password = app.Password
 
@@ -85,6 +86,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 			"icon":             cur.Icon,
 			"version":          cur.Version,
 			"refreshed_date":   cur.RefreshedDate,
+			"expiration_date":  cur.ExpirationDate,
 			"refreshed_result": cur.RefreshedResult,
 			"password":         cur.Password,
 		}
@@ -138,6 +140,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 func UpdateAppRefreshResult(app model.InstalledApp) error {
 	updateData := map[string]interface{}{
 		"refreshed_date":   app.RefreshedDate,
+		"expiration_date":  app.ExpirationDate,
 		"refreshed_result": app.RefreshedResult,
 	}
 	if result := db.Store().Model(&app).Updates(updateData); result.Error != nil {

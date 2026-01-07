@@ -352,7 +352,11 @@ export default {
       let time = item.refreshed_date || item.installed_date;
       if (!time) return "-";
 
-      let diff = dayjs(time).add(7, "day").diff(dayjs(), "day");
+      let expired_date = dayjs(time).add(7, "day")
+      if (item.expiration_date) {
+        expired_date = dayjs(item.expiration_date);
+      }
+      let diff = expired_date.diff(dayjs(), "day");
       if (diff < 0)
         return this.$t("home.table.expired_time_format.expired_tips");
 
