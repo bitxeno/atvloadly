@@ -164,7 +164,7 @@ func HandleScanMessage(c *websocket.Conn) {
 			txtStrs[i] = string(b)
 		}
 
-		data := map[string]interface{}{
+		data := map[string]any{
 			"type":    serviceType,
 			"name":    name,
 			"host":    host,

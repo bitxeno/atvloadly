@@ -81,7 +81,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 			}
 		}
 
-		updateData := map[string]interface{}{
+		updateData := map[string]any{
 			"ipa_path":         cur.IpaPath,
 			"icon":             cur.Icon,
 			"version":          cur.Version,
@@ -125,7 +125,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 				app.Icon = iconPath
 			}
 		}
-		updateData := map[string]interface{}{
+		updateData := map[string]any{
 			"ipa_path": app.IpaPath,
 			"icon":     app.Icon,
 		}
@@ -138,7 +138,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 }
 
 func UpdateAppRefreshResult(app model.InstalledApp) error {
-	updateData := map[string]interface{}{
+	updateData := map[string]any{
 		"refreshed_date":   app.RefreshedDate,
 		"expiration_date":  app.ExpirationDate,
 		"refreshed_result": app.RefreshedResult,

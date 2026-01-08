@@ -25,7 +25,7 @@ func newDeviceManager() *DeviceManager {
 
 func (dm *DeviceManager) GetDevices() []model.Device {
 	devices := []model.Device{}
-	dm.devices.Range(func(k, v interface{}) bool {
+	dm.devices.Range(func(k, v any) bool {
 		devices = append(devices, v.(model.Device))
 		return true
 	})
@@ -81,7 +81,7 @@ func (dm *DeviceManager) AppendProductInfo(dev *model.Device) {
 }
 
 func (dm *DeviceManager) ReloadDevices() {
-	dm.devices.Range(func(k, v interface{}) bool {
+	dm.devices.Range(func(k, v any) bool {
 		dev := v.(model.Device)
 		if dev.Status == model.Pairable {
 			// 检查是否已连接

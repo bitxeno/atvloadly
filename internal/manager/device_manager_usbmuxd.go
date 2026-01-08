@@ -80,7 +80,7 @@ func (dm *DeviceManager) Scan() {
 	}
 
 	// Delete non-existent devices
-	dm.devices.Range(func(key, value interface{}) bool {
+	dm.devices.Range(func(key, value any) bool {
 		uuid := key.(string)
 		if !keepConnectedDevices[uuid] {
 			dm.devices.Delete(uuid)

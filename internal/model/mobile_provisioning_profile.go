@@ -27,7 +27,7 @@ func NewMobileProvisioningProfile(data []byte) (*MobileProvisioningProfile, erro
 
 	decoder := plist.NewDecoder(bytes.NewReader(p7.Content))
 
-	var profile map[string]interface{}
+	var profile map[string]any
 	err = decoder.Decode(&profile)
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func ParseMobileProvisioningProfile(data []byte) (*MobileProvisioningProfile, er
 
 	decoder := plist.NewDecoder(bytes.NewReader(p7.Content))
 
-	var profile map[string]interface{}
+	var profile map[string]any
 	err = decoder.Decode(&profile)
 	if err != nil {
 		return nil, err

@@ -58,7 +58,7 @@ func (s *sqliteDb) Open() *sqliteDb {
 	return s
 }
 
-func (s *sqliteDb) AutoMigrate(dst ...interface{}) error {
+func (s *sqliteDb) AutoMigrate(dst ...any) error {
 	if s.db == nil {
 		panic("Database not open: " + s.path)
 	}

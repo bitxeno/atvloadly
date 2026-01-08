@@ -1,12 +1,12 @@
 package web
 
 type ApiResult struct {
-	Code int         `json:"code"`
-	Msg  string      `json:"msg"`
-	Data interface{} `json:"data"`
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+	Data any    `json:"data"`
 }
 
-func apiSuccess(data interface{}) ApiResult {
+func apiSuccess(data any) ApiResult {
 	return ApiResult{
 		Code: 200,
 		Msg:  "success",

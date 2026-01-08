@@ -44,7 +44,7 @@ func Localize(key string) string {
 	})
 }
 
-func LocalizeF(key string, data map[string]interface{}) string {
+func LocalizeF(key string, data map[string]any) string {
 	return i18nLocalizer.MustLocalize(&i18n.LocalizeConfig{
 		MessageID:    key,
 		TemplateData: data,

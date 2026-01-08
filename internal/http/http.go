@@ -25,7 +25,7 @@ func Get(url string) string {
 	return string(resp.Body())
 }
 
-func Post(url string, postBody interface{}) string {
+func Post(url string, postBody any) string {
 	resp, err := resty.New().R().SetHeader(HEADER_USER_AGENT, HTTP_USER_AGENT).SetBody(postBody).Post(url)
 	if err != nil {
 		fmt.Println(err)

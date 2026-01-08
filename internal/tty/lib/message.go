@@ -17,6 +17,6 @@ type Message struct {
 
 // MessageClient Websocket Communication data format
 type MessageClient struct {
-	Type int         `json:"t"`
-	Data interface{} `json:"d"`
+	Type int `json:"t"`
+	Data any `json:"d"`
 }

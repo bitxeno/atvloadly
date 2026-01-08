@@ -160,8 +160,8 @@ func (t *Task) tryInstallApp(v model.InstalledApp) {
 		_ = service.UpdateAppRefreshResult(v)
 
 		// Send installation failure notification
-		title := i18n.LocalizeF("notify.title", map[string]interface{}{"name": v.IpaName})
-		message := i18n.LocalizeF("notify.content", map[string]interface{}{"account": v.Account, "error": err.Error()})
+		title := i18n.LocalizeF("notify.title", map[string]any{"name": v.IpaName})
+		message := i18n.LocalizeF("notify.content", map[string]any{"account": v.Account, "error": err.Error()})
 		_ = notify.Send(title, message)
 		log.Infof("Installing ipa failed: %s error: %s", v.IpaName, err.Error())
 	}
@@ -217,7 +217,7 @@ func RunInstallApp(v model.InstalledApp) {
 func GetCurrentInstallingApps() []model.InstalledApp {
 	installingApps := []model.InstalledApp{}
 
-	instance.InstallingApps.Range(func(key, value interface{}) bool {
+	instance.InstallingApps.Range(func(key, value any) bool {
 		installingApps = append(installingApps, value.(model.InstalledApp))
 		return true
 	})

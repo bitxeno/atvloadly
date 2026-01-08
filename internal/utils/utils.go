@@ -26,13 +26,13 @@ func FileNameWithoutExt(fileName string) string {
 func MergeEnvs(system, override []string) []string {
 	envMap := make(map[string]string, len(system)+len(override))
 	for _, e := range system {
-		if i := strings.IndexByte(e, '='); i >= 0 {
-			envMap[e[:i]] = e[i+1:]
+		if before, after, ok := strings.Cut(e, "="); ok {
+			envMap[before] = after
 		}
 	}
 	for _, e := range override {
-		if i := strings.IndexByte(e, '='); i >= 0 {
-			envMap[e[:i]] = e[i+1:]
+		if before, after, ok := strings.Cut(e, "="); ok {
+			envMap[before] = after
 		}
 	}
 	merged := make([]string, 0, len(envMap))

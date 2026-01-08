@@ -22,7 +22,7 @@ func newConsoleWriter(out io.Writer) consoleWriter {
 }
 
 func (w consoleWriter) Write(p []byte) (n int, err error) {
-	var evt map[string]interface{}
+	var evt map[string]any
 	d := json.NewDecoder(bytes.NewReader(p))
 	d.UseNumber()
 	err = d.Decode(&evt)
@@ -30,12 +30,12 @@ func (w consoleWriter) Write(p []byte) (n int, err error) {
 		return n, fmt.Errorf("cannot decode event: %s", err)
 	}
 
-	var msgInfo interface{} = ""
+	var msgInfo any = ""
 	if evt[zerolog.MessageFieldName] != nil {
 		msgInfo = evt[zerolog.MessageFieldName]
 	}
 
-	var errInfo interface{} = ""
+	var errInfo any = ""
 	if evt[zerolog.ErrorFieldName] != nil {
 		errInfo = evt[zerolog.ErrorFieldName]
 	}
@@ -49,7 +49,7 @@ func (w consoleWriter) Write(p []byte) (n int, err error) {
 	return len(p), err
 }
 
-func (w consoleWriter) formatCaller(i interface{}) string {
+func (w consoleWriter) formatCaller(i any) string {
 	var c string
 	if cc, ok := i.(string); ok {
 		c = cc
