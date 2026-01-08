@@ -107,15 +107,27 @@
           <thead>
             <tr>
               <th>{{ $t("home.table.header.app") }}</th>
-              <th>{{ $t("home.table.header.device") }}</th>
-              <th>{{ $t("home.table.header.account") }}</th>
+              <th @click="toggleSort('device')" class="cursor-pointer select-none">
+                <div class="flex items-center gap-x-1">
+                  {{ $t("home.table.header.device") }}
+                  <span v-if="sortKey != 'device'" class="text-xs">⇅</span>
+                  <span v-if="sortKey == 'device'" class="text-xs">{{ sortOrder == 'asc' ? '▲' : '▼' }}</span>
+                </div>
+              </th>
+              <th @click="toggleSort('account')" class="cursor-pointer select-none">
+                <div class="flex items-center gap-x-1">
+                  {{ $t("home.table.header.account") }}
+                  <span v-if="sortKey != 'account'" class="text-xs">⇅</span>
+                  <span v-if="sortKey == 'account'" class="text-xs">{{ sortOrder == 'asc' ? '▲' : '▼' }}</span>
+                </div>
+              </th>
               <th>{{ $t("home.table.header.expired_date") }}</th>
               <th>{{ $t("home.table.header.operate") }}</th>
             </tr>
           </thead>
           <tbody class="bg-base-100">
             <!-- row 1 -->
-            <tr class="hover" v-for="item in list" v-bind:key="item.ID">
+            <tr class="hover" v-for="item in sortedList" v-bind:key="item.ID">
               <td>
                 <div class="flex items-center gap-x-2">
                   <div class="indicator">
@@ -255,6 +267,8 @@ export default {
       services: [],
       installingApps: [],
       checkInstallingTimer: null,
+      sortKey: "",
+      sortOrder: "asc",
     };
   },
   computed: {
@@ -267,6 +281,20 @@ export default {
       return this.devices.filter(function (item) {
         return item.status == "paired";
       });
+    },
+    sortedList: function () {
+      let list = this.list.slice();
+      if (this.sortKey) {
+        let order = this.sortOrder === "asc" ? 1 : -1;
+        list.sort((a, b) => {
+          let valA = this.getSortValue(a, this.sortKey);
+          let valB = this.getSortValue(b, this.sortKey);
+          if (valA < valB) return -1 * order;
+          if (valA > valB) return 1 * order;
+          return 0;
+        });
+      }
+      return list;
     },
   },
   created() {
@@ -415,6 +443,28 @@ export default {
       return item.refreshed_result
         ? this.$t("result.success")
         : this.$t("result.fail");
+    },
+    getSortValue(item, key) {
+      if (key === "device") {
+        for (let i = 0; i < this.devices.length; i++) {
+          const dev = this.devices[i];
+          if (dev.udid == item.udid && dev.status == "paired") {
+            return dev.name;
+          }
+        }
+        return "";
+      } else if (key === "account") {
+        return item.account || "";
+      }
+      return "";
+    },
+    toggleSort(key) {
+      if (this.sortKey === key) {
+        this.sortOrder = this.sortOrder === "asc" ? "desc" : "asc";
+      } else {
+        this.sortKey = key;
+        this.sortOrder = "asc";
+      }
     },
     formatDeviceName(item) {
       let _this = this;
