@@ -13,6 +13,7 @@
         "preferences": "Preferences",
         "account": "Accounts",
         "certificate": "Certificates",
+        "connected_devices": "Connected Devices",
         "devices": "Devices",
         "donate": "Donate"
     },
@@ -229,6 +230,7 @@
         "table": {
             "header": {
                 "email": "Email",
+                "account": "Account",
                 "status": "Status",
                 "machine_name": "Machine Name"
             },
@@ -277,7 +279,7 @@
     },
     "device": {
         "modal": {
-            "title": "Devices - {{email}}"
+            "title": "Connected Devices - {{email}}"
         },
         "table": {
             "header": {

@@ -12,7 +12,8 @@
         "language": "中文",
         "preferences": "选项",
         "account": "帐号",
-        "certificate": "证书",
+        "certificate": "证书管理",
+        "connected_devices": "已连接设备",
         "devices": "设备",
         "donate": "赞助"
     },
@@ -229,6 +230,7 @@
         "table": {
             "header": {
                 "email": "邮箱",
+                "account": "帐号",
                 "status": "状态",
                 "machine_name": "设备名称"
             },
@@ -277,7 +279,7 @@
     },
     "device": {
         "modal": {
-            "title": "设备 - {{email}}"
+            "title": "已连接设备 - {{email}}"
         },
         "table": {
             "header": {

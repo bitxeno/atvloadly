@@ -4,7 +4,7 @@
       <table class="table w-full">
         <thead>
           <tr>
-            <th>{{ $t("account.table.header.email") }}</th>
+            <th>{{ $t("account.table.header.account") }}</th>
             <th>{{ $t("account.table.header.status") }}</th>
             <th>{{ $t("home.table.header.operate") }}</th>
           </tr>
@@ -21,7 +21,7 @@
             <td>{{ account.status }}</td>
             <td class="flex gap-x-4">
               <a class="link link-primary" @click="openCertModal(email)">{{ $t("nav.certificate") }}</a>
-              <a class="link link-primary" @click="openDeviceModal(email)">{{ $t("nav.devices") }}</a>
+              <a class="link link-primary hidden" @click="openDeviceModal(email)">{{ $t("nav.connected_devices") }}</a>
               <Popper placement="top" arrow="true">
                     <template #content="{ close }">
                       <div class="flex flex-col gap-y-2">
