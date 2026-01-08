@@ -191,7 +191,7 @@ func (t *Task) runInternal(v model.InstalledApp) (*model.MobileProvisioningProfi
 		if strings.Contains(installMgr.OutputLog(), "Can't log-in") || strings.Contains(installMgr.OutputLog(), "DeveloperSession creation failed") {
 			t.InvalidAccounts[v.Account] = true
 		}
-		return nil, err
+		return nil, fmt.Errorf("%s %s", installMgr.ErrorLog(), err.Error())
 	}
 
 	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") || strings.Contains(installMgr.OutputLog(), "Installation complete") {
