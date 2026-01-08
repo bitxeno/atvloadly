@@ -22,7 +22,7 @@
             }}</span>
           </label>
 
-          <div class="flex gap-x-2">
+          <div class="flex gap-2 flex-wrap">
             <label class="label cursor-pointer flex gap-x-1">
               <input
                 type="radio"

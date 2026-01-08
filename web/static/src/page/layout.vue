@@ -91,7 +91,7 @@
     </div>
 
     <!-- Donate Modal -->
-    <div v-if="showDonateModal" class="modal modal-open modal-bottom sm:modal-middle" @click.self="showDonateModal = false">
+    <div v-if="showDonateModal" class="modal modal-open modal-middle" @click.self="showDonateModal = false">
       <div class="modal-box relative">
         <label @click="showDonateModal = false" class="btn btn-sm btn-circle absolute right-2 top-2">✕</label>
         <h3 class="font-bold text-lg flex items-center gap-2">

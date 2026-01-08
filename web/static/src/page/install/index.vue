@@ -44,9 +44,9 @@
                   $t("install.form.account.label")
                 }}</span>
               </label>
-              <div class="join flex">
+              <div class="join flex w-full">
                 <select
-                  class="select select-bordered join-item flex-1"
+                  class="select select-bordered join-item flex-1 w-full"
                   v-model="form.account"
                   required
                 >

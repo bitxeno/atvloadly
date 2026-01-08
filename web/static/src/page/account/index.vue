@@ -87,7 +87,7 @@
             </tr>
             <template v-else>
             <tr v-for="cert in certificates" :key="cert.serialNumber">
-                <td>
+                <td class="break-all">
                   <div class="font-bold">{{ cert.name }}</div>
                   <div class="text-sm opacity-50">({{ cert.serialNumber }})</div>
                 </td>
