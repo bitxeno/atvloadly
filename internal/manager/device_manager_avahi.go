@@ -118,6 +118,14 @@ func (dm *DeviceManager) Start() {
 			}
 		case service = <-sb.RemoveChannel:
 			log.Tracef("ServiceBrowser REMOVE: %v", service)
+			macAddr := strings.Split(service.Name, "@")[0]
+			dm.devices.Range(func(k, v any) bool {
+				if v.(model.Device).MacAddr == macAddr {
+					dm.devices.Delete(k)
+					return false
+				}
+				return true
+			})
 		case service = <-sbPairable.AddChannel:
 			log.Tracef("ServiceBrowser ADD: %v", service)
 
