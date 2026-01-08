@@ -43,12 +43,14 @@ func (dm *DeviceManager) Scan() {
 		return
 	}
 
+	keepConnectedDevices := make(map[string]bool)
 	for _, d := range devices {
 		if d.Properties().ConnectionType != "Network" {
 			continue
 		}
 
 		uuid := d.Properties().SerialNumber
+		keepConnectedDevices[uuid] = true
 		macAddr := strings.Split(d.Properties().EscapedFullServiceName, "@")[0]
 
 		device := model.Device{
@@ -67,12 +69,24 @@ func (dm *DeviceManager) Scan() {
 			devInfo := new(model.UsbmuxdDevice)
 			if err := json.Unmarshal(data, devInfo); err == nil {
 				device.Name = devInfo.DeviceName
+				device.ProductType = devInfo.ProductType
+				device.ProductVersion = devInfo.ProductVersion
+				device.DeviceClass = devInfo.DeviceClass
 			}
 			device.Status = model.Paired
 		}
 
 		dm.devices.Store(uuid, device)
 	}
+
+	// Delete non-existent devices
+	dm.devices.Range(func(key, value interface{}) bool {
+		uuid := key.(string)
+		if !keepConnectedDevices[uuid] {
+			dm.devices.Delete(uuid)
+		}
+		return true
+	})
 }
 
 // data布局：https://github.com/jkcoxson/netmuxd/blob/48494cf6e264bed4e6e1bfa8015767f515ac9ca3/src/devices.rs#L303

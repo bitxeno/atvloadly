@@ -4,12 +4,14 @@ package manager
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/utils"
+	gidevice "github.com/electricbubble/gidevice"
 	"github.com/godbus/dbus/v5"
 	"github.com/holoplot/go-avahi"
 )
@@ -27,6 +29,11 @@ func (dm *DeviceManager) Start() {
 	conn, err := dbus.SystemBus()
 	if err != nil {
 		log.Printf("Cannot get system bus: %v", err)
+		return
+	}
+	usbmuxd, err := gidevice.NewUsbmux()
+	if err != nil {
+		log.Panicf("Cannot connect to usbmuxd: %v", err)
 		return
 	}
 
@@ -103,7 +110,7 @@ func (dm *DeviceManager) Start() {
 				if lockdownDev, ok := lockdownDevices[macAddr]; ok {
 					log.Tracef("add lockdown device >> %v", lockdownDev)
 					udid := lockdownDev.Name
-					dm.devices.Store(udid, model.Device{
+					device := model.Device{
 						ID:          utils.Md5(udid),
 						Name:        name,
 						ServiceName: service.Name,
@@ -111,7 +118,28 @@ func (dm *DeviceManager) Start() {
 						IP:          service.Address,
 						UDID:        udid,
 						Status:      model.Paired,
-					})
+					}
+
+					// 通过 usbmuxd 获取设备详细信息
+					devices, err := usbmuxd.Devices()
+					if err == nil {
+						for _, d := range devices {
+							if d.Properties().SerialNumber == udid {
+								res, _ := d.GetValue("", "")
+								data, _ := json.Marshal(res)
+								devInfo := new(model.UsbmuxdDevice)
+								if err := json.Unmarshal(data, devInfo); err == nil {
+									device.Name = devInfo.DeviceName
+									device.ProductType = devInfo.ProductType
+									device.ProductVersion = devInfo.ProductVersion
+									device.DeviceClass = devInfo.DeviceClass
+								}
+								break
+							}
+						}
+					}
+
+					dm.devices.Store(udid, device)
 				}
 			}
 		case service = <-sb.RemoveChannel:

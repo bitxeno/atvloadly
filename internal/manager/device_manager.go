@@ -73,7 +73,7 @@ func (dm *DeviceManager) AppendProductInfo(dev *model.Device) {
 		case "ProductVersion":
 			dev.ProductVersion = value
 		case "DeviceClass":
-			dev.ProductClass = value
+			dev.DeviceClass = value
 		case "DeviceName":
 			dev.Name = value
 		}

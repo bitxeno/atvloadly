@@ -10,7 +10,7 @@ type Device struct {
 	Status         DeviceStatus `json:"status"`
 	Enable         bool         `json:"enable"`
 	Message        string       `json:"message"`
-	ProductClass   string       `json:"product_class"`
+	DeviceClass    string       `json:"device_class"`
 	ProductType    string       `json:"product_type"`
 	ProductVersion string       `json:"product_version"`
 }
