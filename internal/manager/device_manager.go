@@ -3,6 +3,7 @@ package manager
 import (
 	"fmt"
 	"os/exec"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -28,6 +29,22 @@ func (dm *DeviceManager) GetDevices() []model.Device {
 	dm.devices.Range(func(k, v any) bool {
 		devices = append(devices, v.(model.Device))
 		return true
+	})
+
+	// Sort devices: iPhone type first, then by name
+	sort.Slice(devices, func(i, j int) bool {
+		nameI := devices[i].Name
+		nameJ := devices[j].Name
+		isIPhoneI := strings.Contains(nameI, "iPhone")
+		isIPhoneJ := strings.Contains(nameJ, "iPhone")
+
+		// iPhone type has priority
+		if isIPhoneI != isIPhoneJ {
+			return isIPhoneI
+		}
+
+		// Sort by name within same type
+		return nameI < nameJ
 	})
 
 	return devices
