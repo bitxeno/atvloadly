@@ -14,7 +14,8 @@
               <div>
                 <div class="avatar">
                   <div class="w-16 rounded">
-                    <AppleTVIcon />
+                    <IPhoneIcon v-if="item.name.toLowerCase().includes('iphone')" />
+                    <AppleTVIcon v-else />
                   </div>
                 </div>
               </div>
@@ -44,7 +45,8 @@
               <div>
                 <div class="avatar online">
                   <div class="w-16 rounded">
-                    <AppleTVIcon />
+                    <IPhoneIcon v-if="item.name.toLowerCase().includes('iphone')" />
+                    <AppleTVIcon v-else />
                   </div>
                 </div>
               </div>
@@ -123,10 +125,13 @@
                       >!</span
                     >
                     <div class="inline-flex">
-                      <div class="w-32 rounded relative">
-                        <img :src="iconUrl(item)" class="rounded-md" />
+                      <div class="w-32 h-20 rounded relative flex items-center justify-center">
+                        <img
+                          :src="iconUrl(item)"
+                          class="max-w-full max-h-full rounded-md object-contain shadow-sm"
+                        />
                         <div
-                          class="absolute w-full h-full top-0 flex items-center justify-center bg-[#00000066]"
+                          class="absolute w-full h-full top-0 flex items-center justify-center bg-[#00000066] rounded"
                           v-show="isInstalling(item)"
                         >
                           <span
@@ -447,6 +452,7 @@ export default {
 
 <script setup>
 import AppleTVIcon from "@/assets/icons/appletv.svg";
+import IPhoneIcon from "@/assets/icons/iphone.svg";
 import HelpIcon from "@/assets/icons/help.svg";
 import CheckMarkIcon from "@/assets/icons/checkmark.svg";
 import DismissIcon from "@/assets/icons/dismiss.svg";
