@@ -2,8 +2,13 @@ package manager
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"regexp"
+	"runtime"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
@@ -115,4 +120,53 @@ func (w *pairOutputWriter) Write(p []byte) (n int, err error) {
 
 func (w *pairOutputWriter) String() string {
 	return string(w.data)
+}
+
+func ImportPairingFile(ip string, data []byte, override bool) error {
+	// Check if the current system is macOS, if so, importing is not supported
+	if runtime.GOOS == "darwin" {
+		return errors.New("importing pairing file is not supported on macOS")
+	}
+
+	udid, err := checkPairingFile(ip, data)
+	if err != nil {
+		return fmt.Errorf("pairing file validation failed: %w", err)
+	}
+
+	log.Infof("Pairing file imported successfully: %s", udid)
+	return nil
+}
+
+func checkPairingFile(ip string, data []byte) (string, error) {
+	// Create a temporary file
+	tmpFile, err := os.CreateTemp("", "pairing-*.plist")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %w", err)
+	}
+	tmpFilePath := tmpFile.Name()
+
+	// Ensure the temporary file is deleted when the function exits
+	defer os.Remove(tmpFilePath)
+
+	// Write data to the temporary file
+	if _, err := tmpFile.Write(data); err != nil {
+		tmpFile.Close()
+		return "", fmt.Errorf("failed to write temp file: %w", err)
+	}
+	tmpFile.Close()
+
+	// Execute the check command
+	output, err := ExecuteCommand("plumesign", "check", "pairing", "--save", "--ip", ip, "-f", tmpFilePath)
+	if err != nil {
+		return "", err
+	}
+
+	// Parse UDID
+	re := regexp.MustCompile("UDID\\s+`([^`]+)`")
+	matches := re.FindStringSubmatch(string(output))
+	if len(matches) >= 2 {
+		return matches[1], nil
+	}
+
+	return "", errors.New("UDID not found in output")
 }

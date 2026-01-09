@@ -47,6 +47,17 @@ const routes = [
     ],
   },
   {
+    path: "/laboratory",
+    component: () => import("@/page/layout.vue"),
+    children: [
+      {
+        path: "",
+        name: "laboratory",
+        component: () => import("@/page/laboratory/index.vue"),
+      },
+    ],
+  },
+  {
     path: "/settings",
     component: () => import("@/page/layout.vue"),
     children: [

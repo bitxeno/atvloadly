@@ -9,6 +9,7 @@
     "nav": {
         "settings": "Settings",
         "tools": "Tools",
+        "laboratory": "Laboratory",
         "language": "English",
         "preferences": "Preferences",
         "account": "Accounts",
@@ -294,6 +295,37 @@
     "tools": {
         "ssdp": {
             "title": "SSDP Scanner"
+        }
+    },
+    "laboratory": {
+        "title": "Connect iPhone",
+        "tips": {
+            "step1": "Please ensure that Developer Mode is enabled on your iPhone.",
+            "step2": "Please download <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a>, connect your iPhone, and export the Pairing File.",
+            "step3": "Please use idevice_pair to enable Wireless Debugging functionality.",
+            "step4": "Please ensure that your iPhone device is discoverable in the <a href=\"/#/tools\" class=\"link\">Tools</a>.",
+            "step5": "Automatic refresh for iPhone is not guaranteed to be stable; the iPhone generally needs to be unlocked for installation refresh to work normally."
+        },
+        "form": {
+            "device_label": "Select Device",
+            "device_placeholder": "Please select a device",
+            "refresh": "Refresh",
+            "refresh_devices": "Refresh device list",
+            "upload_label": "Upload Pair File",
+            "submit": "Submit"
+        },
+        "toast": {
+            "import_success": "Import successful",
+            "import_failed": "Import failed: {{msg}}",
+            "load_devices_failed": "Failed to load device list: {{msg}}"
+        },
+        "dialog": {
+            "override": {
+                "title": "Confirm Overwrite",
+                "content": "A pairing file with the same name already exists. Do you want to overwrite it?",
+                "cancel": "Cancel",
+                "confirm": "Overwrite"
+            }
         }
     }
 }

@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"image/png"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -205,7 +206,6 @@ func route(fi *fiber.App) {
 	api.Get("/devices/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		if device, ok := manager.GetDeviceByID(id); ok {
-			manager.AppendDeviceProductInfo(device)
 			return c.Status(http.StatusOK).JSON(apiSuccess(device))
 		}
 
@@ -263,6 +263,16 @@ func route(fi *fiber.App) {
 		}
 	})
 
+	api.Get("/scan/wireless", func(c *fiber.Ctx) error {
+		devices, err := manager.ScanWirelessDevices(c.Context())
+
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		} else {
+			return c.Status(http.StatusOK).JSON(apiSuccess(devices))
+		}
+	})
+
 	api.Get("/reload", func(c *fiber.Ctx) error {
 		manager.ReloadDevices()
 
@@ -276,6 +286,38 @@ func route(fi *fiber.App) {
 		} else {
 			return c.Status(http.StatusOK).JSON(apiSuccess(devices))
 		}
+	})
+
+	api.Post("/pair/import", func(c *fiber.Ctx) error {
+		file, err := c.FormFile("file")
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("No file uploaded"))
+		}
+
+		// Read file contents
+		src, err := file.Open()
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Failed to open uploaded file"))
+		}
+		defer src.Close()
+
+		data, err := io.ReadAll(src)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Failed to read file content"))
+		}
+
+		override := c.FormValue("override") == "true"
+		ip := c.FormValue("ip")
+
+		// Call manager to process the file
+		if err := manager.ImportPairingFile(ip, data, override); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+
+		// Restart usbmuxd service to apply changes
+		_ = manager.RestartUsbmuxd()
+
+		return c.Status(http.StatusOK).JSON(apiSuccess("success"))
 	})
 
 	api.Post("/upload", func(c *fiber.Ctx) error {

@@ -238,4 +238,21 @@ export default {
       data,
     });
   },
+  importPair: (data) => {
+    return request({
+      url: "/api/pair/import",
+      method: "post",
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      data,
+    });
+  },
+  scanWireless: () => {
+    return request({
+      url: "/api/scan/wireless",
+      method: "get",
+      timeout: 30000,
+    });
+  },
 };

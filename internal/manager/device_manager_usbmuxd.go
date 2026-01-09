@@ -13,6 +13,12 @@ import (
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/utils"
 	gidevice "github.com/electricbubble/gidevice"
+	"github.com/grandcat/zeroconf"
+)
+
+const (
+	mdnsService       = "_apple-mobdev2._tcp"
+	mdnsServiceDomain = "local"
 )
 
 var usbmux gidevice.Usbmux
@@ -74,6 +80,7 @@ func (dm *DeviceManager) Scan() {
 				device.DeviceClass = devInfo.DeviceClass
 			}
 			device.Status = model.Paired
+			device.ParseDeviceClass()
 		}
 
 		dm.devices.Store(uuid, device)
@@ -113,4 +120,61 @@ func (dm *DeviceManager) parseNetworkAddress(networkAddress []byte) string {
 
 func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) error {
 	return nil
+}
+
+func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context) ([]model.Device, error) {
+	resolver, err := zeroconf.NewResolver(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	entries := make(chan *zeroconf.ServiceEntry)
+	devices := []model.Device{}
+
+	// 创建1秒超时的context
+	scanCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	// 启动goroutine收集扫描结果
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for entry := range entries {
+			serviceName := strings.Replace(entry.Instance, "\\@", "@", -1)
+			macAddr := strings.Split(serviceName, "@")[0]
+			host := dm.parseName(entry.HostName)
+
+			var ip string
+			if len(entry.AddrIPv4) > 0 {
+				ip = entry.AddrIPv4[0].String()
+			} else if len(entry.AddrIPv6) > 0 {
+				ip = entry.AddrIPv6[0].String()
+			}
+
+			if ip != "" {
+				device := model.Device{
+					ID:          utils.Md5(serviceName),
+					Name:        host,
+					ServiceName: serviceName,
+					MacAddr:     macAddr,
+					IP:          ip,
+					UDID:        serviceName,
+					Status:      model.Pairable,
+				}
+				device.ParseDeviceClass()
+				devices = append(devices, device)
+			}
+		}
+	}()
+
+	// 扫描mdnsService服务
+	err = resolver.Browse(scanCtx, mdnsService, mdnsServiceDomain, entries)
+	if err != nil && err != context.DeadlineExceeded {
+		return devices, err
+	}
+
+	// 等待goroutine完成收集所有结果
+	<-done
+
+	return devices, nil
 }

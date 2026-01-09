@@ -37,6 +37,14 @@
                 </router-link>
               </li>
               <li>
+                <router-link :to="{ name: 'laboratory' }">
+                    <span class="w-5">
+                      <FlaskIcon />
+                    </span>
+                    {{ $t("nav.laboratory") }}
+                </router-link>
+              </li>
+              <li>
                 <router-link :to="{ name: 'settings' }">
                   <span class="w-5">
                   <SettingsIcon />
@@ -155,6 +163,7 @@ import OptionIcon from "@/assets/icons/slider.svg";
 import LikeIcon from "@/assets/icons/like.svg";
 import AfdianIcon from "@/assets/icons/afdian.svg";
 import ToolsIcon from "@/assets/icons/tools.svg";
+import FlaskIcon from "@/assets/icons/flask.svg";
 </script>
 
 <style lang="postcss" scoped>

@@ -25,11 +25,19 @@ func GetDevices() ([]model.Device, error) {
 }
 
 func GetDeviceByID(id string) (*model.Device, bool) {
-	return deviceManager.GetDeviceByID(id)
+	device, found := deviceManager.GetDeviceByID(id)
+	if found {
+		deviceManager.AppendProductInfo(device)
+	}
+	return device, found
 }
 
-func AppendDeviceProductInfo(dev *model.Device) {
-	deviceManager.AppendProductInfo(dev)
+func GetDeviceByUDID(udid string) (*model.Device, bool) {
+	device, found := deviceManager.GetDeviceByUDID(udid)
+	if found {
+		deviceManager.AppendProductInfo(device)
+	}
+	return device, found
 }
 
 func GetDeviceMountImageInfo(udid string) (*model.UsbmuxdImage, error) {
@@ -42,6 +50,10 @@ func ReloadDevices() {
 
 func ScanDevices() {
 	deviceManager.Scan()
+}
+
+func ScanWirelessDevices(ctx context.Context) ([]model.Device, error) {
+	return deviceManager.ScanWirelessDevices(ctx)
 }
 
 func CheckDeveloperMode(udid string) (bool, error) {

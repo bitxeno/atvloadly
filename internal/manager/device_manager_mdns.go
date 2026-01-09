@@ -49,7 +49,7 @@ func (dm *DeviceManager) Start() {
 				log.Printf("Service discovered: name=%s type=%s ip=%v", serviceName, entry.Service, entry.AddrIPv4)
 
 				macAddr := strings.Split(serviceName, "@")[0]
-				host := strings.TrimSuffix(entry.HostName, ".local.")
+				host := dm.parseName(entry.HostName)
 				// 检查是否已连接
 				lockdownDevices, err := loadLockdownDevices()
 				if err != nil {
@@ -80,7 +80,7 @@ func (dm *DeviceManager) Start() {
 
 				// 添加可配对设备
 				macAddr := strings.Split(serviceName, "@")[0]
-				host := strings.TrimSuffix(entry.HostName, ".local.")
+				host := dm.parseName(entry.HostName)
 				udid := fmt.Sprintf("fff%sfff", macAddr)
 				dm.devices.Store(udid, model.Device{
 					ID:          utils.Md5(udid),
@@ -124,4 +124,61 @@ func (dm *DeviceManager) Scan() {
 
 func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) error {
 	return nil
+}
+
+func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context) ([]model.Device, error) {
+	resolver, err := zeroconf.NewResolver(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	entries := make(chan *zeroconf.ServiceEntry)
+	devices := []model.Device{}
+
+	// 创建1秒超时的context
+	scanCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	// 启动goroutine收集扫描结果
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for entry := range entries {
+			serviceName := strings.Replace(entry.Instance, "\\@", "@", -1)
+			macAddr := strings.Split(serviceName, "@")[0]
+			host := dm.parseName(entry.HostName)
+
+			var ip string
+			if len(entry.AddrIPv4) > 0 {
+				ip = entry.AddrIPv4[0].String()
+			} else if len(entry.AddrIPv6) > 0 {
+				ip = entry.AddrIPv6[0].String()
+			}
+
+			if ip != "" {
+				device := model.Device{
+					ID:          utils.Md5(serviceName),
+					Name:        host,
+					ServiceName: serviceName,
+					MacAddr:     macAddr,
+					IP:          ip,
+					UDID:        serviceName,
+					Status:      model.Pairable,
+				}
+				device.ParseDeviceClass()
+				devices = append(devices, device)
+			}
+		}
+	}()
+
+	// 扫描mdnsService服务
+	err = resolver.Browse(scanCtx, mdnsService, mdnsServiceDomain, entries)
+	if err != nil && err != context.DeadlineExceeded {
+		return devices, err
+	}
+
+	// 等待goroutine完成收集所有结果
+	<-done
+
+	return devices, nil
 }

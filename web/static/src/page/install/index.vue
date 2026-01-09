@@ -270,6 +270,7 @@ export default {
             ipa_name: _this.ipa.name,
             ipa_path: _this.ipa.path,
             device: _this.device.mac_addr,
+            device_class: _this.device.device_class,
             udid: _this.device.udid,
             account: _this.form.account,
             password: _this.form.password,

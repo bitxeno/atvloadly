@@ -31,19 +31,31 @@ func (dm *DeviceManager) GetDevices() []model.Device {
 		return true
 	})
 
-	// Sort devices: iPhone type first, then by name
+	// Sort devices: AppleTV type first, then by DeviceClass, then by Name
 	sort.Slice(devices, func(i, j int) bool {
+		classI := devices[i].DeviceClass
+		classJ := devices[j].DeviceClass
 		nameI := devices[i].Name
 		nameJ := devices[j].Name
-		isIPhoneI := strings.Contains(nameI, "iPhone")
-		isIPhoneJ := strings.Contains(nameJ, "iPhone")
 
-		// iPhone type has priority
-		if isIPhoneI != isIPhoneJ {
-			return isIPhoneI
+		// Detect AppleTV by DeviceClass or fallback to name if empty
+		lowerClassI := strings.ToLower(classI)
+		lowerClassJ := strings.ToLower(classJ)
+
+		isAppleTVI := strings.Contains(lowerClassI, "appletv")
+		isAppleTVJ := strings.Contains(lowerClassJ, "appletv")
+
+		// AppleTV type has highest priority
+		if isAppleTVI != isAppleTVJ {
+			return isAppleTVI
 		}
 
-		// Sort by name within same type
+		// If classes differ, sort by DeviceClass string
+		if classI != classJ {
+			return classI < classJ
+		}
+
+		// Finally sort by name
 		return nameI < nameJ
 	})
 
@@ -247,4 +259,10 @@ func (dm *DeviceManager) RestartUsbmuxd() error {
 	}
 
 	return nil
+}
+
+func (dm *DeviceManager) parseName(host string) string {
+	name := strings.TrimSuffix(host, ".")
+	name = strings.TrimSuffix(name, ".local")
+	return name
 }

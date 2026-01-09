@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
@@ -90,7 +91,7 @@ func (dm *DeviceManager) Start() {
 				log.Tracef(" RESOLVED >> %s", service.Address)
 
 				macAddr := strings.Split(service.Name, "@")[0]
-				name := strings.TrimSuffix(service.Host, ".local")
+				name := dm.parseName(service.Host)
 				// 检查是否已连接
 				lockdownDevices, err := loadLockdownDevices()
 				if err != nil {
@@ -112,6 +113,7 @@ func (dm *DeviceManager) Start() {
 						UDID:        udid,
 						Status:      model.Paired,
 					}
+					device.ParseDeviceClass()
 
 					dm.devices.Store(udid, device)
 				}
@@ -136,9 +138,9 @@ func (dm *DeviceManager) Start() {
 
 				// 添加可配对设备
 				macAddr := strings.Split(service.Name, "@")[0]
-				name := strings.TrimSuffix(service.Host, ".local")
+				name := dm.parseName(service.Host)
 				udid := fmt.Sprintf("fff%sfff", macAddr)
-				dm.devices.Store(udid, model.Device{
+				device := model.Device{
 					ID:          utils.Md5(udid),
 					Name:        name,
 					ServiceName: service.Name,
@@ -146,7 +148,9 @@ func (dm *DeviceManager) Start() {
 					IP:          service.Address,
 					UDID:        udid,
 					Status:      model.Pairable,
-				})
+				}
+				device.ParseDeviceClass()
+				dm.devices.Store(udid, device)
 
 			}
 
@@ -217,6 +221,74 @@ func (dm *DeviceManager) scanServiceTypeContinuous(ctx context.Context, server *
 				service.Type, service.Domain, avahi.ProtoUnspec, 0)
 			if err == nil {
 				callback(serviceType, resolved.Name, resolved.Host, resolved.Address, resolved.Port, resolved.Txt)
+			}
+		}
+	}
+}
+
+func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context) ([]model.Device, error) {
+	conn, err := dbus.SystemBus()
+	if err != nil {
+		return nil, fmt.Errorf("Cannot get system bus: %v", err)
+	}
+
+	server, err := avahi.ServerNew(conn)
+	if err != nil {
+		return nil, fmt.Errorf("Avahi new failed: %v", err)
+	}
+
+	sb, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsService, mdnsServiceDomain, 0)
+	if err != nil {
+		return nil, fmt.Errorf("ServiceBrowserNew() failed: %v", err)
+	}
+
+	devices := make([]model.Device, 0)
+	deviceMap := make(map[string]bool)
+
+	// 创建1秒超时的context
+	scanCtx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	// 加载已连接设备
+	lockdownDevices, err := loadLockdownDevices()
+	if err != nil {
+		log.Err(err).Msg("loadLockdownDevices error")
+	}
+
+	for {
+		select {
+		case <-scanCtx.Done():
+			return devices, nil
+		case service := <-sb.AddChannel:
+			resolved, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
+				service.Type, service.Domain, avahi.ProtoUnspec, 0)
+			if err != nil {
+				continue
+			}
+
+			macAddr := strings.Split(resolved.Name, "@")[0]
+			// 避免重复添加
+			if deviceMap[macAddr] {
+				continue
+			}
+			deviceMap[macAddr] = true
+
+			name := dm.parseName(resolved.Host)
+
+			// 检查是否已配对
+			if lockdownDev, ok := lockdownDevices[macAddr]; ok {
+				udid := lockdownDev.Name
+				device := model.Device{
+					ID:          utils.Md5(udid),
+					Name:        name,
+					ServiceName: resolved.Name,
+					MacAddr:     macAddr,
+					IP:          resolved.Address,
+					UDID:        udid,
+					Status:      model.Paired,
+				}
+				device.ParseDeviceClass()
+				devices = append(devices, device)
 			}
 		}
 	}

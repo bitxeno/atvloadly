@@ -9,6 +9,7 @@
     "nav": {
         "settings": "设置",
         "tools": "工具",
+        "laboratory": "实验室",
         "language": "中文",
         "preferences": "选项",
         "account": "帐号",
@@ -294,6 +295,37 @@
     "tools": {
         "ssdp": {
             "title": "SSDP 扫描器"
+        }
+    },
+    "laboratory": {
+        "title": "连接 iPhone",
+        "tips": {
+            "step1": "请确保您的 iPhone 已开启开发者模式。",
+            "step2": "请下载 <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a> 并连接 iPhone，导出 Pairing File。",
+            "step3": "请使用 idevice_pair 开启 Wireless Debugging 功能。",
+            "step4": "请确保 <a href=\"/#/tools\" class=\"link\">工具</a> 中能发现您的 iPhone 设备。",
+            "step5": "iPhone 自动刷新不保证稳定可用，iPhone 一般需要解锁后才能正常安装刷新。"
+        },
+        "form": {
+            "device_label": "选择设备",
+            "device_placeholder": "请选择一个设备",
+            "refresh": "刷新",
+            "refresh_devices": "刷新设备列表",
+            "upload_label": "上传 Pair 文件",
+            "submit": "提交"
+        },
+        "toast": {
+            "import_success": "导入成功",
+            "import_failed": "导入失败: {{msg}}",
+            "load_devices_failed": "加载设备列表失败: {{msg}}"
+        },
+        "dialog": {
+            "override": {
+                "title": "确认覆盖",
+                "content": "检测到已存在同名配对文件，是否覆盖？",
+                "cancel": "取消",
+                "confirm": "覆盖"
+            }
         }
     }
 }

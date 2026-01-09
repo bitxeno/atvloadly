@@ -15,6 +15,7 @@ type InstalledApp struct {
 	IpaPath          string     `json:"ipa_path"`
 	Description      string     `json:"description,omitempty"`
 	Device           string     `json:"device"`
+	DeviceClass      string     `json:"device_class"`
 	UDID             string     `gorm:"column:udid" json:"udid"`
 	Account          string     `json:"account"`
 	Password         string     `json:"password"`
