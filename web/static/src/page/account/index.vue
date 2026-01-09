@@ -88,7 +88,10 @@
             <template v-else>
             <tr v-for="cert in certificates" :key="cert.serialNumber">
                 <td class="break-all">
-                  <div class="font-bold">{{ cert.name }}</div>
+                  <div class="font-bold">
+                    {{ cert.name }}
+                    <span v-if="cert.inUse" class="text-sm opacity-50">(atvloadly)</span>
+                  </div>
                   <div class="text-sm opacity-50">({{ cert.serialNumber }})</div>
                 </td>
                 <td>{{ cert.machineName }}</td>

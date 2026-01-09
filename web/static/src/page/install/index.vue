@@ -61,7 +61,11 @@
                     {{ account.email }} ({{ account.status }})
                   </option>
                 </select>
-                <button class="btn join-item w-16" @click.prevent="showLoginDialog"><PersonIcon /></button>
+                <button class="btn join-item w-16" @click.prevent="showLoginDialog">
+                  <div class="w-6 h-6">
+                    <PersonIcon />
+                  </div>
+                </button>
               </div>
               <label class="label">
                 <span class="label-text-alt stat-title">{{

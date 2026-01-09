@@ -5,6 +5,7 @@ type Certificate struct {
 	Name           string `json:"name"`
 	MachineName    string `json:"machineName"`
 	Status         string `json:"status"`
+	InUse          bool   `json:"inUse"`
 	Type           string `json:"type"`
 	ExpirationDate string `json:"expirationDate"`
 	CreatedDate    string `json:"createdDate"`
