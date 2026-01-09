@@ -264,7 +264,14 @@ func route(fi *fiber.App) {
 	})
 
 	api.Get("/scan/wireless", func(c *fiber.Ctx) error {
-		devices, err := manager.ScanWirelessDevices(c.Context())
+		timeout := 2
+		if timeoutStr := c.Query("timeout"); timeoutStr != "" {
+			if t := utils.MustParseInt(timeoutStr); t > 0 {
+				timeout = t
+			}
+		}
+
+		devices, err := manager.ScanWirelessDevices(c.Context(), time.Duration(timeout)*time.Second)
 
 		if err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))

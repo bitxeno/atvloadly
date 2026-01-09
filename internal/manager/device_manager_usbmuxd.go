@@ -122,7 +122,7 @@ func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(service
 	return nil
 }
 
-func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context) ([]model.Device, error) {
+func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.Duration) ([]model.Device, error) {
 	resolver, err := zeroconf.NewResolver(nil)
 	if err != nil {
 		return nil, err
@@ -131,8 +131,8 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context) ([]model.Devic
 	entries := make(chan *zeroconf.ServiceEntry)
 	devices := []model.Device{}
 
-	// 创建1秒超时的context
-	scanCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	// 创建超时的context
+	scanCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	// 启动goroutine收集扫描结果
@@ -158,7 +158,6 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context) ([]model.Devic
 					ServiceName: serviceName,
 					MacAddr:     macAddr,
 					IP:          ip,
-					UDID:        serviceName,
 					Status:      model.Pairable,
 				}
 				device.ParseDeviceClass()

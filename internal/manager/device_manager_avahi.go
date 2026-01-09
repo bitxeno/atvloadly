@@ -226,7 +226,7 @@ func (dm *DeviceManager) scanServiceTypeContinuous(ctx context.Context, server *
 	}
 }
 
-func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context) ([]model.Device, error) {
+func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.Duration) ([]model.Device, error) {
 	conn, err := dbus.SystemBus()
 	if err != nil {
 		return nil, fmt.Errorf("Cannot get system bus: %v", err)
@@ -245,15 +245,9 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context) ([]model.Devic
 	devices := make([]model.Device, 0)
 	deviceMap := make(map[string]bool)
 
-	// 创建1秒超时的context
-	scanCtx, cancel := context.WithTimeout(ctx, time.Second)
+	// 创建超时的context
+	scanCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-
-	// 加载已连接设备
-	lockdownDevices, err := loadLockdownDevices()
-	if err != nil {
-		log.Err(err).Msg("loadLockdownDevices error")
-	}
 
 	for {
 		select {
@@ -274,22 +268,16 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context) ([]model.Devic
 			deviceMap[macAddr] = true
 
 			name := dm.parseName(resolved.Host)
-
-			// 检查是否已配对
-			if lockdownDev, ok := lockdownDevices[macAddr]; ok {
-				udid := lockdownDev.Name
-				device := model.Device{
-					ID:          utils.Md5(udid),
-					Name:        name,
-					ServiceName: resolved.Name,
-					MacAddr:     macAddr,
-					IP:          resolved.Address,
-					UDID:        udid,
-					Status:      model.Paired,
-				}
-				device.ParseDeviceClass()
-				devices = append(devices, device)
+			device := model.Device{
+				ID:          utils.Md5(resolved.Name),
+				Name:        name,
+				ServiceName: service.Name,
+				MacAddr:     macAddr,
+				IP:          resolved.Address,
+				Status:      model.Paired,
 			}
+			device.ParseDeviceClass()
+			devices = append(devices, device)
 		}
 	}
 }

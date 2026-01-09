@@ -52,8 +52,8 @@ func ScanDevices() {
 	deviceManager.Scan()
 }
 
-func ScanWirelessDevices(ctx context.Context) ([]model.Device, error) {
-	return deviceManager.ScanWirelessDevices(ctx)
+func ScanWirelessDevices(ctx context.Context, timeout time.Duration) ([]model.Device, error) {
+	return deviceManager.ScanWirelessDevices(ctx, timeout)
 }
 
 func CheckDeveloperMode(udid string) (bool, error) {

@@ -51,7 +51,7 @@
                 :disabled="loading"
                 :title="$t('laboratory.form.refresh_devices')"
               >
-                <div class="w-6 h-6">
+                <div class="w-6 h-6" :class="{ 'animate-spin': loadingDevices }">
                   <RefreshIcon />
                 </div>
               </button>
@@ -95,6 +95,7 @@ export default {
     return {
       files: [],
       loading: false,
+      loadingDevices: false,
       confirmDialogVisible: false,
       devices: [],
       selectedDeviceIp: "",
@@ -105,12 +106,15 @@ export default {
   },
   methods: {
     async loadDevices() {
+      this.loadingDevices = true;
       try {
         const res = await api.scanWireless();
         this.devices = res.data || [];
       } catch (error) {
         console.error("Failed to load devices:", error);
         toast.error(this.$t("laboratory.toast.load_devices_failed", { msg: error.message || "未知错误" }));
+      } finally {
+        this.loadingDevices = false;
       }
     },
     onFileChange(e) {
