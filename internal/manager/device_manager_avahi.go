@@ -124,6 +124,9 @@ func (dm *DeviceManager) Start() {
 					device.ParseDeviceClass()
 
 					dm.devices.Store(udid, device)
+
+					// Trigger device connection callback
+					dm.onDeviceConnected(device)
 				}
 			}
 		case service = <-sb.RemoveChannel:

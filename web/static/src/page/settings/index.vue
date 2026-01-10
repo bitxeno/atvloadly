@@ -262,6 +262,19 @@
         <div class="form-item">
           <label class="form-item-label">
             <span class="label-text">{{
+              $t("settings.refresh.iphone_toggle.label")
+            }}</span>
+          </label>
+          <input
+            type="checkbox"
+            class="toggle toggle-success"
+            v-model="settings.task.iphone_enabled"
+          />
+        </div>
+
+        <div class="form-item !hidden">
+          <label class="form-item-label">
+            <span class="label-text">{{
               $t("settings.refresh.mode.label")
             }}</span>
           </label>

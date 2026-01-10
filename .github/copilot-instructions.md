@@ -84,6 +84,9 @@ return c.Status(http.StatusOK).JSON(apiError("error message"))
 - Translation files: [internal/i18n/locales/](internal/i18n/locales/)
 - User language preference synced via `/api/lang/sync`
 
+### Comments
+- **Mandatory**: All code comments and documentation MUST be written in English, even if the user asks in another language.
+
 ## Key Integration Points
 
 ### External Process Invocation

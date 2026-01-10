@@ -18,14 +18,19 @@ import (
 var deviceManager = newDeviceManager()
 
 type DeviceManager struct {
-	devices sync.Map
-	ctx     context.Context
-	cancel  context.CancelFunc
-	mu      sync.Mutex
+	devices              sync.Map
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	mu                   sync.Mutex
+	onDeviceConnected    func(device model.Device) // 设备连接时的回调函数
+	onDeviceDisconnected func(device model.Device) // 设备断开时的回调函数
 }
 
 func newDeviceManager() *DeviceManager {
-	return &DeviceManager{}
+	return &DeviceManager{
+		onDeviceConnected:    func(device model.Device) {},
+		onDeviceDisconnected: func(device model.Device) {},
+	}
 }
 
 func (dm *DeviceManager) GetDevices() []model.Device {
@@ -274,6 +279,24 @@ func (dm *DeviceManager) parseName(host string) string {
 	return name
 }
 
+// SetOnDeviceConnected 设置设备连接时的回调函数
+func (dm *DeviceManager) SetOnDeviceConnected(callback func(device model.Device)) {
+	dm.mu.Lock()
+	defer dm.mu.Unlock()
+	if callback != nil {
+		dm.onDeviceConnected = callback
+	}
+}
+
+// SetOnDeviceDisconnected 设置设备断开时的回调函数
+func (dm *DeviceManager) SetOnDeviceDisconnected(callback func(device model.Device)) {
+	dm.mu.Lock()
+	defer dm.mu.Unlock()
+	if callback != nil {
+		dm.onDeviceDisconnected = callback
+	}
+}
+
 // Stop 停止设备管理器
 func (dm *DeviceManager) Stop() {
 	dm.mu.Lock()
@@ -285,4 +308,16 @@ func (dm *DeviceManager) Stop() {
 		dm.ctx = nil
 		log.Info("Device manager stopped")
 	}
+}
+
+// 导出的函数，供外部包调用
+
+// SetDeviceConnectedCallback 设置设备连接时的回调函数（导出函数）
+func SetDeviceConnectedCallback(callback func(device model.Device)) {
+	deviceManager.SetOnDeviceConnected(callback)
+}
+
+// SetDeviceDisconnectedCallback 设置设备断开时的回调函数（导出函数）
+func SetDeviceDisconnectedCallback(callback func(device model.Device)) {
+	deviceManager.SetOnDeviceDisconnected(callback)
 }

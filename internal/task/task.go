@@ -29,7 +29,7 @@ type Task struct {
 
 func new() *Task {
 	return &Task{
-		InstallAppQueue: make(chan model.InstalledApp, 1),
+		InstallAppQueue: make(chan model.InstalledApp, 100),
 		chExitQueue:     make(chan bool, 1),
 	}
 }
@@ -59,6 +59,13 @@ func (t *Task) Start() {
 		log.Warn("App refresh scheduled task is disabled.")
 	}
 
+	// Register device connection callback to automatically refresh the application when the device is connected
+	manager.SetDeviceConnectedCallback(func(device model.Device) {
+		if err := t.refreshDeviceApps(device); err != nil {
+			log.Err(err).Msgf("Failed to refresh apps for device: %s (UDID: %s)", device.Name, device.UDID)
+		}
+	})
+
 	go t.runQueue()
 }
 
@@ -78,6 +85,11 @@ func (t *Task) Run() {
 
 	log.Info("Start executing installation task...")
 	for _, v := range installedApps {
+		// iPhone cannot refresh on a schedule and relies on whether the phone is unlocked
+		// iPhone will triggering refresh through avahi events.
+		if v.IsIPhoneApp() {
+			continue
+		}
 		if !t.checkNeedRefresh(v) {
 			continue
 		}
@@ -111,33 +123,24 @@ func (t *Task) checkNeedRefresh(v model.InstalledApp) bool {
 		return true
 	}
 
-	// fix RefreshedDate is nil
+	// fix ExpirationDate is nil
 	if v.ExpirationDate == nil {
 		expireTime := v.RefreshedDate.AddDate(0, 0, 7)
 		v.ExpirationDate = &expireTime
 	}
 
-	// refresh when the expiration time is less than one day.
-	if app.Settings.Task.Mode == app.OneDayAgoMode {
-		if v.ExpirationDate.AddDate(0, 0, -1).Before(now) {
-			return true
-		}
-	}
-
-	// today has refreshed will ignore
-	if app.Settings.Task.Mode == app.CustomMode {
-		if v.RefreshedDate.Format("2006-01-02") != now.Format("2006-01-02") {
-			return true
-		}
-	}
-
-	return false
+	return v.ExpirationDate.AddDate(0, 0, -1).Before(now)
 }
 
 func (t *Task) StartInstallApp(v model.InstalledApp) {
-	go func() {
-		t.InstallAppQueue <- v
-	}()
+	if _, loaded := t.InstallingApps.LoadOrStore(v.ID, v); !loaded {
+		select {
+		case t.InstallAppQueue <- v:
+		default:
+			t.InstallingApps.Delete(v.ID)
+			log.Warnf("The install queue is full, skip task: %s", v.IpaName)
+		}
+	}
 }
 
 func (t *Task) tryInstallApp(v model.InstalledApp) {
@@ -204,14 +207,43 @@ func (t *Task) runInternal(v model.InstalledApp) (*model.MobileProvisioningProfi
 	}
 }
 
+func (t *Task) refreshDeviceApps(device model.Device) error {
+	if !device.IsIPhone() {
+		return nil
+	}
+	if !app.Settings.Task.Enabled || !app.Settings.Task.IphoneEnabled {
+		return nil
+	}
+
+	deviceApps, err := service.GetEnableAppListByUDID(device.UDID)
+	if err != nil {
+		return err
+	}
+
+	appsNeedRefresh := make([]model.InstalledApp, 0)
+	for _, v := range deviceApps {
+		if t.checkNeedRefresh(v) {
+			appsNeedRefresh = append(appsNeedRefresh, v)
+		}
+	}
+
+	if len(appsNeedRefresh) == 0 {
+		return nil
+	}
+
+	log.Infof("Start refresh apps for device: %s (found %d apps, %d need refresh)...", device.Name, len(deviceApps), len(appsNeedRefresh))
+	for _, v := range appsNeedRefresh {
+		t.StartInstallApp(v)
+	}
+	return nil
+}
+
 func ScheduleRefreshApps() error {
 	return instance.RunSchedule()
 }
 
 func RunInstallApp(v model.InstalledApp) {
-	if _, loaded := instance.InstallingApps.LoadOrStore(v.ID, v); !loaded {
-		instance.StartInstallApp(v)
-	}
+	instance.StartInstallApp(v)
 }
 
 func GetCurrentInstallingApps() []model.InstalledApp {

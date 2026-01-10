@@ -45,3 +45,7 @@ func (t InstalledApp) MaskAccount() string {
 	m := masker.EmailMasker{}
 	return m.Marshal("*", t.Account)
 }
+
+func (t InstalledApp) IsIPhoneApp() bool {
+	return t.DeviceClass == string(DeviceClassiPhone) || t.DeviceClass == string(DeviceClassiPad)
+}

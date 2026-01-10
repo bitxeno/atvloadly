@@ -40,6 +40,15 @@ func GetEnableAppList() ([]model.InstalledApp, error) {
 	return apps, nil
 }
 
+func GetEnableAppListByUDID(udid string) ([]model.InstalledApp, error) {
+	var apps []model.InstalledApp
+	if result := db.Store().Where("enabled = ? AND udid = ?", true, udid).Order("created_at desc").Find(&apps); result.Error != nil {
+		return nil, result.Error
+	}
+
+	return apps, nil
+}
+
 func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 	// 查找之前的安装记录，存在记录直接更新旧的
 	var cur model.InstalledApp

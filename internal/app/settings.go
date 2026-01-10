@@ -26,9 +26,10 @@ type SettingsConfiguration struct {
 		Language string `koanf:"language" json:"language"`
 	} `koanf:"app" json:"app"`
 	Task struct {
-		Enabled  bool     `koanf:"enabled" json:"enabled" default:"true"`
-		Mode     TaskMode `koanf:"mode" json:"mode" default:"1"`
-		CrodTime string   `koanf:"crod_time" json:"crod_time" default:"0,30 3-6 * * *"`
+		Enabled       bool     `koanf:"enabled" json:"enabled" default:"true"`
+		IphoneEnabled bool     `koanf:"iphone_enabled" json:"iphone_enabled" default:"true"`
+		Mode          TaskMode `koanf:"mode" json:"mode" default:"1"`
+		CrodTime      string   `koanf:"crod_time" json:"crod_time" default:"0,30 3-6 * * *"`
 	} `koanf:"task" json:"task"`
 	Notification struct {
 		Enabled  bool   `koanf:"enabled" json:"enabled"`

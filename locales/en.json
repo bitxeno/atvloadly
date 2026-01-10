@@ -206,6 +206,9 @@
             "toggle": {
                 "label": "Enable"
             },
+            "iphone_toggle": {
+                "label": "iPhone Auto Refresh"
+            },
             "mode": {
                 "label": "Refresh Mode",
                 "day_before_expired": "One day before expiration",
@@ -304,7 +307,7 @@
             "step2": "Please download <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a>, connect your iPhone, and export the Pairing File.",
             "step3": "Please use idevice_pair to enable Wireless Debugging functionality.",
             "step4": "Please ensure that your iPhone device is discoverable in the <a href=\"/#/tools\" class=\"link\">Tools</a>.",
-            "step5": "Automatic refresh for iPhone is not guaranteed to be stable; the iPhone generally needs to be unlocked for installation refresh to work normally."
+            "step5": "Automatic refresh on iPhone is not guaranteed to be reliable; the iPhone must be unlocked for remote refresh to work properly."
         },
         "form": {
             "device_label": "Select Device",

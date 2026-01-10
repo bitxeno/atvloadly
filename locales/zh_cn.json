@@ -206,6 +206,9 @@
             "toggle": {
                 "label": "启用"
             },
+            "iphone_toggle": {
+                "label": "iPhone 自动刷新"
+            },
             "mode": {
                 "label": "刷新模式",
                 "day_before_expired": "过期前一天",
@@ -304,7 +307,7 @@
             "step2": "请下载 <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a> 并连接 iPhone，导出 Pairing File。",
             "step3": "请使用 idevice_pair 开启 Wireless Debugging 功能。",
             "step4": "请确保 <a href=\"/#/tools\" class=\"link\">工具</a> 中能发现您的 iPhone 设备。",
-            "step5": "iPhone 自动刷新不保证稳定可用，iPhone 一般需要解锁后才能正常安装刷新。"
+            "step5": "iPhone 自动刷新不保证稳定性，iPhone 需要解锁后才能正常远程刷新。"
         },
         "form": {
             "device_label": "选择设备",
