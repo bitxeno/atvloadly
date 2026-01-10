@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"sort"
@@ -18,6 +19,9 @@ var deviceManager = newDeviceManager()
 
 type DeviceManager struct {
 	devices sync.Map
+	ctx     context.Context
+	cancel  context.CancelFunc
+	mu      sync.Mutex
 }
 
 func newDeviceManager() *DeviceManager {
@@ -74,8 +78,11 @@ func (dm *DeviceManager) GetDeviceByID(id string) (*model.Device, bool) {
 }
 
 func (dm *DeviceManager) GetDeviceByUDID(udid string) (*model.Device, bool) {
-	if dev, ok := dm.devices.Load(udid); ok {
-		return dev.(*model.Device), ok
+	devices := dm.GetDevices()
+	for _, d := range devices {
+		if d.UDID == udid {
+			return &d, true
+		}
 	}
 
 	return nil, false
@@ -265,4 +272,17 @@ func (dm *DeviceManager) parseName(host string) string {
 	name := strings.TrimSuffix(host, ".")
 	name = strings.TrimSuffix(name, ".local")
 	return name
+}
+
+// Stop 停止设备管理器
+func (dm *DeviceManager) Stop() {
+	dm.mu.Lock()
+	defer dm.mu.Unlock()
+
+	if dm.cancel != nil {
+		dm.cancel()
+		dm.cancel = nil
+		dm.ctx = nil
+		log.Info("Device manager stopped")
+	}
 }

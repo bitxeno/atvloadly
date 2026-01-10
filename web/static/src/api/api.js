@@ -242,6 +242,7 @@ export default {
     return request({
       url: "/api/pair/import",
       method: "post",
+      timeout: 30000,
       headers: {
         "Content-Type": "multipart/form-data",
       },

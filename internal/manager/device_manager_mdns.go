@@ -22,11 +22,11 @@ const (
 	mdnsServiceDomain   = "local."
 )
 
-var ctx context.Context
-var cancel context.CancelFunc
-
 func (dm *DeviceManager) Start() {
-	ctx, cancel = context.WithCancel(context.Background())
+	dm.mu.Lock()
+	dm.ctx, dm.cancel = context.WithCancel(context.Background())
+	ctx := dm.ctx
+	dm.mu.Unlock()
 
 	// Discover all services on the network (e.g. _workstation._tcp)
 	resolver, err := zeroconf.NewResolver(nil)
@@ -104,11 +104,18 @@ func (dm *DeviceManager) Start() {
 
 	log.Info("mDNS discovery started...")
 	<-ctx.Done()
+	log.Info("mDNS discovery stopped")
 }
 
 func (dm *DeviceManager) Scan() {
-	cancel()
-	<-ctx.Done()
+	dm.mu.Lock()
+	if dm.cancel != nil {
+		dm.cancel()
+	}
+	dm.mu.Unlock()
+
+	// 等待上一个实例退出
+	time.Sleep(time.Second)
 
 	dm.devices.Range(func(k, v interface{}) bool {
 		dm.devices.Delete(k)

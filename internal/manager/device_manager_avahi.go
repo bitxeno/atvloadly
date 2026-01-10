@@ -25,6 +25,11 @@ const (
 // /var/run/dbus
 // /var/run/avahi-daemon
 func (dm *DeviceManager) Start() {
+	dm.mu.Lock()
+	dm.ctx, dm.cancel = context.WithCancel(context.Background())
+	ctx := dm.ctx
+	dm.mu.Unlock()
+
 	conn, err := dbus.SystemBus()
 	if err != nil {
 		log.Printf("Cannot get system bus: %v", err)
@@ -76,12 +81,15 @@ func (dm *DeviceManager) Start() {
 		log.Err(err).Msgf("ServiceBrowserNew() failed: ")
 	}
 
-	log.Info("mDNS discovery started...")
+	log.Info("Avahi discovery started...")
 
 	var service avahi.Service
 
 	for {
 		select {
+		case <-ctx.Done():
+			log.Info("Avahi discovery stopped")
+			return
 		case service = <-sb.AddChannel:
 			log.Tracef("ServiceBrowser ADD: %v", service)
 

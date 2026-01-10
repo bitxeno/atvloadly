@@ -324,6 +324,11 @@ func route(fi *fiber.App) {
 		// Restart usbmuxd service to apply changes
 		_ = manager.RestartUsbmuxd()
 
+		time.Sleep(time.Second)
+
+		// force reload devices
+		manager.StartDeviceManager()
+
 		return c.Status(http.StatusOK).JSON(apiSuccess("success"))
 	})
 

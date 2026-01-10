@@ -17,7 +17,13 @@ func ScanServices(ctx context.Context, callback func(serviceType string, name st
 }
 
 func StartDeviceManager() {
+	// 如果之前已启动，先停止
+	StopDeviceManager()
 	go deviceManager.Start()
+}
+
+func StopDeviceManager() {
+	deviceManager.Stop()
 }
 
 func GetDevices() ([]model.Device, error) {

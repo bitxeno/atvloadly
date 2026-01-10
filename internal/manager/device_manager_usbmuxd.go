@@ -5,11 +5,11 @@ package manager
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/netip"
 	"strings"
 	"time"
 
+	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/utils"
 	gidevice "github.com/electricbubble/gidevice"
@@ -24,28 +24,41 @@ const (
 var usbmux gidevice.Usbmux
 
 func (dm *DeviceManager) Start() {
+	dm.mu.Lock()
+	dm.ctx, dm.cancel = context.WithCancel(context.Background())
+	ctx := dm.ctx
+	dm.mu.Unlock()
+
 	umx, err := gidevice.NewUsbmux()
 	if err != nil {
-		log.Panicf("Cannot connect to usbmuxd: %v", err)
+		log.Err(err).Msg("Cannot connect to usbmuxd")
 		return
 	}
 	usbmux = umx
 
 	t := time.NewTimer(0)
+	defer t.Stop()
+
 	go func() {
 		for {
-			<-t.C
-			dm.Scan()
-
-			t.Reset(10 * time.Second)
+			select {
+			case <-ctx.Done():
+				log.Info("Device scanner stopped")
+				return
+			case <-t.C:
+				dm.Scan()
+				t.Reset(10 * time.Second)
+			}
 		}
 	}()
+
+	<-ctx.Done()
 }
 
 func (dm *DeviceManager) Scan() {
 	devices, err := usbmux.Devices()
 	if err != nil {
-		log.Printf("Cannot get devices: %v", err)
+		log.Err(err).Msg("Cannot get devices")
 		return
 	}
 
