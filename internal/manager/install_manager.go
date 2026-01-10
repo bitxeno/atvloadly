@@ -83,7 +83,7 @@ func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipa
 
 	cmd := exec.CommandContext(ctx, "plumesign", "sign", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--udid", udid, "-u", account, "-p", ipaPath)
 	cmd.Dir = app.Config.Server.DataDir
-	cmd.Env = os.Environ()
+	cmd.Env = GetRunEnvs()
 	cmd.Stdout = t.outputStdout
 	cmd.Stderr = t.outputStdout
 

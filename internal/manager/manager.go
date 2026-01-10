@@ -3,6 +3,7 @@ package manager
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/model"
+	"github.com/bitxeno/atvloadly/internal/utils"
 )
 
 func ScanServices(ctx context.Context, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) error {
@@ -124,4 +126,19 @@ func GetCertificates(email string) ([]model.Certificate, error) {
 
 func RevokeCertificate(email string, serialNumber string) error {
 	return certificateManager.RevokeCertificate(email, serialNumber)
+}
+
+func GetRunEnvs() []string {
+	envs := []string{}
+	if app.Settings.Network.ProxyEnabled {
+		if app.Settings.Network.HTTPProxy != "" {
+			envs = append(envs, fmt.Sprintf("HTTP_PROXY=%s", app.Settings.Network.HTTPProxy))
+			envs = append(envs, fmt.Sprintf("http_proxy=%s", app.Settings.Network.HTTPProxy))
+		}
+		if app.Settings.Network.HTTPSProxy != "" {
+			envs = append(envs, fmt.Sprintf("HTTPS_PROXY=%s", app.Settings.Network.HTTPSProxy))
+			envs = append(envs, fmt.Sprintf("https_proxy=%s", app.Settings.Network.HTTPSProxy))
+		}
+	}
+	return utils.MergeEnvs(os.Environ(), envs)
 }

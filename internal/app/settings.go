@@ -63,6 +63,11 @@ type SettingsConfiguration struct {
 			Body        string `koanf:"body" json:"body"`
 		} `koanf:"webhook" json:"webhook"`
 	} `koanf:"notification" json:"notification"`
+	Network struct {
+		ProxyEnabled bool   `koanf:"proxy_enabled" json:"proxy_enabled"`
+		HTTPProxy    string `koanf:"http_proxy" json:"http_proxy"`
+		HTTPSProxy   string `koanf:"https_proxy" json:"https_proxy"`
+	} `koanf:"network" json:"network"`
 }
 
 func SaveSettings() {

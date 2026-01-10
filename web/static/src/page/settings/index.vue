@@ -336,6 +336,55 @@
         </div>
       </form>
     </fieldset>
+
+    <fieldset class="section bg-base-100">
+      <legend>{{ $t("settings.network.title") }}</legend>
+      <form>
+        <div class="form-item">
+          <label class="form-item-label">
+            <span class="label-text">{{ $t("settings.network.proxy_toggle.label") }}</span>
+          </label>
+          <input
+            type="checkbox"
+            class="toggle toggle-success"
+            v-model="settings.network.proxy_enabled"
+          />
+        </div>
+
+        <div class="form-item">
+          <label class="form-item-label">
+            <span class="label-text">{{ $t("settings.network.http_proxy.label") }}</span>
+          </label>
+          <input
+            v-model="settings.network.http_proxy"
+            type="text"
+            :placeholder="$t('settings.network.http_proxy.placeholder')"
+            class="input input-bordered grow"
+          />
+        </div>
+
+        <div class="form-item">
+          <label class="form-item-label">
+            <span class="label-text">{{ $t("settings.network.https_proxy.label") }}</span>
+          </label>
+          <input
+            v-model="settings.network.https_proxy"
+            type="text"
+            :placeholder="$t('settings.network.https_proxy.placeholder')"
+            class="input input-bordered grow"
+          />
+        </div>
+
+        <div class="form-item">
+          <label class="form-item-label"></label>
+          <div class="flex-1 flex justify-between">
+            <button class="btn btn-primary w-32" @click.prevent="saveNetwork">
+              {{ $t("settings.network.button.submit") }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </fieldset>
   </div>
 </template>
           
@@ -356,6 +405,11 @@ export default {
           weixin: {},
           bark: {},
           webhook: {},
+        },
+        network: {
+          proxy_enabled: false,
+          http_proxy: "",
+          https_proxy: "",
         },
       },
     };
@@ -398,6 +452,16 @@ export default {
       api.sendTestNotify(_this.settings).then((res) => {
         if (res.data) {
           toast.success(this.$t("settings.toast.notify_success"));
+        }
+      });
+    },
+
+    saveNetwork() {
+      let _this = this;
+
+      api.saveTaskSettings(_this.settings).then((res) => {
+        if (res.data) {
+          toast.success(this.$t("settings.toast.save_success"));
         }
       });
     },

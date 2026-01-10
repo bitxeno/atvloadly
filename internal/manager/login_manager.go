@@ -41,6 +41,7 @@ func (t *LoginManager) Start(ctx context.Context, account, password string) erro
 
 	cmd := exec.CommandContext(ctx, "plumesign", "account", "login", "-u", account, "-p", password)
 	cmd.Dir = app.Config.Server.DataDir
+	cmd.Env = GetRunEnvs()
 	cmd.Stdout = t.outputStdout
 	cmd.Stderr = t.outputStdout
 

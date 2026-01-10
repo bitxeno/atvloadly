@@ -221,6 +221,23 @@
             "button": {
                 "submit": "保 存"
             }
+        },
+        "network": {
+            "title": "网络设置",
+            "proxy_toggle": {
+                "label": "启用代理"
+            },
+            "http_proxy": {
+                "label": "HTTP代理",
+                "placeholder": "例如: http://proxy.example.com:8080"
+            },
+            "https_proxy": {
+                "label": "HTTPS代理",
+                "placeholder": "例如: http://proxy.example.com:8080"
+            },
+            "button": {
+                "submit": "保 存"
+            }
         }
     },
     "common": {

@@ -221,6 +221,23 @@
             "button": {
                 "submit": "Save"
             }
+        },
+        "network": {
+            "title": "Network Settings",
+            "proxy_toggle": {
+                "label": "Enable Proxy"
+            },
+            "http_proxy": {
+                "label": "HTTP Proxy",
+                "placeholder": "e.g., http://proxy.example.com:8080"
+            },
+            "https_proxy": {
+                "label": "HTTPS Proxy",
+                "placeholder": "e.g., http://proxy.example.com:8080"
+            },
+            "button": {
+                "submit": "Save"
+            }
         }
     },
     "common": {
