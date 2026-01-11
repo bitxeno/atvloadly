@@ -58,10 +58,17 @@ func (m *CertificateManager) RevokeCertificate(email string, serialNumber string
 func (m *CertificateManager) ExportCertificate(email, password, path string) (string, error) {
 	output, err := ExecuteCommand("plumesign", "certificate", "export", "-u", email, "-p", password, "-o", path)
 	if err != nil {
-		print(string(output))
 		log.Err(err).Msgf("Error exporting certificate for %s", email)
 		return string(output), err
 	}
-	print(string(output))
 	return string(output), nil
+}
+
+func (m *CertificateManager) ImportCertificate(email, password, path string) error {
+	output, err := ExecuteCommand("plumesign", "certificate", "import", "-u", email, "-p", password, "-i", path)
+	if err != nil {
+		log.Err(err).Msgf("Error importing certificate for %s: %s", email, string(output))
+		return err
+	}
+	return nil
 }

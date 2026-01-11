@@ -16,89 +16,112 @@
             </td>
           </tr>
           <template v-else>
-          <tr v-for="(account, email) in accounts" :key="email">
-            <td class="break-all">{{ email }}</td>
-            <td>{{ account.status }}</td>
-            <td class="flex gap-x-4">
-              <a class="link link-primary" @click="openCertModal(email)">{{ $t("nav.certificate") }}</a>
-              <a class="link link-primary hidden" @click="openDeviceModal(email)">{{ $t("nav.connected_devices") }}</a>
-              <Popper placement="top" arrow="true">
-                    <template #content="{ close }">
-                      <div class="flex flex-col gap-y-2">
-                        <div class="py-2">
-                          {{
-                            $t("account.dialog.logout_confirm.title", {
-                              name: email,
-                            })
-                          }}
-                        </div>
-                        <div class="flex gap-x-2 justify-end items-center">
-                          <a
-                            class="link link-primary link-hover"
-                            @click="close"
-                            >{{
-                              $t("home.dialog.delete_confirm.button.cancel")
-                            }}</a
-                          >
-                          <button
-                            class="btn btn-primary btn-xs"
-                            @click="logoutAccount(email, close)"
-                          >
-                            {{
-                              $t("home.dialog.delete_confirm.button.confirm")
-                            }}
-                          </button>
-                        </div>
+            <tr v-for="(account, email) in accounts" :key="email">
+              <td class="break-all">{{ email }}</td>
+              <td>{{ account.status }}</td>
+              <td class="flex gap-x-4">
+                <a class="link link-primary" @click="openCertModal(email)">{{
+                  $t("nav.certificate")
+                }}</a>
+                <a
+                  class="link link-primary hidden"
+                  @click="openDeviceModal(email)"
+                  >{{ $t("nav.connected_devices") }}</a
+                >
+                <Popper placement="top" arrow="true">
+                  <template #content="{ close }">
+                    <div class="flex flex-col gap-y-2">
+                      <div class="py-2">
+                        {{
+                          $t("account.dialog.logout_confirm.title", {
+                            name: email,
+                          })
+                        }}
                       </div>
-                    </template>
-                    <a class="link link-error">{{
-                      $t("account.table.button.logout")
-                    }}</a>
-                  </Popper>
-            </td>
-          </tr>
-          <tr v-if="Object.keys(accounts).length === 0">
-            <td colspan="3" class="text-center">{{ $t("account.table.empty") }}</td>
-          </tr>
+                      <div class="flex gap-x-2 justify-end items-center">
+                        <a
+                          class="link link-primary link-hover"
+                          @click="close"
+                          >{{
+                            $t("home.dialog.delete_confirm.button.cancel")
+                          }}</a
+                        >
+                        <button
+                          class="btn btn-primary btn-xs"
+                          @click="logoutAccount(email, close)"
+                        >
+                          {{ $t("home.dialog.delete_confirm.button.confirm") }}
+                        </button>
+                      </div>
+                    </div>
+                  </template>
+                  <a class="link link-error">{{
+                    $t("account.table.button.logout")
+                  }}</a>
+                </Popper>
+              </td>
+            </tr>
+            <tr v-if="Object.keys(accounts).length === 0">
+              <td colspan="3" class="text-center">
+                {{ $t("account.table.empty") }}
+              </td>
+            </tr>
           </template>
         </tbody>
       </table>
     </div>
 
     <!-- Certificate Modal -->
-    <dialog id="cert_modal" class="modal" :class="{ 'modal-open': showCertModal }">
+    <dialog
+      id="cert_modal"
+      class="modal"
+      :class="{ 'modal-open': showCertModal }"
+    >
       <div class="modal-box w-11/12 max-w-5xl">
-        <h3 class="font-bold text-lg mb-4">{{ $t("certificate.modal.title", { email: currentAccountEmail }) }}</h3>
-        
+        <h3 class="font-bold text-lg mb-4">
+          {{ $t("certificate.modal.title", { email: currentAccountEmail }) }}
+        </h3>
+
         <table class="table w-full">
-            <thead>
+          <thead>
             <tr>
-                <th>{{ $t("certificate.table.header.name") }}</th>
-                <th>{{ $t("certificate.table.header.machine_name") }}</th>
-                <th class="hidden md:table-cell">{{ $t("account.table.header.status") }}</th>
-                <th>{{ $t("home.table.header.operate") }}</th>
+              <th>{{ $t("certificate.table.header.name") }}</th>
+              <th>{{ $t("certificate.table.header.machine_name") }}</th>
+              <th class="hidden md:table-cell">
+                {{ $t("account.table.header.status") }}
+              </th>
+              <th>{{ $t("home.table.header.operate") }}</th>
             </tr>
-            </thead>
-            <tbody class="bg-base-100">
+          </thead>
+          <tbody class="bg-base-100">
             <tr v-if="certLoading">
-                <td colspan="4" class="text-center">
-                  <span class="loading loading-spinner loading-md"></span>
-                </td>
+              <td colspan="4" class="text-center">
+                <span class="loading loading-spinner loading-md"></span>
+              </td>
             </tr>
             <template v-else>
-            <tr v-for="cert in certificates" :key="cert.serialNumber">
+              <tr v-for="cert in certificates" :key="cert.serialNumber">
                 <td class="break-all">
                   <div class="font-bold">
                     {{ cert.name }}
-                    <span v-if="cert.inUse" class="text-sm opacity-50">(atvloadly)</span>
+                    <span v-if="cert.inUse" class="text-sm opacity-50"
+                      >(atvloadly)</span
+                    >
                   </div>
-                  <div class="text-sm opacity-50">({{ cert.serialNumber }})</div>
+                  <div class="text-sm opacity-50">
+                    ({{ cert.serialNumber }})
+                  </div>
                 </td>
                 <td>{{ cert.machineName }}</td>
                 <td class="hidden md:table-cell">{{ cert.status }}</td>
                 <td>
-                 <a class="link link-primary mr-2" @click="openExportModal(cert)">{{ $t("certificate.table.button.export") }}</a>
-                 <Popper placement="top" arrow="true">
+                  <div class="flex gap-x-1">
+                  <a
+                    class="link link-primary mr-2"
+                    @click="openExportModal(cert)"
+                    >{{ $t("certificate.table.button.export") }}</a
+                  >
+                  <Popper placement="top" arrow="true">
                     <template #content="{ close }">
                       <div class="flex flex-col gap-y-2">
                         <div class="py-2">
@@ -131,51 +154,76 @@
                       $t("certificate.table.button.revoke")
                     }}</a>
                   </Popper>
+                  </div>
                 </td>
-            </tr>
-            <tr v-if="certificates.length === 0">
-              <td colspan="4" class="text-center">{{ $t("certificate.no_certificates") }}</td>
-            </tr>
+              </tr>
+              <tr v-if="certificates.length === 0">
+                <td colspan="4" class="text-center">
+                  {{ $t("certificate.no_certificates") }}
+                </td>
+              </tr>
             </template>
-            </tbody>
+          </tbody>
         </table>
 
         <div class="modal-action">
-          <button class="btn" @click="showCertModal = false">{{ $t("common.button.close") }}</button>
+          <button class="btn btn-primary" @click="triggerImport">
+            {{ $t("certificate.button.import") }}
+          </button>
+          <button class="btn" @click="showCertModal = false">
+            {{ $t("common.button.close") }}
+          </button>
         </div>
+        <input
+          type="file"
+          ref="certFileInput"
+          class="hidden"
+          accept=".p12"
+          @change="onCertFileSelected"
+        />
       </div>
     </dialog>
 
     <!-- Device Modal -->
-    <dialog id="device_modal" class="modal" :class="{ 'modal-open': showDeviceModal }">
+    <dialog
+      id="device_modal"
+      class="modal"
+      :class="{ 'modal-open': showDeviceModal }"
+    >
       <div class="modal-box w-11/12 max-w-5xl">
-        <h3 class="font-bold text-lg mb-4">{{ $t("device.modal.title", { email: currentAccountEmail }) }}</h3>
-        
+        <h3 class="font-bold text-lg mb-4">
+          {{ $t("device.modal.title", { email: currentAccountEmail }) }}
+        </h3>
+
         <table class="table w-full">
-            <thead>
+          <thead>
             <tr>
               <th>{{ $t("device.table.header.name") }}</th>
-              <th class="hidden md:table-cell">{{ $t("device.table.header.udid") }}</th>
+              <th class="hidden md:table-cell">
+                {{ $t("device.table.header.udid") }}
+              </th>
               <th>{{ $t("device.table.header.platform") }}</th>
               <th>{{ $t("home.table.header.operate") }}</th>
             </tr>
-            </thead>
-            <tbody class="bg-base-100">
+          </thead>
+          <tbody class="bg-base-100">
             <tr v-if="deviceLoading">
-                <td colspan="5" class="text-center">
-                  <span class="loading loading-spinner loading-md"></span>
-                </td>
+              <td colspan="5" class="text-center">
+                <span class="loading loading-spinner loading-md"></span>
+              </td>
             </tr>
             <template v-else>
-            <tr v-for="dev in devices" :key="dev.deviceId">
+              <tr v-for="dev in devices" :key="dev.deviceId">
                 <td>
                   <div class="font-bold">{{ dev.name }}</div>
                   <div class="text-sm opacity-50">({{ dev.deviceId }})</div>
                 </td>
-                <td class="hidden md:table-cell break-all">{{ dev.deviceNumber }}</td>
+                <td class="hidden md:table-cell break-all">
+                  {{ dev.deviceNumber }}
+                </td>
                 <td>{{ dev.deviceClass }}</td>
                 <td>
-                 <Popper placement="top" arrow="true">
+                  <Popper placement="top" arrow="true">
                     <template #content="{ close }">
                       <div class="flex flex-col gap-y-2">
                         <div class="py-2">
@@ -209,33 +257,96 @@
                     }}</a>
                   </Popper>
                 </td>
-            </tr>
-            <tr v-if="devices.length === 0">
-              <td colspan="5" class="text-center">{{ $t("device.table.empty") }}</td>
-            </tr>
+              </tr>
+              <tr v-if="devices.length === 0">
+                <td colspan="5" class="text-center">
+                  {{ $t("device.table.empty") }}
+                </td>
+              </tr>
             </template>
-            </tbody>
+          </tbody>
         </table>
 
         <div class="modal-action">
-          <button class="btn" @click="showDeviceModal = false">{{ $t("common.button.close") }}</button>
+          <button class="btn" @click="showDeviceModal = false">
+            {{ $t("common.button.close") }}
+          </button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Import Modal -->
+    <dialog
+      id="import_modal"
+      class="modal"
+      :class="{ 'modal-open': showImportModal }"
+    >
+      <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">
+          {{ $t("certificate.modal.import_title") }}
+        </h3>
+        <p class="py-2 text-sm opacity-70" v-if="selectedCertFile">
+          {{
+            $t("certificate.import.file_selected", {
+              name: selectedCertFile ? selectedCertFile.name : "",
+            })
+          }}
+        </p>
+        <div class="form-control w-full">
+          <label class="label">
+            <span class="label-text">{{
+              $t("certificate.import_form.password_label")
+            }}</span>
+          </label>
+          <input
+            type="password"
+            v-model="importPassword"
+            :placeholder="$t('certificate.import_form.password_placeholder')"
+            class="input input-bordered w-full"
+            @keyup.enter="doImportCertificate"
+          />
+        </div>
+        <div class="modal-action">
+          <button class="btn" @click="closeImportModal">
+            {{ $t("home.dialog.delete_confirm.button.cancel") }}
+          </button>
+          <button class="btn btn-primary" @click="doImportCertificate">
+            {{ $t("home.dialog.delete_confirm.button.confirm") }}
+          </button>
         </div>
       </div>
     </dialog>
 
     <!-- Export Modal -->
-    <dialog id="export_modal" class="modal" :class="{ 'modal-open': showExportModal }">
+    <dialog
+      id="export_modal"
+      class="modal"
+      :class="{ 'modal-open': showExportModal }"
+    >
       <div class="modal-box">
-        <h3 class="font-bold text-lg mb-4">{{ $t("certificate.modal.export_title") }}</h3>
+        <h3 class="font-bold text-lg mb-4">
+          {{ $t("certificate.modal.export_title") }}
+        </h3>
         <div class="form-control w-full">
-            <label class="label">
-                <span class="label-text">{{ $t("certificate.export_form.password_label") }}</span>
-            </label>
-            <input type="password" v-model="exportPassword" :placeholder="$t('certificate.export_form.password_placeholder')" class="input input-bordered w-full" />
+          <label class="label">
+            <span class="label-text">{{
+              $t("certificate.export_form.password_label")
+            }}</span>
+          </label>
+          <input
+            type="password"
+            v-model="exportPassword"
+            :placeholder="$t('certificate.export_form.password_placeholder')"
+            class="input input-bordered w-full"
+          />
         </div>
         <div class="modal-action">
-          <button class="btn" @click="showExportModal = false">{{ $t("home.dialog.delete_confirm.button.cancel") }}</button>
-           <button class="btn btn-primary" @click="doExportCertificate">{{ $t("home.dialog.delete_confirm.button.confirm") }}</button>
+          <button class="btn" @click="showExportModal = false">
+            {{ $t("home.dialog.delete_confirm.button.cancel") }}
+          </button>
+          <button class="btn btn-primary" @click="doExportCertificate">
+            {{ $t("home.dialog.delete_confirm.button.confirm") }}
+          </button>
         </div>
       </div>
     </dialog>
@@ -262,6 +373,9 @@ export default {
       showExportModal: false,
       exportPassword: "",
       exportingCert: null,
+      showImportModal: false,
+      importPassword: "",
+      selectedCertFile: null,
     };
   },
   created() {
@@ -270,11 +384,14 @@ export default {
   methods: {
     fetchData() {
       this.loading = true;
-      api.getAccounts().then((res) => {
-        this.accounts = res.data || {};
-      }).finally(() => {
-        this.loading = false;
-      });
+      api
+        .getAccounts()
+        .then((res) => {
+          this.accounts = res.data || {};
+        })
+        .finally(() => {
+          this.loading = false;
+        });
     },
     logoutAccount(email, close) {
       let _this = this;
@@ -295,22 +412,30 @@ export default {
     },
     fetchCertificates(email) {
       this.certLoading = true;
-      api.getCertificates({ email: email }).then((res) => {
-        this.certificates = res.data || [];
-      }).finally(() => {
-        this.certLoading = false;
-      });
+      api
+        .getCertificates({ email: email })
+        .then((res) => {
+          this.certificates = res.data || [];
+        })
+        .finally(() => {
+          this.certLoading = false;
+        });
     },
     revokeCertificate(serialNumber, close) {
       let _this = this;
-      api.revokeCertificate({ email: this.currentAccountEmail, serialNumber: serialNumber }).then((res) => {
-        if (res.data) {
-          toast.success(_this.$t("certificate.toast.revoke_success"));
-          _this.fetchCertificates(_this.currentAccountEmail);
-        } else {
-          toast.error(_this.$t("certificate.toast.revoke_failed"));
-        }
-      });
+      api
+        .revokeCertificate({
+          email: this.currentAccountEmail,
+          serialNumber: serialNumber,
+        })
+        .then((res) => {
+          if (res.data) {
+            toast.success(_this.$t("certificate.toast.revoke_success"));
+            _this.fetchCertificates(_this.currentAccountEmail);
+          } else {
+            toast.error(_this.$t("certificate.toast.revoke_failed"));
+          }
+        });
       close?.();
     },
     openDeviceModal(email) {
@@ -320,22 +445,30 @@ export default {
     },
     fetchDevices(email) {
       this.deviceLoading = true;
-      api.getAccountDevices({ email: email }).then((res) => {
-        this.devices = res.data || [];
-      }).finally(() => {
-        this.deviceLoading = false;
-      });
+      api
+        .getAccountDevices({ email: email })
+        .then((res) => {
+          this.devices = res.data || [];
+        })
+        .finally(() => {
+          this.deviceLoading = false;
+        });
     },
     deleteDevice(deviceId, close) {
       let _this = this;
-      api.deleteAccountDevice({ email: this.currentAccountEmail, deviceId: deviceId }).then((res) => {
-        if (res.data) {
-          toast.success(_this.$t("account.toast.delete_success"));
-          _this.fetchDevices(_this.currentAccountEmail);
-        } else {
-          toast.error(_this.$t("account.toast.delete_failed"));
-        }
-      });
+      api
+        .deleteAccountDevice({
+          email: this.currentAccountEmail,
+          deviceId: deviceId,
+        })
+        .then((res) => {
+          if (res.data) {
+            toast.success(_this.$t("account.toast.delete_success"));
+            _this.fetchDevices(_this.currentAccountEmail);
+          } else {
+            toast.error(_this.$t("account.toast.delete_failed"));
+          }
+        });
       close?.();
     },
     openExportModal(cert) {
@@ -344,33 +477,106 @@ export default {
       this.showExportModal = true;
     },
     doExportCertificate() {
-       if (!this.exportPassword) {
-        toast.error(this.$t("pair.toast.pin_incorrect")); // Reusing error or just generic? 
+      if (!this.exportPassword) {
+        toast.error(this.$t("pair.toast.pin_incorrect")); // Reusing error or just generic?
         // Better to use generic or simple string since I didn't add validation key
         // Or "Input Required"
         return;
       }
-      
+
       const toastId = toast.loading(this.$t("common.loading") || "Loading...");
-      
-      api.exportCertificate({
-        email: this.currentAccountEmail,
-        password: this.exportPassword,
-        // teamId: ... 
-      }).then(response => {
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', `atvloadly_${this.currentAccountEmail}.p12`);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        
-        toast.update(toastId, { render: this.$t("certificate.toast.export_success"), type: "success", isLoading: false, autoClose: 3000 });
-        this.showExportModal = false;
-      }).catch(err => {
-         toast.update(toastId, { render: err.message || "Export failed", type: "error", isLoading: false, autoClose: 3000 });
-      });
+
+      api
+        .exportCertificate({
+          email: this.currentAccountEmail,
+          password: this.exportPassword,
+          // teamId: ...
+        })
+        .then((response) => {
+          const url = window.URL.createObjectURL(new Blob([response.data]));
+          const link = document.createElement("a");
+          link.href = url;
+          link.setAttribute(
+            "download",
+            `atvloadly_${this.currentAccountEmail}.p12`
+          );
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+
+          toast.update(toastId, {
+            render: this.$t("certificate.toast.export_success"),
+            type: "success",
+            isLoading: false,
+            autoClose: 3000,
+          });
+          this.showExportModal = false;
+        })
+        .catch((err) => {});
+    },
+    triggerImport() {
+      this.$refs.certFileInput.click();
+    },
+    onCertFileSelected(e) {
+      const files = e.target.files;
+      if (files.length > 0) {
+        this.selectedCertFile = files[0];
+        this.importPassword = "";
+        this.showImportModal = true;
+      }
+      // Reset input so same file can be selected again if needed
+      e.target.value = "";
+    },
+    closeImportModal() {
+      this.showImportModal = false;
+      this.selectedCertFile = null;
+      this.importPassword = "";
+    },
+    doImportCertificate() {
+      if (!this.importPassword) {
+        // Optionally prompt, but empty password might be valid for some p12?
+        // Usually not. Assuming required as per prompt "prompt for password".
+        // Use toast if empty? Or just let it try.
+      }
+
+      if (!this.selectedCertFile) return;
+
+      const toastId = toast.loading(this.$t("common.loading"));
+
+      const formData = new FormData();
+      formData.append("email", this.currentAccountEmail);
+      formData.append("password", this.importPassword);
+      formData.append("file", this.selectedCertFile);
+
+      api
+        .importCertificate(formData)
+        .then((res) => {
+          if (res.data) {
+            toast.update(toastId, {
+              render: this.$t("certificate.toast.import_success"),
+              type: "success",
+              isLoading: false,
+              autoClose: 3000,
+            });
+            this.closeImportModal();
+            this.fetchCertificates(this.currentAccountEmail);
+          } else {
+            toast.update(toastId, {
+              render: this.$t("certificate.toast.import_failed"),
+              type: "error",
+              isLoading: false,
+              autoClose: 3000,
+            });
+          }
+        })
+        .catch((err) => {
+          toast.update(toastId, {
+            render: err.message || "Import failed",
+            type: "error",
+            isLoading: false,
+            autoClose: 3000,
+          });
+        });
     },
   },
 };

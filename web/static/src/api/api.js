@@ -69,6 +69,17 @@ export default {
       responseType: 'blob', // Important for file download
     });
   },
+  importCertificate: (data) => {
+    return request({
+      url: "/api/certificates/import",
+      method: "post",
+      timeout: 60000,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      data,
+    });
+  },
   mountDeviceImageAsync: (id) => {
     return new Promise((resolve, reject) => {
       request({
@@ -154,12 +165,12 @@ export default {
           "Content-Type": "multipart/form-data",
         },
         data,
-      }) .then((res) => {
+      }).then((res) => {
         resolve(res.data);
       })
-      .catch((err) => {
-        reject(err);
-      });
+        .catch((err) => {
+          reject(err);
+        });
     });
   },
 

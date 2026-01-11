@@ -191,6 +191,32 @@ func route(fi *fiber.App) {
 		return c.Send(content)
 	})
 
+	api.Post("/certificates/import", func(c *fiber.Ctx) error {
+		email := c.FormValue("email")
+		password := c.FormValue("password")
+		file, err := c.FormFile("file")
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("No file uploaded"))
+		}
+
+		// Save to temp file
+		tempDir := os.TempDir()
+		timestamp := time.Now().Unix()
+		fileName := fmt.Sprintf("import_cert_%d_%s", timestamp, file.Filename)
+		tempPath := filepath.Join(tempDir, fileName)
+
+		if err := c.SaveFile(file, tempPath); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Failed to save uploaded file"))
+		}
+		defer os.Remove(tempPath)
+
+		if err := manager.ImportCertificate(email, password, tempPath); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Import failed: " + err.Error()))
+		}
+
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
 	api.Post("/settings/:key", func(c *fiber.Ctx) error {
 		var settings app.SettingsConfiguration
 		if err := c.BodyParser(&settings); err != nil {

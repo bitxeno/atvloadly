@@ -276,7 +276,23 @@
     },
     "certificate": {
         "modal": {
-            "title": "Certificate Management - {{email}}"
+            "title": "Certificate Management - {{email}}",
+            "import_title": "Import Certificate",
+            "export_title": "Export Certificate"
+        },
+        "button": {
+            "import": "Import"
+        },
+        "import": {
+            "file_selected": "Selected File: {{name}}"
+        },
+        "import_form": {
+            "password_label": "Certificate Password",
+            "password_placeholder": "Enter P12 Password"
+        },
+        "export_form": {
+            "password_label": "P12 Password",
+            "password_placeholder": "Enter P12 Password"
         },
         "table": {
             "header": {
@@ -286,7 +302,9 @@
                 "expiration": "Expiration Date"
             },
             "button": {
-                "revoke": "Revoke"
+                "revoke": "Revoke",
+                "export": "Export",
+                "import": "Import"
             }
         },
         "dialog": {
@@ -296,7 +314,10 @@
         },
         "toast": {
             "revoke_success": "Certificate revoked successfully",
-            "revoke_failed": "Failed to revoke certificate"
+            "revoke_failed": "Failed to revoke certificate",
+            "export_success": "Export Successful",
+            "import_success": "Import Successful",
+            "import_failed": "Import Failed"
         },
         "no_certificates": "No certificates found"
     },

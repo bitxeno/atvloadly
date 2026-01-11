@@ -277,7 +277,18 @@
     "certificate": {
         "modal": {
             "title": "证书管理 - {{email}}",
-            "export_title": "导出证书"
+            "export_title": "导出证书",
+            "import_title": "导入证书"
+        },
+        "button": {
+            "import": "导入"
+        },
+        "import": {
+            "file_selected": "已选文件: {{name}}"
+        },
+        "import_form": {
+            "password_label": "证书密码",
+            "password_placeholder": "请输入 P12 密码"
         },
         "export_form": {
             "password_label": "P12 密码",
@@ -292,7 +303,8 @@
             },
             "button": {
                 "revoke": "注销",
-                "export": "导出"
+                "export": "导出",
+                "import": "导入"
             }
         },
         "dialog": {
@@ -303,7 +315,9 @@
         "toast": {
             "revoke_success": "注销成功",
             "revoke_failed": "注销失败",
-            "export_success": "导出成功"
+            "export_success": "导出成功",
+            "import_success": "导入成功",
+            "import_failed": "导入失败"
         },
         "no_certificates": "没有找到证书"
     },
