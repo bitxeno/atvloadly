@@ -256,6 +256,7 @@
             type="checkbox"
             class="toggle toggle-success"
             v-model="settings.task.enabled"
+            @change="onTaskEnabledChange"
           />
         </div>
 
@@ -265,11 +266,18 @@
               $t("settings.refresh.iphone_toggle.label")
             }}</span>
           </label>
+          <div class="flex flex-col grow">
           <input
             type="checkbox"
             class="toggle toggle-success"
             v-model="settings.task.iphone_enabled"
           />
+          <label class="label">
+            <span class="label-text-alt">{{
+              $t("settings.refresh.iphone_toggle.tips")
+            }}</span>
+          </label>
+          </div>
         </div>
 
         <div class="form-item !hidden">
@@ -312,12 +320,27 @@
             }}</span>
           </label>
           <div class="flex flex-col grow">
-            <input
-              v-model="settings.task.crod_time"
-              type="text"
-              placeholder=""
-              class="input input-bordered"
-            />
+            <div class="flex flex-row items-center gap-2">
+              <select
+                v-model="startHour"
+                class="select select-bordered w-full"
+                @change="updateCronTime"
+              >
+                <option v-for="h in 24" :key="h" :value="h - 1">
+                  {{ (h - 1).toString().padStart(2, "0") }}:00
+                </option>
+              </select>
+              <span>-</span>
+              <select
+                v-model="endHour"
+                class="select select-bordered w-full"
+                @change="updateCronTime"
+              >
+                <option v-for="h in 24" :key="h" :value="h - 1">
+                  {{ (h - 1).toString().padStart(2, "0") }}:00
+                </option>
+              </select>
+            </div>
             <label class="label">
               <span class="label-text-alt">{{
                 $t("settings.refresh.run_time.format_tips")
@@ -397,6 +420,8 @@ export default {
   name: "Home",
   data() {
     return {
+      startHour: 0,
+      endHour: 23,
       settings: {
         task: {},
         notification: {
@@ -423,6 +448,7 @@ export default {
       let _this = this;
       api.getSettings().then((res) => {
         _this.settings = res.data;
+        _this.parseCronTime();
       });
     },
 
@@ -464,6 +490,68 @@ export default {
           toast.success(this.$t("settings.toast.save_success"));
         }
       });
+    },
+
+    parseCronTime() {
+      if (!this.settings.task.crod_time) return;
+      try {
+        const parts = this.settings.task.crod_time.split(" ");
+        if (parts.length < 2) return;
+        const hour = parts[1];
+        if (hour.includes(",")) {
+          // 22-23,0-2 or 22,23,0,1,2
+          const hours = hour.split(",");
+          let firstPart = hours[0];
+          let lastPart = hours[hours.length - 1];
+
+          if (firstPart.includes("-")) {
+            this.startHour = parseInt(firstPart.split("-")[0]);
+          } else {
+            this.startHour = parseInt(firstPart);
+          }
+
+          if (lastPart.includes("-")) {
+            this.endHour = parseInt(lastPart.split("-")[1]);
+          } else {
+            this.endHour = parseInt(lastPart);
+          }
+        } else if (hour.includes("-")) {
+          const [start, end] = hour.split("-");
+          this.startHour = parseInt(start);
+          this.endHour = parseInt(end);
+        } else if (hour !== "*") {
+          this.startHour = parseInt(hour);
+          this.endHour = parseInt(hour);
+        } else {
+          // * or invalid
+          this.startHour = 0;
+          this.endHour = 23; 
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    },
+
+    onTaskEnabledChange() {
+      if (!this.settings.task.enabled) {
+        this.settings.task.iphone_enabled = false;
+      }
+    },
+
+    updateCronTime() {
+        let h = "";
+        const start = parseInt(this.startHour);
+        const end = parseInt(this.endHour);
+
+        if (start === end) {
+            h = `${start}`;
+        } else if (start < end) {
+            h = `${start}-${end}`;
+        } else {
+            // Cross-day time range (e.g., 22:00 to 02:00)
+            h = `${start}-23,0-${end}`;
+        }
+        this.settings.task.crod_time = `0,30 ${h} * * *`;
     },
   },
 };

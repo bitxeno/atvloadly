@@ -207,7 +207,8 @@
                 "label": "启用"
             },
             "iphone_toggle": {
-                "label": "iPhone 自动刷新"
+                "label": "iPhone 自动刷新",
+                "tips": "iPhone 刷新不受运行时间段限制，当 iPhone 连接 wifi 就会尝试刷新"
             },
             "mode": {
                 "label": "刷新模式",

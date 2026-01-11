@@ -207,7 +207,8 @@
                 "label": "Enable"
             },
             "iphone_toggle": {
-                "label": "iPhone Auto Refresh"
+                "label": "iPhone Auto Refresh",
+                "tips": "iPhone refresh isn't restricted by the configured running time; it will attempt to refresh when the iPhone is connected to WiFi"
             },
             "mode": {
                 "label": "Refresh Mode",
