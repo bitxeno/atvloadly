@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -126,6 +127,27 @@ func GetCertificates(email string) ([]model.Certificate, error) {
 
 func RevokeCertificate(email string, serialNumber string) error {
 	return certificateManager.RevokeCertificate(email, serialNumber)
+}
+
+func ExportCertificate(email, password string) ([]byte, error) {
+	tempDir := os.TempDir()
+	fileName := fmt.Sprintf("cert_%d.p12", time.Now().Unix())
+	tempFile := filepath.Join(tempDir, fileName)
+
+	if _, err := certificateManager.ExportCertificate(email, password, tempFile); err != nil {
+		return nil, err
+	}
+
+	if _, err := os.Stat(tempFile); os.IsNotExist(err) {
+		return nil, errors.New("certificate file not generated")
+	}
+
+	content, err := os.ReadFile(tempFile)
+	if err != nil {
+		return nil, errors.New("failed to read generated file")
+	}
+	_ = os.Remove(tempFile)
+	return content, nil
 }
 
 func GetRunEnvs() []string {

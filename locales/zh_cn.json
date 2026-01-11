@@ -1,5 +1,11 @@
 {
     "language": "zh_cn",
+    "common": {
+        "loading": "加载中...",
+        "button": {
+            "close": "关闭"
+        }
+    },
     "notify": {
         "title": "[{{.name}}]刷新任务执行失败",
         "content": "帐号：{{.account}}\n错误日志：{{.error}}",
@@ -241,11 +247,6 @@
             }
         }
     },
-    "common": {
-        "button": {
-            "close": "关闭"
-        }
-    },
     "account": {
         "select_account": "选择帐号",
         "select_placeholder": "请选择一个帐号",
@@ -275,7 +276,12 @@
     },
     "certificate": {
         "modal": {
-            "title": "证书管理 - {{email}}"
+            "title": "证书管理 - {{email}}",
+            "export_title": "导出证书"
+        },
+        "export_form": {
+            "password_label": "P12 密码",
+            "password_placeholder": "请输入 P12 文件保护密码"
         },
         "table": {
             "header": {
@@ -285,7 +291,8 @@
                 "expiration": "过期时间"
             },
             "button": {
-                "revoke": "注销"
+                "revoke": "注销",
+                "export": "导出"
             }
         },
         "dialog": {
@@ -295,7 +302,8 @@
         },
         "toast": {
             "revoke_success": "注销成功",
-            "revoke_failed": "注销失败"
+            "revoke_failed": "注销失败",
+            "export_success": "导出成功"
         },
         "no_certificates": "没有找到证书"
     },

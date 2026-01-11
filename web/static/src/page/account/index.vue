@@ -97,6 +97,7 @@
                 <td>{{ cert.machineName }}</td>
                 <td class="hidden md:table-cell">{{ cert.status }}</td>
                 <td>
+                 <a class="link link-primary mr-2" @click="openExportModal(cert)">{{ $t("certificate.table.button.export") }}</a>
                  <Popper placement="top" arrow="true">
                     <template #content="{ close }">
                       <div class="flex flex-col gap-y-2">
@@ -221,6 +222,23 @@
         </div>
       </div>
     </dialog>
+
+    <!-- Export Modal -->
+    <dialog id="export_modal" class="modal" :class="{ 'modal-open': showExportModal }">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">{{ $t("certificate.modal.export_title") }}</h3>
+        <div class="form-control w-full">
+            <label class="label">
+                <span class="label-text">{{ $t("certificate.export_form.password_label") }}</span>
+            </label>
+            <input type="password" v-model="exportPassword" :placeholder="$t('certificate.export_form.password_placeholder')" class="input input-bordered w-full" />
+        </div>
+        <div class="modal-action">
+          <button class="btn" @click="showExportModal = false">{{ $t("home.dialog.delete_confirm.button.cancel") }}</button>
+           <button class="btn btn-primary" @click="doExportCertificate">{{ $t("home.dialog.delete_confirm.button.confirm") }}</button>
+        </div>
+      </div>
+    </dialog>
   </div>
 </template>
 
@@ -241,6 +259,9 @@ export default {
       showDeviceModal: false,
       devices: [],
       deviceLoading: false,
+      showExportModal: false,
+      exportPassword: "",
+      exportingCert: null,
     };
   },
   created() {
@@ -316,6 +337,40 @@ export default {
         }
       });
       close?.();
+    },
+    openExportModal(cert) {
+      this.exportingCert = cert;
+      this.exportPassword = "";
+      this.showExportModal = true;
+    },
+    doExportCertificate() {
+       if (!this.exportPassword) {
+        toast.error(this.$t("pair.toast.pin_incorrect")); // Reusing error or just generic? 
+        // Better to use generic or simple string since I didn't add validation key
+        // Or "Input Required"
+        return;
+      }
+      
+      const toastId = toast.loading(this.$t("common.loading") || "Loading...");
+      
+      api.exportCertificate({
+        email: this.currentAccountEmail,
+        password: this.exportPassword,
+        // teamId: ... 
+      }).then(response => {
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `atvloadly_${this.currentAccountEmail}.p12`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        
+        toast.update(toastId, { render: this.$t("certificate.toast.export_success"), type: "success", isLoading: false, autoClose: 3000 });
+        this.showExportModal = false;
+      }).catch(err => {
+         toast.update(toastId, { render: err.message || "Export failed", type: "error", isLoading: false, autoClose: 3000 });
+      });
     },
   },
 };

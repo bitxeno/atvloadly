@@ -1,5 +1,11 @@
 {
     "language": "en",
+    "common": {
+        "loading": "Loading...",
+        "button": {
+            "close": "Close"
+        }
+    },
     "notify": {
         "title": "[{{.name}}] Refresh task execution failed.",
         "content": "Account: {{.account}}\nError log: {{.error}}",
@@ -239,11 +245,6 @@
             "button": {
                 "submit": "Save"
             }
-        }
-    },
-    "common": {
-        "button": {
-            "close": "Close"
         }
     },
     "account": {

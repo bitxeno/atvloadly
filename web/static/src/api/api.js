@@ -60,6 +60,15 @@ export default {
       data,
     });
   },
+  exportCertificate: (data) => {
+    return request({
+      url: "/api/certificates/export",
+      method: "post",
+      timeout: 60000,
+      data,
+      responseType: 'blob', // Important for file download
+    });
+  },
   mountDeviceImageAsync: (id) => {
     return new Promise((resolve, reject) => {
       request({

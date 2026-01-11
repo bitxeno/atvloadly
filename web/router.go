@@ -171,6 +171,26 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))
 	})
 
+	api.Post("/certificates/export", func(c *fiber.Ctx) error {
+		var req struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+			TeamID   string `json:"teamId"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument"))
+		}
+
+		content, err := manager.ExportCertificate(req.Email, req.Password)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Export failed: " + err.Error()))
+		}
+
+		c.Set("Content-Disposition", "attachment; filename=atvloadly.p12")
+		c.Set("Content-Type", "application/x-pkcs12")
+		return c.Send(content)
+	})
+
 	api.Post("/settings/:key", func(c *fiber.Ctx) error {
 		var settings app.SettingsConfiguration
 		if err := c.BodyParser(&settings); err != nil {
