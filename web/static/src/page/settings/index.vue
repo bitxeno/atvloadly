@@ -341,11 +341,6 @@
                 </option>
               </select>
             </div>
-            <label class="label">
-              <span class="label-text-alt">{{
-                $t("settings.refresh.run_time.format_tips")
-              }}</span>
-            </label>
           </div>
         </div>
 
