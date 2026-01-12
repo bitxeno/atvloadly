@@ -93,14 +93,14 @@ func (dm *DeviceManager) GetDeviceByUDID(udid string) (*model.Device, bool) {
 	return nil, false
 }
 
-func (dm *DeviceManager) AppendProductInfo(dev *model.Device) {
-	output, err := ExecuteCommand("ideviceinfo", "-u", dev.UDID, "-n")
+func (dm *DeviceManager) GetDeviceInfo(udid string) (*model.DeviceInfo, error) {
+	output, err := ExecuteCommand("ideviceinfo", "-u", udid, "-n")
 	if err != nil {
-		log.Err(err).Msgf("Error execute ideviceinfo: %s", dev.UDID)
-		return
+		return nil, err
 	}
 	lines := strings.Split(string(output), "\n")
 
+	dev := &model.DeviceInfo{UniqueDeviceID: udid}
 	for _, line := range lines {
 		var parts = strings.Split(line, ":")
 		if len(parts) != 2 {
@@ -109,6 +109,10 @@ func (dm *DeviceManager) AppendProductInfo(dev *model.Device) {
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
 		switch key {
+		case "UniqueDeviceID":
+			dev.UniqueDeviceID = value
+		case "ProductName":
+			dev.ProductName = value
 		case "ProductType":
 			dev.ProductType = value
 		case "ProductVersion":
@@ -116,9 +120,43 @@ func (dm *DeviceManager) AppendProductInfo(dev *model.Device) {
 		case "DeviceClass":
 			dev.DeviceClass = value
 		case "DeviceName":
-			dev.Name = value
+			dev.DeviceName = value
+		case "WiFiAddress":
+			dev.WiFiAddress = value
+		case "SerialNumber":
+			dev.SerialNumber = value
 		}
 	}
+	return dev, nil
+}
+
+func (dm *DeviceManager) AppendProductInfo(dev *model.Device, devInfo model.DeviceInfo) {
+	if dev.Name != devInfo.DeviceName || dev.ProductVersion != devInfo.ProductVersion || dev.DeviceClass != devInfo.DeviceClass {
+		dev.ProductType = devInfo.ProductType
+		dev.ProductVersion = devInfo.ProductVersion
+		dev.DeviceClass = devInfo.DeviceClass
+		dev.Name = devInfo.DeviceName
+
+		dm.SaveDevice(*dev)
+	}
+}
+
+func (dm *DeviceManager) SaveDevice(dev model.Device) {
+	dm.devices.Store(dev.UDID, dev)
+}
+
+func (dm *DeviceManager) DeleteDevice(udid string) {
+	dm.devices.Delete(udid)
+}
+
+func (dm *DeviceManager) DeleteDeviceByMacAddr(macAddr string) {
+	dm.devices.Range(func(k, v any) bool {
+		if v.(model.Device).MacAddr == macAddr {
+			dm.devices.Delete(k)
+			return false
+		}
+		return true
+	})
 }
 
 func (dm *DeviceManager) ReloadDevices() {

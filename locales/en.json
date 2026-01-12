@@ -162,7 +162,8 @@
             "title": "Login Apple Account",
             "button": {
                 "close": "Close",
-                "login": "Login"
+                "login": "Login",
+                "add_account": "Add Account"
             }
         }
     },
@@ -350,8 +351,9 @@
             "step5": "Automatic refresh on iPhone is not guaranteed to be reliable; the iPhone must be unlocked for remote refresh to work properly."
         },
         "form": {
-            "device_label": "Select Device",
+            "device_label": "Select Corresponding Device",
             "device_placeholder": "Please select a device",
+            "device_unlock": "The iPhone must be unlocked to be discovered",
             "refresh": "Refresh",
             "refresh_devices": "Refresh device list",
             "upload_label": "Upload Pair File",

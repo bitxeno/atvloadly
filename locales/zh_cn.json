@@ -162,7 +162,8 @@
             "title": "登录 Apple 帐号",
             "button": {
                 "close": "关闭",
-                "login": "登录"
+                "login": "登录",
+                "add_account": "添加帐号"
             }
         }
     },
@@ -350,8 +351,9 @@
             "step5": "iPhone 自动刷新不保证稳定性，iPhone 需要解锁后才能正常远程刷新。"
         },
         "form": {
-            "device_label": "选择设备",
+            "device_label": "选择对应设备",
             "device_placeholder": "请选择一个设备",
+            "device_unlock": "iPhone 需要先解锁屏幕，才能被发现",
             "refresh": "刷新",
             "refresh_devices": "刷新设备列表",
             "upload_label": "上传 Pair 文件",

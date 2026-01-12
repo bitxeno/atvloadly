@@ -123,7 +123,7 @@ func (dm *DeviceManager) Start() {
 					}
 					device.ParseDeviceClass()
 
-					dm.devices.Store(udid, device)
+					dm.SaveDevice(device)
 
 					// Trigger device connection callback
 					dm.onDeviceConnected(device)
@@ -132,13 +132,7 @@ func (dm *DeviceManager) Start() {
 		case service = <-sb.RemoveChannel:
 			log.Tracef("ServiceBrowser REMOVE: %v", service)
 			macAddr := strings.Split(service.Name, "@")[0]
-			dm.devices.Range(func(k, v any) bool {
-				if v.(model.Device).MacAddr == macAddr {
-					dm.devices.Delete(k)
-					return false
-				}
-				return true
-			})
+			dm.DeleteDeviceByMacAddr(macAddr)
 		case service = <-sbPairable.AddChannel:
 			log.Tracef("ServiceBrowser ADD: %v", service)
 
@@ -161,7 +155,7 @@ func (dm *DeviceManager) Start() {
 					Status:      model.Pairable,
 				}
 				device.ParseDeviceClass()
-				dm.devices.Store(udid, device)
+				dm.SaveDevice(device)
 
 			}
 
@@ -169,7 +163,7 @@ func (dm *DeviceManager) Start() {
 			log.Tracef("ServiceBrowser REMOVE: %v", service)
 			macAddr := strings.Split(service.Name, "@")[0]
 			udid := fmt.Sprintf("fff%sfff", macAddr)
-			dm.devices.Delete(udid)
+			dm.DeleteDevice(udid)
 		}
 	}
 }

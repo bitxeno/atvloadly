@@ -69,9 +69,8 @@ func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipa
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	t.cancel = cancel
 
-	_, found := GetDeviceByUDID(udid)
-	if !found {
-		return fmt.Errorf("device not found. udid: %s", udid)
+	if _, err := GetDeviceInfo(udid); err != nil {
+		return fmt.Errorf("device can't connect. udid: %s", udid)
 	}
 
 	provisionPath := t.GetMobileProvisionPath()

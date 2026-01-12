@@ -56,6 +56,9 @@
                 </div>
               </button>
             </div>
+            <label class="label">
+              <span class="label-text-alt">{{ $t("laboratory.form.device_unlock") }}</span>
+            </label>
           </div>
 
         </form>

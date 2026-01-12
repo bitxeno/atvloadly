@@ -36,7 +36,9 @@ func GetDevices() ([]model.Device, error) {
 func GetDeviceByID(id string) (*model.Device, bool) {
 	device, found := deviceManager.GetDeviceByID(id)
 	if found {
-		deviceManager.AppendProductInfo(device)
+		if devInfo, err := GetDeviceInfo(device.UDID); err == nil {
+			deviceManager.AppendProductInfo(device, *devInfo)
+		}
 	}
 	return device, found
 }
@@ -44,9 +46,15 @@ func GetDeviceByID(id string) (*model.Device, bool) {
 func GetDeviceByUDID(udid string) (*model.Device, bool) {
 	device, found := deviceManager.GetDeviceByUDID(udid)
 	if found {
-		deviceManager.AppendProductInfo(device)
+		if devInfo, err := GetDeviceInfo(device.UDID); err == nil {
+			deviceManager.AppendProductInfo(device, *devInfo)
+		}
 	}
 	return device, found
+}
+
+func GetDeviceInfo(udid string) (*model.DeviceInfo, error) {
+	return deviceManager.GetDeviceInfo(udid)
 }
 
 func GetDeviceMountImageInfo(udid string) (*model.UsbmuxdImage, error) {

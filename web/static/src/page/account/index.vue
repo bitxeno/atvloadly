@@ -3,7 +3,7 @@
     <div class="flex justify-between items-center mb-4 px-1">
       <button class="btn btn-soft btn-sm" @click="showLoginDialog">
         <PersonIcon class="w-4 h-4 mr-1" />
-        {{ $t("install.login_modal.button.login") }}
+        {{ $t("install.login_modal.button.add_account") }}
       </button>
     </div>
     <div>
