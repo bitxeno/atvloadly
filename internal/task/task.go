@@ -100,6 +100,9 @@ func (t *Task) Run() {
 }
 
 func (t *Task) runQueue() {
+	// Wait for one minute before install at startup to avoid the usbmuxd service not being ready.
+	time.Sleep(time.Minute)
+
 	for {
 		select {
 		case v := <-t.InstallAppQueue:

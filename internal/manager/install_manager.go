@@ -54,7 +54,8 @@ func (t *InstallManager) TryStart(ctx context.Context, udid, account, password, 
 		log.Infof("Try restarting usbmuxd to fix afc connect issue. %s", ipaName)
 		if err = RestartUsbmuxd(); err == nil {
 			log.Infof("Restart usbmuxd complete, try install ipa again. %s", ipaName)
-			time.Sleep(5 * time.Second)
+			// iPhone reconnect wait take one minute
+			time.Sleep(time.Minute)
 			err = t.Start(ctx, udid, account, password, ipaPath)
 		}
 	}
@@ -133,7 +134,7 @@ func (t *InstallManager) checkDeviceConnected(udid string) error {
 			return err
 		}
 
-		waitTime := time.Duration(try * 10)
+		waitTime := time.Duration(try * 20)
 		time.Sleep(waitTime * time.Second)
 	}
 }
