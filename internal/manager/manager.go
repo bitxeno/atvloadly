@@ -91,6 +91,10 @@ func RestartUsbmuxd() error {
 
 func ExecuteCommand(name string, args ...string) ([]byte, error) {
 	timeout := 10 * time.Minute
+	return ExecuteCommandTimeout(timeout, name, args...)
+}
+
+func ExecuteCommandTimeout(timeout time.Duration, name string, args ...string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, name, args...)

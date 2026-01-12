@@ -94,7 +94,8 @@ func (dm *DeviceManager) GetDeviceByUDID(udid string) (*model.Device, bool) {
 }
 
 func (dm *DeviceManager) GetDeviceInfo(udid string) (*model.DeviceInfo, error) {
-	output, err := ExecuteCommand("ideviceinfo", "-u", udid, "-n")
+	timeout := 5 * time.Second
+	output, err := ExecuteCommandTimeout(timeout, "ideviceinfo", "-u", udid, "-n")
 	if err != nil {
 		return nil, err
 	}
