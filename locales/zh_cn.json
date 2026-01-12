@@ -73,7 +73,9 @@
             },
             "expired_time_format": {
                 "expired_tips": "已过期",
-                "days": "{{num}} 天后"
+                "days": "{{num}} 天后",
+                "hours": "{{num}} 小时后",
+                "less_than_hour": "即将"
             },
             "refresh_date_format": {
                 "installing_tips": "安装中...",

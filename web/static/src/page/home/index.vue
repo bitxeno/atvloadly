@@ -385,17 +385,34 @@ export default {
       let time = item.refreshed_date || item.installed_date;
       if (!time) return "-";
 
-      let expired_date = dayjs(time).add(7, "day")
+      let expired_date = dayjs(time).add(7, "day");
       if (item.expiration_date) {
         expired_date = dayjs(item.expiration_date);
       }
-      let diff = expired_date.diff(dayjs(), "day");
-      if (diff < 0)
-        return this.$t("home.table.expired_time_format.expired_tips");
 
-      return this.$t("home.table.expired_time_format.days", {
-        num: diff,
-      });
+      // If it has already expired
+      if (expired_date.diff(dayjs()) <= 0) {
+        return this.$t("home.table.expired_time_format.expired_tips");
+      }
+
+      // Display by day priority, show days for durations of 1 day or more
+      let days = expired_date.diff(dayjs(), "day");
+      if (days >= 1) {
+        return this.$t("home.table.expired_time_format.days", {
+          num: days,
+        });
+      }
+
+      // Display hours when less than 1 day
+      let hours = expired_date.diff(dayjs(), "hour");
+      if (hours >= 1) {
+        return this.$t("home.table.expired_time_format.hours", {
+          num: hours,
+        });
+      }
+
+      // Less than 1 hour
+      return this.$t("home.table.expired_time_format.less_than_hour");
     },
     formatStatus(status) {
       if (status == "paired") {

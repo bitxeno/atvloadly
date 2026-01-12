@@ -73,7 +73,9 @@
             },
             "expired_time_format": {
                 "expired_tips": "Expired",
-                "days": "{{num}} DAYS"
+                "days": "{{num}} DAYS",
+                "hours": "{{num}} HOURS",
+                "less_than_hour": "Soon"
             },
             "refresh_date_format": {
                 "installing_tips": "Installing...",
