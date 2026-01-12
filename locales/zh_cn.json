@@ -27,6 +27,7 @@
     "donate": {
         "title": "赞助",
         "desc": "如果您觉得本项目对您有帮助，请考虑赞助支持开发。您的支持是项目持续发展的动力！",
+        "github_sponsor": "在 GitHub Sponsors 上支持",
         "kofi": "在 Ko-fi 上支持",
         "afdian": "在爱发电上支持",
         "close": "关闭"

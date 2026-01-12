@@ -110,8 +110,12 @@
           {{ $t("donate.desc") }}
         </p>
         <div class="flex flex-col gap-3 w-full mt-2">
+           <a href="https://github.com/sponsors/bitxeno" target="_blank" class="btn border-none w-full normal-case text-lg gap-2 text-white hover:opacity-90" style="background-color: #ea4aaa;">
+             <GithubIcon class="w-6 h-6" />
+             {{ $t("donate.github_sponsor") }}
+           </a>
            <a href="https://ko-fi.com/bitxeno" target="_blank" class="btn border-none w-full normal-case text-lg gap-2 text-white hover:opacity-90" style="background-color: #29abe0;">
-             <img src="https://storage.ko-fi.com/cdn/cup-border.png" class="w-6 h-6" alt="Ko-fi"/>
+             <KofiIcon class="w-6 h-6" />
              {{ $t("donate.kofi") }}
            </a>
            <a href="https://afdian.com/a/bitxeno" target="_blank" class="btn border-none w-full normal-case text-lg gap-2 text-white hover:opacity-90" style="background-color: #946ce6;">
@@ -162,6 +166,7 @@ import AccountIcon from "@/assets/icons/person.svg";
 import OptionIcon from "@/assets/icons/slider.svg";
 import LikeIcon from "@/assets/icons/like.svg";
 import AfdianIcon from "@/assets/icons/afdian.svg";
+import KofiIcon from "@/assets/icons/kofi.svg";
 import ToolsIcon from "@/assets/icons/tools.svg";
 import FlaskIcon from "@/assets/icons/flask.svg";
 </script>
