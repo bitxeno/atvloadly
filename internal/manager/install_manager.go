@@ -71,7 +71,7 @@ func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipa
 	t.cancel = cancel
 
 	if err := t.checkDeviceConnected(udid); err != nil {
-		return fmt.Errorf("device can't connect. %s", err.Error())
+		return err
 	}
 
 	provisionPath := t.GetMobileProvisionPath()
@@ -131,6 +131,7 @@ func (t *InstallManager) checkDeviceConnected(udid string) error {
 
 		try++
 		if try >= 3 {
+			log.Warnf("Can't connect device after 3 times retry. %s", err.Error())
 			return err
 		}
 

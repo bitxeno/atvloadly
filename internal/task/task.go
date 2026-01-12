@@ -143,6 +143,8 @@ func (t *Task) StartInstallApp(v model.InstalledApp) {
 			t.InstallingApps.Delete(v.ID)
 			log.Warnf("The install queue is full, skip task: %s", v.IpaName)
 		}
+	} else {
+		log.Infof("The app is already in the install queue, skip task: %s", v.IpaName)
 	}
 }
 
