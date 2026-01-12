@@ -65,14 +65,14 @@ func (t *InstallManager) TryStart(ctx context.Context, udid, account, password, 
 func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipaPath string) error {
 	t.outputStdout.Reset()
 
+	if err := t.checkDeviceConnected(udid); err != nil {
+		return err
+	}
+
 	// set execute timeout 30 miniutes
 	timeout := 30 * time.Minute
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	t.cancel = cancel
-
-	if err := t.checkDeviceConnected(udid); err != nil {
-		return err
-	}
 
 	provisionPath := t.GetMobileProvisionPath()
 	defer func() {
@@ -119,25 +119,10 @@ func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipa
 }
 
 func (t *InstallManager) checkDeviceConnected(udid string) error {
-	// When the iPhone is discovered by the network
-	// usbmuxd may not have established the connection to iPhone yet;
-	// try detecting multiple times.
-	try := 0
-	for {
-		_, err := GetDeviceInfo(udid)
-		if err == nil {
-			return nil
-		}
-
-		try++
-		if try >= 3 {
-			log.Warnf("Can't connect device after 3 times retry. %s", err.Error())
-			return err
-		}
-
-		waitTime := time.Duration(try * 20)
-		time.Sleep(waitTime * time.Second)
+	if _, err := GetDeviceInfo(udid); err != nil {
+		return err
 	}
+	return nil
 }
 
 func (t *InstallManager) GetMobileProvisionPath() string {

@@ -25,6 +25,8 @@ type Task struct {
 	InstallAppQueue chan model.InstalledApp
 	chExitQueue     chan bool
 	InvalidAccounts map[string]bool
+	// RefreshingDevices prevents concurrent refresh operations for the same device UDID
+	RefreshingDevices sync.Map
 }
 
 func new() *Task {
@@ -236,10 +238,33 @@ func (t *Task) refreshDeviceApps(device model.Device) error {
 		return nil
 	}
 
-	log.Infof("Start refresh apps for device: %s (found %d apps, %d need refresh)...", device.Name, len(deviceApps), len(appsNeedRefresh))
-	for _, v := range appsNeedRefresh {
-		t.StartInstallApp(v)
+	// Prevent concurrent refresh for the same device UDID
+	if _, loaded := t.RefreshingDevices.LoadOrStore(device.UDID, true); loaded {
+		log.Infof("Device refresh already in progress, skip: %s (UDID: %s)", device.Name, device.UDID)
+		return nil
 	}
+
+	go func(udid, name string, apps []model.InstalledApp) {
+		// Ensure we clear the refreshing flag when finished
+		defer t.RefreshingDevices.Delete(udid)
+
+		// The iPhone may connect and disconnect instantly (for example, briefly lighting up the screen when receiving a message).
+		// Check twice to ensure the device is online truly.
+		time.Sleep(10 * time.Second)
+		if _, err := manager.GetDeviceInfo(udid); err != nil {
+			return
+		}
+
+		time.Sleep(20 * time.Second)
+		if _, err := manager.GetDeviceInfo(udid); err != nil {
+			return
+		}
+
+		log.Infof("Start refresh apps for device: %s (found %d apps, %d need refresh)...", name, len(deviceApps), len(apps))
+		for _, v := range apps {
+			t.StartInstallApp(v)
+		}
+	}(device.UDID, device.Name, appsNeedRefresh)
 	return nil
 }
 
