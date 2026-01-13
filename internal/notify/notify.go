@@ -22,10 +22,6 @@ func Send(title string, message string) error {
 }
 
 func SendWithConfig(title string, message string, settings app.SettingsConfiguration) error {
-	if !settings.Notification.Enabled {
-		return errors.New("未启用")
-	}
-
 	no := notify.New()
 	switch settings.Notification.Type {
 	case "bark":

@@ -11,7 +11,8 @@
       <div class="lg:flex lg:flex-row">
         <div class="flex flex-col justify-center place-items-center gap-y-4">
           <div class="w-32 rounded">
-            <AppleTVIcon />
+            <IPhoneIcon v-if="isIPhone(device)" />
+            <AppleTVIcon v-else />
           </div>
           <div class="flex flex-col gap-y-2 items-center justify-center">
             <span>{{ device.name }}</span>
@@ -486,12 +487,19 @@ export default {
         _this.refreshLogInterval = null;
       }
     },
+    isIPhone(item) {
+      if (item.device_class) {
+        return item.device_class.toLowerCase() == "iphone" || item.device_class.toLowerCase() == "ipad";
+      }
+      return item.name && (item.name.toLowerCase().includes("iphone") || item.name.toLowerCase().includes("ipad"));
+    },
   },
 };
 </script>
 
 <script setup>
 import AppleTVIcon from "@/assets/icons/appletv.svg";
+import IPhoneIcon from "@/assets/icons/iphone.svg";
 import WarningIcon from "@/assets/icons/warning.svg";
 import PersonIcon from "@/assets/icons/person.badge.plus.svg";
 </script>

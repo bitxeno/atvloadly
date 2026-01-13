@@ -22,16 +22,21 @@ var instance = new()
 type Task struct {
 	c               *cron.Cron
 	InstallingApps  sync.Map
-	InstallAppQueue chan model.InstalledApp
+	InstallAppQueue chan TaskItem
 	chExitQueue     chan bool
 	InvalidAccounts map[string]bool
 	// RefreshingDevices prevents concurrent refresh operations for the same device UDID
 	RefreshingDevices sync.Map
 }
 
+type TaskItem struct {
+	App    model.InstalledApp
+	Notify bool
+}
+
 func new() *Task {
 	return &Task{
-		InstallAppQueue: make(chan model.InstalledApp, 100),
+		InstallAppQueue: make(chan TaskItem, 100),
 		chExitQueue:     make(chan bool, 1),
 	}
 }
@@ -85,17 +90,27 @@ func (t *Task) Run() {
 		return
 	}
 
-	log.Info("Start executing installation task...")
+	appsNeedRefresh := make([]model.InstalledApp, 0)
 	for _, v := range installedApps {
 		// iPhone cannot refresh on a schedule and relies on whether the phone is unlocked
 		// iPhone will triggering refresh through avahi events.
 		if v.IsIPhoneApp() {
 			continue
 		}
-		if !t.checkNeedRefresh(v) {
+		if !v.NeedRefresh() {
 			continue
 		}
 
+		appsNeedRefresh = append(appsNeedRefresh, v)
+	}
+
+	if len(appsNeedRefresh) == 0 {
+		log.Info("No apps need to be refreshed.")
+		return
+	}
+
+	log.Infof("Start executing installation task (%d need refresh)...", len(appsNeedRefresh))
+	for _, v := range appsNeedRefresh {
 		t.StartInstallApp(v)
 	}
 	log.Info("Installation task completed.")
@@ -109,7 +124,7 @@ func (t *Task) runQueue() {
 		select {
 		case v := <-t.InstallAppQueue:
 			t.tryInstallApp(v)
-			t.InstallingApps.Delete(v.ID)
+			t.InstallingApps.Delete(v.App.ID)
 
 			// Next execution delayed by 10 seconds.
 			time.Sleep(10 * time.Second)
@@ -120,37 +135,23 @@ func (t *Task) runQueue() {
 	}
 }
 
-func (t *Task) checkNeedRefresh(v model.InstalledApp) bool {
-	now := time.Now()
-
-	// fix RefreshedDate is nil
-	if v.RefreshedDate == nil {
-		return true
-	}
-
-	// fix ExpirationDate is nil
-	if v.ExpirationDate == nil {
-		expireTime := v.RefreshedDate.AddDate(0, 0, 7)
-		v.ExpirationDate = &expireTime
-	}
-
-	return v.ExpirationDate.AddDate(0, 0, -1).Before(now)
+func (t *Task) StartInstallApp(v model.InstalledApp) {
+	t.startInstallAppInternal(v, true)
 }
 
-func (t *Task) StartInstallApp(v model.InstalledApp) {
+func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool) {
 	if _, loaded := t.InstallingApps.LoadOrStore(v.ID, v); !loaded {
 		select {
-		case t.InstallAppQueue <- v:
+		case t.InstallAppQueue <- TaskItem{App: v, Notify: notify}:
 		default:
 			t.InstallingApps.Delete(v.ID)
 			log.Warnf("The install queue is full, skip task: %s", v.IpaName)
 		}
-	} else {
-		log.Infof("The app is already in the install queue, skip task: %s", v.IpaName)
 	}
 }
 
-func (t *Task) tryInstallApp(v model.InstalledApp) {
+func (t *Task) tryInstallApp(item TaskItem) {
+	v := item.App
 	log.Infof("Start installing ipa: %s", v.IpaName)
 	provisioningProfile, err := t.runInternal(v)
 
@@ -170,10 +171,12 @@ func (t *Task) tryInstallApp(v model.InstalledApp) {
 		_ = service.UpdateAppRefreshResult(v)
 
 		// Send installation failure notification
-		title := i18n.LocalizeF("notify.title", map[string]any{"name": v.IpaName})
-		message := i18n.LocalizeF("notify.content", map[string]any{"account": v.Account, "error": err.Error()})
-		_ = notify.Send(title, message)
-		log.Infof("Installing ipa failed: %s error: %s", v.IpaName, err.Error())
+		if item.Notify && app.Settings.Notification.Enabled {
+			title := i18n.LocalizeF("notify.title", map[string]any{"name": v.IpaName})
+			message := i18n.LocalizeF("notify.content", map[string]any{"account": v.Account, "error": err.Error()})
+			_ = notify.Send(title, message)
+			log.Infof("Installing ipa failed: %s error: %s", v.IpaName, err.Error())
+		}
 	}
 }
 
@@ -214,6 +217,7 @@ func (t *Task) runInternal(v model.InstalledApp) (*model.MobileProvisioningProfi
 	}
 }
 
+// refreshes apps when device is discovery on network, for iPhone only.
 func (t *Task) refreshDeviceApps(device model.Device) error {
 	if !device.IsIPhone() {
 		return nil
@@ -229,7 +233,7 @@ func (t *Task) refreshDeviceApps(device model.Device) error {
 
 	appsNeedRefresh := make([]model.InstalledApp, 0)
 	for _, v := range deviceApps {
-		if t.checkNeedRefresh(v) {
+		if v.NeedRefresh() {
 			appsNeedRefresh = append(appsNeedRefresh, v)
 		}
 	}
@@ -249,20 +253,15 @@ func (t *Task) refreshDeviceApps(device model.Device) error {
 		defer t.RefreshingDevices.Delete(udid)
 
 		// The iPhone may connect and disconnect instantly (for example, briefly lighting up the screen when receiving a message).
-		// Check twice to ensure the device is online truly.
-		time.Sleep(10 * time.Second)
-		if _, err := manager.GetDeviceInfo(udid); err != nil {
-			return
-		}
-
-		time.Sleep(20 * time.Second)
-		if _, err := manager.GetDeviceInfo(udid); err != nil {
+		// Check to ensure the device can connect truly.
+		time.Sleep(30 * time.Second)
+		if err := manager.CheckAfcServiceStatus(udid); err != nil {
 			return
 		}
 
 		log.Infof("Start refresh apps for device: %s (found %d apps, %d need refresh)...", name, len(deviceApps), len(apps))
 		for _, v := range apps {
-			t.StartInstallApp(v)
+			t.startInstallAppInternal(v, false)
 		}
 	}(device.UDID, device.Name, appsNeedRefresh)
 	return nil

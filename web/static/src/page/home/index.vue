@@ -14,7 +14,7 @@
               <div>
                 <div class="avatar">
                   <div class="w-16 rounded">
-                    <IPhoneIcon v-if="item.name.toLowerCase().includes('iphone')" />
+                    <IPhoneIcon v-if="isIPhone(item)" />
                     <AppleTVIcon v-else />
                   </div>
                 </div>
@@ -422,6 +422,12 @@ export default {
       } else {
         return this.$t("home.sidebar.device_status.unpaired");
       }
+    },
+    isIPhone(item) {
+      if (item.device_class) {
+        return item.device_class.toLowerCase() == "iphone" || item.device_class.toLowerCase() == "ipad";
+      }
+      return item.name && (item.name.toLowerCase().includes("iphone") || item.name.toLowerCase().includes("ipad"));
     },
     formatRefreshDate(item) {
       let _this = this;

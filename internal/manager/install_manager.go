@@ -52,11 +52,15 @@ func (t *InstallManager) TryStart(ctx context.Context, udid, account, password, 
 		// LOCKDOWN_E_MUX_ERROR / AFC_E_MUX_ERROR /
 		ipaName := filepath.Base(ipaPath)
 		log.Infof("Try restarting usbmuxd to fix afc connect issue. %s", ipaName)
-		if err = RestartUsbmuxd(); err == nil {
-			log.Infof("Restart usbmuxd complete, try install ipa again. %s", ipaName)
-			// iPhone reconnect wait take one minute
-			time.Sleep(time.Minute)
-			err = t.Start(ctx, udid, account, password, ipaPath)
+		if errmux := RestartUsbmuxd(); errmux == nil {
+			// iPhone reconnect may take a while, wait some time
+			time.Sleep(30 * time.Second)
+			if errafc := CheckAfcServiceStatus(udid); errafc == nil {
+				log.Infof("Restart usbmuxd complete, try install ipa again. %s", ipaName)
+				err = t.Start(ctx, udid, account, password, ipaPath)
+			} else {
+				log.Err(errafc).Msgf("Restart usbmuxd complete, but Afc service still not available. %s", ipaName)
+			}
 		}
 	}
 	return err
@@ -64,10 +68,6 @@ func (t *InstallManager) TryStart(ctx context.Context, udid, account, password, 
 
 func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipaPath string) error {
 	t.outputStdout.Reset()
-
-	if err := t.checkDeviceConnected(udid); err != nil {
-		return err
-	}
 
 	// set execute timeout 30 miniutes
 	timeout := 30 * time.Minute
@@ -116,13 +116,6 @@ func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipa
 	}
 
 	return err
-}
-
-func (t *InstallManager) checkDeviceConnected(udid string) error {
-	if _, err := GetDeviceInfo(udid); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (t *InstallManager) GetMobileProvisionPath() string {

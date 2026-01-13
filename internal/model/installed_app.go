@@ -49,3 +49,21 @@ func (t InstalledApp) MaskAccount() string {
 func (t InstalledApp) IsIPhoneApp() bool {
 	return t.DeviceClass == string(DeviceClassiPhone) || t.DeviceClass == string(DeviceClassiPad)
 }
+
+func (t InstalledApp) NeedRefresh() bool {
+	now := time.Now()
+
+	// fix RefreshedDate is nil
+	if t.RefreshedDate == nil {
+		return true
+	}
+
+	// fix ExpirationDate is nil
+	expirationDate := t.ExpirationDate
+	if expirationDate == nil {
+		expireTime := t.RefreshedDate.AddDate(0, 0, 7)
+		expirationDate = &expireTime
+	}
+
+	return expirationDate.AddDate(0, 0, -1).Before(now)
+}
