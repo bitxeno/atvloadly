@@ -125,9 +125,15 @@ func (t *InstallManager) GetMobileProvisionPath() string {
 func (t *InstallManager) CleanTempFiles(ipaPath string) {
 	ipaName := filepath.Base(ipaPath)
 	fileNameWithoutExt := strings.TrimSuffix(ipaName, filepath.Ext(ipaName))
-	os.RemoveAll(filepath.Join(app.Config.Server.DataDir, "tmp", fileNameWithoutExt+".ipa"))
-	os.RemoveAll(filepath.Join(app.Config.Server.DataDir, "tmp", fileNameWithoutExt+".png"))
-	os.RemoveAll(filepath.Join(os.TempDir(), fileNameWithoutExt+".ipa"))
+	_ = os.RemoveAll(filepath.Join(app.Config.Server.DataDir, "tmp", fileNameWithoutExt+".ipa"))
+	_ = os.RemoveAll(filepath.Join(app.Config.Server.DataDir, "tmp", fileNameWithoutExt+".png"))
+	_ = os.RemoveAll(filepath.Join(os.TempDir(), fileNameWithoutExt+".ipa"))
+
+	pat := filepath.Join(os.TempDir(), "plume_stage*")
+	matches, _ := filepath.Glob(pat)
+	for _, m := range matches {
+		_ = os.RemoveAll(m)
+	}
 }
 
 func (t *InstallManager) Close() {
