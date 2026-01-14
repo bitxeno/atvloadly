@@ -3,13 +3,13 @@ package manager
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/exec"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/utils"
@@ -223,7 +223,7 @@ func (dm *DeviceManager) GetMountImageInfo(udid string) (*model.UsbmuxdImage, er
 }
 
 func (dm *DeviceManager) GetUsbmuxdDeviceInfo(udid string) (*model.UsbmuxdDevice, error) {
-	cmd := exec.Command("ideviceinfo", "-u", udid, "-n")
+	cmd := exec.Command("ideviceinfo", "-u", udid, "-n").WithTimeout(10 * time.Second)
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
@@ -251,7 +251,7 @@ func (dm *DeviceManager) GetUsbmuxdDeviceInfo(udid string) (*model.UsbmuxdDevice
 }
 
 func (dm *DeviceManager) CheckHasMountImage(udid string) (bool, error) {
-	cmd := exec.Command("ideviceimagemounter", "list", "-u", udid, "-n")
+	cmd := exec.Command("ideviceimagemounter", "list", "-u", udid, "-n").WithTimeout(10 * time.Second)
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
@@ -267,7 +267,7 @@ func (dm *DeviceManager) CheckHasMountImage(udid string) (bool, error) {
 }
 
 func (dm *DeviceManager) CheckAfcServiceStatus(udid string) error {
-	cmd := exec.Command("plumesign", "check", "afc", "--udid", udid)
+	cmd := exec.Command("plumesign", "check", "afc", "--udid", udid).WithTimeout(10 * time.Second)
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
@@ -287,7 +287,7 @@ func (dm *DeviceManager) CheckAfcServiceStatus(udid string) error {
 }
 
 func (dm *DeviceManager) CheckDeveloperMode(udid string) (bool, error) {
-	cmd := exec.Command("idevicedevmodectl", "list", "-u", udid, "-n")
+	cmd := exec.Command("idevicedevmodectl", "list", "-u", udid, "-n").WithTimeout(10 * time.Second)
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
@@ -303,7 +303,7 @@ func (dm *DeviceManager) CheckDeveloperMode(udid string) (bool, error) {
 }
 
 func (dm *DeviceManager) RestartUsbmuxd() error {
-	cmd := exec.Command("/etc/init.d/usbmuxd", "restart")
+	cmd := exec.Command("/etc/init.d/usbmuxd", "restart").WithTimeout(time.Minute)
 	data, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s%s", string(data), err.Error())

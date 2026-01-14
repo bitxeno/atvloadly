@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/artdarek/go-unzip/pkg/unzip"
 	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/exec"
 	"github.com/bitxeno/atvloadly/internal/http"
 	"github.com/bitxeno/atvloadly/internal/i18n"
 	"github.com/bitxeno/atvloadly/internal/log"

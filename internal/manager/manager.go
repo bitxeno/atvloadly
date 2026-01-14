@@ -5,12 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/exec"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/utils"
 )
@@ -90,31 +89,18 @@ func RestartUsbmuxd() error {
 }
 
 func ExecuteCommand(name string, args ...string) ([]byte, error) {
-	timeout := 10 * time.Minute
-	return ExecuteCommandTimeout(timeout, name, args...)
+	return exec.NewCommand(name, args...).
+		WithDir(app.Config.Server.DataDir).
+		WithEnv(GetRunEnvs()).
+		CombinedOutput()
 }
 
 func ExecuteCommandTimeout(timeout time.Duration, name string, args ...string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, name, args...)
-	cmd.Dir = app.Config.Server.DataDir
-	cmd.Env = os.Environ()
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		// Parse error output
-		var found []string
-		for _, line := range strings.Split(string(output), "\n") {
-			s := strings.ToLower(strings.TrimSpace(line))
-			if strings.HasPrefix(s, "error:") {
-				found = append(found, s)
-			}
-		}
-		if len(found) > 0 {
-			return output, errors.New(strings.Join(found, "\n"))
-		}
-	}
-	return output, err
+	return exec.NewCommand(name, args...).
+		WithTimeout(timeout).
+		WithDir(app.Config.Server.DataDir).
+		WithEnv(GetRunEnvs()).
+		CombinedOutput()
 }
 
 func GetAppleAccounts() (*model.Accounts, error) {
