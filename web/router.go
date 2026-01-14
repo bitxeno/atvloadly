@@ -255,7 +255,7 @@ func route(fi *fiber.App) {
 			return c.Status(http.StatusOK).JSON(apiSuccess(device))
 		}
 
-		return c.Status(http.StatusOK).JSON(apiError("not found"))
+		return c.Status(http.StatusOK).JSON(apiError("device not found"))
 	})
 
 	api.Post("/devices/:id/mountimage", func(c *fiber.Ctx) error {

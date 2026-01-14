@@ -45,8 +45,8 @@ func NewInteractiveInstallManager() *InstallManager {
 	return ins
 }
 
-func (t *InstallManager) TryStart(ctx context.Context, udid, account, password, ipaPath string) error {
-	err := t.Start(ctx, udid, account, password, ipaPath)
+func (t *InstallManager) TryStart(ctx context.Context, udid, account, password, ipaPath string, removeExtensions bool) error {
+	err := t.Start(ctx, udid, account, password, ipaPath, removeExtensions)
 	if err != nil {
 		// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
 		// LOCKDOWN_E_MUX_ERROR / AFC_E_MUX_ERROR /
@@ -57,7 +57,7 @@ func (t *InstallManager) TryStart(ctx context.Context, udid, account, password, 
 			time.Sleep(30 * time.Second)
 			if errafc := CheckAfcServiceStatus(udid); errafc == nil {
 				log.Infof("Restart usbmuxd complete, try install ipa again. %s", ipaName)
-				err = t.Start(ctx, udid, account, password, ipaPath)
+				err = t.Start(ctx, udid, account, password, ipaPath, removeExtensions)
 			} else {
 				log.Err(errafc).Msgf("Restart usbmuxd complete, but Afc service still not available. %s", ipaName)
 			}
@@ -66,7 +66,7 @@ func (t *InstallManager) TryStart(ctx context.Context, udid, account, password, 
 	return err
 }
 
-func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipaPath string) error {
+func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipaPath string, removeExtensions bool) error {
 	t.outputStdout.Reset()
 
 	// set execute timeout 30 miniutes
@@ -81,7 +81,11 @@ func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipa
 		}
 	}()
 
-	cmd := exec.CommandContext(ctx, "plumesign", "sign", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--udid", udid, "-u", account, "-p", ipaPath)
+	args := []string{"sign", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--udid", udid, "-u", account, "-p", ipaPath}
+	if removeExtensions {
+		args = append(args, "--remove-extensions")
+	}
+	cmd := exec.CommandContext(ctx, "plumesign", args...)
 	cmd.Dir = app.Config.Server.DataDir
 	cmd.Env = GetRunEnvs()
 	cmd.Stdout = t.outputStdout

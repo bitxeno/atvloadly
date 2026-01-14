@@ -200,7 +200,7 @@ func (t *Task) runInternal(v model.InstalledApp) (*model.MobileProvisioningProfi
 		return nil, fmt.Errorf("The install account (%s) is invalid, skip install.", v.MaskAccount())
 	}
 
-	err := installMgr.TryStart(context.Background(), v.UDID, v.Account, v.Password, v.IpaPath)
+	err := installMgr.TryStart(context.Background(), v.UDID, v.Account, v.Password, v.IpaPath, v.RemoveExtensions)
 	if err != nil {
 		log.Err(err).Msgf("Error executing installation script. %s", installMgr.ErrorLog())
 		installMgr.WriteLog(err.Error())

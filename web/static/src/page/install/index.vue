@@ -75,6 +75,24 @@
               </label>
             </div>
 
+            <div class="form-control">
+              <label class="label cursor-pointer justify-between items-center gap-x-4">
+                <div class="flex items-center">
+                  <span class="label-text">{{
+                    $t("install.form.extensions.remove_extensions")
+                  }}</span>
+                  <div class="tooltip" :data-tip="$t('install.form.extensions.tips')">
+                    <div class="w-4 h-4 text-secondary-content"><HelpIcon /></div>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  class="toggle toggle-success"
+                  v-model="form.remove_extensions"
+                />
+              </label>
+            </div>
+
           </form>
 
           <div class="flex flex-row gap-x-4">
@@ -185,6 +203,7 @@ export default {
         account: "",
         password: "",
         authcode: "",
+        remove_extensions: false,
       },
       log: {
         newcontent : "",
@@ -278,6 +297,7 @@ export default {
             icon: _this.ipa.icon,
             bundle_identifier: _this.ipa.bundle_identifier,
             version: _this.ipa.version,
+            remove_extensions: _this.form.remove_extensions,
         });
       } catch (error) {
         console.log(error);
@@ -502,6 +522,7 @@ import AppleTVIcon from "@/assets/icons/appletv.svg";
 import IPhoneIcon from "@/assets/icons/iphone.svg";
 import WarningIcon from "@/assets/icons/warning.svg";
 import PersonIcon from "@/assets/icons/person.badge.plus.svg";
+import HelpIcon from "@/assets/icons/help.svg";
 </script>
   
   <style scoped>

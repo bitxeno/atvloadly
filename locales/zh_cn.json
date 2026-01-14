@@ -158,6 +158,10 @@
             "button": {
                 "back": "返 回",
                 "submit": "安装"
+            },
+            "extensions": {
+                "remove_extensions": "移除扩展插件",
+                "tips": "没有足够的 App ID 可以注册时很有用"
             }
         }
         ,

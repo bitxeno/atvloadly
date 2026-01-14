@@ -158,6 +158,10 @@
             "button": {
                 "back": "Back",
                 "submit": "Install"
+            },
+            "extensions": {
+                "remove_extensions": "Remove extensions (Plug-ins)",
+                "tips": "Useful when there are not enough App IDs available for registration"
             }
         }
         ,
