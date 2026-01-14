@@ -92,13 +92,16 @@ func (t *Task) Run() {
 
 	appsNeedRefresh := make([]model.InstalledApp, 0)
 	for _, v := range installedApps {
-		// iPhone cannot refresh on a schedule and relies on whether the phone is unlocked
-		// iPhone will triggering refresh through avahi events.
-		if v.IsIPhoneApp() {
-			continue
-		}
 		if !v.NeedRefresh() {
 			continue
+		}
+
+		// iPhone cannot refresh on a schedule and relies on whether the phone is unlocked
+		// Need to check Afc service status before refreshing
+		if v.IsIPhoneApp() {
+			if err := manager.CheckAfcServiceStatus(v.UDID); err != nil {
+				continue
+			}
 		}
 
 		appsNeedRefresh = append(appsNeedRefresh, v)
