@@ -345,7 +345,8 @@
     ,
     "tools": {
         "ssdp": {
-            "title": "SSDP Scanner"
+            "title": "SSDP Scanner",
+            "pairable_label": "Pairable device service type: _apple-pairable._tcp"
         }
     },
     "laboratory": {

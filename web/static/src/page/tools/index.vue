@@ -5,6 +5,13 @@
     <div class="mockup-code overflow-y-auto h-[600px]">
       <pre v-for="(log, index) in logs" :key="index" class="px-4 py-1"><code :style="log.color ? { color: log.color } : {}">{{ typeof log === 'string' ? log : log.text }}</code></pre>
     </div>
+
+        <div
+        class="stat-title text-sm flex flex-row items-center gap-x-1 whitespace-break-spaces mt-2"
+      >
+        <div class="w-4"><HelpIcon /></div>
+          {{ $t('tools.ssdp.pairable_label') }}
+      </div>
   </div>
 </template>
 
@@ -68,4 +75,8 @@ onMounted(() => {
 onUnmounted(() => {
   stopScan();
 });
+</script>
+
+<script>
+import HelpIcon from "@/assets/icons/help.svg";
 </script>

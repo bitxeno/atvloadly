@@ -345,7 +345,8 @@
     ,
     "tools": {
         "ssdp": {
-            "title": "SSDP 扫描器"
+            "title": "SSDP 扫描器",
+            "pairable_label": "可配对设备类型标识：_apple-pairable._tcp"
         }
     },
     "laboratory": {
