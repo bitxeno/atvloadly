@@ -1,0 +1,32 @@
+name: "Bug Report"
+description: Bug Report / Issue
+title: "[BUG] Please modify the title to describe the issue you are facing"
+labels: [bug]
+body:
+  - type: checkboxes
+    attributes:
+      label: Please confirm the following
+      description: |
+        You must check all the following, otherwise your request may be closed directly.
+      options:
+        - label: |
+            I confirm there are no duplicate issues or discussions.
+        - label: |
+            I confirm this is an `atvloadly` issue, not caused by other reasons (such as [network]).
+        - label: |
+            I confirm this issue is not fixed in the latest version.
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Bug Description (required)
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (required)
+      description: |
+        Please copy and paste any relevant log output or screenshots. (You may mask sensitive fields)
+    validations:
+      required: true

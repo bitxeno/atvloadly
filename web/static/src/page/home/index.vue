@@ -14,7 +14,8 @@
               <div>
                 <div class="avatar">
                   <div class="w-16 rounded">
-                    <AppleTVIcon />
+                    <IPhoneIcon v-if="isIPhone(item)" />
+                    <AppleTVIcon v-else />
                   </div>
                 </div>
               </div>
@@ -44,7 +45,8 @@
               <div>
                 <div class="avatar online">
                   <div class="w-16 rounded">
-                    <AppleTVIcon />
+                    <IPhoneIcon v-if="item.name.toLowerCase().includes('iphone')" />
+                    <AppleTVIcon v-else />
                   </div>
                 </div>
               </div>
@@ -105,15 +107,33 @@
           <thead>
             <tr>
               <th>{{ $t("home.table.header.app") }}</th>
-              <th>{{ $t("home.table.header.device") }}</th>
-              <th>{{ $t("home.table.header.account") }}</th>
-              <th>{{ $t("home.table.header.expired_date") }}</th>
+              <th @click="toggleSort('device')" class="cursor-pointer select-none">
+                <div class="flex items-center gap-x-1">
+                  {{ $t("home.table.header.device") }}
+                  <span v-if="sortKey != 'device'" class="text-xs">⇅</span>
+                  <span v-if="sortKey == 'device'" class="text-xs">{{ sortOrder == 'asc' ? '▲' : '▼' }}</span>
+                </div>
+              </th>
+              <th @click="toggleSort('account')" class="cursor-pointer select-none">
+                <div class="flex items-center gap-x-1">
+                  {{ $t("home.table.header.account") }}
+                  <span v-if="sortKey != 'account'" class="text-xs">⇅</span>
+                  <span v-if="sortKey == 'account'" class="text-xs">{{ sortOrder == 'asc' ? '▲' : '▼' }}</span>
+                </div>
+              </th>
+              <th @click="toggleSort('expired_date')" class="cursor-pointer select-none">
+                <div class="flex items-center gap-x-1">
+                  {{ $t("home.table.header.expired_date") }}
+                  <span v-if="sortKey != 'expired_date'" class="text-xs">⇅</span>
+                  <span v-if="sortKey == 'expired_date'" class="text-xs">{{ sortOrder == 'asc' ? '▲' : '▼' }}</span>
+                </div>
+              </th>
               <th>{{ $t("home.table.header.operate") }}</th>
             </tr>
           </thead>
           <tbody class="bg-base-100">
             <!-- row 1 -->
-            <tr class="hover" v-for="item in list" v-bind:key="item.ID">
+            <tr class="hover" v-for="item in sortedList" v-bind:key="item.ID">
               <td>
                 <div class="flex items-center gap-x-2">
                   <div class="indicator">
@@ -123,10 +143,13 @@
                       >!</span
                     >
                     <div class="inline-flex">
-                      <div class="w-32 rounded relative">
-                        <img :src="iconUrl(item)" class="rounded-md" />
+                      <div class="w-32 h-20 rounded relative flex items-center justify-center">
+                        <img
+                          :src="iconUrl(item)"
+                          class="max-w-full max-h-full rounded-md object-contain shadow-sm"
+                        />
                         <div
-                          class="absolute w-full h-full top-0 flex items-center justify-center bg-[#00000066]"
+                          class="absolute w-full h-full top-0 flex items-center justify-center bg-[#00000066] rounded"
                           v-show="isInstalling(item)"
                         >
                           <span
@@ -250,6 +273,8 @@ export default {
       services: [],
       installingApps: [],
       checkInstallingTimer: null,
+      sortKey: "",
+      sortOrder: "asc",
     };
   },
   computed: {
@@ -262,6 +287,20 @@ export default {
       return this.devices.filter(function (item) {
         return item.status == "paired";
       });
+    },
+    sortedList: function () {
+      let list = this.list.slice();
+      if (this.sortKey) {
+        let order = this.sortOrder === "asc" ? 1 : -1;
+        list.sort((a, b) => {
+          let valA = this.getSortValue(a, this.sortKey);
+          let valB = this.getSortValue(b, this.sortKey);
+          if (valA < valB) return -1 * order;
+          if (valA > valB) return 1 * order;
+          return 0;
+        });
+      }
+      return list;
     },
   },
   created() {
@@ -352,13 +391,34 @@ export default {
       let time = item.refreshed_date || item.installed_date;
       if (!time) return "-";
 
-      let diff = dayjs(time).add(7, "day").diff(dayjs(), "day");
-      if (diff < 0)
-        return this.$t("home.table.expired_time_format.expired_tips");
+      let expired_date = dayjs(time).add(7, "day");
+      if (item.expiration_date) {
+        expired_date = dayjs(item.expiration_date);
+      }
 
-      return this.$t("home.table.expired_time_format.days", {
-        num: diff,
-      });
+      // If it has already expired
+      if (expired_date.diff(dayjs()) <= 0) {
+        return this.$t("home.table.expired_time_format.expired_tips");
+      }
+
+      // Display by day priority, show days for durations of 1 day or more
+      let days = expired_date.diff(dayjs(), "day");
+      if (days >= 1) {
+        return this.$t("home.table.expired_time_format.days", {
+          num: days,
+        });
+      }
+
+      // Display hours when less than 1 day
+      let hours = expired_date.diff(dayjs(), "hour");
+      if (hours >= 1) {
+        return this.$t("home.table.expired_time_format.hours", {
+          num: hours,
+        });
+      }
+
+      // Less than 1 hour
+      return this.$t("home.table.expired_time_format.less_than_hour");
     },
     formatStatus(status) {
       if (status == "paired") {
@@ -368,6 +428,12 @@ export default {
       } else {
         return this.$t("home.sidebar.device_status.unpaired");
       }
+    },
+    isIPhone(item) {
+      if (item.device_class) {
+        return item.device_class.toLowerCase() == "iphone" || item.device_class.toLowerCase() == "ipad";
+      }
+      return item.name && (item.name.toLowerCase().includes("iphone") || item.name.toLowerCase().includes("ipad"));
     },
     formatRefreshDate(item) {
       let _this = this;
@@ -407,6 +473,39 @@ export default {
         ? this.$t("result.success")
         : this.$t("result.fail");
     },
+    getSortValue(item, key) {
+      if (key === "device") {
+        for (let i = 0; i < this.devices.length; i++) {
+          const dev = this.devices[i];
+          if (dev.udid == item.udid && dev.status == "paired") {
+            return dev.name;
+          }
+        }
+        return "";
+      } else if (key === "account") {
+        return item.account || "";
+      } else if (key === "expired_date") {
+        // Compute expiration timestamp for sorting.
+        // Prefer explicit expiration_date; otherwise use refreshed_date/installed_date + 7 days.
+        let time = item.refreshed_date || item.installed_date;
+        if (item.expiration_date) {
+          return dayjs(item.expiration_date).valueOf();
+        }
+        if (time) {
+          return dayjs(time).add(7, "day").valueOf();
+        }
+        return 0;
+      }
+      return "";
+    },
+    toggleSort(key) {
+      if (this.sortKey === key) {
+        this.sortOrder = this.sortOrder === "asc" ? "desc" : "asc";
+      } else {
+        this.sortKey = key;
+        this.sortOrder = "asc";
+      }
+    },
     formatDeviceName(item) {
       let _this = this;
       for (let i = 0; i < _this.devices.length; i++) {
@@ -443,6 +542,7 @@ export default {
 
 <script setup>
 import AppleTVIcon from "@/assets/icons/appletv.svg";
+import IPhoneIcon from "@/assets/icons/iphone.svg";
 import HelpIcon from "@/assets/icons/help.svg";
 import CheckMarkIcon from "@/assets/icons/checkmark.svg";
 import DismissIcon from "@/assets/icons/dismiss.svg";

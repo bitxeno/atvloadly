@@ -36,6 +36,28 @@ const routes = [
     ],
   },
   {
+    path: "/tools",
+    component: () => import("@/page/layout.vue"),
+    children: [
+      {
+        path: "",
+        name: "tools",
+        component: () => import("@/page/tools/index.vue"),
+      },
+    ],
+  },
+  {
+    path: "/laboratory",
+    component: () => import("@/page/layout.vue"),
+    children: [
+      {
+        path: "",
+        name: "laboratory",
+        component: () => import("@/page/laboratory/index.vue"),
+      },
+    ],
+  },
+  {
     path: "/settings",
     component: () => import("@/page/layout.vue"),
     children: [
@@ -46,7 +68,19 @@ const routes = [
       },
     ],
   },
+  {
+    path: "/account",
+    component: () => import("@/page/layout.vue"),
+    children: [
+      {
+        path: "",
+        name: "account",
+        component: () => import("@/page/account/index.vue"),
+      },
+    ],
+  },
 ];
+
 
 const router = createRouter({
   history: createWebHashHistory(),

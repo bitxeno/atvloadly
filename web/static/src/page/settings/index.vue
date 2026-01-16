@@ -22,7 +22,7 @@
             }}</span>
           </label>
 
-          <div class="flex gap-x-2">
+          <div class="flex gap-2 flex-wrap">
             <label class="label cursor-pointer flex gap-x-1">
               <input
                 type="radio"
@@ -51,6 +51,15 @@
               <span class="label-text">{{
                 $t("settings.notification.weixin.title")
               }}</span>
+            </label>
+            <label class="label cursor-pointer flex gap-x-1">
+              <input
+                type="radio"
+                class="radio"
+                v-model="settings.notification.type"
+                value="webhook"
+              />
+              <span class="label-text">Webhook</span>
             </label>
           </div>
         </div>
@@ -159,6 +168,61 @@
           />
         </div>
 
+        <div class="form-item" v-show="settings.notification.type == 'webhook'">
+          <label class="form-item-label">
+            <span class="label-text">{{
+              $t("settings.notification.webhook.url")
+            }}</span>
+          </label>
+          <input
+            v-model="settings.notification.webhook.url"
+            type="url"
+            :placeholder="$t('settings.notification.webhook.url_placeholder')"
+            class="input input-bordered grow"
+          />
+        </div>
+        <div class="form-item" v-show="settings.notification.type == 'webhook'">
+          <label class="form-item-label">
+            <span class="label-text">{{
+              $t("settings.notification.webhook.method")
+            }}</span>
+          </label>
+          <select
+            v-model="settings.notification.webhook.method"
+            class="select select-bordered grow"
+          >
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+          </select>
+        </div>
+        <div class="form-item" v-show="settings.notification.type == 'webhook' && settings.notification.webhook.method == 'POST'">
+          <label class="form-item-label">
+            <span class="label-text">{{
+              $t("settings.notification.webhook.content_type")
+            }}</span>
+          </label>
+          <select
+            v-model="settings.notification.webhook.content_type"
+            class="select select-bordered grow"
+          >
+            <option value="text/plain">text/plain</option>
+            <option value="application/json">application/json</option>
+          </select>
+        </div>
+        <div class="form-item" v-show="settings.notification.type == 'webhook' && settings.notification.webhook.method == 'POST'">
+          <label class="form-item-label">
+            <span class="label-text">{{
+              $t("settings.notification.webhook.body")
+            }}</span>
+          </label>
+          <textarea
+            v-model="settings.notification.webhook.body"
+            :placeholder="$t('settings.notification.webhook.body_placeholder')"
+            class="textarea textarea-bordered grow"
+            rows="4"
+          ></textarea>
+        </div>
+
         <div class="form-item">
           <label class="form-item-label"></label>
           <div class="flex-1 flex justify-between">
@@ -172,7 +236,6 @@
             <a
               class="link"
               @click.prevent="testNotification"
-              v-show="settings.notification.enabled"
               >{{ $t("settings.notification.button.send_test") }}</a
             >
           </div>
@@ -189,14 +252,42 @@
               $t("settings.refresh.toggle.label")
             }}</span>
           </label>
+          <div class="flex flex-col grow">
           <input
             type="checkbox"
             class="toggle toggle-success"
             v-model="settings.task.enabled"
+            @change="onTaskEnabledChange"
           />
+          <label class="label">
+            <span class="label-text-alt">{{
+              $t("settings.refresh.iphone_toggle.tips")
+            }}</span>
+          </label>
+          </div>
         </div>
 
-        <div class="form-item">
+        <div class="form-item !hidden">
+          <label class="form-item-label">
+            <span class="label-text">{{
+              $t("settings.refresh.iphone_toggle.label")
+            }}</span>
+          </label>
+          <div class="flex flex-col grow">
+          <input
+            type="checkbox"
+            class="toggle toggle-success"
+            v-model="settings.task.iphone_enabled"
+          />
+          <label class="label">
+            <span class="label-text-alt">{{
+              $t("settings.refresh.iphone_toggle.tips")
+            }}</span>
+          </label>
+          </div>
+        </div>
+
+        <div class="form-item !hidden">
           <label class="form-item-label">
             <span class="label-text">{{
               $t("settings.refresh.mode.label")
@@ -236,17 +327,27 @@
             }}</span>
           </label>
           <div class="flex flex-col grow">
-            <input
-              v-model="settings.task.crod_time"
-              type="text"
-              placeholder=""
-              class="input input-bordered"
-            />
-            <label class="label">
-              <span class="label-text-alt">{{
-                $t("settings.refresh.run_time.format_tips")
-              }}</span>
-            </label>
+            <div class="flex flex-row items-center gap-2">
+              <select
+                v-model="startHour"
+                class="select select-bordered w-full"
+                @change="updateCronTime"
+              >
+                <option v-for="h in 24" :key="h" :value="h - 1">
+                  {{ (h - 1).toString().padStart(2, "0") }}:00
+                </option>
+              </select>
+              <span>-</span>
+              <select
+                v-model="endHour"
+                class="select select-bordered w-full"
+                @change="updateCronTime"
+              >
+                <option v-for="h in 24" :key="h" :value="h - 1">
+                  {{ (h - 1).toString().padStart(2, "0") }}:00
+                </option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -255,6 +356,55 @@
           <div class="flex-1 flex justify-between">
             <button class="btn btn-primary w-32" @click.prevent="saveTask">
               {{ $t("settings.refresh.button.submit") }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </fieldset>
+
+    <fieldset class="section bg-base-100">
+      <legend>{{ $t("settings.network.title") }}</legend>
+      <form>
+        <div class="form-item">
+          <label class="form-item-label">
+            <span class="label-text">{{ $t("settings.network.proxy_toggle.label") }}</span>
+          </label>
+          <input
+            type="checkbox"
+            class="toggle toggle-success"
+            v-model="settings.network.proxy_enabled"
+          />
+        </div>
+
+        <div class="form-item">
+          <label class="form-item-label">
+            <span class="label-text">{{ $t("settings.network.http_proxy.label") }}</span>
+          </label>
+          <input
+            v-model="settings.network.http_proxy"
+            type="text"
+            :placeholder="$t('settings.network.http_proxy.placeholder')"
+            class="input input-bordered grow"
+          />
+        </div>
+
+        <div class="form-item">
+          <label class="form-item-label">
+            <span class="label-text">{{ $t("settings.network.https_proxy.label") }}</span>
+          </label>
+          <input
+            v-model="settings.network.https_proxy"
+            type="text"
+            :placeholder="$t('settings.network.https_proxy.placeholder')"
+            class="input input-bordered grow"
+          />
+        </div>
+
+        <div class="form-item">
+          <label class="form-item-label"></label>
+          <div class="flex-1 flex justify-between">
+            <button class="btn btn-primary w-32" @click.prevent="saveNetwork">
+              {{ $t("settings.network.button.submit") }}
             </button>
           </div>
         </div>
@@ -272,6 +422,8 @@ export default {
   name: "Home",
   data() {
     return {
+      startHour: 0,
+      endHour: 23,
       settings: {
         task: {},
         notification: {
@@ -279,6 +431,12 @@ export default {
           telegram: {},
           weixin: {},
           bark: {},
+          webhook: {},
+        },
+        network: {
+          proxy_enabled: false,
+          http_proxy: "",
+          https_proxy: "",
         },
       },
     };
@@ -292,6 +450,7 @@ export default {
       let _this = this;
       api.getSettings().then((res) => {
         _this.settings = res.data;
+        _this.parseCronTime();
       });
     },
 
@@ -323,6 +482,78 @@ export default {
           toast.success(this.$t("settings.toast.notify_success"));
         }
       });
+    },
+
+    saveNetwork() {
+      let _this = this;
+
+      api.saveTaskSettings(_this.settings).then((res) => {
+        if (res.data) {
+          toast.success(this.$t("settings.toast.save_success"));
+        }
+      });
+    },
+
+    parseCronTime() {
+      if (!this.settings.task.crod_time) return;
+      try {
+        const parts = this.settings.task.crod_time.split(" ");
+        if (parts.length < 2) return;
+        const hour = parts[1];
+        if (hour.includes(",")) {
+          // 22-23,0-2 or 22,23,0,1,2
+          const hours = hour.split(",");
+          let firstPart = hours[0];
+          let lastPart = hours[hours.length - 1];
+
+          if (firstPart.includes("-")) {
+            this.startHour = parseInt(firstPart.split("-")[0]);
+          } else {
+            this.startHour = parseInt(firstPart);
+          }
+
+          if (lastPart.includes("-")) {
+            this.endHour = parseInt(lastPart.split("-")[1]);
+          } else {
+            this.endHour = parseInt(lastPart);
+          }
+        } else if (hour.includes("-")) {
+          const [start, end] = hour.split("-");
+          this.startHour = parseInt(start);
+          this.endHour = parseInt(end);
+        } else if (hour !== "*") {
+          this.startHour = parseInt(hour);
+          this.endHour = parseInt(hour);
+        } else {
+          // * or invalid
+          this.startHour = 0;
+          this.endHour = 23; 
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    },
+
+    onTaskEnabledChange() {
+      if (!this.settings.task.enabled) {
+        this.settings.task.iphone_enabled = false;
+      }
+    },
+
+    updateCronTime() {
+        let h = "";
+        const start = parseInt(this.startHour);
+        const end = parseInt(this.endHour);
+
+        if (start === end) {
+            h = `${start}`;
+        } else if (start < end) {
+            h = `${start}-${end}`;
+        } else {
+            // Cross-day time range (e.g., 22:00 to 02:00)
+            h = `${start}-23,0-${end}`;
+        }
+        this.settings.task.crod_time = `0,30 ${h} * * *`;
     },
   },
 };

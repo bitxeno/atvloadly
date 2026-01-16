@@ -53,9 +53,9 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go_version }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: 24
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -135,7 +135,7 @@ jobs:
           images: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPOSITORY }}
           tags: |
             type=ref,event=branch
-            type=raw,value=nightly
+            type=raw,value=nightly,enable=${{ github.ref == 'refs/heads/master' }}
       - name: Build and push Docker images to DockerHub
         uses: docker/build-push-action@v5
         with:
@@ -183,7 +183,7 @@ jobs:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=ref,event=branch
-            type=raw,value=nightly
+            type=raw,value=nightly,enable=${{ github.ref == 'refs/heads/master' }}
       - name: Build and push Docker images to ghci
         uses: docker/build-push-action@v5
         with:

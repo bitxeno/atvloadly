@@ -7,6 +7,7 @@ require (
 	github.com/creasty/defaults v1.5.2
 	github.com/electricbubble/gidevice v0.6.2
 	github.com/fatih/color v1.9.0
+	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/ggwhite/go-masker/v2 v2.1.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-errors/errors v1.5.1

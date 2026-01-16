@@ -1,0 +1,384 @@
+{
+    "language": "en",
+    "common": {
+        "loading": "Loading...",
+        "button": {
+            "close": "Close"
+        }
+    },
+    "notify": {
+        "title": "[{{.name}}] Refresh task execution failed.",
+        "content": "Account: {{.account}}\nError log: {{.error}}",
+        "batch_title": "atvloadly Refresh Task Execution Failed",
+        "batch_content": "app: {{.name}}\n Error Log: {{.error}}\n\n"
+    },
+    "nav": {
+        "settings": "Settings",
+        "tools": "Tools",
+        "laboratory": "Laboratory",
+        "language": "English",
+        "preferences": "Preferences",
+        "account": "Accounts",
+        "certificate": "Certificates",
+        "connected_devices": "Connected Devices",
+        "devices": "Devices",
+        "donate": "Donate"
+    },
+    "donate": {
+        "title": "Donate",
+        "desc": "If you find this project helpful, please consider supporting its development. Your support keeps the project alive!",
+        "github_sponsor": "Support on GitHub Sponsors",
+        "kofi": "Support on Ko-fi",
+        "afdian": "Support on Afadian",
+        "close": "Close"
+    },
+    "home": {
+        "heading": {
+            "pairable_devices": "Pairable Devices",
+            "paired_devices": "Paired Devices",
+            "service_status": "Service Status",
+            "installed_app": "Installed Apps"
+        },
+        "dialog": {
+            "delete_confirm": {
+                "title": "Are you sure you want to delete {{name}}?",
+                "button": {
+                    "cancel": "Cancel",
+                    "confirm": "Confirm"
+                }
+            }
+        },
+        "toast": {
+            "refresh_app_started": "Refresh of {{name}} started",
+            "installing_app": "Installing…"
+        },
+        "sidebar": {
+            "device_status": {
+                "pairable": "Pairable",
+                "paired": "Paired",
+                "unpaired": "Unpaired"
+            },
+            "tips": {
+                "no_paired_devices": "No connected devices",
+                "how_pair_device": "For AppleTV, go to 'Settings -> Remotes and Devices -> Remote App and Devices' to enter pairing mode for completion"
+            }
+        },
+        "table": {
+            "header": {
+                "app": "App",
+                "device": "Device",
+                "account": "Account",
+                "expired_date": "Expiration Date",
+                "operate": "Operation"
+            },
+            "expired_time_format": {
+                "expired_tips": "Expired",
+                "days": "{{num}} DAYS",
+                "hours": "{{num}} HOURS",
+                "less_than_hour": "Soon"
+            },
+            "refresh_date_format": {
+                "installing_tips": "Installing...",
+                "seconds": "{{num}} seconds ago",
+                "miniutes": "{{num}} minutes ago",
+                "hours": "{{num}} hours ago",
+                "days": "{{num}} days ago"
+            },
+            "button": {
+                "refresh": "Refresh",
+                "delete": "Delete"
+            },
+            "tips": {
+                "view_log": "Click to view installation log",
+                "no_data": "No data",
+                "footer": "By default, when the app expiration time is less than 1 day, it will automatically refresh between 3-6am."
+            }
+        }
+    },
+    "pair": {
+        "toast": {
+            "pin_incorrect": "Incorrect PIN code",
+            "pair_error": "Pairing error. Please check the console for more information.",
+            "no_device_found": "Device not found. Pleasemake sure the usbmuxd service is running."
+        },
+        "step": {
+            "start": {
+                "title": "Start",
+                "device": "Device",
+                "button": "Start Pairing"
+            },
+            "pin": {
+                "title": "Enter PIN code",
+                "loading": "Connecting…",
+                "placeholder": "Please enter the PIN displayed on AppleTV",
+                "button": "Confirm"
+            },
+            "completed": {
+                "title": "Pairing Completed",
+                "msg": "Pairing successful",
+                "button": "Back"
+            }
+        }
+    },
+    "install": {
+        "tips": {
+            "warning": "This device will emulate a MacBook. When signing in with the installation account, please ensure you have an iPhone or an authorized device nearby to receive 2FA verification codes."
+        },
+        "dialog": {
+            "input_pin": {
+                "title": "Please enter the 2FA verification code",
+                "input": {
+                    "placeholder": ""
+                },
+                "button": {
+                    "submit": "Confirm"
+                }
+            }
+        },
+        "toast": {
+            "install_success": "Installation Successful",
+            "install_failed": "Installation Failed. Please check logs for more information."
+        ,
+            "login_success": "Login Success"
+        },
+        "form": {
+            "choose_ipa": {
+                "label": "Choose IPA:"
+            },
+            "account": {
+                "label": "Apple Account:",
+                "select": {
+                    "placeholder": "Select an account"
+                },
+                "alt": "For account security, please do not use your primary account for installation."
+            },
+            "password": {
+                "label": "Apple Password:"
+            },
+            "button": {
+                "back": "Back",
+                "submit": "Install"
+            },
+            "extensions": {
+                "remove_extensions": "Remove extensions (Plug-ins)",
+                "tips": "Useful when there are not enough App IDs available for registration"
+            }
+        }
+        ,
+        "login_modal": {
+            "title": "Login Apple Account",
+            "button": {
+                "close": "Close",
+                "login": "Login",
+                "add_account": "Add Account"
+            }
+        }
+    },
+    "settings": {
+        "toast": {
+            "save_success": "Save Successful",
+            "notify_success": "Notification Sent Successfully"
+        },
+        "notification": {
+            "title": "Installation Failure Notification",
+            "toggle": {
+                "label": "Enable"
+            },
+            "type": {
+                "label": "Notification Type"
+            },
+            "weixin": {
+                "title": "Wecom",
+                "corp_id": "CorpID",
+                "corp_secret": "CorpSecret",
+                "agent_id": "AgentID",
+                "touser": "ToUser"
+            },
+            "email": {
+                "smtp_host": "SMTP Server",
+                "smtp_port": "SMTP Port",
+                "username": "Username",
+                "password": "Password",
+                "from": "From Email",
+                "to": "To Email"
+            },
+            "webhook": {
+                "url": "URL",
+                "url_placeholder": "Supports {{title}} and {{message}} template variables",
+                "method": "HTTP Method",
+                "content_type": "Content-Type",
+                "body": "Request Body",
+                "body_placeholder": "Supports {{title}} and {{message}} template variables\nExample: {\"title\": \"{{title}}\", \"message\": \"{{message}}\"}"
+            },
+            "button": {
+                "submit": "Save",
+                "send_test": "Send Test Notification"
+            }
+        },
+        "refresh": {
+            "title": "Auto Refresh App",
+            "toggle": {
+                "label": "Enable"
+            },
+            "iphone_toggle": {
+                "label": "iPhone Auto Refresh",
+                "tips": "iPhone refresh isn't restricted by the configured running time; it will attempt to refresh when the iPhone is connected to WiFi"
+            },
+            "mode": {
+                "label": "Refresh Mode",
+                "day_before_expired": "One day before expiration",
+                "custom": "Custom"
+            },
+            "run_time": {
+                "label": "Running Time Period",
+                "format_tips": "Linux crontab format, restricted by refresh mode"
+            },
+            "button": {
+                "submit": "Save"
+            }
+        },
+        "network": {
+            "title": "Network Settings",
+            "proxy_toggle": {
+                "label": "Enable Proxy"
+            },
+            "http_proxy": {
+                "label": "HTTP Proxy",
+                "placeholder": "e.g., http://proxy.example.com:8080"
+            },
+            "https_proxy": {
+                "label": "HTTPS Proxy",
+                "placeholder": "e.g., http://proxy.example.com:8080"
+            },
+            "button": {
+                "submit": "Save"
+            }
+        }
+    },
+    "account": {
+        "select_account": "Select Account",
+        "select_placeholder": "Please select an account",
+        "table": {
+            "header": {
+                "email": "Email",
+                "account": "Account",
+                "status": "Status",
+                "machine_name": "Machine Name"
+            },
+            "button": {
+                "logout": "Logout"
+            },
+            "empty": "No accounts found"
+        },
+        "dialog": {
+            "logout_confirm": {
+                "title": "Are you sure you want to logout {{name}}?"
+            }
+        },
+        "toast": {
+            "delete_success": "Account deleted successfully",
+            "delete_failed": "Failed to delete account",
+            "logout_success": "Account logged out successfully",
+            "logout_failed": "Failed to logout account"
+        }
+    },
+    "certificate": {
+        "modal": {
+            "title": "Certificate Management - {{email}}",
+            "import_title": "Import Certificate",
+            "export_title": "Export Certificate"
+        },
+        "button": {
+            "import": "Import"
+        },
+        "import": {
+            "file_selected": "Selected File: {{name}}"
+        },
+        "import_form": {
+            "password_label": "Certificate Password",
+            "password_placeholder": "Enter P12 Password"
+        },
+        "export_form": {
+            "password_label": "P12 Password",
+            "password_placeholder": "Enter P12 Password"
+        },
+        "table": {
+            "header": {
+                "serial": "Serial Number",
+                "name": "Name",
+                "machine_name": "Machine Name",
+                "expiration": "Expiration Date"
+            },
+            "button": {
+                "revoke": "Revoke",
+                "export": "Export",
+                "import": "Import"
+            }
+        },
+        "dialog": {
+            "revoke_confirm": {
+                "title": "Are you sure you want to revoke certificate {{serial}}?"
+            }
+        },
+        "toast": {
+            "revoke_success": "Certificate revoked successfully",
+            "revoke_failed": "Failed to revoke certificate",
+            "export_success": "Export Successful",
+            "import_success": "Import Successful",
+            "import_failed": "Import Failed"
+        },
+        "no_certificates": "No certificates found"
+    },
+    "device": {
+        "modal": {
+            "title": "Connected Devices - {{email}}"
+        },
+        "table": {
+            "header": {
+                "name": "Name",
+                "udid": "UDID",
+                "platform": "Platform"
+            },
+            "empty": "No devices found"
+        }
+    }
+    ,
+    "tools": {
+        "ssdp": {
+            "title": "SSDP Scanner",
+            "pairable_label": "Pairable device service type: _apple-pairable._tcp"
+        }
+    },
+    "laboratory": {
+        "title": "Connect iPhone",
+        "tips": {
+            "step1": "Please ensure that Developer Mode is enabled on your iPhone.",
+            "step2": "Please download <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a>, connect your iPhone, and export the Pairing File.",
+            "step3": "Please use idevice_pair to enable Wireless Debugging functionality.",
+            "step4": "Please ensure that your iPhone device is discoverable in the <a href=\"/#/tools\" class=\"link\">Tools</a>.",
+            "step5": "Automatic refresh on iPhone is not guaranteed to be reliable; the iPhone must be unlocked for remote refresh to work properly."
+        },
+        "form": {
+            "device_label": "Select Corresponding Device",
+            "device_placeholder": "Please select a device",
+            "device_unlock": "The iPhone must be unlocked to be discovered",
+            "refresh": "Refresh",
+            "refresh_devices": "Refresh device list",
+            "upload_label": "Upload Pair File",
+            "submit": "Submit"
+        },
+        "toast": {
+            "import_success": "Import successful",
+            "import_failed": "Import failed: {{msg}}",
+            "load_devices_failed": "Failed to load device list: {{msg}}"
+        },
+        "dialog": {
+            "override": {
+                "title": "Confirm Overwrite",
+                "content": "A pairing file with the same name already exists. Do you want to overwrite it?",
+                "cancel": "Cancel",
+                "confirm": "Overwrite"
+            }
+        }
+    }
+}

@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"image/png"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -46,11 +47,12 @@ func route(fi *fiber.App) {
 		defer term.Close()
 
 		term.SetCWD(app.Config.Server.DataDir)
-		term.SetENV([]string{fmt.Sprintf("SIDELOADER_CONFIG_DIR='%s'", app.SideloaderDataDir())})
 		term.Start()
 	}))
 	fi.Get("/ws/pair", websocket.New(service.HandlePairMessage))
 	fi.Get("/ws/install", websocket.New(service.HandleInstallMessage))
+	fi.Get("/ws/login", websocket.New(service.HandleLoginMessage))
+	fi.Get("/ws/tools/scan", websocket.New(service.HandleScanMessage))
 	fi.Get("/apps/:id/icon", func(c *fiber.Ctx) error {
 		id := utils.MustParseInt(c.Params("id"))
 
@@ -93,6 +95,128 @@ func route(fi *fiber.App) {
 	api.Get("/settings", func(c *fiber.Ctx) error {
 		return c.Status(http.StatusOK).JSON(apiSuccess(app.Settings))
 	})
+
+	api.Get("/accounts", func(c *fiber.Ctx) error {
+		accounts, err := manager.GetAppleAccounts()
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+
+		return c.Status(http.StatusOK).JSON(apiSuccess(accounts.Accounts))
+	})
+
+	api.Post("/accounts/logout", func(c *fiber.Ctx) error {
+		var req struct {
+			Email string `json:"email"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument"))
+		}
+
+		if err := manager.LogoutAppleAccount(req.Email); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
+	api.Get("/accounts/devices", func(c *fiber.Ctx) error {
+		email := c.Query("email")
+		if email == "" {
+			return c.Status(http.StatusOK).JSON(apiError("email is required"))
+		}
+		devices, err := manager.GetAccountDevices(email)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(devices))
+	})
+
+	api.Post("/accounts/devices/delete", func(c *fiber.Ctx) error {
+		var req struct {
+			Email    string `json:"email"`
+			DeviceID string `json:"deviceId"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument"))
+		}
+		if err := manager.DeleteAccountDevice(req.Email, req.DeviceID); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
+	api.Get("/certificates", func(c *fiber.Ctx) error {
+		email := c.Query("email")
+		if email == "" {
+			return c.Status(http.StatusOK).JSON(apiError("email is required"))
+		}
+		certs, err := manager.GetCertificates(email)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(certs))
+	})
+
+	api.Post("/certificates/revoke", func(c *fiber.Ctx) error {
+		var req struct {
+			Email        string `json:"email"`
+			SerialNumber string `json:"serialNumber"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument"))
+		}
+		if err := manager.RevokeCertificate(req.Email, req.SerialNumber); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
+	api.Post("/certificates/export", func(c *fiber.Ctx) error {
+		var req struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+			TeamID   string `json:"teamId"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument"))
+		}
+
+		content, err := manager.ExportCertificate(req.Email, req.Password)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Export failed: " + err.Error()))
+		}
+
+		c.Set("Content-Disposition", "attachment; filename=atvloadly.p12")
+		c.Set("Content-Type", "application/x-pkcs12")
+		return c.Send(content)
+	})
+
+	api.Post("/certificates/import", func(c *fiber.Ctx) error {
+		email := c.FormValue("email")
+		password := c.FormValue("password")
+		file, err := c.FormFile("file")
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("No file uploaded"))
+		}
+
+		// Save to temp file
+		tempDir := os.TempDir()
+		timestamp := time.Now().Unix()
+		fileName := fmt.Sprintf("import_cert_%d_%s", timestamp, file.Filename)
+		tempPath := filepath.Join(tempDir, fileName)
+
+		if err := c.SaveFile(file, tempPath); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Failed to save uploaded file"))
+		}
+		defer os.Remove(tempPath)
+
+		if err := manager.ImportCertificate(email, password, tempPath); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Import failed: " + err.Error()))
+		}
+
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
 	api.Post("/settings/:key", func(c *fiber.Ctx) error {
 		var settings app.SettingsConfiguration
 		if err := c.BodyParser(&settings); err != nil {
@@ -128,11 +252,10 @@ func route(fi *fiber.App) {
 	api.Get("/devices/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		if device, ok := manager.GetDeviceByID(id); ok {
-			manager.AppendDeviceProductInfo(device)
 			return c.Status(http.StatusOK).JSON(apiSuccess(device))
 		}
 
-		return c.Status(http.StatusOK).JSON(apiError("not found"))
+		return c.Status(http.StatusOK).JSON(apiError("device not found"))
 	})
 
 	api.Post("/devices/:id/mountimage", func(c *fiber.Ctx) error {
@@ -152,7 +275,17 @@ func route(fi *fiber.App) {
 		if err != nil {
 			return c.Status(http.StatusOK).JSON(apiSuccess(err.Error()))
 		}
-		return c.Status(http.StatusOK).JSON(apiSuccess(enabled))
+		result := map[string]bool{
+			"enabled": enabled,
+			"mounted": false,
+		}
+		if enabled {
+			if imageInfo, err := service.GetDeviceMountImageInfo(c.Context(), id); err == nil {
+				result["mounted"] = imageInfo.ImageMounted
+			}
+		}
+
+		return c.Status(http.StatusOK).JSON(apiSuccess(result))
 	})
 
 	api.Post("/devices/:id/check/afc", func(c *fiber.Ctx) error {
@@ -176,6 +309,23 @@ func route(fi *fiber.App) {
 		}
 	})
 
+	api.Get("/scan/wireless", func(c *fiber.Ctx) error {
+		timeout := 2
+		if timeoutStr := c.Query("timeout"); timeoutStr != "" {
+			if t := utils.MustParseInt(timeoutStr); t > 0 {
+				timeout = t
+			}
+		}
+
+		devices, err := manager.ScanWirelessDevices(c.Context(), time.Duration(timeout)*time.Second)
+
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		} else {
+			return c.Status(http.StatusOK).JSON(apiSuccess(devices))
+		}
+	})
+
 	api.Get("/reload", func(c *fiber.Ctx) error {
 		manager.ReloadDevices()
 
@@ -189,6 +339,43 @@ func route(fi *fiber.App) {
 		} else {
 			return c.Status(http.StatusOK).JSON(apiSuccess(devices))
 		}
+	})
+
+	api.Post("/pair/import", func(c *fiber.Ctx) error {
+		file, err := c.FormFile("file")
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("No file uploaded"))
+		}
+
+		// Read file contents
+		src, err := file.Open()
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Failed to open uploaded file"))
+		}
+		defer src.Close()
+
+		data, err := io.ReadAll(src)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Failed to read file content"))
+		}
+
+		override := c.FormValue("override") == "true"
+		ip := c.FormValue("ip")
+
+		// Call manager to process the file
+		if err := manager.ImportPairingFile(ip, data, override); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+
+		// Restart usbmuxd service to apply changes
+		_ = manager.RestartUsbmuxd()
+
+		time.Sleep(time.Second)
+
+		// force reload devices
+		manager.StartDeviceManager()
+
+		return c.Status(http.StatusOK).JSON(apiSuccess("success"))
 	})
 
 	api.Post("/upload", func(c *fiber.Ctx) error {
@@ -258,18 +445,20 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(task.GetCurrentInstallingApps()))
 	})
 
-	api.Post("/apps", func(c *fiber.Ctx) error {
-		var installApp model.InstalledApp
-		if err := c.BodyParser(&installApp); err != nil {
-			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
-		}
+	api.Get("/apps/refresh", func(c *fiber.Ctx) error {
+		// wait a moment to ensure device connected
+		time.Sleep(5 * time.Second)
 
-		ipa, err := service.SaveApp(installApp)
+		devices, err := manager.GetDevices()
 		if err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
-		} else {
-			return c.Status(http.StatusOK).JSON(apiSuccess(ipa))
 		}
+		for _, device := range devices {
+			if err := task.RefreshDeviceApps(device); err != nil {
+				return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+			}
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
 	})
 
 	api.Post("/clean", func(c *fiber.Ctx) error {
@@ -334,7 +523,7 @@ func route(fi *fiber.App) {
 			return c.Status(http.StatusOK).JSON(apiError("Invalid argument. error: " + err.Error()))
 		}
 
-		if err := notify.SendWithConfig("test", "content", settings); err != nil {
+		if err := notify.SendWithConfig("atvloadly", "test message", settings); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		} else {
 			return c.Status(http.StatusOK).JSON(apiSuccess(true))

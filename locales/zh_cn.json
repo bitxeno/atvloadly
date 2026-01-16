@@ -1,0 +1,384 @@
+{
+    "language": "zh_cn",
+    "common": {
+        "loading": "加载中...",
+        "button": {
+            "close": "关闭"
+        }
+    },
+    "notify": {
+        "title": "[{{.name}}]刷新任务执行失败",
+        "content": "帐号：{{.account}}\n错误日志：{{.error}}",
+        "batch_title": "atvloadly 刷新任务执行失败",
+        "batch_content": "app: {{.name}}\n 错误日志：{{.error}}\n\n"
+    },
+    "nav": {
+        "settings": "设置",
+        "tools": "工具",
+        "laboratory": "实验室",
+        "language": "中文",
+        "preferences": "选项",
+        "account": "帐号",
+        "certificate": "证书管理",
+        "connected_devices": "已连接设备",
+        "devices": "设备",
+        "donate": "赞助"
+    },
+    "donate": {
+        "title": "赞助",
+        "desc": "如果您觉得本项目对您有帮助，请考虑赞助支持开发。您的支持是项目持续发展的动力！",
+        "github_sponsor": "在 GitHub Sponsors 上支持",
+        "kofi": "在 Ko-fi 上支持",
+        "afdian": "在爱发电上支持",
+        "close": "关闭"
+    },
+    "home": {
+        "heading": {
+            "pairable_devices": "待配对设备",
+            "paired_devices": "已连接设备",
+            "service_status": "服务状态",
+            "installed_app": "已安装 Apps"
+        },
+        "dialog": {
+            "delete_confirm": {
+                "title": "确定要删除 {{name}} 吗?",
+                "button": {
+                    "cancel": "取消",
+                    "confirm": "确定"
+                }
+            }
+        },
+        "toast": {
+            "refresh_app_started": "已启动刷新 {{name}}",
+            "installing_app": "安装中..."
+        },
+        "sidebar": {
+            "device_status": {
+                "pairable": "待配对",
+                "paired": "已连接",
+                "unpaired": "未连接"
+            },
+            "tips": {
+                "no_paired_devices": "没有连接设备",
+                "how_pair_device": "AppleTV 请转到『设置 -> 遥控器与设备 -> 遥控器App与设备』，进入配对模式完成配对"
+            }
+        },
+        "table": {
+            "header": {
+                "app": "app",
+                "device": "设备",
+                "account": "帐号",
+                "expired_date": "过期时间",
+                "operate": "操作"
+            },
+            "expired_time_format": {
+                "expired_tips": "已过期",
+                "days": "{{num}} 天后",
+                "hours": "{{num}} 小时后",
+                "less_than_hour": "即将"
+            },
+            "refresh_date_format": {
+                "installing_tips": "安装中...",
+                "seconds": "{{num}} 秒前",
+                "miniutes": "{{num}} 分钟前",
+                "hours": "{{num}} 小时前",
+                "days": "{{num}} 天前"
+            },
+            "button": {
+                "refresh": "刷新",
+                "delete": "删除"
+            },
+            "tips": {
+                "view_log": "点击查看安装日志",
+                "no_data": "没有数据",
+                "footer": "默认当app过期时间小于1天时，会在凌晨3～6点钟自动进行刷新操作"
+            }
+        }
+    },
+    "pair": {
+        "toast": {
+            "pin_incorrect": "PIN码不正确",
+            "pair_error": "配对出错，请到控制台查看详细信息",
+            "no_device_found": "找不到设备，请确认 usbmuxd 服务已启动"
+        },
+        "step": {
+            "start": {
+                "title": "开始",
+                "device": "设备",
+                "button": "开始配对"
+            },
+            "pin": {
+                "title": "输入PIN码",
+                "loading": "连接中...",
+                "placeholder": "请输入 AppleTV 上显示的 PIN 码",
+                "button": "确定"
+            },
+            "completed": {
+                "title": "配对完成",
+                "msg": "配对成功",
+                "button": "返回"
+            }
+        }
+    },
+    "install": {
+        "tips": {
+            "warning": "本设备会模拟为一台 MacBook，登陆安装帐号时，请确保身边有 iPhone 手机或已授权设备能正常接收 2FA 验证码，并及时授权验证。"
+        },
+        "dialog": {
+            "input_pin": {
+                "title": "请输入 2FA 验证码",
+                "input": {
+                    "placeholder": ""
+                },
+                "button": {
+                    "submit": "确 定"
+                }
+            }
+        },
+        "toast": {
+            "install_success": "安装成功",
+            "install_failed": "安装失败，请查看日志了解详细信息"
+        ,
+            "login_success": "登录成功"
+        },
+        "form": {
+            "choose_ipa": {
+                "label": "选择ipa:"
+            },
+            "account": {
+                "label": "Apple帐号:",
+                "select": {
+                    "placeholder": "请选择帐号"
+                },
+                "alt": "为了帐号安全，请不要使用常用帐号安装"
+            },
+            "password": {
+                "label": "Apple密码:"
+            },
+            "button": {
+                "back": "返 回",
+                "submit": "安装"
+            },
+            "extensions": {
+                "remove_extensions": "移除扩展插件",
+                "tips": "没有足够的 App ID 可以注册时很有用"
+            }
+        }
+        ,
+        "login_modal": {
+            "title": "登录 Apple 帐号",
+            "button": {
+                "close": "关闭",
+                "login": "登录",
+                "add_account": "添加帐号"
+            }
+        }
+    },
+    "settings": {
+        "toast": {
+            "save_success": "保存成功",
+            "notify_success": "推送成功"
+        },
+        "notification": {
+            "title": "安装失败通知",
+            "toggle": {
+                "label": "启用"
+            },
+            "type": {
+                "label": "通知方式"
+            },
+            "weixin": {
+                "title": "企业微信",
+                "corp_id": "企业ID (CorpId)",
+                "corp_secret": "密钥 (Corpsecret)",
+                "agent_id": "应用ID (AgentId)",
+                "touser": "指定成员 (touser)"
+            },
+            "email": {
+                "smtp_host": "SMTP服务器",
+                "smtp_port": "SMTP端口",
+                "username": "用户名",
+                "password": "密码",
+                "from": "发件人邮箱",
+                "to": "收件人邮箱"
+            },
+            "webhook": {
+                "url": "URL",
+                "url_placeholder": "支持 {{title}} 和 {{message}} 模板变量",
+                "method": "请求方法 (Method)",
+                "content_type": "内容类型 (Content-Type)",
+                "body": "请求体",
+                "body_placeholder": "支持 {{title}} 和 {{message}} 模板变量\n示例: {\"title\": \"{{title}}\", \"message\": \"{{message}}\"}"
+            },
+            "button": {
+                "submit": "保 存",
+                "send_test": "推送测试通知"
+            }
+        },
+        "refresh": {
+            "title": "自动刷新 App",
+            "toggle": {
+                "label": "启用"
+            },
+            "iphone_toggle": {
+                "label": "iPhone 自动刷新",
+                "tips": "iPhone 刷新不受运行时间段限制，当 iPhone 连接 wifi 就会尝试刷新"
+            },
+            "mode": {
+                "label": "刷新模式",
+                "day_before_expired": "过期前一天",
+                "custom": "自定义"
+            },
+            "run_time": {
+                "label": "运行时间段",
+                "format_tips": "linux crontab格式，受刷新模式限制"
+            },
+            "button": {
+                "submit": "保 存"
+            }
+        },
+        "network": {
+            "title": "网络设置",
+            "proxy_toggle": {
+                "label": "启用代理"
+            },
+            "http_proxy": {
+                "label": "HTTP代理",
+                "placeholder": "例如: http://proxy.example.com:8080"
+            },
+            "https_proxy": {
+                "label": "HTTPS代理",
+                "placeholder": "例如: http://proxy.example.com:8080"
+            },
+            "button": {
+                "submit": "保 存"
+            }
+        }
+    },
+    "account": {
+        "select_account": "选择帐号",
+        "select_placeholder": "请选择一个帐号",
+        "table": {
+            "header": {
+                "email": "邮箱",
+                "account": "帐号",
+                "status": "状态",
+                "machine_name": "设备名称"
+            },
+            "button": {
+                "logout": "登出"
+            },
+            "empty": "未找到帐号"
+        },
+        "dialog": {
+            "logout_confirm": {
+                "title": "确定要登出 {{name}} 吗?"
+            }
+        },
+        "toast": {
+            "delete_success": "帐号删除成功",
+            "delete_failed": "删除帐号失败",
+            "logout_success": "帐号登出成功",
+            "logout_failed": "登出帐号失败"
+        }
+    },
+    "certificate": {
+        "modal": {
+            "title": "证书管理 - {{email}}",
+            "export_title": "导出证书",
+            "import_title": "导入证书"
+        },
+        "button": {
+            "import": "导入"
+        },
+        "import": {
+            "file_selected": "已选文件: {{name}}"
+        },
+        "import_form": {
+            "password_label": "证书密码",
+            "password_placeholder": "请输入 P12 密码"
+        },
+        "export_form": {
+            "password_label": "P12 密码",
+            "password_placeholder": "请输入 P12 文件保护密码"
+        },
+        "table": {
+            "header": {
+                "serial": "序列号",
+                "name": "名称",
+                "machine_name": "设备名称",
+                "expiration": "过期时间"
+            },
+            "button": {
+                "revoke": "注销",
+                "export": "导出",
+                "import": "导入"
+            }
+        },
+        "dialog": {
+            "revoke_confirm": {
+                "title": "确定要注销证书 {{serial}} 吗?"
+            }
+        },
+        "toast": {
+            "revoke_success": "注销成功",
+            "revoke_failed": "注销失败",
+            "export_success": "导出成功",
+            "import_success": "导入成功",
+            "import_failed": "导入失败"
+        },
+        "no_certificates": "没有找到证书"
+    },
+    "device": {
+        "modal": {
+            "title": "已连接设备 - {{email}}"
+        },
+        "table": {
+            "header": {
+                "name": "名称",
+                "udid": "UDID",
+                "platform": "平台"
+            },
+            "empty": "未找到设备"
+        }
+    }
+    ,
+    "tools": {
+        "ssdp": {
+            "title": "SSDP 扫描器",
+            "pairable_label": "可配对设备类型标识：_apple-pairable._tcp"
+        }
+    },
+    "laboratory": {
+        "title": "连接 iPhone",
+        "tips": {
+            "step1": "请确保您的 iPhone 已开启开发者模式。",
+            "step2": "请下载 <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a> 并连接 iPhone，导出 Pairing File。",
+            "step3": "请使用 idevice_pair 开启 Wireless Debugging 功能。",
+            "step4": "请确保 <a href=\"/#/tools\" class=\"link\">工具</a> 中能发现您的 iPhone 设备。",
+            "step5": "iPhone 自动刷新不保证稳定性，iPhone 需要解锁后才能正常远程刷新。"
+        },
+        "form": {
+            "device_label": "选择对应设备",
+            "device_placeholder": "请选择一个设备",
+            "device_unlock": "iPhone 需要先解锁屏幕，才能被发现",
+            "refresh": "刷新",
+            "refresh_devices": "刷新设备列表",
+            "upload_label": "上传 Pair 文件",
+            "submit": "提交"
+        },
+        "toast": {
+            "import_success": "导入成功",
+            "import_failed": "导入失败: {{msg}}",
+            "load_devices_failed": "加载设备列表失败: {{msg}}"
+        },
+        "dialog": {
+            "override": {
+                "title": "确认覆盖",
+                "content": "检测到已存在同名配对文件，是否覆盖？",
+                "cancel": "取消",
+                "confirm": "覆盖"
+            }
+        }
+    }
+}

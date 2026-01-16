@@ -10,7 +10,7 @@ RUN echo "I'm building for $TARGETPLATFORM"
 
 # Install dependencies
 RUN apt-get update && apt-get -y install \
-    wget libavahi-compat-libdnssd-dev curl
+    wget unzip libavahi-compat-libdnssd-dev curl
 
 RUN case ${TARGETARCH} in \
          "amd64")  PKG_ARCH=x86_64  ;; \
@@ -28,27 +28,38 @@ RUN case ${TARGETARCH} in \
     && dpkg -i ./libimobiledevice_1.3.1-1_${PKG_ARCH}.deb \
     && dpkg -i ./usbmuxd2_1.0.0-1_${PKG_ARCH}.deb
 
-# Install Sideloader
+# Install PlumeImpactor
 RUN case ${TARGETARCH} in \
          "amd64")  PKG_ARCH=x86_64  ;; \
          "arm64")  PKG_ARCH=aarch64  ;; \
     esac \
     && cd /tmp \
-    && wget https://github.com/bitxeno/Sideloader/releases/download/1.0-alpha.8/sideloader-cli-${PKG_ARCH}-linux-gnu.tar.gz \
-    && tar zxf sideloader-cli-${PKG_ARCH}-linux-gnu.tar.gz \
-    && mv sideloader-cli-${PKG_ARCH}-linux-gnu /usr/bin/sideloader \
-    && chmod +x /usr/bin/sideloader
+    && wget https://github.com/bitxeno/PlumeImpactor/releases/download/v1.4.1-patch.1/plumesign-linux-${PKG_ARCH}.tar.gz \
+    && tar zxf plumesign-linux-${PKG_ARCH}.tar.gz \
+    && mv plumesign-linux-${PKG_ARCH} /usr/bin/plumesign \
+    && chmod +x /usr/bin/plumesign
+
+# Download anisette dependency library
+RUN case ${TARGETARCH} in \
+         "amd64")  PKG_ARCH=x86_64  ;; \
+         "arm64")  PKG_ARCH=arm64-v8a  ;; \
+    esac \
+    && mkdir -p /keep \
+    && cd /keep \
+    && wget https://apps.mzstatic.com/content/android-apple-music-apk/applemusic.apk \
+    && unzip applemusic.apk lib/${PKG_ARCH}/libstoreservicescore.so lib/${PKG_ARCH}/libCoreADI.so \
+    && rm applemusic.apk
 
 # Install tzdata to support timezone updates.
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install tzdata
 
 # Clear apt cache and temporary data to reduce image size.
 RUN apt-get clean
-RUN cd /tmp && rm ./*.deb && rm ./*.tar.gz
+RUN cd /tmp && rm -rf ./*.deb && rm -rf ./*.tar.gz && rm -rf ./*.zip && rm -rf ./*.apk
 
 # The add command will automatically decompress the file.
-RUN mkdir -p /doc
-COPY ./doc/config.yaml.example /doc/config.yaml
+RUN mkdir -p /keep
+COPY ./doc/config.yaml.example /keep/config.yaml
 COPY ./build/${APP_NAME}-${TARGETOS}-${TARGETARCH} /usr/bin/${APP_NAME}
 RUN chmod +x /usr/bin/${APP_NAME}
 
@@ -63,11 +74,16 @@ RUN chmod +x /etc/init.d/usbmuxd
 RUN printf '#!/bin/sh \n\n\
 
 mkdir -p /data/lockdown \n\
-mkdir -p /data/Sideloader \n\
-ln -s /data ~/.config \n\
+mkdir -p /data/PlumeImpactor \n\
+mkdir -p $HOME/.config \n\
+[ ! -e "$HOME/.config/PlumeImpactor" ] && ln -s /data/PlumeImpactor $HOME/.config/PlumeImpactor \n\
+
+if [ ! -d "/data/PlumeImpactor/lib" ]; then  \n\
+    cp -rf /keep/lib /data/PlumeImpactor/lib \n\
+fi  \n\
 
 if [ ! -f "/data/config.yaml" ]; then  \n\
-    cp /doc/config.yaml /data/config.yaml \n\
+    cp /keep/config.yaml /data/config.yaml \n\
 fi  \n\
 
 /etc/init.d/usbmuxd start \n\

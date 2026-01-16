@@ -33,6 +33,7 @@
         </div>
         <div v-show="!loading" class="flex flex-col gap-y-4">
           <input
+            ref="pinInput"
             type="number"
             :placeholder="$t('pair.step.pin.placeholder')"
             class="input input-bordered input-primary w-full"
@@ -155,6 +156,9 @@ export default {
         if (line.indexOf("Enter PIN") !== -1) {
           _this.pin = "";
           _this.loading = false;
+          _this.$nextTick(() => {
+            _this.$refs.pinInput?.focus();
+          });
           line = "";
           return;
         }

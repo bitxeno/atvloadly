@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/bitxeno/atvloadly/internal/db"
 )
@@ -37,6 +38,10 @@ type Configuration struct {
 	Db db.Config `koanf:"db" json:"db"`
 }
 
-func SideloaderDataDir() string {
-	return fmt.Sprintf("%s/Sideloader", Config.Server.DataDir)
+func SideloadDataDir() string {
+	if home, err := os.UserHomeDir(); err != nil {
+		return "~/.config/PlumeImpactor"
+	} else {
+		return fmt.Sprintf("%s/.config/PlumeImpactor", home)
+	}
 }

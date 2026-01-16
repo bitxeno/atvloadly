@@ -40,6 +40,15 @@ func GetEnableAppList() ([]model.InstalledApp, error) {
 	return apps, nil
 }
 
+func GetEnableAppListByUDID(udid string) ([]model.InstalledApp, error) {
+	var apps []model.InstalledApp
+	if result := db.Store().Where("enabled = ? AND udid = ?", true, udid).Order("created_at desc").Find(&apps); result.Error != nil {
+		return nil, result.Error
+	}
+
+	return apps, nil
+}
+
 func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 	// 查找之前的安装记录，存在记录直接更新旧的
 	var cur model.InstalledApp
@@ -58,6 +67,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 		cur.Icon = app.Icon
 		cur.Version = app.Version
 		cur.RefreshedDate = &now
+		cur.ExpirationDate = app.ExpirationDate
 		cur.RefreshedResult = app.RefreshedResult
 		cur.Password = app.Password
 
@@ -80,11 +90,12 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 			}
 		}
 
-		updateData := map[string]interface{}{
+		updateData := map[string]any{
 			"ipa_path":         cur.IpaPath,
 			"icon":             cur.Icon,
 			"version":          cur.Version,
 			"refreshed_date":   cur.RefreshedDate,
+			"expiration_date":  cur.ExpirationDate,
 			"refreshed_result": cur.RefreshedResult,
 			"password":         cur.Password,
 		}
@@ -123,7 +134,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 				app.Icon = iconPath
 			}
 		}
-		updateData := map[string]interface{}{
+		updateData := map[string]any{
 			"ipa_path": app.IpaPath,
 			"icon":     app.Icon,
 		}
@@ -136,8 +147,9 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 }
 
 func UpdateAppRefreshResult(app model.InstalledApp) error {
-	updateData := map[string]interface{}{
+	updateData := map[string]any{
 		"refreshed_date":   app.RefreshedDate,
+		"expiration_date":  app.ExpirationDate,
 		"refreshed_result": app.RefreshedResult,
 	}
 	if result := db.Store().Model(&app).Updates(updateData); result.Error != nil {

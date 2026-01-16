@@ -15,15 +15,18 @@ type InstalledApp struct {
 	IpaPath          string     `json:"ipa_path"`
 	Description      string     `json:"description,omitempty"`
 	Device           string     `json:"device"`
+	DeviceClass      string     `json:"device_class"`
 	UDID             string     `gorm:"column:udid" json:"udid"`
 	Account          string     `json:"account"`
 	Password         string     `json:"password"`
 	InstalledDate    *time.Time `json:"installed_date"`
 	RefreshedDate    *time.Time `json:"refreshed_date"`
+	ExpirationDate   *time.Time `json:"expiration_date"`
 	RefreshedResult  bool       `json:"refreshed_result"`
 	Icon             string     `json:"icon"`
 	BundleIdentifier string     `json:"bundle_identifier"`
 	Version          string     `json:"version"`
+	RemoveExtensions bool       `json:"remove_extensions"`
 	Enabled          bool       `json:"enabled,omitempty"`
 }
 
@@ -42,4 +45,26 @@ func (t InstalledApp) MarshalJSON() ([]byte, error) {
 func (t InstalledApp) MaskAccount() string {
 	m := masker.EmailMasker{}
 	return m.Marshal("*", t.Account)
+}
+
+func (t InstalledApp) IsIPhoneApp() bool {
+	return t.DeviceClass == string(DeviceClassiPhone) || t.DeviceClass == string(DeviceClassiPad)
+}
+
+func (t InstalledApp) NeedRefresh() bool {
+	now := time.Now()
+
+	// fix RefreshedDate is nil
+	if t.RefreshedDate == nil {
+		return true
+	}
+
+	// fix ExpirationDate is nil
+	expirationDate := t.ExpirationDate
+	if expirationDate == nil {
+		expireTime := t.RefreshedDate.AddDate(0, 0, 7)
+		expirationDate = &expireTime
+	}
+
+	return expirationDate.AddDate(0, 0, -1).Before(now)
 }

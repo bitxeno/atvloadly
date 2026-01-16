@@ -3,12 +3,13 @@ package manager
 import (
 	"context"
 	"fmt"
-	"os/exec"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/exec"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/utils"
@@ -17,18 +18,54 @@ import (
 var deviceManager = newDeviceManager()
 
 type DeviceManager struct {
-	devices sync.Map
+	devices              sync.Map
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	mu                   sync.Mutex
+	onDeviceConnected    func(device model.Device) // 设备连接时的回调函数
+	onDeviceDisconnected func(device model.Device) // 设备断开时的回调函数
 }
 
 func newDeviceManager() *DeviceManager {
-	return &DeviceManager{}
+	return &DeviceManager{
+		onDeviceConnected:    func(device model.Device) {},
+		onDeviceDisconnected: func(device model.Device) {},
+	}
 }
 
 func (dm *DeviceManager) GetDevices() []model.Device {
 	devices := []model.Device{}
-	dm.devices.Range(func(k, v interface{}) bool {
+	dm.devices.Range(func(k, v any) bool {
 		devices = append(devices, v.(model.Device))
 		return true
+	})
+
+	// Sort devices: AppleTV type first, then by DeviceClass, then by Name
+	sort.Slice(devices, func(i, j int) bool {
+		classI := devices[i].DeviceClass
+		classJ := devices[j].DeviceClass
+		nameI := devices[i].Name
+		nameJ := devices[j].Name
+
+		// Detect AppleTV by DeviceClass or fallback to name if empty
+		lowerClassI := strings.ToLower(classI)
+		lowerClassJ := strings.ToLower(classJ)
+
+		isAppleTVI := strings.Contains(lowerClassI, "appletv")
+		isAppleTVJ := strings.Contains(lowerClassJ, "appletv")
+
+		// AppleTV type has highest priority
+		if isAppleTVI != isAppleTVJ {
+			return isAppleTVI
+		}
+
+		// If classes differ, sort by DeviceClass string
+		if classI != classJ {
+			return classI < classJ
+		}
+
+		// Finally sort by name
+		return nameI < nameJ
 	})
 
 	return devices
@@ -46,26 +83,25 @@ func (dm *DeviceManager) GetDeviceByID(id string) (*model.Device, bool) {
 }
 
 func (dm *DeviceManager) GetDeviceByUDID(udid string) (*model.Device, bool) {
-	if dev, ok := dm.devices.Load(udid); ok {
-		return dev.(*model.Device), ok
+	devices := dm.GetDevices()
+	for _, d := range devices {
+		if d.UDID == udid {
+			return &d, true
+		}
 	}
 
 	return nil, false
 }
 
-func (dm *DeviceManager) AppendProductInfo(dev *model.Device) {
-	timeout := 10 * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "ideviceinfo", "-u", dev.UDID, "-n")
-	cmd.Dir = app.Config.Server.DataDir
-	output, err := cmd.CombinedOutput()
+func (dm *DeviceManager) GetDeviceInfo(udid string) (*model.DeviceInfo, error) {
+	timeout := 5 * time.Second
+	output, err := ExecuteCommandTimeout(timeout, "ideviceinfo", "-u", udid, "-n")
 	if err != nil {
-		log.Err(err).Msgf("Error execute ideviceinfo: %s", dev.UDID)
-		return
+		return nil, err
 	}
 	lines := strings.Split(string(output), "\n")
 
+	dev := &model.DeviceInfo{UniqueDeviceID: udid}
 	for _, line := range lines {
 		var parts = strings.Split(line, ":")
 		if len(parts) != 2 {
@@ -74,20 +110,58 @@ func (dm *DeviceManager) AppendProductInfo(dev *model.Device) {
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
 		switch key {
+		case "UniqueDeviceID":
+			dev.UniqueDeviceID = value
+		case "ProductName":
+			dev.ProductName = value
 		case "ProductType":
 			dev.ProductType = value
 		case "ProductVersion":
 			dev.ProductVersion = value
 		case "DeviceClass":
-			dev.ProductClass = value
+			dev.DeviceClass = value
 		case "DeviceName":
-			dev.Name = value
+			dev.DeviceName = value
+		case "WiFiAddress":
+			dev.WiFiAddress = value
+		case "SerialNumber":
+			dev.SerialNumber = value
 		}
+	}
+	return dev, nil
+}
+
+func (dm *DeviceManager) AppendProductInfo(dev *model.Device, devInfo model.DeviceInfo) {
+	if dev.Name != devInfo.DeviceName || dev.ProductVersion != devInfo.ProductVersion || dev.DeviceClass != devInfo.DeviceClass {
+		dev.ProductType = devInfo.ProductType
+		dev.ProductVersion = devInfo.ProductVersion
+		dev.DeviceClass = devInfo.DeviceClass
+		dev.Name = devInfo.DeviceName
+
+		dm.SaveDevice(*dev)
 	}
 }
 
+func (dm *DeviceManager) SaveDevice(dev model.Device) {
+	dm.devices.Store(dev.UDID, dev)
+}
+
+func (dm *DeviceManager) DeleteDevice(udid string) {
+	dm.devices.Delete(udid)
+}
+
+func (dm *DeviceManager) DeleteDeviceByMacAddr(macAddr string) {
+	dm.devices.Range(func(k, v any) bool {
+		if v.(model.Device).MacAddr == macAddr {
+			dm.devices.Delete(k)
+			return false
+		}
+		return true
+	})
+}
+
 func (dm *DeviceManager) ReloadDevices() {
-	dm.devices.Range(func(k, v interface{}) bool {
+	dm.devices.Range(func(k, v any) bool {
 		dev := v.(model.Device)
 		if dev.Status == model.Pairable {
 			// 检查是否已连接
@@ -149,7 +223,7 @@ func (dm *DeviceManager) GetMountImageInfo(udid string) (*model.UsbmuxdImage, er
 }
 
 func (dm *DeviceManager) GetUsbmuxdDeviceInfo(udid string) (*model.UsbmuxdDevice, error) {
-	cmd := exec.Command("ideviceinfo", "-u", udid, "-n")
+	cmd := exec.Command("ideviceinfo", "-u", udid, "-n").WithTimeout(10 * time.Second)
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
@@ -177,7 +251,7 @@ func (dm *DeviceManager) GetUsbmuxdDeviceInfo(udid string) (*model.UsbmuxdDevice
 }
 
 func (dm *DeviceManager) CheckHasMountImage(udid string) (bool, error) {
-	cmd := exec.Command("ideviceimagemounter", "-u", udid, "-n", "-l")
+	cmd := exec.Command("ideviceimagemounter", "list", "-u", udid, "-n").WithTimeout(10 * time.Second)
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
@@ -193,7 +267,7 @@ func (dm *DeviceManager) CheckHasMountImage(udid string) (bool, error) {
 }
 
 func (dm *DeviceManager) CheckAfcServiceStatus(udid string) error {
-	cmd := exec.Command("sideloader", "check", "afc", "--nocolor", "--udid", udid)
+	cmd := exec.Command("plumesign", "check", "afc", "--udid", udid).WithTimeout(10 * time.Second)
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
@@ -213,7 +287,7 @@ func (dm *DeviceManager) CheckAfcServiceStatus(udid string) error {
 }
 
 func (dm *DeviceManager) CheckDeveloperMode(udid string) (bool, error) {
-	cmd := exec.Command("idevicedevmodectl", "list", "-u", udid, "-n")
+	cmd := exec.Command("idevicedevmodectl", "list", "-u", udid, "-n").WithTimeout(10 * time.Second)
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
@@ -229,11 +303,60 @@ func (dm *DeviceManager) CheckDeveloperMode(udid string) (bool, error) {
 }
 
 func (dm *DeviceManager) RestartUsbmuxd() error {
-	cmd := exec.Command("/etc/init.d/usbmuxd", "restart")
+	cmd := exec.Command("/etc/init.d/usbmuxd", "restart").WithTimeout(time.Minute)
 	data, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s%s", string(data), err.Error())
 	}
 
 	return nil
+}
+
+func (dm *DeviceManager) parseName(host string) string {
+	name := strings.TrimSuffix(host, ".")
+	name = strings.TrimSuffix(name, ".local")
+	return name
+}
+
+// SetOnDeviceConnected 设置设备连接时的回调函数
+func (dm *DeviceManager) SetOnDeviceConnected(callback func(device model.Device)) {
+	dm.mu.Lock()
+	defer dm.mu.Unlock()
+	if callback != nil {
+		dm.onDeviceConnected = callback
+	}
+}
+
+// SetOnDeviceDisconnected 设置设备断开时的回调函数
+func (dm *DeviceManager) SetOnDeviceDisconnected(callback func(device model.Device)) {
+	dm.mu.Lock()
+	defer dm.mu.Unlock()
+	if callback != nil {
+		dm.onDeviceDisconnected = callback
+	}
+}
+
+// Stop 停止设备管理器
+func (dm *DeviceManager) Stop() {
+	dm.mu.Lock()
+	defer dm.mu.Unlock()
+
+	if dm.cancel != nil {
+		dm.cancel()
+		dm.cancel = nil
+		dm.ctx = nil
+		log.Info("Device manager stopped")
+	}
+}
+
+// 导出的函数，供外部包调用
+
+// SetDeviceConnectedCallback 设置设备连接时的回调函数（导出函数）
+func SetDeviceConnectedCallback(callback func(device model.Device)) {
+	deviceManager.SetOnDeviceConnected(callback)
+}
+
+// SetDeviceDisconnectedCallback 设置设备断开时的回调函数（导出函数）
+func SetDeviceDisconnectedCallback(callback func(device model.Device)) {
+	deviceManager.SetOnDeviceDisconnected(callback)
 }

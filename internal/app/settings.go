@@ -26,9 +26,10 @@ type SettingsConfiguration struct {
 		Language string `koanf:"language" json:"language"`
 	} `koanf:"app" json:"app"`
 	Task struct {
-		Enabled  bool     `koanf:"enabled" json:"enabled" default:"true"`
-		Mode     TaskMode `koanf:"mode" json:"mode" default:"1"`
-		CrodTime string   `koanf:"crod_time" json:"crod_time" default:"0,30 3-6 * * *"`
+		Enabled       bool     `koanf:"enabled" json:"enabled" default:"true"`
+		IphoneEnabled bool     `koanf:"iphone_enabled" json:"iphone_enabled" default:"true"`
+		Mode          TaskMode `koanf:"mode" json:"mode" default:"1"`
+		CrodTime      string   `koanf:"crod_time" json:"crod_time" default:"0,30 3-6 * * *"`
 	} `koanf:"task" json:"task"`
 	Notification struct {
 		Enabled  bool   `koanf:"enabled" json:"enabled"`
@@ -47,7 +48,26 @@ type SettingsConfiguration struct {
 			BarkServer string `koanf:"bark_server" json:"bark_server" default:"https://api.day.app"`
 			DeviceKey  string `koanf:"device_key" json:"device_key"`
 		} `koanf:"bark" json:"bark"`
+		Email struct {
+			SMTPHost string `koanf:"smtp_host" json:"smtp_host"`
+			SMTPPort int    `koanf:"smtp_port" json:"smtp_port" default:"587"`
+			Username string `koanf:"username" json:"username"`
+			Password string `koanf:"password" json:"password"`
+			From     string `koanf:"from" json:"from"`
+			To       string `koanf:"to" json:"to"`
+		} `koanf:"email" json:"email"`
+		Webhook struct {
+			URL         string `koanf:"url" json:"url"`
+			Method      string `koanf:"method" json:"method" default:"POST"`
+			ContentType string `koanf:"content_type" json:"content_type" default:"application/json"`
+			Body        string `koanf:"body" json:"body"`
+		} `koanf:"webhook" json:"webhook"`
 	} `koanf:"notification" json:"notification"`
+	Network struct {
+		ProxyEnabled bool   `koanf:"proxy_enabled" json:"proxy_enabled"`
+		HTTPProxy    string `koanf:"http_proxy" json:"http_proxy"`
+		HTTPSProxy   string `koanf:"https_proxy" json:"https_proxy"`
+	} `koanf:"network" json:"network"`
 }
 
 func SaveSettings() {

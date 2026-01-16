@@ -50,7 +50,7 @@ func Trace(msg string) {
 	log.Trace().Msg(msg)
 }
 
-func Tracef(format string, v ...interface{}) {
+func Tracef(format string, v ...any) {
 	log.Trace().Msgf(format, v...)
 }
 
@@ -58,19 +58,19 @@ func Debug(msg string) {
 	log.Debug().Msg(msg)
 }
 
-func Debugf(format string, v ...interface{}) {
+func Debugf(format string, v ...any) {
 	log.Debug().Msgf(format, v...)
 }
 
-func Print(v ...interface{}) {
+func Print(v ...any) {
 	log.Print(v...)
 }
 
-func Println(v ...interface{}) {
+func Println(v ...any) {
 	log.Print(v...)
 }
 
-func Printf(format string, v ...interface{}) {
+func Printf(format string, v ...any) {
 	log.Printf(format, v...)
 }
 
@@ -78,7 +78,7 @@ func Info(msg string) {
 	log.Info().Msg(msg)
 }
 
-func Infof(format string, v ...interface{}) {
+func Infof(format string, v ...any) {
 	log.Info().Msgf(format, v...)
 }
 
@@ -86,7 +86,7 @@ func Warn(msg string) {
 	log.Warn().Msg(msg)
 }
 
-func Warnf(format string, v ...interface{}) {
+func Warnf(format string, v ...any) {
 	log.Warn().Msgf(format, v...)
 }
 
@@ -94,7 +94,7 @@ func Error(msg string) {
 	log.Error().Msg(msg)
 }
 
-func Errorf(format string, v ...interface{}) {
+func Errorf(format string, v ...any) {
 	log.Error().Msgf(format, v...)
 }
 
@@ -106,7 +106,7 @@ func Panic(msg string) {
 	log.Panic().Msg(msg)
 }
 
-func Panicf(format string, v ...interface{}) {
+func Panicf(format string, v ...any) {
 	log.Panic().Msgf(format, v...)
 }
 

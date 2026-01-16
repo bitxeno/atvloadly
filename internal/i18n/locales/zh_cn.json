@@ -1,9 +1,0 @@
-{
-    "language": "zh_cn",
-    "notify": {
-        "title": "[{{.name}}]刷新任务执行失败",
-        "content": "帐号：{{.account}}\n错误日志：{{.error}}",
-        "batch_title": "atvloadly 刷新任务执行失败",
-        "batch_content": "app: {{.name}}\n 错误日志：{{.error}}\n\n"
-    }
-}

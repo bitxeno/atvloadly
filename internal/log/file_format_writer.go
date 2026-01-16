@@ -21,7 +21,7 @@ func newFileFormatWriter(out io.Writer) fileFormatWriter {
 }
 
 func (w fileFormatWriter) Write(p []byte) (n int, err error) {
-	var evt map[string]interface{}
+	var evt map[string]any
 
 	d := json.NewDecoder(bytes.NewReader(p))
 	d.UseNumber()
@@ -30,12 +30,12 @@ func (w fileFormatWriter) Write(p []byte) (n int, err error) {
 		return n, fmt.Errorf("cannot decode event: %s", err)
 	}
 
-	var msgInfo interface{} = ""
+	var msgInfo any = ""
 	if evt[zerolog.MessageFieldName] != nil {
 		msgInfo = evt[zerolog.MessageFieldName]
 	}
 
-	var errInfo interface{} = ""
+	var errInfo any = ""
 	if evt[zerolog.ErrorFieldName] != nil {
 		errInfo = evt[zerolog.ErrorFieldName]
 	}
@@ -46,7 +46,7 @@ func (w fileFormatWriter) Write(p []byte) (n int, err error) {
 	return len(p), err
 }
 
-func (w fileFormatWriter) formatCaller(i interface{}) string {
+func (w fileFormatWriter) formatCaller(i any) string {
 	var c string
 	if cc, ok := i.(string); ok {
 		c = cc

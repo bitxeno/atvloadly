@@ -36,6 +36,10 @@ service.interceptors.response.use(
   (response) => {
     const res = response.data;
 
+    if (response.config.responseType === 'blob') {
+      return response;
+    }
+
     // if the custom code is not 200, it is judged as an error.
     if (res.code !== 200) {
       const msg = res.msg ? `${res.msg} (code: ${res.code})` : `Error (code: ${res.code})`;

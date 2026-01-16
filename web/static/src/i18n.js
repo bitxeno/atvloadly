@@ -1,7 +1,7 @@
 import i18next from "i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
-import en from "./locales/en/translation.json";
-import zh_cn from "./locales/zh_cn/translation.json";
+import en from "@locales/en.json";
+import zh_cn from "@locales/zh_cn.json";
 
 i18next.use(LanguageDetector).init({
   //   debug: true,

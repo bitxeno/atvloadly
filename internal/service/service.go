@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/artdarek/go-unzip/pkg/unzip"
 	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/exec"
 	"github.com/bitxeno/atvloadly/internal/http"
 	"github.com/bitxeno/atvloadly/internal/i18n"
 	"github.com/bitxeno/atvloadly/internal/log"
@@ -38,6 +38,13 @@ func GetServiceStatus() []model.ServiceStatus {
 			Running: err == nil,
 		})
 	}
+	if runtime.GOOS == "darwin" {
+		proc := "mDNSResponder"
+		status = append(status, model.ServiceStatus{
+			Name:    proc,
+			Running: checkProcessExists(proc),
+		})
+	}
 
 	proc := "usbmuxd"
 	status = append(status, model.ServiceStatus{
@@ -60,6 +67,21 @@ func checkProcessExists(name string) bool {
 		}
 	}
 	return false
+}
+
+func GetDeviceMountImageInfo(ctx context.Context, id string) (*model.UsbmuxdImage, error) {
+	device, ok := manager.GetDeviceByID(id)
+	if !ok {
+		return nil, fmt.Errorf("device not found: %s", id)
+	}
+
+	imageInfo, err := manager.GetDeviceMountImageInfo(device.UDID)
+	if err != nil {
+		log.Err(err).Msg("GetDeviceMountImageInfo error: ")
+		return nil, err
+	}
+
+	return imageInfo, nil
 }
 
 func MountDeveloperDiskImage(ctx context.Context, id string) error {

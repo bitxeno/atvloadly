@@ -14,6 +14,72 @@ export default {
       method: "get",
     });
   },
+  getAccounts: (params) => {
+    return request({
+      url: "/api/accounts",
+      method: "get",
+      params,
+    });
+  },
+  logoutAccount: (data) => {
+    return request({
+      url: "/api/accounts/logout",
+      method: "post",
+      data,
+    });
+  },
+  getAccountDevices: (params) => {
+    return request({
+      url: "/api/accounts/devices",
+      method: "get",
+      timeout: 30000,
+      params,
+    });
+  },
+  deleteAccountDevice: (data) => {
+    return request({
+      url: "/api/accounts/devices/delete",
+      method: "post",
+      timeout: 30000,
+      data,
+    });
+  },
+  getCertificates: (params) => {
+    return request({
+      url: "/api/certificates",
+      method: "get",
+      timeout: 30000,
+      params,
+    });
+  },
+  revokeCertificate: (data) => {
+    return request({
+      url: "/api/certificates/revoke",
+      method: "post",
+      timeout: 30000,
+      data,
+    });
+  },
+  exportCertificate: (data) => {
+    return request({
+      url: "/api/certificates/export",
+      method: "post",
+      timeout: 60000,
+      data,
+      responseType: 'blob', // Important for file download
+    });
+  },
+  importCertificate: (data) => {
+    return request({
+      url: "/api/certificates/import",
+      method: "post",
+      timeout: 60000,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      data,
+    });
+  },
   mountDeviceImageAsync: (id) => {
     return new Promise((resolve, reject) => {
       request({
@@ -52,7 +118,7 @@ export default {
         method: "Post",
       })
         .then((res) => {
-          resolve(res.data ? "enabled" : "disabled");
+          resolve(res.data);
         })
         .catch((err) => {
           console.log(err);
@@ -99,12 +165,12 @@ export default {
           "Content-Type": "multipart/form-data",
         },
         data,
-      }) .then((res) => {
+      }).then((res) => {
         resolve(res.data);
       })
-      .catch((err) => {
-        reject(err);
-      });
+        .catch((err) => {
+          reject(err);
+        });
     });
   },
 
@@ -121,14 +187,6 @@ export default {
       url: "/api/apps/installing",
       method: "get",
       params,
-    });
-  },
-
-  saveApp: (data) => {
-    return request({
-      url: "/api/apps",
-      method: "post",
-      data,
     });
   },
 
@@ -196,7 +254,26 @@ export default {
     return request({
       url: `/api/notify/send/test`,
       method: "post",
+      timeout: 30000,
       data,
+    });
+  },
+  importPair: (data) => {
+    return request({
+      url: "/api/pair/import",
+      method: "post",
+      timeout: 30000,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      data,
+    });
+  },
+  scanWireless: () => {
+    return request({
+      url: "/api/scan/wireless",
+      method: "get",
+      timeout: 30000,
     });
   },
 };

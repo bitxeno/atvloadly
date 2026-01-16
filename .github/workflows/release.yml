@@ -32,9 +32,9 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go_version }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: 24
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -120,6 +120,7 @@ jobs:
             ./build/*.tar.gz
           prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
           body: ${{ steps.changelog.outputs.changelog }}
+          draft: true
           fail_on_unmatched_files: true
 
   dockerhub:

@@ -22,14 +22,21 @@ var instance = new()
 type Task struct {
 	c               *cron.Cron
 	InstallingApps  sync.Map
-	InstallAppQueue chan model.InstalledApp
+	InstallAppQueue chan TaskItem
 	chExitQueue     chan bool
 	InvalidAccounts map[string]bool
+	// RefreshingDevices prevents concurrent refresh operations for the same device UDID
+	RefreshingDevices sync.Map
+}
+
+type TaskItem struct {
+	App    model.InstalledApp
+	Notify bool
 }
 
 func new() *Task {
 	return &Task{
-		InstallAppQueue: make(chan model.InstalledApp, 1),
+		InstallAppQueue: make(chan TaskItem, 100),
 		chExitQueue:     make(chan bool, 1),
 	}
 }
@@ -39,11 +46,6 @@ func (t *Task) RunSchedule() error {
 		t.Stop()
 	}
 
-	if !app.Settings.Task.Enabled {
-		log.Info("App refresh scheduled task is not enabled")
-		return nil
-	}
-
 	t.c = cron.New()
 	if _, err := t.c.AddFunc(app.Settings.Task.CrodTime, t.Run); err != nil {
 		log.Err(err).Msgf("Failed to start app refresh scheduled task due to incorrect timing format: %s", app.Settings.Task.CrodTime)
@@ -51,14 +53,26 @@ func (t *Task) RunSchedule() error {
 		return err
 	}
 
-	log.Infof("App refresh scheduled task has started, time: %s", app.Settings.Task.CrodTime)
 	t.Start()
 
 	return nil
 }
 
 func (t *Task) Start() {
-	t.c.Start()
+	if app.Settings.Task.Enabled {
+		log.Infof("App refresh scheduled task has started, time: %s", app.Settings.Task.CrodTime)
+		t.c.Start()
+	} else {
+		log.Warn("App refresh scheduled task is disabled.")
+	}
+
+	// Register device connection callback to automatically refresh the application when the device is connected
+	manager.SetDeviceConnectedCallback(func(device model.Device) {
+		if err := t.autoRefreshDeviceApps(device); err != nil {
+			log.Err(err).Msgf("Failed to refresh apps for device: %s (UDID: %s)", device.Name, device.UDID)
+		}
+	})
+
 	go t.runQueue()
 }
 
@@ -76,26 +90,47 @@ func (t *Task) Run() {
 		return
 	}
 
-	log.Info("Start executing installation task...")
+	appsNeedRefresh := make([]model.InstalledApp, 0)
 	for _, v := range installedApps {
-		if !t.checkNeedRefresh(v) {
+		if !v.NeedRefresh() {
 			continue
 		}
 
+		// iPhone cannot refresh on a schedule and relies on whether the phone is unlocked
+		// Need to check Afc service status before refreshing
+		if v.IsIPhoneApp() {
+			if err := manager.CheckAfcServiceStatus(v.UDID); err != nil {
+				continue
+			}
+		}
+
+		appsNeedRefresh = append(appsNeedRefresh, v)
+	}
+
+	if len(appsNeedRefresh) == 0 {
+		log.Info("No apps need to be refreshed.")
+		return
+	}
+
+	log.Infof("Start executing installation task (%d need refresh)...", len(appsNeedRefresh))
+	for _, v := range appsNeedRefresh {
 		t.StartInstallApp(v)
 	}
 	log.Info("Installation task completed.")
 }
 
 func (t *Task) runQueue() {
+	// Wait for one minute before install at startup to avoid the usbmuxd service not being ready.
+	time.Sleep(time.Minute)
+
 	for {
 		select {
 		case v := <-t.InstallAppQueue:
 			t.tryInstallApp(v)
-			t.InstallingApps.Delete(v.ID)
+			t.InstallingApps.Delete(v.App.ID)
 
-			// Next execution delayed by 5 seconds.
-			time.Sleep(5 * time.Second)
+			// Next execution delayed by 10 seconds.
+			time.Sleep(10 * time.Second)
 		case <-t.chExitQueue:
 			log.Info("Install app queue exit.")
 			return
@@ -103,45 +138,36 @@ func (t *Task) runQueue() {
 	}
 }
 
-func (t *Task) checkNeedRefresh(v model.InstalledApp) bool {
-	now := time.Now()
-
-	// fix RefreshedDate is nil
-	if v.RefreshedDate == nil {
-		return true
-	}
-
-	// refresh when the expiration time is less than one day.
-	if app.Settings.Task.Mode == app.OneDayAgoMode {
-		expireTime := v.RefreshedDate.AddDate(0, 0, 6)
-		if expireTime.Before(now) {
-			return true
-		}
-	}
-
-	// today has refreshed will ignore
-	if app.Settings.Task.Mode == app.CustomMode {
-		if v.RefreshedDate.Format("2006-01-02") != now.Format("2006-01-02") {
-			return true
-		}
-	}
-
-	return false
-}
-
 func (t *Task) StartInstallApp(v model.InstalledApp) {
-	go func() {
-		t.InstallAppQueue <- v
-	}()
+	t.startInstallAppInternal(v, true)
 }
 
-func (t *Task) tryInstallApp(v model.InstalledApp) {
+func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool) {
+	if _, loaded := t.InstallingApps.LoadOrStore(v.ID, v); !loaded {
+		fmt.Println("Starting install for app: ", v.IpaName)
+		select {
+		case t.InstallAppQueue <- TaskItem{App: v, Notify: notify}:
+		default:
+			t.InstallingApps.Delete(v.ID)
+			log.Warnf("The install queue is full, skip task: %s", v.IpaName)
+		}
+		fmt.Println("Push to install queue for app: ", v.IpaName)
+	}
+}
+
+func (t *Task) tryInstallApp(item TaskItem) {
+	v := item.App
 	log.Infof("Start installing ipa: %s", v.IpaName)
-	err := t.runInternal(v)
+	provisioningProfile, err := t.runInternal(v)
 
 	now := time.Now()
+	expirationDate := now.AddDate(0, 0, 7)
+	if provisioningProfile != nil {
+		expirationDate = provisioningProfile.ExpirationDate.Local()
+	}
 	if err == nil {
 		v.RefreshedDate = &now
+		v.ExpirationDate = &expirationDate
 		v.RefreshedResult = true
 		_ = service.UpdateAppRefreshResult(v)
 		log.Infof("Installing ipa success: %s", v.IpaName)
@@ -150,47 +176,103 @@ func (t *Task) tryInstallApp(v model.InstalledApp) {
 		_ = service.UpdateAppRefreshResult(v)
 
 		// Send installation failure notification
-		title := i18n.LocalizeF("notify.title", map[string]interface{}{"name": v.IpaName})
-		message := i18n.LocalizeF("notify.content", map[string]interface{}{"account": v.Account, "error": err.Error()})
-		_ = notify.Send(title, message)
-		log.Infof("Installing ipa failed: %s error: %s", v.IpaName, err.Error())
+		if item.Notify && app.Settings.Notification.Enabled {
+			title := i18n.LocalizeF("notify.title", map[string]any{"name": v.IpaName})
+			message := i18n.LocalizeF("notify.content", map[string]any{"account": v.Account, "error": err.Error()})
+			_ = notify.Send(title, message)
+			log.Infof("Installing ipa failed: %s error: %s", v.IpaName, err.Error())
+		}
 	}
 }
 
-func (t *Task) runInternal(v model.InstalledApp) error {
+func (t *Task) runInternal(v model.InstalledApp) (*model.MobileProvisioningProfile, error) {
 	installMgr := manager.NewInstallManager()
 	defer func() {
 		installMgr.SaveLog(v.ID)
 		installMgr.Close()
 	}()
 
-	if v.Account == "" || v.Password == "" || v.UDID == "" {
-		installMgr.WriteLog("account or password or UDID is empty")
-		return fmt.Errorf("%s", "account or password or UDID is empty")
+	if v.Account == "" || v.UDID == "" {
+		installMgr.WriteLog("account or UDID is empty")
+		return nil, fmt.Errorf("%s", "account or UDID is empty")
 	}
 
 	if _, ok := t.InvalidAccounts[v.Account]; ok {
 		installMgr.WriteLog(fmt.Sprintf("The install account (%s) is invalid, skip install.", v.MaskAccount()))
-		return fmt.Errorf("The install account (%s) is invalid, skip install.", v.MaskAccount())
+		return nil, fmt.Errorf("The install account (%s) is invalid, skip install.", v.MaskAccount())
 	}
 
-	err := installMgr.TryStart(context.Background(), v.UDID, v.Account, v.Password, v.IpaPath)
+	err := installMgr.TryStart(context.Background(), v.UDID, v.Account, v.Password, v.IpaPath, v.RemoveExtensions)
 	if err != nil {
 		log.Err(err).Msgf("Error executing installation script. %s", installMgr.ErrorLog())
 		installMgr.WriteLog(err.Error())
-		if strings.Contains(installMgr.ErrorLog(), "Can't log-in") || strings.Contains(installMgr.ErrorLog(), "DeveloperSession creation failed") {
+		if strings.Contains(installMgr.OutputLog(), "Can't log-in") || strings.Contains(installMgr.OutputLog(), "DeveloperSession creation failed") {
 			t.InvalidAccounts[v.Account] = true
 		}
+		return nil, fmt.Errorf("%s %s", installMgr.ErrorLog(), err.Error())
+	}
+
+	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") || strings.Contains(installMgr.OutputLog(), "Installation complete") {
+		return installMgr.ProvisioningProfile, nil
+	} else {
+		if strings.Contains(installMgr.OutputLog(), "Can't log-in") || strings.Contains(installMgr.OutputLog(), "DeveloperSession creation failed") {
+			t.InvalidAccounts[v.Account] = true
+		}
+		return nil, fmt.Errorf("%s", installMgr.ErrorLog())
+	}
+}
+
+func (t *Task) autoRefreshDeviceApps(device model.Device) error {
+	if !device.IsIPhone() {
+		return nil
+	}
+	if !app.Settings.Task.Enabled || !app.Settings.Task.IphoneEnabled {
+		return nil
+	}
+	return t.refreshDeviceApps(device)
+}
+
+// refreshes apps when device is discovery on network, for iPhone only.
+func (t *Task) refreshDeviceApps(device model.Device) error {
+	deviceApps, err := service.GetEnableAppListByUDID(device.UDID)
+	if err != nil {
 		return err
 	}
-	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") {
-		return nil
-	} else {
-		if strings.Contains(installMgr.ErrorLog(), "Can't log-in") || strings.Contains(installMgr.ErrorLog(), "DeveloperSession creation failed") {
-			t.InvalidAccounts[v.Account] = true
+
+	appsNeedRefresh := make([]model.InstalledApp, 0)
+	for _, v := range deviceApps {
+		if v.NeedRefresh() {
+			appsNeedRefresh = append(appsNeedRefresh, v)
 		}
-		return fmt.Errorf("%s", installMgr.ErrorLog())
 	}
+
+	if len(appsNeedRefresh) == 0 {
+		return nil
+	}
+
+	// Prevent concurrent refresh for the same device UDID
+	if _, loaded := t.RefreshingDevices.LoadOrStore(device.UDID, true); loaded {
+		return nil
+	}
+
+	go func(udid, name string, apps []model.InstalledApp) {
+		// Ensure we clear the refreshing flag when finished
+		defer t.RefreshingDevices.Delete(udid)
+
+		// The iPhone may connect and disconnect instantly (for example, briefly lighting up the screen when receiving a message).
+		// Check to ensure the device can connect truly.
+		time.Sleep(30 * time.Second)
+		if err := manager.CheckAfcServiceStatus(udid); err != nil {
+			log.Err(err).Msgf("Check AFC service status failed, skip refresh device: %s.", udid)
+			return
+		}
+
+		log.Infof("Start refresh apps for device: %s (found %d apps, %d need refresh)...", name, len(deviceApps), len(apps))
+		for _, v := range apps {
+			t.startInstallAppInternal(v, false)
+		}
+	}(device.UDID, device.Name, appsNeedRefresh)
+	return nil
 }
 
 func ScheduleRefreshApps() error {
@@ -198,15 +280,13 @@ func ScheduleRefreshApps() error {
 }
 
 func RunInstallApp(v model.InstalledApp) {
-	if _, loaded := instance.InstallingApps.LoadOrStore(v.ID, v); !loaded {
-		instance.StartInstallApp(v)
-	}
+	instance.StartInstallApp(v)
 }
 
 func GetCurrentInstallingApps() []model.InstalledApp {
 	installingApps := []model.InstalledApp{}
 
-	instance.InstallingApps.Range(func(key, value interface{}) bool {
+	instance.InstallingApps.Range(func(key, value any) bool {
 		installingApps = append(installingApps, value.(model.InstalledApp))
 		return true
 	})
@@ -216,4 +296,8 @@ func GetCurrentInstallingApps() []model.InstalledApp {
 func ReloadTask() error {
 	log.Info("Reload task...")
 	return instance.RunSchedule()
+}
+
+func RefreshDeviceApps(device model.Device) error {
+	return instance.refreshDeviceApps(device)
 }

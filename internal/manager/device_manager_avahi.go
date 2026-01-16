@@ -3,8 +3,10 @@
 package manager
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
@@ -23,6 +25,11 @@ const (
 // /var/run/dbus
 // /var/run/avahi-daemon
 func (dm *DeviceManager) Start() {
+	dm.mu.Lock()
+	dm.ctx, dm.cancel = context.WithCancel(context.Background())
+	ctx := dm.ctx
+	dm.mu.Unlock()
+
 	conn, err := dbus.SystemBus()
 	if err != nil {
 		log.Printf("Cannot get system bus: %v", err)
@@ -74,12 +81,15 @@ func (dm *DeviceManager) Start() {
 		log.Err(err).Msgf("ServiceBrowserNew() failed: ")
 	}
 
-	log.Info("mDNS discovery started...")
+	log.Info("Avahi discovery started...")
 
 	var service avahi.Service
 
 	for {
 		select {
+		case <-ctx.Done():
+			log.Info("Avahi discovery stopped")
+			return
 		case service = <-sb.AddChannel:
 			log.Tracef("ServiceBrowser ADD: %v", service)
 
@@ -89,7 +99,7 @@ func (dm *DeviceManager) Start() {
 				log.Tracef(" RESOLVED >> %s", service.Address)
 
 				macAddr := strings.Split(service.Name, "@")[0]
-				name := strings.TrimSuffix(service.Host, ".local")
+				name := dm.parseName(service.Host)
 				// 检查是否已连接
 				lockdownDevices, err := loadLockdownDevices()
 				if err != nil {
@@ -102,7 +112,7 @@ func (dm *DeviceManager) Start() {
 				if lockdownDev, ok := lockdownDevices[macAddr]; ok {
 					log.Tracef("add lockdown device >> %v", lockdownDev)
 					udid := lockdownDev.Name
-					dm.devices.Store(udid, model.Device{
+					device := model.Device{
 						ID:          utils.Md5(udid),
 						Name:        name,
 						ServiceName: service.Name,
@@ -110,11 +120,19 @@ func (dm *DeviceManager) Start() {
 						IP:          service.Address,
 						UDID:        udid,
 						Status:      model.Paired,
-					})
+					}
+					device.ParseDeviceClass()
+
+					dm.SaveDevice(device)
+
+					// Trigger device connection callback
+					dm.onDeviceConnected(device)
 				}
 			}
 		case service = <-sb.RemoveChannel:
 			log.Tracef("ServiceBrowser REMOVE: %v", service)
+			macAddr := strings.Split(service.Name, "@")[0]
+			dm.DeleteDeviceByMacAddr(macAddr)
 		case service = <-sbPairable.AddChannel:
 			log.Tracef("ServiceBrowser ADD: %v", service)
 
@@ -125,9 +143,9 @@ func (dm *DeviceManager) Start() {
 
 				// 添加可配对设备
 				macAddr := strings.Split(service.Name, "@")[0]
-				name := strings.TrimSuffix(service.Host, ".local")
+				name := dm.parseName(service.Host)
 				udid := fmt.Sprintf("fff%sfff", macAddr)
-				dm.devices.Store(udid, model.Device{
+				device := model.Device{
 					ID:          utils.Md5(udid),
 					Name:        name,
 					ServiceName: service.Name,
@@ -135,7 +153,9 @@ func (dm *DeviceManager) Start() {
 					IP:          service.Address,
 					UDID:        udid,
 					Status:      model.Pairable,
-				})
+				}
+				device.ParseDeviceClass()
+				dm.SaveDevice(device)
 
 			}
 
@@ -143,11 +163,126 @@ func (dm *DeviceManager) Start() {
 			log.Tracef("ServiceBrowser REMOVE: %v", service)
 			macAddr := strings.Split(service.Name, "@")[0]
 			udid := fmt.Sprintf("fff%sfff", macAddr)
-			dm.devices.Delete(udid)
+			dm.DeleteDevice(udid)
 		}
 	}
 }
 
 func (dm *DeviceManager) Scan() {
 	// TODO: AppleTV端删除连接后，本地自动删除已连接设备
+}
+
+func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) error {
+	conn, err := dbus.SystemBus()
+	if err != nil {
+		return fmt.Errorf("Cannot get system bus: %v", err)
+	}
+
+	server, err := avahi.ServerNew(conn)
+	if err != nil {
+		return fmt.Errorf("Avahi new failed: %v", err)
+	}
+
+	// Browse all service types
+	stb, err := server.ServiceTypeBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceDomain, 0)
+	if err != nil {
+		return fmt.Errorf("ServiceTypeBrowserNew failed: %w", err)
+	}
+
+	discoveredTypes := make(map[string]bool)
+
+	// Goroutine to handle type discovery and spawn service browsers
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case t := <-stb.AddChannel:
+				if !discoveredTypes[t.Type] {
+					discoveredTypes[t.Type] = true
+					go dm.scanServiceTypeContinuous(ctx, server, t.Type, callback)
+				}
+			}
+		}
+	}()
+
+	<-ctx.Done()
+	return nil
+}
+
+func (dm *DeviceManager) scanServiceTypeContinuous(ctx context.Context, server *avahi.Server, serviceType string, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) {
+	sb, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, serviceType, mdnsServiceDomain, 0)
+	if err != nil {
+		log.Err(err).Msgf("ServiceBrowserNew failed for %s", serviceType)
+		return
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case service := <-sb.AddChannel:
+			resolved, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
+				service.Type, service.Domain, avahi.ProtoUnspec, 0)
+			if err == nil {
+				callback(serviceType, resolved.Name, resolved.Host, resolved.Address, resolved.Port, resolved.Txt)
+			}
+		}
+	}
+}
+
+func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.Duration) ([]model.Device, error) {
+	conn, err := dbus.SystemBus()
+	if err != nil {
+		return nil, fmt.Errorf("Cannot get system bus: %v", err)
+	}
+
+	server, err := avahi.ServerNew(conn)
+	if err != nil {
+		return nil, fmt.Errorf("Avahi new failed: %v", err)
+	}
+
+	sb, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsService, mdnsServiceDomain, 0)
+	if err != nil {
+		return nil, fmt.Errorf("ServiceBrowserNew() failed: %v", err)
+	}
+
+	devices := make([]model.Device, 0)
+	deviceMap := make(map[string]bool)
+
+	// 创建超时的context
+	scanCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	for {
+		select {
+		case <-scanCtx.Done():
+			return devices, nil
+		case service := <-sb.AddChannel:
+			resolved, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
+				service.Type, service.Domain, avahi.ProtoUnspec, 0)
+			if err != nil {
+				continue
+			}
+
+			macAddr := strings.Split(resolved.Name, "@")[0]
+			// 避免重复添加
+			if deviceMap[macAddr] {
+				continue
+			}
+			deviceMap[macAddr] = true
+
+			name := dm.parseName(resolved.Host)
+			device := model.Device{
+				ID:          utils.Md5(resolved.Name),
+				Name:        name,
+				ServiceName: service.Name,
+				MacAddr:     macAddr,
+				IP:          resolved.Address,
+				Status:      model.Paired,
+			}
+			device.ParseDeviceClass()
+			devices = append(devices, device)
+		}
+	}
 }
