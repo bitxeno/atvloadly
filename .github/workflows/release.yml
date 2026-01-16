@@ -120,6 +120,7 @@ jobs:
             ./build/*.tar.gz
           prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
           body: ${{ steps.changelog.outputs.changelog }}
+          draft: true
           fail_on_unmatched_files: true
 
   dockerhub:
