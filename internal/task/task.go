@@ -68,7 +68,7 @@ func (t *Task) Start() {
 
 	// Register device connection callback to automatically refresh the application when the device is connected
 	manager.SetDeviceConnectedCallback(func(device model.Device) {
-		if err := t.refreshDeviceApps(device); err != nil {
+		if err := t.autoRefreshDeviceApps(device); err != nil {
 			log.Err(err).Msgf("Failed to refresh apps for device: %s (UDID: %s)", device.Name, device.UDID)
 		}
 	})
@@ -144,12 +144,14 @@ func (t *Task) StartInstallApp(v model.InstalledApp) {
 
 func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool) {
 	if _, loaded := t.InstallingApps.LoadOrStore(v.ID, v); !loaded {
+		fmt.Println("Starting install for app: ", v.IpaName)
 		select {
 		case t.InstallAppQueue <- TaskItem{App: v, Notify: notify}:
 		default:
 			t.InstallingApps.Delete(v.ID)
 			log.Warnf("The install queue is full, skip task: %s", v.IpaName)
 		}
+		fmt.Println("Push to install queue for app: ", v.IpaName)
 	}
 }
 
@@ -220,15 +222,18 @@ func (t *Task) runInternal(v model.InstalledApp) (*model.MobileProvisioningProfi
 	}
 }
 
-// refreshes apps when device is discovery on network, for iPhone only.
-func (t *Task) refreshDeviceApps(device model.Device) error {
+func (t *Task) autoRefreshDeviceApps(device model.Device) error {
 	if !device.IsIPhone() {
 		return nil
 	}
 	if !app.Settings.Task.Enabled || !app.Settings.Task.IphoneEnabled {
 		return nil
 	}
+	return t.refreshDeviceApps(device)
+}
 
+// refreshes apps when device is discovery on network, for iPhone only.
+func (t *Task) refreshDeviceApps(device model.Device) error {
 	deviceApps, err := service.GetEnableAppListByUDID(device.UDID)
 	if err != nil {
 		return err
@@ -247,7 +252,6 @@ func (t *Task) refreshDeviceApps(device model.Device) error {
 
 	// Prevent concurrent refresh for the same device UDID
 	if _, loaded := t.RefreshingDevices.LoadOrStore(device.UDID, true); loaded {
-		log.Infof("Device refresh already in progress, skip: %s (UDID: %s)", device.Name, device.UDID)
 		return nil
 	}
 
@@ -259,6 +263,7 @@ func (t *Task) refreshDeviceApps(device model.Device) error {
 		// Check to ensure the device can connect truly.
 		time.Sleep(30 * time.Second)
 		if err := manager.CheckAfcServiceStatus(udid); err != nil {
+			log.Err(err).Msgf("Check AFC service status failed, skip refresh device: %s.", udid)
 			return
 		}
 
@@ -291,4 +296,8 @@ func GetCurrentInstallingApps() []model.InstalledApp {
 func ReloadTask() error {
 	log.Info("Reload task...")
 	return instance.RunSchedule()
+}
+
+func RefreshDeviceApps(device model.Device) error {
+	return instance.refreshDeviceApps(device)
 }

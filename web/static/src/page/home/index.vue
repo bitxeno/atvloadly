@@ -121,7 +121,13 @@
                   <span v-if="sortKey == 'account'" class="text-xs">{{ sortOrder == 'asc' ? '▲' : '▼' }}</span>
                 </div>
               </th>
-              <th>{{ $t("home.table.header.expired_date") }}</th>
+              <th @click="toggleSort('expired_date')" class="cursor-pointer select-none">
+                <div class="flex items-center gap-x-1">
+                  {{ $t("home.table.header.expired_date") }}
+                  <span v-if="sortKey != 'expired_date'" class="text-xs">⇅</span>
+                  <span v-if="sortKey == 'expired_date'" class="text-xs">{{ sortOrder == 'asc' ? '▲' : '▼' }}</span>
+                </div>
+              </th>
               <th>{{ $t("home.table.header.operate") }}</th>
             </tr>
           </thead>
@@ -478,6 +484,17 @@ export default {
         return "";
       } else if (key === "account") {
         return item.account || "";
+      } else if (key === "expired_date") {
+        // Compute expiration timestamp for sorting.
+        // Prefer explicit expiration_date; otherwise use refreshed_date/installed_date + 7 days.
+        let time = item.refreshed_date || item.installed_date;
+        if (item.expiration_date) {
+          return dayjs(item.expiration_date).valueOf();
+        }
+        if (time) {
+          return dayjs(time).add(7, "day").valueOf();
+        }
+        return 0;
       }
       return "";
     },

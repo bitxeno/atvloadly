@@ -445,6 +445,22 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(task.GetCurrentInstallingApps()))
 	})
 
+	api.Get("/apps/refresh", func(c *fiber.Ctx) error {
+		// wait a moment to ensure device connected
+		time.Sleep(5 * time.Second)
+
+		devices, err := manager.GetDevices()
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		for _, device := range devices {
+			if err := task.RefreshDeviceApps(device); err != nil {
+				return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+			}
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
 	api.Post("/clean", func(c *fiber.Ctx) error {
 		var ipa model.IpaFile
 		if err := c.BodyParser(&ipa); err != nil {
