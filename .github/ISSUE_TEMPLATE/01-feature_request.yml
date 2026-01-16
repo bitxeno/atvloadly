@@ -1,0 +1,35 @@
+name: "Feature Request"
+description: Feature Request / Enhancement
+title: "[Feature] Please change the title to your feature name"
+labels: [enhancement]
+body:
+  - type: checkboxes
+    attributes:
+      label: Please confirm the following
+      description: |
+        You must check all the following, otherwise your request may be closed directly.
+      options:
+        - label: |
+            I confirm there are no duplicate feature requests.
+        - label: |
+            I confirm this feature has not been implemented yet.
+        - label: |
+            I confirm this feature is reasonable and has general demand, not just my personal need.
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: Feature Description
+    validations:
+      required: true
+  - type: textarea
+    id: suggested-solution
+    attributes:
+      label: Suggested Solution
+      description: |
+        Solution or approach to achieve this feature.
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Information
+      description: |
+        Any other context or screenshots related to this feature request, or information you find helpful.
