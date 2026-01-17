@@ -111,19 +111,26 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [P
 
 > Currently does not support it.
 
+4. IPA crashes after installation
+
+> If the IPA requires permissions such as CloudKit, only paid developer accounts can sign and enable them. After sideloading with atvloadly, the IPA's `Bundle Identifier` will be modified, and some IPAs may restrict this, causing crashes.
+
+5. Unable to receive 2FA verification code
+
+> This may have triggered Apple's risk control. It is recommended to create a new account and try again. Apple also has login restrictions for certain regions; you can try adding a proxy in the settings and try again.
+
 ## How to build
 
 [>> wiki](https://github.com/bitxeno/atvloadly/wiki/How-to-build)
 
-## Donation
+## Credits
 
-**atvloadly** is a free open source software that benefits from the open source community, if you appreciate my current work, you can buy me a cup of coffee ☕️.
+[PlumeImpactor](https://github.com/khcrysalis/PlumeImpactor)
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/H2H8NU37J)
+[idevice](https://github.com/jkcoxson/idevice)
 
-[![爱发电](./doc/image/afdian.svg)](https://afdian.com/a/bitxeno)
+[usbmuxd2](https://github.com/tihmstar/usbmuxd2)
 
-Thanks for all the love and support ❤️
 
 ## Disclaimer
 

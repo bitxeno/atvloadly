@@ -1,8 +1,8 @@
 name: "🚫 Close Inactive"
 
 on:
-  # schedule:
-  #   - cron: "0 0 * * 1"  # the first day of the week
+  schedule:
+    - cron: "0 0 * * 1"  # the first day of the week
   workflow_dispatch:
 
 jobs:
@@ -15,9 +15,9 @@ jobs:
       - name: close-issues
         uses: actions/stale@v7
         with:
-          stale-issue-message: "This issue was closed due to inactive more than 30 days. You can reopen it if you think it should continue."
-          exempt-issue-labels: "FAQ,question,bug,enhancement"
-          days-before-stale: 30
+          stale-issue-message: "This issue was closed due to inactive more than 90 days. You can reopen it if you think it should continue."
+          exempt-issue-labels: "FAQ,question,bug,enhancement,pr-welcome"
+          days-before-stale: 90
           days-before-close: 0
           days-before-pr-stale: -1
           days-before-pr-close: -1

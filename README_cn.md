@@ -112,6 +112,14 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 
 > 目前不支持
 
+4、IPA 安装后闪退
+
+> 假如 IPA 需要 CloudKit 等权限，只有付费开发者帐号才能签名开通。atvloadly 侧载后会修改 IPA 的 `Bundle Identifier`，部分 IPA 也会限制导致闪退。
+
+5、没法收到 2FA 验证码
+
+> 可能触发了苹果的风控，建议新建个帐号再试下。苹果对部分地区登录也有限制，可以尝试在设置中添加代理再试下。
+
 
 ## 推荐开源 App
 
@@ -122,14 +130,13 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 
 [>> wiki](https://github.com/bitxeno/atvloadly/wiki/How-to-build)
 
-## 赞助
+## 致谢
 
-如果觉得项目对您有帮助，欢迎赞助 ❤️
+[PlumeImpactor](https://github.com/khcrysalis/PlumeImpactor)
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/H2H8NU37J)
+[idevice](https://github.com/jkcoxson/idevice)
 
-[![爱发电](./doc/image/afdian.svg)](https://afdian.com/a/bitxeno)
-
+[usbmuxd2](https://github.com/tihmstar/usbmuxd2)
 
 ## 免责声明
 
