@@ -119,6 +119,10 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [P
 
 > This may have triggered Apple's risk control. It is recommended to create a new account and try again. Apple also has login restrictions for certain regions; you can try adding a proxy in the settings and try again.
 
+6. Unable to find AppleTV
+
+> Please turn off the VPN, restart the AppleTV, re-enter pairing mode, make sure **[Tool]** can detect devices of the `_apple-pairable._tcp` type, and pair again.
+
 ## How to build
 
 [>> wiki](https://github.com/bitxeno/atvloadly/wiki/How-to-build)
