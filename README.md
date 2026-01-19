@@ -103,25 +103,26 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [P
 
 > Each free Apple ID can register up to 10 apps and activate up to 3 apps simultaneously. Installing more than 3 will cause previously installed apps to become unavailable.
 
-2. Installation failure after system upgrade.
+2. Unable to find AppleTV
 
-> After upgrading the system, re-pairing is required. Generally, newly released systems are not supported. It is recommended to disable automatic system updates.
+> Please turn off the VPN, restart the AppleTV, re-enter pairing mode, make sure **[Tool]** can detect devices of the `_apple-pairable._tcp` type, and pair again.
 
-3. Can App-specific passwords be used for passwords? Is it more secure this way?
+3. Failed to log in to Apple account
 
-> Currently does not support it.
+> This may have triggered Apple's risk control. Apple has login restrictions for certain regions. You can try adding a proxy in the settings. Alternatively, try creating a new account.
 
 4. IPA crashes after installation
 
 > If the IPA requires permissions such as CloudKit, only paid developer accounts can sign and enable them. After sideloading with atvloadly, the IPA's `Bundle Identifier` will be modified, and some IPAs may restrict this, causing crashes.
 
-5. Unable to receive 2FA verification code
+5. Installation failure after system upgrade.
 
-> This may have triggered Apple's risk control. It is recommended to create a new account and try again. Apple also has login restrictions for certain regions; you can try adding a proxy in the settings and try again.
+> After upgrading the system, re-pairing is required. Generally, newly released systems are not supported. It is recommended to disable automatic system updates.
 
-6. Unable to find AppleTV
+6. Can App-specific passwords be used for passwords? Is it more secure this way?
 
-> Please turn off the VPN, restart the AppleTV, re-enter pairing mode, make sure **[Tool]** can detect devices of the `_apple-pairable._tcp` type, and pair again.
+> Currently does not support it.
+
 
 ## How to build
 
