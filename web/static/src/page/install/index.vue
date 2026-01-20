@@ -34,7 +34,7 @@
                 type="file"
                 class="file-input file-input-bordered w-full"
                 @change="onFileChange"
-                accept=".ipa"
+                accept=".ipa,.tipa"
                 required
               />
             </div>
