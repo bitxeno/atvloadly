@@ -59,7 +59,14 @@ func HandleInstallMessage(c *websocket.Conn) {
 }
 
 func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.InstallManager, v model.InstalledApp) {
-	err := installMgr.Start(mgr.Context(), v.UDID, v.Account, v.Password, v.IpaPath, v.RemoveExtensions)
+	err := installMgr.Start(mgr.Context(), manager.InstallOptions{
+		UDID:             v.UDID,
+		Account:          v.Account,
+		Password:         v.Password,
+		IpaPath:          v.IpaPath,
+		RemoveExtensions: v.RemoveExtensions,
+		RefreshMode:      false,
+	})
 	if err != nil {
 		installMgr.CleanTempFiles(v.IpaPath)
 		msg := fmt.Sprintf("ERROR: %s", err.Error())
