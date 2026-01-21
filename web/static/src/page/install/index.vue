@@ -218,6 +218,8 @@ export default {
       loginLoading: false,
       authLoading: false,
       isLoginFlow: false,
+      // 控制错误提示只显示一次（仅用于安装流程）
+      errorToastShown: false,
       loginForm: {
         account: "",
         password: "",
@@ -259,6 +261,7 @@ export default {
 
      
       _this.loading = true;
+      _this.errorToastShown = false;
       _this.log.output = "";
       _this.log.newcontent = "";
       _this.log.show = true;
@@ -380,7 +383,7 @@ export default {
           _this.loginWebsock.close();
         }
 
-        if (line.indexOf("ERROR") !== -1 || line.indexOf("Error:") !== -1) {
+        if (line.toLowerCase().indexOf("error") !== -1 && line.indexOf("exit status") === -1) {
             _this.loginLoading = false;
             _this.authLoading = false;
             toast.error(line);
@@ -457,10 +460,13 @@ export default {
 
 
       // Installation error
-      if (line.indexOf("ERROR") !== -1 || line.indexOf("Error:") !== -1) {
+      if (line.toLowerCase().indexOf("error") !== -1 && line.indexOf("exit status") === -1) {
         _this.loading = false;
         _this.authLoading = false;
-        toast.error(this.$t("install.toast.install_failed"));
+        if (!_this.errorToastShown) {
+          _this.errorToastShown = true;
+          toast.error(_this.$t("install.toast.install_failed"));
+        }
         return;
       }
 

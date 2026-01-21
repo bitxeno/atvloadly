@@ -756,7 +756,7 @@ export default {
         _this.loginWebsock.close();
       }
 
-      if (line.indexOf("ERROR") !== -1 || line.indexOf("Error:") !== -1) {
+      if (line.toLowerCase().indexOf("error") !== -1 && line.indexOf("exit status") === -1) {
         _this.loginLoading = false;
         _this.authLoading = false;
         toast.error(line);
