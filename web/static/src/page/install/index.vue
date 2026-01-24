@@ -219,8 +219,6 @@ export default {
       loginErr: "",
       authLoading: false,
       isLoginFlow: false,
-      // 控制错误提示只显示一次（仅用于安装流程）
-      errorToastShown: false,
       loginForm: {
         account: "",
         password: "",
@@ -262,7 +260,6 @@ export default {
 
      
       _this.loading = true;
-      _this.errorToastShown = false;
       _this.log.output = "";
       _this.log.newcontent = "";
       _this.log.show = true;
@@ -276,8 +273,7 @@ export default {
         let devmode = await api.checkDeveloperMode(_this.id);
         _this.log.output += `developer mode: ${devmode.enabled ? "enabled" : "disabled"}${devmode.mounted ? " (mounted)" : ""}\n`;
 
-        await api.checkAfcService(_this.id);
-        _this.log.output += "afc service: OK!\n";
+        await _this.checkAfcService(_this.id);
 
         let formData = new FormData();
         for (let i = 0; i < _this.files.length; i++) {
@@ -305,9 +301,9 @@ export default {
         });
       } catch (error) {
         console.log(error);
-        _this.log.output += error;
+        _this.log.newcontent += error;
         _this.loading = false;
-        _this.startUpdateLog();
+        _this.authLoading = false;
         toast.error(this.$t("install.toast.install_failed"));
         return;
       }
@@ -383,16 +379,19 @@ export default {
           _this.authDialogVisible = false;
           _this.fetchData(); // Refresh accounts
           _this.loginWebsock.close();
+          return;
         }
 
+        if (line.indexOf("exit status") !== -1) {
+          _this.loginLoading = false;
+          _this.authLoading = false;
+          toast.error(_this.loginErr);
+          return;
+        } 
+
         if (line.toLowerCase().indexOf("error") !== -1 || _this.loginErr !== "") {
-          if (line.indexOf("exit status") !== -1) {
-            _this.loginLoading = false;
-            _this.authLoading = false;
-            toast.error(_this.loginErr);
-          } else {
-            _this.loginErr += line;
-          }
+          _this.loginErr += line;
+          return;
         }
     },
     loginWebsocketsend(t, data) {
@@ -452,10 +451,12 @@ export default {
       // hide password string
       let line = e.data.replace(_this.form.password, "******");
 
-      // append new log content
-      if (line.indexOf("sealing regular file") === -1) {
-        _this.log.newcontent += line;
+      if (line.indexOf("sealing regular file") !== -1) {
+        return;
       }
+
+      // append new log content
+      _this.log.newcontent += line;
 
       // input 2FA authentication code
       if (line.indexOf("A code has been sent to your devices") !== -1) {
@@ -464,23 +465,20 @@ export default {
         return;
       }
 
-
-      // Installation error
-      if (line.toLowerCase().indexOf("error") !== -1 && line.indexOf("exit status") === -1) {
-        _this.loading = false;
-        _this.authLoading = false;
-        if (!_this.errorToastShown) {
-          _this.errorToastShown = true;
-          toast.error(_this.$t("install.toast.install_failed"));
-        }
-        return;
-      }
-
       // Installation successful.
       if (line.indexOf("Installation Succeeded") !== -1 || line.indexOf("Installation complete") !== -1) {
         _this.loading = false;
         _this.authLoading = false;
         toast.success(this.$t("install.toast.install_success"));
+        return;
+      }
+
+
+      // Installation error
+      if (line.indexOf("exit status") !== -1) {
+        _this.loading = false;
+        _this.authLoading = false;
+        toast.error(_this.$t("install.toast.install_failed"));
         return;
       }
     },
@@ -492,11 +490,24 @@ export default {
       }
       const json = JSON.stringify({ t: t, d: data });
       console.log("--> ", json);
+      if (_this.websock.readyState !== WebSocket.OPEN) {
+        throw new Error("WebSocket is in CLOSING or CLOSED state.");
+      }
       _this.websock.send(json);
     },
 
     websocketclose(e) {
       console.log(`connection closed (${e.code})`);
+    },
+    async checkAfcService(id) {
+      let _this = this;
+      try {
+        await api.checkAfcService(id);
+        _this.log.newcontent += "afc service: OK!\n";
+      } catch (error) {
+        _this.log.newcontent += `afc service: Failed!\n`;
+        throw error;
+      }
     },
     startUpdateLog() {
       let _this = this;

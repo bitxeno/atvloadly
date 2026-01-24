@@ -756,16 +756,19 @@ export default {
         _this.authDialogVisible = false;
         _this.fetchData(); // Refresh accounts
         _this.loginWebsock.close();
+        return;
       }
 
+      if (line.indexOf("exit status") !== -1) {
+        _this.loginLoading = false;
+        _this.authLoading = false;
+        toast.error(_this.loginErr);
+        return;
+      } 
+
       if (line.toLowerCase().indexOf("error") !== -1 || _this.loginErr !== "") {
-        if (line.indexOf("exit status") !== -1) {
-          _this.loginLoading = false;
-          _this.authLoading = false;
-          toast.error(_this.loginErr);
-        } else {
-          _this.loginErr += line;
-        }
+        _this.loginErr += line;
+        return;
       }
     },
     loginWebsocketsend(t, data) {
