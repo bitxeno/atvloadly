@@ -480,6 +480,7 @@ export default {
       loginWebsock: null,
       loginDialogVisible: false,
       loginLoading: false,
+      loginErr: "",
       authDialogVisible: false,
       authLoading: false,
       loginForm: {
@@ -715,6 +716,7 @@ export default {
         return;
       }
       this.loginLoading = true;
+      this.loginErr = "";
       this.initLoginWebSocket();
     },
     initLoginWebSocket() {
@@ -756,10 +758,14 @@ export default {
         _this.loginWebsock.close();
       }
 
-      if (line.toLowerCase().indexOf("error") !== -1 && line.indexOf("exit status") === -1) {
-        _this.loginLoading = false;
-        _this.authLoading = false;
-        toast.error(line);
+      if (line.toLowerCase().indexOf("error") !== -1 || _this.loginErr !== "") {
+        if (line.indexOf("exit status") !== -1) {
+          _this.loginLoading = false;
+          _this.authLoading = false;
+          toast.error(_this.loginErr);
+        } else {
+          _this.loginErr += line;
+        }
       }
     },
     loginWebsocketsend(t, data) {

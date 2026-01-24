@@ -497,7 +497,7 @@ func route(fi *fiber.App) {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 
-		task.RunInstallApp(*t)
+		task.RefreshApp(*t)
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))
 	})
 

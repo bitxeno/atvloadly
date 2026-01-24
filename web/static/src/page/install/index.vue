@@ -216,6 +216,7 @@ export default {
       loginWebsock: null,
       loginDialogVisible: false,
       loginLoading: false,
+      loginErr: "",
       authLoading: false,
       isLoginFlow: false,
       // 控制错误提示只显示一次（仅用于安装流程）
@@ -342,6 +343,7 @@ export default {
           return;
         }
         this.loginLoading = true;
+        this.loginErr = "";
         this.initLoginWebSocket();
     },
     initLoginWebSocket() {
@@ -383,11 +385,15 @@ export default {
           _this.loginWebsock.close();
         }
 
-        if (line.toLowerCase().indexOf("error") !== -1 && line.indexOf("exit status") === -1) {
+        if (line.toLowerCase().indexOf("error") !== -1 || _this.loginErr !== "") {
+          if (line.indexOf("exit status") !== -1) {
             _this.loginLoading = false;
             _this.authLoading = false;
-            toast.error(line);
-         }
+            toast.error(_this.loginErr);
+          } else {
+            _this.loginErr += line;
+          }
+        }
     },
     loginWebsocketsend(t, data) {
       let _this = this;

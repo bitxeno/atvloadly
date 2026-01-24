@@ -56,7 +56,7 @@ func NewInteractiveInstallManager() *InstallManager {
 
 func (t *InstallManager) TryStart(ctx context.Context, opts InstallOptions) error {
 	err := t.Start(ctx, opts)
-	if err != nil {
+	if err != nil && !t.IsAccountInvalid() {
 		// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
 		// LOCKDOWN_E_MUX_ERROR / AFC_E_MUX_ERROR /
 		ipaName := filepath.Base(opts.IpaPath)
@@ -122,16 +122,15 @@ func (t *InstallManager) Start(ctx context.Context, opts InstallOptions) error {
 		return err
 	}
 
-	err = cmd.Wait()
-	if err != nil {
-		log.Err(err).Msgf("Error executing installation script. %s", t.ErrorLog())
+	if err = cmd.Wait(); err != nil {
+		return err
 	}
 
 	if provisionProfile, perr := model.ParseMobileProvisioningProfileFile(provisionPath); perr == nil {
 		t.ProvisioningProfile = provisionProfile
 	}
 
-	return err
+	return nil
 }
 
 func (t *InstallManager) GetMobileProvisionPath() string {
@@ -182,12 +181,34 @@ func (t *InstallManager) ErrorLog() string {
 	}
 
 	var lines []string
+	collect := false
 	for _, l := range strings.Split(data, "\n") {
-		if strings.Contains(strings.ToLower(l), "error") {
+		lower := strings.ToLower(l)
+		if collect {
+			lines = append(lines, l)
+			continue
+		}
+		if strings.HasPrefix(lower, "error:") {
+			// The remaining lines are all error logs.
+			lines = append(lines, l)
+			collect = true
+			continue
+		}
+		if strings.Contains(lower, "error") {
 			lines = append(lines, l)
 		}
 	}
 	return strings.Join(lines, "\n")
+}
+
+func (t *InstallManager) IsAccountInvalid() bool {
+	log := t.OutputLog()
+	return strings.Contains(log, "plumesign account list") || strings.Contains(log, "Can't log-in") || strings.Contains(log, "DeveloperSession creation failed")
+}
+
+func (t *InstallManager) IsSuccess() bool {
+	log := t.OutputLog()
+	return strings.Contains(log, "Installation Succeeded") || strings.Contains(log, "Installation complete")
 }
 
 func (t *InstallManager) OutputLog() string {

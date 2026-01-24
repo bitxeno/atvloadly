@@ -11,24 +11,33 @@ import (
 type InstalledApp struct {
 	gorm.Model
 
-	IpaName          string     `json:"ipa_name"`
-	IpaPath          string     `json:"ipa_path"`
-	Description      string     `json:"description,omitempty"`
-	Device           string     `json:"device"`
-	DeviceClass      string     `json:"device_class"`
-	UDID             string     `gorm:"column:udid" json:"udid"`
-	Account          string     `json:"account"`
-	Password         string     `json:"password"`
-	InstalledDate    *time.Time `json:"installed_date"`
-	RefreshedDate    *time.Time `json:"refreshed_date"`
-	ExpirationDate   *time.Time `json:"expiration_date"`
-	RefreshedResult  bool       `json:"refreshed_result"`
-	Icon             string     `json:"icon"`
-	BundleIdentifier string     `json:"bundle_identifier"`
-	Version          string     `json:"version"`
-	RemoveExtensions bool       `json:"remove_extensions"`
-	Enabled          bool       `json:"enabled,omitempty"`
+	IpaName          string         `json:"ipa_name"`
+	IpaPath          string         `json:"ipa_path"`
+	Description      string         `json:"description,omitempty"`
+	Device           string         `json:"device"`
+	DeviceClass      string         `json:"device_class"`
+	UDID             string         `gorm:"column:udid" json:"udid"`
+	Account          string         `json:"account"`
+	Password         string         `json:"password"`
+	InstalledDate    *time.Time     `json:"installed_date"`
+	RefreshedDate    *time.Time     `json:"refreshed_date"`
+	ExpirationDate   *time.Time     `json:"expiration_date"`
+	RefreshedResult  bool           `json:"refreshed_result"`
+	RefreshedError   RefreshedError `json:"refreshed_error"`
+	Icon             string         `json:"icon"`
+	BundleIdentifier string         `json:"bundle_identifier"`
+	Version          string         `json:"version"`
+	RemoveExtensions bool           `json:"remove_extensions"`
+	Enabled          bool           `json:"enabled,omitempty"`
 }
+
+type RefreshedError int
+
+const (
+	RefreshedErrorNone           RefreshedError = 0
+	RefreshedErrorInvalidAccount RefreshedError = 1
+	RefreshedErrorInvalidOther   RefreshedError = 99
+)
 
 // 输出json时，清空密码字段，提高安全性
 func (t InstalledApp) MarshalJSON() ([]byte, error) {
@@ -67,4 +76,8 @@ func (t InstalledApp) NeedRefresh() bool {
 	}
 
 	return expirationDate.AddDate(0, 0, -1).Before(now)
+}
+
+func (t InstalledApp) IsAccountInvalid() bool {
+	return t.RefreshedError == RefreshedErrorInvalidAccount
 }
