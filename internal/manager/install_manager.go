@@ -29,6 +29,15 @@ type InstallManager struct {
 	ProvisioningProfile *model.MobileProvisioningProfile
 }
 
+type InstallOptions struct {
+	UDID             string
+	Account          string
+	Password         string
+	IpaPath          string
+	RemoveExtensions bool
+	RefreshMode      bool
+}
+
 func NewInstallManager() *InstallManager {
 	em := event.NewManager("output", event.UsePathMode)
 	return &InstallManager{
@@ -45,19 +54,19 @@ func NewInteractiveInstallManager() *InstallManager {
 	return ins
 }
 
-func (t *InstallManager) TryStart(ctx context.Context, udid, account, password, ipaPath string, removeExtensions bool) error {
-	err := t.Start(ctx, udid, account, password, ipaPath, removeExtensions)
-	if err != nil {
+func (t *InstallManager) TryStart(ctx context.Context, opts InstallOptions) error {
+	err := t.Start(ctx, opts)
+	if err != nil && !t.IsAccountInvalid() {
 		// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
 		// LOCKDOWN_E_MUX_ERROR / AFC_E_MUX_ERROR /
-		ipaName := filepath.Base(ipaPath)
+		ipaName := filepath.Base(opts.IpaPath)
 		log.Infof("Try restarting usbmuxd to fix afc connect issue. %s", ipaName)
 		if errmux := RestartUsbmuxd(); errmux == nil {
 			// iPhone reconnect may take a while, wait some time
 			time.Sleep(30 * time.Second)
-			if errafc := CheckAfcServiceStatus(udid); errafc == nil {
+			if errafc := CheckAfcServiceStatus(opts.UDID); errafc == nil {
 				log.Infof("Restart usbmuxd complete, try install ipa again. %s", ipaName)
-				err = t.Start(ctx, udid, account, password, ipaPath, removeExtensions)
+				err = t.Start(ctx, opts)
 			} else {
 				log.Err(errafc).Msgf("Restart usbmuxd complete, but Afc service still not available. %s", ipaName)
 			}
@@ -66,7 +75,7 @@ func (t *InstallManager) TryStart(ctx context.Context, udid, account, password, 
 	return err
 }
 
-func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipaPath string, removeExtensions bool) error {
+func (t *InstallManager) Start(ctx context.Context, opts InstallOptions) error {
 	t.outputStdout.Reset()
 
 	// set execute timeout 30 miniutes
@@ -81,9 +90,12 @@ func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipa
 		}
 	}()
 
-	args := []string{"sign", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--udid", udid, "-u", account, "-p", ipaPath}
-	if removeExtensions {
+	args := []string{"sign", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--udid", opts.UDID, "-u", opts.Account, "-p", opts.IpaPath}
+	if opts.RemoveExtensions {
 		args = append(args, "--remove-extensions")
+	}
+	if opts.RefreshMode {
+		args = append(args, "--refresh")
 	}
 	cmd := exec.CommandContext(ctx, "plumesign", args...)
 	cmd.Dir = app.Config.Server.DataDir
@@ -110,16 +122,15 @@ func (t *InstallManager) Start(ctx context.Context, udid, account, password, ipa
 		return err
 	}
 
-	err = cmd.Wait()
-	if err != nil {
-		log.Err(err).Msgf("Error executing installation script. %s", t.ErrorLog())
+	if err = cmd.Wait(); err != nil {
+		return err
 	}
 
 	if provisionProfile, perr := model.ParseMobileProvisioningProfileFile(provisionPath); perr == nil {
 		t.ProvisioningProfile = provisionProfile
 	}
 
-	return err
+	return nil
 }
 
 func (t *InstallManager) GetMobileProvisionPath() string {
@@ -158,7 +169,9 @@ func (t *InstallManager) OnOutput(fn func(string)) {
 }
 
 func (t *InstallManager) Write(p []byte) {
-	_, _ = t.stdin.Write(p)
+	if t.stdin != nil {
+		_, _ = t.stdin.Write(p)
+	}
 }
 
 func (t *InstallManager) ErrorLog() string {
@@ -174,6 +187,16 @@ func (t *InstallManager) ErrorLog() string {
 		}
 	}
 	return strings.Join(lines, "\n")
+}
+
+func (t *InstallManager) IsAccountInvalid() bool {
+	log := t.OutputLog()
+	return strings.Contains(log, "plumesign account list") || strings.Contains(log, "Can't log-in") || strings.Contains(log, "DeveloperSession creation failed")
+}
+
+func (t *InstallManager) IsSuccess() bool {
+	log := t.OutputLog()
+	return strings.Contains(log, "Installation Succeeded") || strings.Contains(log, "Installation complete")
 }
 
 func (t *InstallManager) OutputLog() string {

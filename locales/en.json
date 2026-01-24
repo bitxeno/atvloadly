@@ -90,6 +90,7 @@
             },
             "tips": {
                 "view_log": "Click to view installation log",
+                "account_invalid": "There is an issue with the account. Please check logs and fix it.",
                 "no_data": "No data",
                 "footer": "By default, when the app expiration time is less than 1 day, it will automatically refresh between 3-6am."
             }

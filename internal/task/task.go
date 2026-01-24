@@ -2,8 +2,8 @@ package task
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -18,6 +18,8 @@ import (
 )
 
 var instance = new()
+
+var ErrAccountInvalid = errors.New("account invalid")
 
 type Task struct {
 	c               *cron.Cron
@@ -96,6 +98,11 @@ func (t *Task) Run() {
 			continue
 		}
 
+		if v.IsAccountInvalid() {
+			log.Warnf("The install account (%s) is invalid, skip refresh app: %s.", v.MaskAccount(), v.IpaName)
+			continue
+		}
+
 		// iPhone cannot refresh on a schedule and relies on whether the phone is unlocked
 		// Need to check Afc service status before refreshing
 		if v.IsIPhoneApp() {
@@ -116,7 +123,6 @@ func (t *Task) Run() {
 	for _, v := range appsNeedRefresh {
 		t.StartInstallApp(v)
 	}
-	log.Info("Installation task completed.")
 }
 
 func (t *Task) runQueue() {
@@ -144,14 +150,12 @@ func (t *Task) StartInstallApp(v model.InstalledApp) {
 
 func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool) {
 	if _, loaded := t.InstallingApps.LoadOrStore(v.ID, v); !loaded {
-		fmt.Println("Starting install for app: ", v.IpaName)
 		select {
 		case t.InstallAppQueue <- TaskItem{App: v, Notify: notify}:
 		default:
 			t.InstallingApps.Delete(v.ID)
 			log.Warnf("The install queue is full, skip task: %s", v.IpaName)
 		}
-		fmt.Println("Push to install queue for app: ", v.IpaName)
 	}
 }
 
@@ -160,19 +164,26 @@ func (t *Task) tryInstallApp(item TaskItem) {
 	log.Infof("Start installing ipa: %s", v.IpaName)
 	provisioningProfile, err := t.runInternal(v)
 
-	now := time.Now()
-	expirationDate := now.AddDate(0, 0, 7)
-	if provisioningProfile != nil {
-		expirationDate = provisioningProfile.ExpirationDate.Local()
-	}
 	if err == nil {
+		now := time.Now()
+		expirationDate := now.AddDate(0, 0, 7)
+		if provisioningProfile != nil {
+			expirationDate = provisioningProfile.ExpirationDate.Local()
+		}
+
 		v.RefreshedDate = &now
 		v.ExpirationDate = &expirationDate
 		v.RefreshedResult = true
+		v.RefreshedError = model.RefreshedErrorNone
 		_ = service.UpdateAppRefreshResult(v)
 		log.Infof("Installing ipa success: %s", v.IpaName)
 	} else {
 		v.RefreshedResult = false
+		if errors.Is(err, ErrAccountInvalid) {
+			v.RefreshedError = model.RefreshedErrorInvalidAccount
+		} else {
+			v.RefreshedError = model.RefreshedErrorInvalidOther
+		}
 		_ = service.UpdateAppRefreshResult(v)
 
 		// Send installation failure notification
@@ -198,25 +209,35 @@ func (t *Task) runInternal(v model.InstalledApp) (*model.MobileProvisioningProfi
 	}
 
 	if _, ok := t.InvalidAccounts[v.Account]; ok {
+		log.Warnf("The install account (%s) is invalid, skip install app: %s.", v.MaskAccount(), v.IpaName)
 		installMgr.WriteLog(fmt.Sprintf("The install account (%s) is invalid, skip install.", v.MaskAccount()))
 		return nil, fmt.Errorf("The install account (%s) is invalid, skip install.", v.MaskAccount())
 	}
 
-	err := installMgr.TryStart(context.Background(), v.UDID, v.Account, v.Password, v.IpaPath, v.RemoveExtensions)
+	err := installMgr.TryStart(context.Background(), manager.InstallOptions{
+		UDID:             v.UDID,
+		Account:          v.Account,
+		Password:         v.Password,
+		IpaPath:          v.IpaPath,
+		RemoveExtensions: v.RemoveExtensions,
+		RefreshMode:      true,
+	})
 	if err != nil {
 		log.Err(err).Msgf("Error executing installation script. %s", installMgr.ErrorLog())
 		installMgr.WriteLog(err.Error())
-		if strings.Contains(installMgr.OutputLog(), "Can't log-in") || strings.Contains(installMgr.OutputLog(), "DeveloperSession creation failed") {
+		if installMgr.IsAccountInvalid() {
 			t.InvalidAccounts[v.Account] = true
+			return nil, fmt.Errorf("%s %w", installMgr.ErrorLog(), ErrAccountInvalid)
 		}
 		return nil, fmt.Errorf("%s %s", installMgr.ErrorLog(), err.Error())
 	}
 
-	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") || strings.Contains(installMgr.OutputLog(), "Installation complete") {
+	if installMgr.IsSuccess() {
 		return installMgr.ProvisioningProfile, nil
 	} else {
-		if strings.Contains(installMgr.OutputLog(), "Can't log-in") || strings.Contains(installMgr.OutputLog(), "DeveloperSession creation failed") {
+		if installMgr.IsAccountInvalid() {
 			t.InvalidAccounts[v.Account] = true
+			return nil, fmt.Errorf("%s %w", installMgr.ErrorLog(), ErrAccountInvalid)
 		}
 		return nil, fmt.Errorf("%s", installMgr.ErrorLog())
 	}
@@ -241,9 +262,16 @@ func (t *Task) refreshDeviceApps(device model.Device) error {
 
 	appsNeedRefresh := make([]model.InstalledApp, 0)
 	for _, v := range deviceApps {
-		if v.NeedRefresh() {
-			appsNeedRefresh = append(appsNeedRefresh, v)
+		if !v.NeedRefresh() {
+			continue
 		}
+
+		if v.IsAccountInvalid() {
+			log.Warnf("The install account (%s) is invalid, skip refresh app: %s.", v.MaskAccount(), v.IpaName)
+			continue
+		}
+
+		appsNeedRefresh = append(appsNeedRefresh, v)
 	}
 
 	if len(appsNeedRefresh) == 0 {
@@ -279,7 +307,7 @@ func ScheduleRefreshApps() error {
 	return instance.RunSchedule()
 }
 
-func RunInstallApp(v model.InstalledApp) {
+func RefreshApp(v model.InstalledApp) {
 	instance.StartInstallApp(v)
 }
 

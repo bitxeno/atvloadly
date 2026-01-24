@@ -69,6 +69,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 		cur.RefreshedDate = &now
 		cur.ExpirationDate = app.ExpirationDate
 		cur.RefreshedResult = app.RefreshedResult
+		cur.RefreshedError = app.RefreshedError
 		cur.Password = app.Password
 
 		// 把 ipa/icon 移动到 ipa 保存目录
@@ -97,6 +98,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 			"refreshed_date":   cur.RefreshedDate,
 			"expiration_date":  cur.ExpirationDate,
 			"refreshed_result": cur.RefreshedResult,
+			"refreshed_error":  cur.RefreshedError,
 			"password":         cur.Password,
 		}
 		if result := db.Store().Model(&cur).Updates(updateData); result.Error != nil {
@@ -151,6 +153,7 @@ func UpdateAppRefreshResult(app model.InstalledApp) error {
 		"refreshed_date":   app.RefreshedDate,
 		"expiration_date":  app.ExpirationDate,
 		"refreshed_result": app.RefreshedResult,
+		"refreshed_error":  app.RefreshedError,
 	}
 	if result := db.Store().Model(&app).Updates(updateData); result.Error != nil {
 		return result.Error

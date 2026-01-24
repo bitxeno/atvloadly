@@ -34,7 +34,7 @@ RUN case ${TARGETARCH} in \
          "arm64")  PKG_ARCH=aarch64  ;; \
     esac \
     && cd /tmp \
-    && wget https://github.com/bitxeno/PlumeImpactor/releases/download/v1.4.1-patch.1/plumesign-linux-${PKG_ARCH}.tar.gz \
+    && wget https://github.com/bitxeno/PlumeImpactor/releases/download/v2.0.0-patch.1/plumesign-linux-${PKG_ARCH}.tar.gz \
     && tar zxf plumesign-linux-${PKG_ARCH}.tar.gz \
     && mv plumesign-linux-${PKG_ARCH} /usr/bin/plumesign \
     && chmod +x /usr/bin/plumesign

@@ -177,7 +177,14 @@
               </td>
               <td class="lg:break-all" v-html="formatDeviceName(item)">
               </td>
-              <td class="lg:break-all">{{ item.account }}</td>
+              <td class="lg:break-all">
+                <div class="tooltip" :data-tip="$t('home.table.tips.account_invalid')" v-if="item.refreshed_error == 1">
+                  <div class="text-red-500"> {{ item.account }}</div>
+                </div>
+                <div v-else>
+                  {{ item.account }}
+                </div>
+              </td>
               <td>
                 <div class="badge badge-ghost min-w-max">
                   {{ formatExpiredTime(item) }}
