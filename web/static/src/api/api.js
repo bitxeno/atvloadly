@@ -235,6 +235,15 @@ export default {
       data,
     });
   },
+  
+  saveNetworkSettings: function (data) {
+    return request({
+      url: "/api/settings/network",
+      method: "post",
+      data,
+    });
+  },
+
 
   getServiceStatus: () => {
     return request({

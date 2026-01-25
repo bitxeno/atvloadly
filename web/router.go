@@ -227,6 +227,8 @@ func route(fi *fiber.App) {
 		switch key {
 		case "notification":
 			app.Settings.Notification = settings.Notification
+		case "network":
+			app.Settings.Network = settings.Network
 		case "task":
 			app.Settings.Task = settings.Task
 			if err := task.ReloadTask(); err != nil {

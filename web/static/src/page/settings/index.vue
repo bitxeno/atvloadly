@@ -516,7 +516,7 @@ export default {
     saveNetwork() {
       let _this = this;
 
-      api.saveTaskSettings(_this.settings).then((res) => {
+      api.saveNetworkSettings(_this.settings).then((res) => {
         if (res.data) {
           toast.success(this.$t("settings.toast.save_success"));
         }
