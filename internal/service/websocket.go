@@ -71,6 +71,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		installMgr.CleanTempFiles(v.IpaPath)
 		msg := fmt.Sprintf("ERROR: %s", err.Error())
 		mgr.WriteMessage(msg)
+		mgr.WriteMessage("Installation Failed!")
 		return
 	}
 
@@ -89,9 +90,11 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 			installMgr.CleanTempFiles(v.IpaPath)
 			msg := fmt.Sprintf("ERROR: save app to db failed. %s", err.Error())
 			mgr.WriteMessage(msg)
+			mgr.WriteMessage("Installation Failed!")
 			return
 		} else {
 			installMgr.SaveLog(app.ID)
+			mgr.WriteMessage("Installation Succeeded!")
 		}
 	}
 
@@ -152,9 +155,10 @@ func runLoginMessage(mgr *manager.WebsocketManager, loginMgr *manager.LoginManag
 	if err != nil {
 		msg := fmt.Sprintf("ERROR: %s", err.Error())
 		mgr.WriteMessage(msg)
+		mgr.WriteMessage("Login Failed!")
 		return
 	}
-	mgr.WriteMessage("Login Succeeded")
+	mgr.WriteMessage("Login Succeeded!")
 }
 
 func HandleScanMessage(c *websocket.Conn) {
