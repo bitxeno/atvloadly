@@ -748,7 +748,7 @@ export default {
         return;
       }
 
-      if (line.indexOf("Successfully logged in") !== -1) {
+      if (line.indexOf("Successfully logged in") !== -1 || line.indexOf("Login Succeeded") !== -1) {
         _this.loginLoading = false;
         _this.authLoading = false;
         toast.success(_this.$t("install.toast.login_success"));
@@ -759,7 +759,7 @@ export default {
         return;
       }
 
-      if (line.indexOf("exit status") !== -1) {
+      if (line.indexOf("Login Failed") !== -1) {
         _this.loginLoading = false;
         _this.authLoading = false;
         toast.error(_this.loginErr);

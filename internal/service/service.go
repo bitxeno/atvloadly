@@ -1,8 +1,11 @@
 package service
 
 import (
+	"archive/zip"
 	"context"
 	"fmt"
+	"io"
+	stdhttp "net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -250,4 +253,97 @@ func SetLanguage(lang string) {
 
 		i18n.SetLanguage(lang)
 	}
+}
+
+// UpdateCoreADI downloads the latest Apple Music APK and saves it to DataDir/PlumeImpactor/lib
+func UpdateCoreADI() error {
+	// Determine package arch used inside the APK zip
+	pkgArch := "x86_64"
+	if runtime.GOARCH == "arm64" {
+		pkgArch = "arm64-v8a"
+	}
+
+	url := "https://apps.mzstatic.com/content/android-apple-music-apk/applemusic.apk"
+	resp, err := stdhttp.Get(url)
+	if err != nil {
+		return fmt.Errorf("download failed: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != stdhttp.StatusOK {
+		return fmt.Errorf("download failed, status: %d", resp.StatusCode)
+	}
+
+	tmpDir := filepath.Join(app.Config.Server.DataDir, "tmp")
+	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
+		return fmt.Errorf("create tmp dir failed: %w", err)
+	}
+	tmpPath := filepath.Join(tmpDir, "applemusic.apk")
+
+	tmpOut, err := os.Create(tmpPath)
+	if err != nil {
+		return fmt.Errorf("create temp file failed: %w", err)
+	}
+	if _, err := io.Copy(tmpOut, resp.Body); err != nil {
+		tmpOut.Close()
+		return fmt.Errorf("save temp file failed: %w", err)
+	}
+	tmpOut.Close()
+
+	defer func() {
+		_ = os.Remove(tmpPath)
+	}()
+
+	// open zip and extract specific lib files
+	zr, err := zip.OpenReader(tmpPath)
+	if err != nil {
+		return fmt.Errorf("open apk zip failed: %w", err)
+	}
+	defer zr.Close()
+
+	destDir := filepath.Join(app.Config.Server.DataDir, "PlumeImpactor", "lib", pkgArch)
+	if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
+		return fmt.Errorf("create dir failed: %w", err)
+	}
+
+	targets := map[string]string{
+		filepath.ToSlash(filepath.Join("lib", pkgArch, "libstoreservicescore.so")): "libstoreservicescore.so",
+		filepath.ToSlash(filepath.Join("lib", pkgArch, "libCoreADI.so")):           "libCoreADI.so",
+	}
+
+	for _, f := range zr.File {
+		name := f.Name
+		// normalize slashes
+		name = filepath.ToSlash(name)
+		if destName, ok := targets[name]; ok {
+			rc, err := f.Open()
+			if err != nil {
+				return fmt.Errorf("open zip entry failed: %w", err)
+			}
+			dstPath := filepath.Join(destDir, destName)
+			outf, err := os.Create(dstPath)
+			if err != nil {
+				rc.Close()
+				return fmt.Errorf("create dest file failed: %w", err)
+			}
+			if _, err := io.Copy(outf, rc); err != nil {
+				rc.Close()
+				outf.Close()
+				return fmt.Errorf("copy entry failed: %w", err)
+			}
+			rc.Close()
+			outf.Close()
+			delete(targets, name)
+		}
+	}
+
+	if len(targets) > 0 {
+		missing := []string{}
+		for k := range targets {
+			missing = append(missing, k)
+		}
+		return fmt.Errorf("missing files in apk: %v", missing)
+	}
+
+	log.Infof("Update CoreADI success. path: %s", destDir)
+	return nil
 }

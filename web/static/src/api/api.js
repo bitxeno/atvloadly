@@ -235,6 +235,15 @@ export default {
       data,
     });
   },
+  
+  saveNetworkSettings: function (data) {
+    return request({
+      url: "/api/settings/network",
+      method: "post",
+      data,
+    });
+  },
+
 
   getServiceStatus: () => {
     return request({
@@ -256,6 +265,13 @@ export default {
       method: "post",
       timeout: 30000,
       data,
+    });
+  },
+  updateCoreADI: () => {
+    return request({
+      url: "/api/settings/update/coreadi",
+      method: "post",
+      timeout: 600000,
     });
   },
   importPair: (data) => {

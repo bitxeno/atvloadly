@@ -227,6 +227,8 @@ func route(fi *fiber.App) {
 		switch key {
 		case "notification":
 			app.Settings.Notification = settings.Notification
+		case "network":
+			app.Settings.Network = settings.Network
 		case "task":
 			app.Settings.Task = settings.Task
 			if err := task.ReloadTask(); err != nil {
@@ -504,6 +506,14 @@ func route(fi *fiber.App) {
 	api.Get("/service/status", func(c *fiber.Ctx) error {
 		status := service.GetServiceStatus()
 		return c.Status(http.StatusOK).JSON(apiSuccess(status))
+	})
+
+	// Download latest Apple Music APK and place into PlumeImpactor lib directory (CoreADI update)
+	api.Post("/settings/update/coreadi", func(c *fiber.Ctx) error {
+		if err := service.UpdateCoreADI(); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("update failed: " + err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
 	})
 
 	api.Get("/notify/send", func(c *fiber.Ctx) error {

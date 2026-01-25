@@ -255,6 +255,19 @@
                 "submit": "Save"
             }
         }
+            ,
+            "advanced": {
+                "title": "Advanced",
+                "update_coreadi": "Update CoreADI",
+                "update_coreadi_confirm": "Are you sure you want update the CoreADI libraries?",
+                "cancel": "Cancel",
+                "confirm": "Confirm",
+                "toast": {
+                    "downloading": "Downloading...",
+                    "success": "Update completed",
+                    "failed": "Update failed"
+                }
+            }
     },
     "account": {
         "select_account": "Select Account",

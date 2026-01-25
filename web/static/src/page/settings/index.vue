@@ -410,6 +410,32 @@
         </div>
       </form>
     </fieldset>
+    <fieldset class="section bg-base-100">
+      <legend>{{ $t('settings.advanced.title') }}</legend>
+      <form>
+        <div class="form-item">
+          <label class="form-item-label">
+            <span class="label-text">{{ $t('settings.advanced.update_coreadi') }}</span>
+          </label>
+          <div class="form-item-content">
+            <Popper placement="top" arrow="true">
+              <template #content="{ close }">
+                <div class="flex flex-col gap-y-2">
+                  <div class="py-2">{{ $t('settings.advanced.update_coreadi_confirm') }}</div>
+                  <div class="flex gap-x-2 justify-end items-center">
+                    <a class="link link-primary link-hover" @click="close">{{ $t('settings.advanced.cancel') }}</a>
+                    <button class="btn btn-primary" @click.prevent="confirmUpdateCoreADI(close)">{{ $t('settings.advanced.confirm') }}</button>
+                  </div>
+                </div>
+              </template>
+              <button type="button" class="btn btn-error w-48" :disabled="advanced.adiLoading">
+                <span class="loading loading-spinner" v-show="advanced.adiLoading"></span>{{ $t('settings.advanced.update_coreadi') }}
+              </button>
+            </Popper>
+          </div>
+        </div>
+      </form>
+    </fieldset>
   </div>
 </template>
           
@@ -438,6 +464,9 @@ export default {
           http_proxy: "",
           https_proxy: "",
         },
+      },
+      advanced: {
+        adiLoading: false,
       },
     };
   },
@@ -487,11 +516,33 @@ export default {
     saveNetwork() {
       let _this = this;
 
-      api.saveTaskSettings(_this.settings).then((res) => {
+      api.saveNetworkSettings(_this.settings).then((res) => {
         if (res.data) {
           toast.success(this.$t("settings.toast.save_success"));
         }
       });
+    },
+
+    confirmUpdateCoreADI(close) {
+      let _this = this;
+      close && close();
+
+      _this.advanced.adiLoading = true;
+      api.updateCoreADI()
+        .then((res) => {
+          if (res.data) {
+            toast.success(this.$t('settings.advanced.toast.success'));
+          } else {
+            toast.error(this.$t('settings.advanced.toast.failed'));
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+          toast.error(this.$t('settings.advanced.toast.failed'));
+        })
+        .finally(() => {
+          _this.advanced.adiLoading = false;
+        });
     },
 
     parseCronTime() {
@@ -590,5 +641,24 @@ form {
 .form-item-content {
   @apply grow;
 }
+
+:deep(.popper) {
+  background: #ffffff;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid #ebeef5;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  word-break: break-all;
+  text-align: justify;
+  min-width: 150px;
+}
+
+:deep(.popper:hover),
+:deep(.popper:hover > #arrow::before) {
+  background: #ffffff;
+}
+
+:deep(.popper #arrow::before) {
+  background: #ffffff;
+}
 </style>
-  
