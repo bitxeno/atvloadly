@@ -78,8 +78,10 @@ mkdir -p /data/PlumeImpactor \n\
 mkdir -p $HOME/.config \n\
 [ ! -e "$HOME/.config/PlumeImpactor" ] && ln -s /data/PlumeImpactor $HOME/.config/PlumeImpactor \n\
 
-if [ ! -d "/data/PlumeImpactor/lib" ]; then  \n\
+if [ -d "/keep/lib" ]; then  \n\
+    rm -rf /data/PlumeImpactor/lib \n\
     cp -rf /keep/lib /data/PlumeImpactor/lib \n\
+    rm -rf /keep/lib \n\
 fi  \n\
 
 if [ ! -f "/data/config.yaml" ]; then  \n\

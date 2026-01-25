@@ -255,6 +255,19 @@
                 "submit": "保 存"
             }
         }
+            ,
+            "advanced": {
+                "title": "高级",
+                "update_coreadi": "更新 CoreADI",
+                "update_coreadi_confirm": "确认要下载并更新 CoreADI 库文件吗？",
+                "cancel": "取消",
+                "confirm": "确认",
+                "toast": {
+                    "downloading": "正在下载...",
+                    "success": "更新完成",
+                    "failed": "更新失败"
+                }
+            }
     },
     "account": {
         "select_account": "选择帐号",

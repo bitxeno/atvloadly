@@ -258,6 +258,13 @@ export default {
       data,
     });
   },
+  updateCoreADI: () => {
+    return request({
+      url: "/api/settings/update/coreadi",
+      method: "post",
+      timeout: 600000,
+    });
+  },
   importPair: (data) => {
     return request({
       url: "/api/pair/import",
