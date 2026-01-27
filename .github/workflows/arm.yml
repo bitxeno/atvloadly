@@ -10,12 +10,16 @@ jobs:
     steps:
       - name: Arm Test
         run: |
+          apt update && apt install -y file
+
           PKG_ARCH=aarch64
 
           mkdir -p ~/.config/PlumeImpactor
           cd ~/.config/PlumeImpactor
           wget https://apps.mzstatic.com/content/android-apple-music-apk/applemusic.apk
           unzip applemusic.apk lib/arm64-v8a/libstoreservicescore.so lib/arm64-v8a/libCoreADI.so 
+          file lib/arm64-v8a/libCoreADI.so  
+          sha1sum lib/arm64-v8a/libCoreADI.so 
 
           wget https://github.com/bitxeno/PlumeImpactor/releases/download/v2.0.0-patch.1/plumesign-linux-${PKG_ARCH}.tar.gz
           tar zxf plumesign-linux-${PKG_ARCH}.tar.gz
