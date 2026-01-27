@@ -1,0 +1,19 @@
+name: "🏗️ ARM Test"
+# trigger events
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04-arm
+    steps:
+      - name: Arm Test
+        run: |
+          PKG_ARCH=aarch64
+          wget https://github.com/bitxeno/PlumeImpactor/releases/download/v2.0.0-patch.1/plumesign-linux-${PKG_ARCH}.tar.gz
+          tar zxf plumesign-linux-${PKG_ARCH}.tar.gz
+          mv plumesign-linux-${PKG_ARCH} plumesign
+          chmod +x ./plumesign
+
+          ./plumesign check config
