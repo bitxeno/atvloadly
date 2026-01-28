@@ -2,6 +2,7 @@ package model
 
 type AppleAccount struct {
 	Email  string `json:"email,omitempty"`
+	TeamID string `json:"team_id,omitempty"`
 	Status string `json:"status,omitempty"`
 }
 

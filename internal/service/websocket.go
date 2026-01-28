@@ -3,7 +3,6 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/log"
@@ -75,7 +74,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		return
 	}
 
-	if strings.Contains(installMgr.OutputLog(), "Installation Succeeded") || strings.Contains(installMgr.OutputLog(), "Installation complete") {
+	if installMgr.IsSuccess() {
 		now := time.Now()
 		expirationDate := now.AddDate(0, 0, 7)
 		if installMgr.ProvisioningProfile != nil {

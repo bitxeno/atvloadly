@@ -296,7 +296,7 @@ export default {
 
 
       // Installation successful.
-      if (line.indexOf("Installation Succeeded") !== -1 || line.indexOf("Installation complete") !== -1) {
+      if (line.indexOf("Installation Succeeded") !== -1) {
         _this.loading = false;
         toast.success(this.$t("install.toast.install_success"));
         return;
@@ -331,9 +331,9 @@ export default {
       let _this = this;
       try {
         await api.checkAfcService(id);
-        _this.log.newcontent += "afc service: OK!\n";
+        _this.log.output += "afc service: OK!\n";
       } catch (error) {
-        _this.log.newcontent += `afc service: Failed!\n`;
+        _this.log.output += `afc service: Failed!\n`;
         throw error;
       }
     },
