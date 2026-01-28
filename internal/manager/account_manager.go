@@ -32,10 +32,15 @@ func (am *AccountManager) GetAccounts() (*model.Accounts, error) {
 		return nil, err
 	}
 
-	// 1) try as array of accounts
 	var a model.Accounts
 	if err := json.Unmarshal(data, &a); err != nil {
 		return &model.Accounts{}, nil
+	}
+
+	// account status field is not in the file, need to set it to "valid"
+	for key, account := range a.Accounts {
+		account.Status = "valid"
+		a.Accounts[key] = account
 	}
 
 	return &a, nil

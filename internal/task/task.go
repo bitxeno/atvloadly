@@ -85,7 +85,6 @@ func (t *Task) Stop() {
 }
 
 func (t *Task) Run() {
-	t.InvalidAccounts = make(map[string]bool)
 	installedApps, err := service.GetEnableAppList()
 	if err != nil {
 		log.Err(err).Msg("Failed to get the installation list")
@@ -120,8 +119,25 @@ func (t *Task) Run() {
 	}
 
 	log.Infof("Start executing installation task (%d need refresh)...", len(appsNeedRefresh))
-	for _, v := range appsNeedRefresh {
-		t.StartInstallApp(v)
+	t.StartInstallApps(appsNeedRefresh, true)
+}
+
+func (t *Task) StartInstallApps(apps []model.InstalledApp, notify bool) {
+	t.resetInvalidAccounts()
+
+	for _, v := range apps {
+		t.startInstallAppInternal(v, notify)
+	}
+}
+
+func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool) {
+	if _, loaded := t.InstallingApps.LoadOrStore(v.ID, v); !loaded {
+		select {
+		case t.InstallAppQueue <- TaskItem{App: v, Notify: notify}:
+		default:
+			t.InstallingApps.Delete(v.ID)
+			log.Warnf("The install queue is full, skip task: %s", v.IpaName)
+		}
 	}
 }
 
@@ -140,21 +156,6 @@ func (t *Task) runQueue() {
 		case <-t.chExitQueue:
 			log.Info("Install app queue exit.")
 			return
-		}
-	}
-}
-
-func (t *Task) StartInstallApp(v model.InstalledApp) {
-	t.startInstallAppInternal(v, true)
-}
-
-func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool) {
-	if _, loaded := t.InstallingApps.LoadOrStore(v.ID, v); !loaded {
-		select {
-		case t.InstallAppQueue <- TaskItem{App: v, Notify: notify}:
-		default:
-			t.InstallingApps.Delete(v.ID)
-			log.Warnf("The install queue is full, skip task: %s", v.IpaName)
 		}
 	}
 }
@@ -296,11 +297,13 @@ func (t *Task) refreshDeviceApps(device model.Device) error {
 		}
 
 		log.Infof("Start refresh apps for device: %s (found %d apps, %d need refresh)...", name, len(deviceApps), len(apps))
-		for _, v := range apps {
-			t.startInstallAppInternal(v, false)
-		}
+		t.StartInstallApps(apps, false)
 	}(device.UDID, device.Name, appsNeedRefresh)
 	return nil
+}
+
+func (t *Task) resetInvalidAccounts() {
+	t.InvalidAccounts = make(map[string]bool)
 }
 
 func ScheduleRefreshApps() error {
@@ -308,7 +311,7 @@ func ScheduleRefreshApps() error {
 }
 
 func RefreshApp(v model.InstalledApp) {
-	instance.StartInstallApp(v)
+	instance.StartInstallApps([]model.InstalledApp{v}, true)
 }
 
 func GetCurrentInstallingApps() []model.InstalledApp {
