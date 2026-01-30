@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -16,6 +17,8 @@ import (
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/gookit/event"
 )
+
+var ErrAccountInvalid = errors.New("account invalid")
 
 type InstallManager struct {
 	quietMode bool
@@ -56,7 +59,11 @@ func NewInteractiveInstallManager() *InstallManager {
 
 func (t *InstallManager) TryStart(ctx context.Context, opts InstallOptions) error {
 	err := t.Start(ctx, opts)
-	if err != nil && !t.IsAccountInvalid() {
+	if err != nil {
+		if t.IsAccountInvalid() {
+			return fmt.Errorf("%s %s %w", t.ErrorLog(), err.Error(), ErrAccountInvalid)
+		}
+
 		// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
 		// LOCKDOWN_E_MUX_ERROR / AFC_E_MUX_ERROR /
 		ipaName := filepath.Base(opts.IpaPath)
@@ -64,12 +71,8 @@ func (t *InstallManager) TryStart(ctx context.Context, opts InstallOptions) erro
 		if errmux := RestartUsbmuxd(); errmux == nil {
 			// iPhone reconnect may take a while, wait some time
 			time.Sleep(30 * time.Second)
-			if errafc := CheckAfcServiceStatus(opts.UDID); errafc == nil {
-				log.Infof("Restart usbmuxd complete, try install ipa again. %s", ipaName)
-				err = t.Start(ctx, opts)
-			} else {
-				log.Err(errafc).Msgf("Restart usbmuxd complete, but Afc service still not available. %s", ipaName)
-			}
+			log.Infof("Restart usbmuxd complete, try install ipa again. %s", ipaName)
+			err = t.Start(ctx, opts)
 		}
 	}
 	return err
@@ -89,6 +92,10 @@ func (t *InstallManager) Start(ctx context.Context, opts InstallOptions) error {
 			_ = os.Remove(provisionPath)
 		}
 	}()
+
+	if err := CheckAfcServiceStatus(opts.UDID); err != nil {
+		return fmt.Errorf("afc service not available: %w", err)
+	}
 
 	args := []string{"sign", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--udid", opts.UDID, "-u", opts.Account, "-p", opts.IpaPath}
 	if opts.RemoveExtensions {
@@ -114,7 +121,7 @@ func (t *InstallManager) Start(ctx context.Context, opts InstallOptions) error {
 	}()
 
 	if err := cmd.Start(); err != nil {
-		if err == context.DeadlineExceeded {
+		if errors.Is(err, context.DeadlineExceeded) {
 			_ = cmd.Process.Kill()
 			log.Err(err).Msgf("Installation exceeded %d-minute timeout limit. %s", int(timeout.Minutes()), t.ErrorLog())
 			err = fmt.Errorf("Installation exceeded %d-minute timeout limit. %s", int(timeout.Minutes()), err.Error())

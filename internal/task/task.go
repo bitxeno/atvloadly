@@ -19,8 +19,6 @@ import (
 
 var instance = new()
 
-var ErrAccountInvalid = errors.New("account invalid")
-
 type Task struct {
 	c               *cron.Cron
 	InstallingApps  sync.Map
@@ -179,8 +177,9 @@ func (t *Task) tryInstallApp(item TaskItem) {
 		_ = service.UpdateAppRefreshResult(v)
 		log.Infof("Installing ipa success: %s", v.IpaName)
 	} else {
+		log.Err(err).Msgf("Installing ipa failed: %s", v.IpaName)
 		v.RefreshedResult = false
-		if errors.Is(err, ErrAccountInvalid) {
+		if errors.Is(err, manager.ErrAccountInvalid) {
 			v.RefreshedError = model.RefreshedErrorInvalidAccount
 		} else {
 			v.RefreshedError = model.RefreshedErrorInvalidOther
@@ -192,7 +191,6 @@ func (t *Task) tryInstallApp(item TaskItem) {
 			title := i18n.LocalizeF("notify.title", map[string]any{"name": v.IpaName})
 			message := i18n.LocalizeF("notify.content", map[string]any{"account": v.Account, "error": err.Error()})
 			_ = notify.Send(title, message)
-			log.Infof("Installing ipa failed: %s error: %s", v.IpaName, err.Error())
 		}
 	}
 }
@@ -224,11 +222,10 @@ func (t *Task) runInternal(v model.InstalledApp) (*model.MobileProvisioningProfi
 		RefreshMode:      true,
 	})
 	if err != nil {
-		log.Err(err).Msgf("Error executing installation script. %s", installMgr.ErrorLog())
 		installMgr.WriteLog(err.Error())
-		if installMgr.IsAccountInvalid() {
+		if errors.Is(err, manager.ErrAccountInvalid) {
 			t.InvalidAccounts[v.Account] = true
-			return nil, fmt.Errorf("%s %w", installMgr.ErrorLog(), ErrAccountInvalid)
+			return nil, err
 		}
 		return nil, fmt.Errorf("%s %s", installMgr.ErrorLog(), err.Error())
 	}
@@ -236,11 +233,7 @@ func (t *Task) runInternal(v model.InstalledApp) (*model.MobileProvisioningProfi
 	if installMgr.IsSuccess() {
 		return installMgr.ProvisioningProfile, nil
 	} else {
-		if installMgr.IsAccountInvalid() {
-			t.InvalidAccounts[v.Account] = true
-			return nil, fmt.Errorf("%s %w", installMgr.ErrorLog(), ErrAccountInvalid)
-		}
-		return nil, fmt.Errorf("%s", installMgr.ErrorLog())
+		return nil, fmt.Errorf("install failed with unknown error. %s", installMgr.ErrorLog())
 	}
 }
 

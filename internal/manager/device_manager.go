@@ -271,7 +271,7 @@ func (dm *DeviceManager) CheckAfcServiceStatus(udid string) error {
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%s%s", string(data), err.Error())
+		return err
 	}
 
 	output := string(data)
