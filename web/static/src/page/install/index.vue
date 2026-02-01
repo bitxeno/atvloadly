@@ -285,7 +285,7 @@ export default {
     websocketonmessage(e) {
       let _this = this;
       // hide password string
-      let line = e.data.replace(_this.form.password, "******");
+      let line = e.data;
 
       if (line.indexOf("sealing regular file") !== -1) {
         return;
