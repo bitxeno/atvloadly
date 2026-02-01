@@ -3,12 +3,15 @@ package exec
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 )
+
+var ErrCommandTimeout = errors.New("command execute timeout")
 
 // Cmd represents a Cmd to be executed.
 type Cmd struct {
@@ -94,6 +97,10 @@ func (c *Cmd) Run() error {
 
 	err := cmd.Run()
 	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			_ = cmd.Process.Kill()
+			return fmt.Errorf("%s %w", err.Error(), ErrCommandTimeout)
+		}
 		return c.parseError(err, nil)
 	}
 	return nil
