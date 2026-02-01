@@ -1,7 +1,6 @@
 name: "Bug Report"
 description: Bug Report / Issue
 title: "[BUG] Please modify the title to describe the issue you are facing"
-labels: [bug]
 body:
   - type: checkboxes
     attributes:
@@ -15,7 +14,17 @@ body:
             I confirm there are no duplicate issues or discussions.
         - label: |
             I confirm this is an `atvloadly` issue, not caused by other reasons (such as [network]).
-
+  - type: dropdown
+    id: arch
+    attributes:
+      label: Architecture
+      description: What is the cpu architecture of your Docker?
+      options:
+        - x86_64
+        - Arm64
+      default: 0
+    validations:
+      required: true
   - type: textarea
     id: bug-description
     attributes:
