@@ -5,16 +5,16 @@ set -e
 
 DAEMON=/usr/sbin/usbmuxd
 PIDFILE=/var/run/usbmuxd.pid
-DAEMON_OPTS=""
+DAEMON_OPTS="--logfile=/tmp/usbmuxd.log"
 
 start_it_up()
 {
-  start-stop-daemon --start --background --quiet --make-pidfile  --pidfile $PIDFILE --exec $DAEMON -- $DAEMON_OPTS
+  $DAEMON --daemonize $DAEMON_OPTS
 }
 
 shut_it_down()
 {
-  start-stop-daemon --stop --pidfile $PIDFILE --retry 5 --remove-pidfile
+  $DAEMON --force-exit
 }
 
 
