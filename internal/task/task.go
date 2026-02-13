@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -27,11 +28,29 @@ type Task struct {
 	InvalidAccounts map[string]bool
 	// RefreshingDevices prevents concurrent refresh operations for the same device UDID
 	RefreshingDevices sync.Map
+	// Batch tracking for aggregated notifications
+	batchMu      sync.Mutex
+	currentBatch *BatchInfo
 }
 
 type TaskItem struct {
-	App    model.InstalledApp
-	Notify bool
+	App     model.InstalledApp
+	Notify  bool
+	BatchID string
+}
+
+type BatchInfo struct {
+	ID           string
+	TotalCount   int
+	SuccessCount int
+	FailedApps   []FailedAppInfo
+	Notify       bool
+}
+
+type FailedAppInfo struct {
+	AppName string
+	Account string
+	Error   string
 }
 
 func new() *Task {
@@ -123,15 +142,31 @@ func (t *Task) Run() {
 func (t *Task) StartInstallApps(apps []model.InstalledApp, notify bool) {
 	t.resetInvalidAccounts()
 
+	if len(apps) == 0 {
+		return
+	}
+
+	// Create a batch for aggregated notification
+	batchID := fmt.Sprintf("batch-%d", time.Now().UnixNano())
+	t.batchMu.Lock()
+	t.currentBatch = &BatchInfo{
+		ID:           batchID,
+		TotalCount:   len(apps),
+		SuccessCount: 0,
+		FailedApps:   make([]FailedAppInfo, 0),
+		Notify:       notify,
+	}
+	t.batchMu.Unlock()
+
 	for _, v := range apps {
-		t.startInstallAppInternal(v, notify)
+		t.startInstallAppInternal(v, notify, batchID)
 	}
 }
 
-func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool) {
+func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool, batchID string) {
 	if _, loaded := t.InstallingApps.LoadOrStore(v.ID, v); !loaded {
 		select {
-		case t.InstallAppQueue <- TaskItem{App: v, Notify: notify}:
+		case t.InstallAppQueue <- TaskItem{App: v, Notify: notify, BatchID: batchID}:
 		default:
 			t.InstallingApps.Delete(v.ID)
 			log.Warnf("The install queue is full, skip task: %s", v.IpaName)
@@ -163,7 +198,8 @@ func (t *Task) tryInstallApp(item TaskItem) {
 	log.Infof("Start installing ipa: %s", v.IpaName)
 	provisioningProfile, err := t.runInternal(v)
 
-	if err == nil {
+	success := err == nil
+	if success {
 		now := time.Now()
 		expirationDate := now.AddDate(0, 0, 7)
 		if provisioningProfile != nil {
@@ -185,13 +221,53 @@ func (t *Task) tryInstallApp(item TaskItem) {
 			v.RefreshedError = model.RefreshedErrorInvalidOther
 		}
 		_ = service.UpdateAppRefreshResult(v)
+	}
 
-		// Send installation failure notification
-		if item.Notify && app.Settings.Notification.Enabled {
-			title := i18n.LocalizeF("notify.title", map[string]any{"name": v.IpaName})
-			message := i18n.LocalizeF("notify.content", map[string]any{"account": v.Account, "error": err.Error()})
-			_ = notify.Send(title, message)
+	// Track batch progress and send aggregated notification
+	t.trackBatchProgress(item, success, err)
+}
+
+func (t *Task) trackBatchProgress(item TaskItem, success bool, err error) {
+	t.batchMu.Lock()
+	defer t.batchMu.Unlock()
+
+	if t.currentBatch == nil || t.currentBatch.ID != item.BatchID {
+		return
+	}
+
+	if success {
+		t.currentBatch.SuccessCount++
+	} else {
+		t.currentBatch.FailedApps = append(t.currentBatch.FailedApps, FailedAppInfo{
+			AppName: item.App.IpaName,
+			Account: item.App.Account,
+			Error:   err.Error(),
+		})
+	}
+
+	// Check if batch is complete
+	completedCount := t.currentBatch.SuccessCount + len(t.currentBatch.FailedApps)
+	if completedCount >= t.currentBatch.TotalCount {
+		// Batch complete, send aggregated notification
+		t.sendBatchNotification(t.currentBatch)
+		t.currentBatch = nil
+	}
+}
+
+func (t *Task) sendBatchNotification(batch *BatchInfo) {
+	if !batch.Notify || !app.Settings.Notification.Enabled {
+		return
+	}
+
+	if len(batch.FailedApps) > 0 {
+		// Some apps failed, send aggregated failure notification
+		var message strings.Builder
+		for _, failed := range batch.FailedApps {
+			message.WriteString(i18n.LocalizeF("notify.batch_content", map[string]any{"name": failed.AppName, "error": failed.Error}))
+			message.WriteString("\n")
 		}
+		title := i18n.LocalizeF("notify.batch_title", map[string]any{})
+		_ = notify.Send(title, message.String())
 	}
 }
 
