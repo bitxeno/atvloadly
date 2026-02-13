@@ -110,7 +110,7 @@ func (t *Task) Run() {
 
 	appsNeedRefresh := make([]model.InstalledApp, 0)
 	for _, v := range installedApps {
-		if !v.NeedRefresh() {
+		if !v.NeedRefresh(app.Settings.Task.AdvanceDays) {
 			continue
 		}
 
@@ -332,7 +332,7 @@ func (t *Task) refreshDeviceApps(device model.Device) error {
 
 	appsNeedRefresh := make([]model.InstalledApp, 0)
 	for _, v := range deviceApps {
-		if !v.NeedRefresh() {
+		if !v.NeedRefresh(app.Settings.Task.AdvanceDays) {
 			continue
 		}
 

@@ -60,7 +60,7 @@ func (t InstalledApp) IsIPhoneApp() bool {
 	return t.DeviceClass == string(DeviceClassiPhone) || t.DeviceClass == string(DeviceClassiPad)
 }
 
-func (t InstalledApp) NeedRefresh() bool {
+func (t InstalledApp) NeedRefresh(advanceDays int) bool {
 	now := time.Now()
 
 	// fix RefreshedDate is nil
@@ -75,7 +75,12 @@ func (t InstalledApp) NeedRefresh() bool {
 		expirationDate = &expireTime
 	}
 
-	return expirationDate.AddDate(0, 0, -1).Before(now)
+	// Use configured advance days (default to 1 if not set or invalid)
+	if advanceDays <= 0 {
+		advanceDays = 1
+	}
+
+	return expirationDate.AddDate(0, 0, -advanceDays).Before(now)
 }
 
 func (t InstalledApp) IsAccountInvalid() bool {

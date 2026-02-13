@@ -230,6 +230,12 @@
                 "day_before_expired": "过期前一天",
                 "custom": "自定义"
             },
+            "advance_days": {
+                "label": "提前天数",
+                "1_day": "1天",
+                "2_days": "2天",
+                "3_days": "3天"
+            },
             "run_time": {
                 "label": "运行时间段",
                 "format_tips": "linux crontab格式，受刷新模式限制"

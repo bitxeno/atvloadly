@@ -322,6 +322,49 @@
 
         <div class="form-item">
           <label class="form-item-label">
+            <span class="label-text">{{
+              $t("settings.refresh.advance_days.label")
+            }}</span>
+          </label>
+          <div class="flex gap-x-2">
+            <label class="label cursor-pointer flex gap-x-1">
+              <input
+                type="radio"
+                class="radio"
+                v-model="settings.task.advance_days"
+                :value="1"
+              />
+              <span class="label-text">{{
+                $t("settings.refresh.advance_days.1_day")
+              }}</span>
+            </label>
+            <label class="label cursor-pointer flex gap-x-1">
+              <input
+                type="radio"
+                class="radio"
+                v-model="settings.task.advance_days"
+                :value="2"
+              />
+              <span class="label-text">{{
+                $t("settings.refresh.advance_days.2_days")
+              }}</span>
+            </label>
+            <label class="label cursor-pointer flex gap-x-1">
+              <input
+                type="radio"
+                class="radio"
+                v-model="settings.task.advance_days"
+                :value="3"
+              />
+              <span class="label-text">{{
+                $t("settings.refresh.advance_days.3_days")
+              }}</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-item">
+          <label class="form-item-label">
             <span class="label-text mb-8">{{
               $t("settings.refresh.run_time.label")
             }}</span>

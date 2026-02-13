@@ -230,6 +230,12 @@
                 "day_before_expired": "One day before expiration",
                 "custom": "Custom"
             },
+            "advance_days": {
+                "label": "Advance Days",
+                "1_day": "1 Day",
+                "2_days": "2 Days",
+                "3_days": "3 Days"
+            },
             "run_time": {
                 "label": "Running Time Period",
                 "format_tips": "Linux crontab format, restricted by refresh mode"
