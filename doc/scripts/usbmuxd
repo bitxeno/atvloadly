@@ -5,7 +5,7 @@ set -e
 
 DAEMON=/usr/sbin/usbmuxd
 PIDFILE=/var/run/usbmuxd.pid
-DAEMON_OPTS="--logfile=/tmp/usbmuxd.log"
+DAEMON_OPTS="--nousb"
 
 start_it_up()
 {
@@ -26,7 +26,8 @@ case "$1" in
     shut_it_down
   ;;
   restart)
-    shut_it_down
+    shut_it_down || true
+    while pgrep -f "$DAEMON" > /dev/null; do sleep 1; done
     start_it_up
   ;;
   *)
