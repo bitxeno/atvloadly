@@ -264,7 +264,6 @@ func (t *Task) sendBatchNotification(batch *BatchInfo) {
 		var message strings.Builder
 		for _, failed := range batch.FailedApps {
 			message.WriteString(i18n.LocalizeF("notify.batch_content", map[string]any{"name": failed.AppName, "error": failed.Error}))
-			message.WriteString("\n")
 		}
 		title := i18n.LocalizeF("notify.batch_title", map[string]any{})
 		_ = notify.Send(title, message.String())

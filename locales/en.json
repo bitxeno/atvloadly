@@ -9,8 +9,8 @@
     "notify": {
         "title": "[{{.name}}] Refresh task execution failed.",
         "content": "Account: {{.account}}\nError: {{.error}}",
-        "batch_title": "atvloadly Refresh Task Execution Failed",
-        "batch_content": "app: {{.name}}\n Error: {{.error}}\n\n"
+        "batch_title": "atvloadly refresh task execution failed",
+        "batch_content": "{{.name}}: {{.error}}\n\n"
     },
     "nav": {
         "settings": "Settings",
