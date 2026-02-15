@@ -28,6 +28,40 @@ func route(fi *fiber.App) {
 	fi.Use("/", filesystem.New(filesystem.Config{
 		Root: http.FS(StaticAssets()),
 	}))
+
+	// Health check endpoint (no /api prefix)
+	// Returns 503 if any enabled apps are expired, 200 if healthy
+	fi.Get("/healthcheck", func(c *fiber.Ctx) error {
+		apps, err := service.GetEnableAppList()
+		if err != nil {
+			return c.Status(http.StatusServiceUnavailable).JSON(apiError("failed to check app status"))
+		}
+
+		expiredApps := []map[string]string{}
+		for _, app := range apps {
+			if app.NeedRefresh(0) { // 0 days advance = strictly expired
+				expiredApps = append(expiredApps, map[string]string{
+					"name":   app.IpaName,
+					"device": app.Device,
+					"udid":   app.UDID,
+				})
+			}
+		}
+
+		if len(expiredApps) > 0 {
+			return c.Status(http.StatusServiceUnavailable).JSON(apiSuccess(map[string]interface{}{
+				"status":       "unhealthy",
+				"expired_apps": expiredApps,
+				"count":        len(expiredApps),
+				"time":         time.Now().Unix(),
+			}))
+		}
+
+		return c.Status(http.StatusOK).JSON(apiSuccess(map[string]interface{}{
+			"status": "healthy",
+			"time":   time.Now().Unix(),
+		}))
+	})
 	fi.Use("/ws", func(c *fiber.Ctx) error {
 		// IsWebSocketUpgrade returns true if the client
 		// requested upgrade to the WebSocket protocol.
