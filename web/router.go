@@ -32,28 +32,15 @@ func route(fi *fiber.App) {
 	// Health check endpoint (no /api prefix)
 	// Returns 503 if any enabled apps are expired, 200 if healthy
 	fi.Get("/healthcheck", func(c *fiber.Ctx) error {
-		apps, err := service.GetEnableAppList()
+		hasExpired, err := service.HasExpiredApps()
 		if err != nil {
 			return c.Status(http.StatusServiceUnavailable).JSON(apiError("failed to check app status"))
 		}
 
-		expiredApps := []map[string]string{}
-		for _, app := range apps {
-			if app.NeedRefresh(0) { // 0 days advance = strictly expired
-				expiredApps = append(expiredApps, map[string]string{
-					"name":   app.IpaName,
-					"device": app.Device,
-					"udid":   app.UDID,
-				})
-			}
-		}
-
-		if len(expiredApps) > 0 {
+		if hasExpired {
 			return c.Status(http.StatusServiceUnavailable).JSON(apiSuccess(map[string]interface{}{
-				"status":       "unhealthy",
-				"expired_apps": expiredApps,
-				"count":        len(expiredApps),
-				"time":         time.Now().Unix(),
+				"status": "unhealthy",
+				"time":   time.Now().Unix(),
 			}))
 		}
 

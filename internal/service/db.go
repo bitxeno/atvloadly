@@ -49,6 +49,22 @@ func GetEnableAppListByUDID(udid string) ([]model.InstalledApp, error) {
 	return apps, nil
 }
 
+// HasExpiredApps checks if there are any enabled apps that have expired
+func HasExpiredApps() (bool, error) {
+	var apps []model.InstalledApp
+	if result := db.Store().Where("enabled = ?", true).Find(&apps); result.Error != nil {
+		return false, result.Error
+	}
+
+	for _, app := range apps {
+		if app.IsExpired() {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 	// 查找之前的安装记录，存在记录直接更新旧的
 	var cur model.InstalledApp
