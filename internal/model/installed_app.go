@@ -86,3 +86,16 @@ func (t InstalledApp) NeedRefresh(advanceDays int) bool {
 func (t InstalledApp) IsAccountInvalid() bool {
 	return t.RefreshedError == RefreshedErrorInvalidAccount
 }
+
+// IsExpired checks if the app has strictly expired (ExpirationDate < now)
+func (t InstalledApp) IsExpired() bool {
+	now := time.Now()
+
+	// If ExpirationDate is nil, the app is considered expired (never refreshed or unknown expiration)
+	if t.ExpirationDate == nil {
+		return true
+	}
+
+	// Strict check: expired if ExpirationDate is before now
+	return t.ExpirationDate.Before(now)
+}
