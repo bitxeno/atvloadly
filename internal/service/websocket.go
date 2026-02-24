@@ -70,6 +70,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		installMgr.CleanTempFiles(v.IpaPath)
 		msg := fmt.Sprintf("ERROR: %s", err.Error())
 		mgr.WriteMessage(msg)
+		mgr.WriteMessage("\n")
 		mgr.WriteMessage("Installation Failed!")
 		return
 	}
@@ -89,6 +90,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 			installMgr.CleanTempFiles(v.IpaPath)
 			msg := fmt.Sprintf("ERROR: save app to db failed. %s", err.Error())
 			mgr.WriteMessage(msg)
+			mgr.WriteMessage("\n")
 			mgr.WriteMessage("Installation Failed!")
 			return
 		} else {
