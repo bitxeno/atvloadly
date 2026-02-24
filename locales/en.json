@@ -19,8 +19,6 @@
         "language": "English",
         "preferences": "Preferences",
         "account": "Accounts",
-        "certificate": "Certificates",
-        "connected_devices": "Connected Devices",
         "devices": "Devices",
         "donate": "Donate"
     },
@@ -280,6 +278,8 @@
                 "machine_name": "Machine Name"
             },
             "button": {
+                "certificate": "Certificates",
+                "devices": "Devices",
                 "logout": "Logout"
             },
             "empty": "No accounts found"
@@ -345,7 +345,7 @@
     },
     "device": {
         "modal": {
-            "title": "Connected Devices - {{email}}"
+            "title": "Devices - {{email}}"
         },
         "table": {
             "header": {

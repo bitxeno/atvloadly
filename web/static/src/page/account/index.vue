@@ -27,12 +27,12 @@
               <td>{{ account.status }}</td>
               <td class="flex gap-x-4">
                 <a class="link link-primary" @click="openCertModal(email)">{{
-                  $t("nav.certificate")
+                  $t("account.table.button.certificate")
                 }}</a>
                 <a
-                  class="link link-primary hidden"
+                  class="link link-primary"
                   @click="openDeviceModal(email)"
-                  >{{ $t("nav.connected_devices") }}</a
+                  >{{ $t("account.table.button.devices") }}</a
                 >
                 <Popper placement="top" arrow="true">
                   <template #content="{ close }">
