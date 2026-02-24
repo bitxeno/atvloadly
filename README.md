@@ -19,7 +19,7 @@ English | [中文](./README_cn.md)
 
 </div>
 
-atvloadly is a web service that supports sideloading app on Apple TV. It uses [PlumeImpactor](https://github.com/khcrysalis/PlumeImpactor) as the underlying technology for sideloading and automatically refreshes the app to ensure its long-term availability.
+atvloadly is a web service that supports sideloading app on Apple TV. It uses [Impactor](https://github.com/claration/Impactor) as the underlying technology for sideloading and automatically refreshes the app to ensure its long-term availability.
 
 ## Features
 
@@ -130,11 +130,11 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [P
 
 ## Credits
 
-[PlumeImpactor](https://github.com/khcrysalis/PlumeImpactor)
+[Impactor](https://github.com/claration/Impactor): The sideload core
 
-[idevice](https://github.com/jkcoxson/idevice)
+[idevice](https://github.com/jkcoxson/idevice): libimobiledevice in pure Rust
 
-[usbmuxd2](https://github.com/tihmstar/usbmuxd2)
+[usbmuxd2](https://github.com/tihmstar/usbmuxd2): usbmuxd implementation for linux
 
 
 ## Disclaimer

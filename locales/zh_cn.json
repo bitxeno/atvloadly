@@ -19,8 +19,6 @@
         "language": "中文",
         "preferences": "选项",
         "account": "帐号",
-        "certificate": "证书管理",
-        "connected_devices": "已连接设备",
         "devices": "设备",
         "donate": "赞助"
     },
@@ -286,6 +284,8 @@
                 "machine_name": "设备名称"
             },
             "button": {
+                "certificate": "证书管理",
+                "devices": "设备管理",
                 "logout": "登出"
             },
             "empty": "未找到帐号"
@@ -351,7 +351,7 @@
     },
     "device": {
         "modal": {
-            "title": "已连接设备 - {{email}}"
+            "title": "设备管理 - {{email}}"
         },
         "table": {
             "header": {
