@@ -59,7 +59,12 @@
                     :key="account.email"
                     :value="account.email"
                   >
-                    {{ account.email }} ({{ account.status }})
+                    {{ account.email }}
+                    {{
+                      account.email === recommendedAccount
+                        ? "(" + $t("install.form.account.recommended") + ")"
+                        : "(" + account.status + ")"
+                    }}
                   </option>
                 </select>
                 <button class="btn join-item w-16" @click.prevent="showLoginDialog">
@@ -128,7 +133,7 @@
   <script>
 import api from "@/api/api";
 import { toast } from "vue3-toastify";
-import { maskEmail } from "@/utils/utils";
+import { maskEmail, getStringSimilarity } from "@/utils/utils";
 import Login from "@/components/Login.vue";
 
 export default {
@@ -140,7 +145,9 @@ export default {
       ipa: {},
       device: {},
       loading: false,
-        accounts: [],
+      accounts: [],
+      installedApps: [],
+      recommendedAccount: "",
       form: {
         account: "",
         password: "",
@@ -178,6 +185,11 @@ export default {
         _this.accounts = Object.keys(m).map((k) => m[k]);
       }).catch(() => {
         _this.accounts = [];
+      });
+      api.getAppList().then((res) => {
+        _this.installedApps = res.data || [];
+      }).catch(() => {
+        _this.installedApps = [];
       });
     },
     async onSubmit(e) {
@@ -244,6 +256,25 @@ export default {
     },
     onFileChange(e) {
       this.files = e.target.files;
+      this.recommendedAccount = "";
+      if (this.files.length > 0) {
+        let filename = this.files[0].name.replace(/\.(ipa|tipa)$/i, "");
+        let maxSimilarity = 0;
+        let bestAccount = "";
+
+        for (let app of this.installedApps) {
+          let appIpaName = (app.ipa_name || "").replace(/\.(ipa|tipa)$/i, "");
+          let s = getStringSimilarity(filename, appIpaName);
+          if (s > maxSimilarity) {
+            maxSimilarity = s;
+            bestAccount = app.account;
+          }
+        }
+
+        if (maxSimilarity > 0.5) {
+          this.recommendedAccount = bestAccount;
+        }
+      }
     },
     validateForm(id) {
       let form = document.querySelector(id);

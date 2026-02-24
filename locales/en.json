@@ -149,6 +149,7 @@
                 "select": {
                     "placeholder": "Select an account"
                 },
+                "recommended": "Recommended",
                 "alt": "For account security, please do not use your primary account for installation."
             },
             "password": {
