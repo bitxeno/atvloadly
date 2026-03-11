@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-screen-lg mx-auto">
+  <div class="settings-page max-w-screen-lg mx-auto">
     <fieldset class="section bg-base-100">
       <legend>{{ $t("settings.notification.title") }}</legend>
       <form>
@@ -63,165 +63,22 @@
             </label>
           </div>
         </div>
-        <div class="form-item" v-show="settings.notification.type == 'weixin'">
-          <label class="form-item-label">
-            <span class="label-text">{{
-              $t("settings.notification.weixin.corp_id")
-            }}</span>
-          </label>
-          <input
-            v-model="settings.notification.weixin.corp_id"
-            type="text"
-            placeholder=""
-            class="input input-bordered grow"
-          />
-        </div>
-        <div class="form-item" v-show="settings.notification.type == 'weixin'">
-          <label class="form-item-label">
-            <span class="label-text">{{
-              $t("settings.notification.weixin.corp_secret")
-            }}</span>
-          </label>
-          <input
-            v-model="settings.notification.weixin.corp_secret"
-            type="text"
-            placeholder=""
-            class="input input-bordered grow"
-          />
-        </div>
-        <div class="form-item" v-show="settings.notification.type == 'weixin'">
-          <label class="form-item-label">
-            <span class="label-text">{{
-              $t("settings.notification.weixin.agent_id")
-            }}</span>
-          </label>
-          <input
-            v-model="settings.notification.weixin.agent_id"
-            type="text"
-            placeholder=""
-            class="input input-bordered grow"
-          />
-        </div>
-        <div class="form-item" v-show="settings.notification.type == 'weixin'">
-          <label class="form-item-label">
-            <span class="label-text">{{
-              $t("settings.notification.weixin.touser")
-            }}</span>
-          </label>
-          <input
-            v-model="settings.notification.weixin.to_user"
-            type="text"
-            placeholder=""
-            class="input input-bordered grow"
-          />
-        </div>
-
-        <div
-          class="form-item"
-          v-show="settings.notification.type == 'telegram'"
-        >
-          <label class="form-item-label">
-            <span class="label-text">BotToken</span>
-          </label>
-          <input
-            v-model="settings.notification.telegram.bot_token"
-            type="text"
-            placeholder=""
-            class="input input-bordered grow"
-          />
-        </div>
-        <div
-          class="form-item"
-          v-show="settings.notification.type == 'telegram'"
-        >
-          <label class="form-item-label">
-            <span class="label-text">ChatID</span>
-          </label>
-          <input
-            v-model="settings.notification.telegram.chat_id"
-            type="text"
-            placeholder=""
-            class="input input-bordered grow"
-          />
-        </div>
-
-        <div class="form-item" v-show="settings.notification.type == 'bark'">
-          <label class="form-item-label">
-            <span class="label-text">Device Key</span>
-          </label>
-          <input
-            v-model="settings.notification.bark.device_key"
-            type="text"
-            placeholder=""
-            class="input input-bordered grow"
-          />
-        </div>
-        <div class="form-item" v-show="settings.notification.type == 'bark'">
-          <label class="form-item-label">
-            <span class="label-text">Bark Server</span>
-          </label>
-          <input
-            v-model="settings.notification.bark.bark_server"
-            type="text"
-            placeholder=""
-            class="input input-bordered grow"
-          />
-        </div>
-
-        <div class="form-item" v-show="settings.notification.type == 'webhook'">
-          <label class="form-item-label">
-            <span class="label-text">{{
-              $t("settings.notification.webhook.url")
-            }}</span>
-          </label>
-          <input
-            v-model="settings.notification.webhook.url"
-            type="url"
-            :placeholder="$t('settings.notification.webhook.url_placeholder')"
-            class="input input-bordered grow"
-          />
-        </div>
-        <div class="form-item" v-show="settings.notification.type == 'webhook'">
-          <label class="form-item-label">
-            <span class="label-text">{{
-              $t("settings.notification.webhook.method")
-            }}</span>
-          </label>
-          <select
-            v-model="settings.notification.webhook.method"
-            class="select select-bordered grow"
-          >
-            <option value="GET">GET</option>
-            <option value="POST">POST</option>
-          </select>
-        </div>
-        <div class="form-item" v-show="settings.notification.type == 'webhook' && settings.notification.webhook.method == 'POST'">
-          <label class="form-item-label">
-            <span class="label-text">{{
-              $t("settings.notification.webhook.content_type")
-            }}</span>
-          </label>
-          <select
-            v-model="settings.notification.webhook.content_type"
-            class="select select-bordered grow"
-          >
-            <option value="text/plain">text/plain</option>
-            <option value="application/json">application/json</option>
-          </select>
-        </div>
-        <div class="form-item" v-show="settings.notification.type == 'webhook' && settings.notification.webhook.method == 'POST'">
-          <label class="form-item-label">
-            <span class="label-text">{{
-              $t("settings.notification.webhook.body")
-            }}</span>
-          </label>
-          <textarea
-            v-model="settings.notification.webhook.body"
-            :placeholder="$t('settings.notification.webhook.body_placeholder')"
-            class="textarea textarea-bordered grow"
-            rows="4"
-          ></textarea>
-        </div>
+        <Weixin
+          v-if="settings.notification.type == 'weixin'"
+          v-model="settings.notification.weixin"
+        />
+        <Telegram
+          v-if="settings.notification.type == 'telegram'"
+          v-model="settings.notification.telegram"
+        />
+        <Bark
+          v-if="settings.notification.type == 'bark'"
+          v-model="settings.notification.bark"
+        />
+        <Webhook
+          v-if="settings.notification.type == 'webhook'"
+          v-model="settings.notification.webhook"
+        />
 
         <div class="form-item">
           <label class="form-item-label"></label>
@@ -486,9 +343,19 @@
 <script>
 import api from "@/api/api";
 import { toast } from "vue3-toastify";
+import Bark from "./components/Bark.vue";
+import Telegram from "./components/Telegram.vue";
+import Weixin from "./components/Weixin.vue";
+import Webhook from "./components/Webhook.vue";
 
 export default {
   name: "Home",
+  components: {
+    Bark,
+    Telegram,
+    Weixin,
+    Webhook,
+  },
   data() {
     return {
       startHour: 0,
@@ -653,7 +520,7 @@ export default {
 };
 </script>
 
-<style lang="postcss" scoped>
+<style lang="postcss">
 .section {
   border: 1px solid #ebebeb;
   border-radius: 5px;

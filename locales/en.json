@@ -207,6 +207,8 @@
                 "url_placeholder": "Supports {{title}} and {{message}} template variables",
                 "method": "HTTP Method",
                 "content_type": "Content-Type",
+                "header": "HTTP Headers",
+                "header_placeholder": "Separate multiple headers with semicolons, e.g.: Authorization: Bearer token; X-Custom: value",
                 "body": "Request Body",
                 "body_placeholder": "Supports {{title}} and {{message}} template variables\nExample: {\"title\": \"{{title}}\", \"message\": \"{{message}}\"}"
             },
