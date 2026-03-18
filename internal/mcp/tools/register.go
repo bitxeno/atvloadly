@@ -8,7 +8,7 @@ func Register(server *sdkmcp.Server) {
 		return
 	}
 
-	registerSearchApp(server)
+	registerGetAppList(server)
 	registerRefreshApp(server)
 	registerGetRefreshStatus(server)
 	registerInstallApp(server)

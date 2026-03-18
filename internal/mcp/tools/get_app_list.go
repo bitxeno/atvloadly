@@ -9,11 +9,11 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-type searchAppInput struct {
+type getAppListInput struct {
 	OnlyExpired bool `json:"only_expired,omitempty" jsonschema:"Set to true to return only expired apps"`
 }
 
-type searchAppItem struct {
+type appListItem struct {
 	ID               uint       `json:"id"`
 	IpaName          string     `json:"ipa_name"`
 	BundleIdentifier string     `json:"bundle_identifier"`
@@ -28,43 +28,43 @@ type searchAppItem struct {
 	IsExpired        bool       `json:"is_expired"`
 }
 
-type searchAppOutput struct {
-	Total int             `json:"total"`
-	Items []searchAppItem `json:"items"`
+type getAppListOutput struct {
+	Total int           `json:"total"`
+	Items []appListItem `json:"items"`
 }
 
-func registerSearchApp(server *sdkmcp.Server) {
+func registerGetAppList(server *sdkmcp.Server) {
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
-		Name: "search_app",
-		Description: "Get all enabled apps. " +
+		Name: "get_app_list",
+		Description: "Get all apps. " +
 			"Set only_expired=true to return only expired apps. " +
 			"Expired means ExpirationDate is before now. " +
 			"Call refresh_app with app_id to refresh an app or Call refresh_app without app_id to refresh all apps.",
-	}, handleSearchApp)
+	}, handleGetAppList)
 }
 
-func handleSearchApp(_ context.Context, _ *sdkmcp.CallToolRequest, input searchAppInput) (*sdkmcp.CallToolResult, searchAppOutput, error) {
+func handleGetAppList(_ context.Context, _ *sdkmcp.CallToolRequest, input getAppListInput) (*sdkmcp.CallToolResult, getAppListOutput, error) {
 	apps, err := service.GetEnableAppList()
 	if err != nil {
-		return nil, searchAppOutput{}, err
+		return nil, getAppListOutput{}, err
 	}
 
-	filtered := make([]searchAppItem, 0)
+	filtered := make([]appListItem, 0)
 	for _, app := range apps {
 		if input.OnlyExpired && !app.IsExpired() {
 			continue
 		}
-		filtered = append(filtered, toSearchAppItem(app))
+		filtered = append(filtered, toAppListItem(app))
 	}
 
-	return nil, searchAppOutput{
+	return nil, getAppListOutput{
 		Total: len(filtered),
 		Items: filtered,
 	}, nil
 }
 
-func toSearchAppItem(app model.InstalledApp) searchAppItem {
-	return searchAppItem{
+func toAppListItem(app model.InstalledApp) appListItem {
+	return appListItem{
 		ID:               app.ID,
 		IpaName:          app.IpaName,
 		BundleIdentifier: app.BundleIdentifier,
