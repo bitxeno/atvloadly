@@ -46,7 +46,8 @@ func registerSearchApp(server *sdkmcp.Server) {
 		Name: "search_app",
 		Description: "Search enabled apps by keyword or UDID. " +
 			"To get expired apps, set only_expired=true. " +
-			"Expired means ExpirationDate is before now.",
+			"Expired means ExpirationDate is before now. " +
+			"Call refresh_app with app_id to refresh an app or Call refresh_app without app_id to refresh all apps.",
 	}, handleSearchApp)
 }
 
