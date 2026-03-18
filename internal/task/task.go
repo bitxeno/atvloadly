@@ -382,6 +382,10 @@ func RefreshApp(v model.InstalledApp) {
 	instance.StartInstallApps([]model.InstalledApp{v}, true)
 }
 
+func StartInstallApps(apps []model.InstalledApp, notify bool) {
+	instance.StartInstallApps(apps, notify)
+}
+
 func GetCurrentInstallingApps() []model.InstalledApp {
 	installingApps := []model.InstalledApp{}
 
