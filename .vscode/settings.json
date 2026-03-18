@@ -10,5 +10,29 @@
     "i18n-ally.localesPaths": [
         "web/static/src/locales"
     ],
-    "i18n-ally.keystyle": "nested"
+    "i18n-ally.keystyle": "nested",
+    "workbench.editorAssociations": {
+        "*.copilotmd": "vscode.markdown.preview.editor",
+        "{hexdiff}:/**/*.*": "hexEditor.hexedit",
+        "*.md": "markdownEditorOptimized.editor",
+        "*.markdown": "markdownEditorOptimized.editor",
+        "*.mdx": "markdownEditorOptimized.editor",
+        "*.mdc": "markdownEditorOptimized.editor",
+        "git:/**/*.md": "default",
+        "git:/**/*.markdown": "default",
+        "git:/**/*.mdx": "default",
+        "git:/**/*.mdc": "default",
+        "git:**/*.md": "default",
+        "git:**/*.markdown": "default",
+        "git:**/*.mdx": "default",
+        "git:**/*.mdc": "default",
+        "chat-editing-text-model:/**/*.md": "default",
+        "chat-editing-text-model:/**/*.markdown": "default",
+        "chat-editing-text-model:/**/*.mdx": "default",
+        "chat-editing-text-model:/**/*.mdc": "default",
+        "chat-editing-text-model:**/*.md": "default",
+        "chat-editing-text-model:**/*.markdown": "default",
+        "chat-editing-text-model:**/*.mdx": "default",
+        "chat-editing-text-model:**/*.mdc": "default"
+    }
 }

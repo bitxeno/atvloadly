@@ -13,6 +13,7 @@ import (
 	"github.com/bitxeno/atvloadly/internal/i18n"
 	"github.com/bitxeno/atvloadly/internal/ipa"
 	"github.com/bitxeno/atvloadly/internal/manager"
+	mcpserver "github.com/bitxeno/atvloadly/internal/mcp"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/notify"
 	"github.com/bitxeno/atvloadly/internal/service"
@@ -21,10 +22,15 @@ import (
 	"github.com/bitxeno/atvloadly/internal/utils"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 )
 
 func route(fi *fiber.App) {
+	mcpHandler := adaptor.HTTPHandler(mcpserver.NewHTTPHandler())
+	fi.All("/mcp", mcpHandler)
+	fi.All("/mcp/*", mcpHandler)
+
 	fi.Use("/", filesystem.New(filesystem.Config{
 		Root: http.FS(StaticAssets()),
 	}))
