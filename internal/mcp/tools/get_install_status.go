@@ -21,8 +21,6 @@ type getInstallStatusOutput struct {
 	InstallInProgress bool                 `json:"install_in_progress"`
 	IpaName           string               `json:"ipa_name"`
 	BundleIdentifier  string               `json:"bundle_identifier"`
-	UDID              string               `json:"udid"`
-	Account           string               `json:"account"`
 	LastRefreshAt     *string              `json:"last_refresh_at,omitempty"`
 	LastSuccess       bool                 `json:"last_success"`
 	LastErrorCode     model.RefreshedError `json:"last_error_code"`
@@ -67,8 +65,6 @@ func handleGetInstallStatus(_ context.Context, _ *sdkmcp.CallToolRequest, input 
 		InstallInProgress: inProgress,
 		IpaName:           app.IpaName,
 		BundleIdentifier:  app.BundleIdentifier,
-		UDID:              app.UDID,
-		Account:           app.Account,
 		LastRefreshAt:     refreshedAt,
 		LastSuccess:       app.RefreshedResult,
 		LastErrorCode:     app.RefreshedError,

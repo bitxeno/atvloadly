@@ -15,17 +15,19 @@ import (
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/service"
 	"github.com/bitxeno/atvloadly/internal/task"
+	"github.com/bitxeno/atvloadly/internal/utils"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 type installAppInput struct {
 	IpaURL           string `json:"ipa_url" jsonschema:"Required IPA download URL"`
-	DeviceUDID       string `json:"device_udid,omitempty" jsonschema:"Optional target device UDID"`
-	AccountEmail     string `json:"account_email,omitempty" jsonschema:"Optional Apple account email"`
+	DeviceID         string `json:"device_id,omitempty" jsonschema:"Optional target device ID"`
+	AccountID        string `json:"account_id,omitempty" jsonschema:"Optional Apple account ID (md5 of account email)"`
 	RemoveExtensions bool   `json:"remove_extensions,omitempty" jsonschema:"Optional remove app extensions while installing"`
 }
 
 type installDeviceOption struct {
+	ID             string `json:"id"`
 	UDID           string `json:"udid"`
 	Name           string `json:"name"`
 	DeviceClass    string `json:"device_class"`
@@ -34,9 +36,11 @@ type installDeviceOption struct {
 }
 
 type installAccountOption struct {
-	Email  string `json:"email"`
-	TeamID string `json:"team_id,omitempty"`
-	Status string `json:"status,omitempty"`
+	AccountID    string `json:"account_id"`
+	AccountEmail string `json:"account_email"`
+	TeamID       string `json:"team_id,omitempty"`
+	Status       string `json:"status,omitempty"`
+	rawEmail     string
 }
 
 type installAppOutput struct {
@@ -53,7 +57,7 @@ func registerInstallApp(server *sdkmcp.Server) {
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name: "install_app",
 		Description: "Install app from IPA URL. " +
-			"If device_udid/account_email is omitted, this tool returns options for interactive selection. " +
+			"If device_id/account_id is omitted, this tool returns options for interactive selection. " +
 			"When there is only one available device/account, it is selected automatically. " +
 			"After app is queued, use get_install_status with app_id to track progress.",
 	}, handleInstallApp)
@@ -68,26 +72,26 @@ func handleInstallApp(_ context.Context, _ *sdkmcp.CallToolRequest, input instal
 		return nil, installAppOutput{}, fmt.Errorf("ipa_url must point to an .ipa file")
 	}
 
-	selectedDevice, deviceOptions, needDeviceChoice, err := resolveDeviceSelection(strings.TrimSpace(input.DeviceUDID))
+	selectedDevice, deviceOptions, needDeviceChoice, err := resolveDeviceSelection(strings.TrimSpace(input.DeviceID))
 	if err != nil {
 		return nil, installAppOutput{}, err
 	}
 	if needDeviceChoice {
 		return nil, installAppOutput{
 			Status:           "require_device",
-			Message:          "Please choose a target device and call install_app again with device_udid.",
+			Message:          "Please choose a target device and call install_app again with device_id.",
 			AvailableDevices: deviceOptions,
 		}, nil
 	}
 
-	selectedAccount, accountOptions, needAccountChoice, err := resolveAccountSelection(strings.TrimSpace(input.AccountEmail))
+	selectedAccount, accountOptions, needAccountChoice, err := resolveAccountSelection(strings.TrimSpace(input.AccountID))
 	if err != nil {
 		return nil, installAppOutput{}, err
 	}
 	if needAccountChoice {
 		return nil, installAppOutput{
 			Status:            "require_account",
-			Message:           "Please choose an account and call install_app again with account_email.",
+			Message:           "Please choose an account and call install_app again with account_id.",
 			SelectedDevice:    selectedDevice,
 			AvailableAccounts: accountOptions,
 		}, nil
@@ -127,7 +131,7 @@ func handleInstallApp(_ context.Context, _ *sdkmcp.CallToolRequest, input instal
 		Device:           selectedDevice.Name,
 		DeviceClass:      selectedDevice.DeviceClass,
 		UDID:             selectedDevice.UDID,
-		Account:          selectedAccount.Email,
+		Account:          selectedAccount.rawEmail,
 		BundleIdentifier: packageInfo.Identifier(),
 		Version:          packageInfo.Version(),
 		Enabled:          true,
@@ -151,7 +155,7 @@ func handleInstallApp(_ context.Context, _ *sdkmcp.CallToolRequest, input instal
 	}, nil
 }
 
-func resolveDeviceSelection(requestedUDID string) (*installDeviceOption, []installDeviceOption, bool, error) {
+func resolveDeviceSelection(requestedDeviceID string) (*installDeviceOption, []installDeviceOption, bool, error) {
 	manager.ReloadDevices()
 	devices, err := manager.GetDevices()
 	if err != nil {
@@ -164,6 +168,7 @@ func resolveDeviceSelection(requestedUDID string) (*installDeviceOption, []insta
 	options := make([]installDeviceOption, 0, len(devices))
 	for _, d := range devices {
 		options = append(options, installDeviceOption{
+			ID:             d.ID,
 			UDID:           d.UDID,
 			Name:           d.Name,
 			DeviceClass:    d.DeviceClass,
@@ -173,19 +178,19 @@ func resolveDeviceSelection(requestedUDID string) (*installDeviceOption, []insta
 	}
 	sort.Slice(options, func(i, j int) bool {
 		if options[i].Name == options[j].Name {
-			return options[i].UDID < options[j].UDID
+			return options[i].ID < options[j].ID
 		}
 		return options[i].Name < options[j].Name
 	})
 
-	if requestedUDID != "" {
+	if requestedDeviceID != "" {
 		for _, opt := range options {
-			if opt.UDID == requestedUDID {
+			if opt.ID == requestedDeviceID {
 				selected := opt
 				return &selected, options, false, nil
 			}
 		}
-		return nil, options, false, fmt.Errorf("device_udid not found: %s", requestedUDID)
+		return nil, options, false, fmt.Errorf("device_id not found: %s", requestedDeviceID)
 	}
 
 	if len(options) == 1 {
@@ -196,7 +201,7 @@ func resolveDeviceSelection(requestedUDID string) (*installDeviceOption, []insta
 	return nil, options, true, nil
 }
 
-func resolveAccountSelection(requestedEmail string) (*installAccountOption, []installAccountOption, bool, error) {
+func resolveAccountSelection(requestedAccountID string) (*installAccountOption, []installAccountOption, bool, error) {
 	accounts, err := manager.GetAppleAccounts()
 	if err != nil {
 		return nil, nil, false, err
@@ -217,21 +222,24 @@ func resolveAccountSelection(requestedEmail string) (*installAccountOption, []in
 		if acc.Email == "" {
 			acc.Email = email
 		}
+		accountID := utils.Md5(acc.Email)
 		options = append(options, installAccountOption{
-			Email:  acc.Email,
-			TeamID: acc.TeamID,
-			Status: acc.Status,
+			AccountID:    accountID,
+			AccountEmail: utils.MaskEmail(acc.Email),
+			TeamID:       acc.TeamID,
+			Status:       acc.Status,
+			rawEmail:     acc.Email,
 		})
 	}
 
-	if requestedEmail != "" {
+	if requestedAccountID != "" {
 		for _, opt := range options {
-			if strings.EqualFold(opt.Email, requestedEmail) {
+			if strings.EqualFold(opt.AccountID, requestedAccountID) {
 				selected := opt
 				return &selected, options, false, nil
 			}
 		}
-		return nil, options, false, fmt.Errorf("account_email not found: %s", requestedEmail)
+		return nil, options, false, fmt.Errorf("account_id not found: %s", requestedAccountID)
 	}
 
 	if len(options) == 1 {

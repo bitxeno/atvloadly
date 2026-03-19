@@ -4,8 +4,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/service"
+	"github.com/bitxeno/atvloadly/internal/utils"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -19,12 +21,9 @@ type appListItem struct {
 	BundleIdentifier string     `json:"bundle_identifier"`
 	Account          string     `json:"account"`
 	Device           string     `json:"device"`
-	UDID             string     `json:"udid"`
 	Version          string     `json:"version"`
 	Enabled          bool       `json:"enabled"`
-	RefreshedDate    *time.Time `json:"refreshed_date,omitempty"`
 	ExpirationDate   *time.Time `json:"expiration_date,omitempty"`
-	RefreshedResult  bool       `json:"refreshed_result"`
 	IsExpired        bool       `json:"is_expired"`
 }
 
@@ -64,18 +63,20 @@ func handleGetAppList(_ context.Context, _ *sdkmcp.CallToolRequest, input getApp
 }
 
 func toAppListItem(app model.InstalledApp) appListItem {
+	deviceName := "Unpaired"
+	if dev, found := manager.GetDeviceByUDID(app.UDID); found && dev != nil {
+		deviceName = dev.Name
+	}
+
 	return appListItem{
 		ID:               app.ID,
 		IpaName:          app.IpaName,
 		BundleIdentifier: app.BundleIdentifier,
-		Account:          app.Account,
-		Device:           app.Device,
-		UDID:             app.UDID,
+		Account:          utils.MaskEmail(app.Account),
+		Device:           deviceName,
 		Version:          app.Version,
 		Enabled:          app.Enabled,
-		RefreshedDate:    app.RefreshedDate,
 		ExpirationDate:   app.ExpirationDate,
-		RefreshedResult:  app.RefreshedResult,
 		IsExpired:        app.IsExpired(),
 	}
 }

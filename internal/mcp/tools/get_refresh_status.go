@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/model"
@@ -12,16 +11,14 @@ import (
 )
 
 type getRefreshStatusInput struct {
-	AppID          uint   `json:"app_id,omitempty" jsonschema:"Optional app ID. If set, returns status for a single app"`
-	UDID           string `json:"udid,omitempty" jsonschema:"Optional device UDID filter when app_id is not provided"`
-	OnlyInProgress bool   `json:"only_in_progress,omitempty" jsonschema:"If true, return only apps that are currently refreshing"`
+	AppID          uint `json:"app_id,omitempty" jsonschema:"Optional app ID. If set, returns status for a single app"`
+	OnlyInProgress bool `json:"only_in_progress,omitempty" jsonschema:"If true, return only apps that are currently refreshing"`
 }
 
 type getRefreshStatusItem struct {
 	AppID             uint                 `json:"app_id"`
 	IpaName           string               `json:"ipa_name"`
 	BundleIdentifier  string               `json:"bundle_identifier"`
-	UDID              string               `json:"udid"`
 	RefreshState      string               `json:"refresh_state"`
 	RefreshInProgress bool                 `json:"refresh_in_progress"`
 	LastRefreshAt     *time.Time           `json:"last_refresh_at,omitempty"`
@@ -71,7 +68,6 @@ func handleGetRefreshStatus(_ context.Context, _ *sdkmcp.CallToolRequest, input 
 			AppID:             app.ID,
 			IpaName:           app.IpaName,
 			BundleIdentifier:  app.BundleIdentifier,
-			UDID:              app.UDID,
 			RefreshState:      state,
 			RefreshInProgress: inProgress,
 			LastRefreshAt:     app.RefreshedDate,
@@ -106,11 +102,6 @@ func loadAppsForRefreshStatus(input getRefreshStatusInput) ([]model.InstalledApp
 		}
 		return []model.InstalledApp{*app}, nil
 	}
-
-	if strings.TrimSpace(input.UDID) != "" {
-		return service.GetEnableAppListByUDID(strings.TrimSpace(input.UDID))
-	}
-
 	return service.GetEnableAppList()
 }
 
