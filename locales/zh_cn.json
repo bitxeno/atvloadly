@@ -347,6 +347,8 @@
             "revoke_success": "注销成功",
             "revoke_failed": "注销失败",
             "export_success": "导出成功",
+            "export_failed": "导出失败",
+            "export_password_required": "请输入证书密码",
             "import_success": "导入成功",
             "import_failed": "导入失败"
         },
@@ -363,6 +365,10 @@
                 "platform": "平台"
             },
             "empty": "未找到设备"
+        },
+        "toast": {
+            "delete_success": "设备删除成功",
+            "delete_failed": "删除设备失败"
         }
     }
     ,
