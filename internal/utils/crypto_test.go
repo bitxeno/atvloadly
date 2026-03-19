@@ -8,7 +8,8 @@ func TestMaskEmail(t *testing.T) {
 		email string
 		want  string
 	}{
-		{name: "standard email", email: "alice@example.com", want: "a***e@example.com"},
+		{name: "standard email", email: "alice@example.com", want: "al**e@example.com"},
+		{name: "long local part", email: "abcdefgh@example.com", want: "abc****h@example.com"},
 		{name: "short local part", email: "ab@example.com", want: "**@example.com"},
 		{name: "no at sign", email: "abcde", want: "a***e"},
 		{name: "empty", email: "", want: ""},

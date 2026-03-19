@@ -56,10 +56,18 @@ func MaskEmail(email string) string {
 		return email[:1] + strings.Repeat("*", len(email)-2) + email[len(email)-1:]
 	}
 
+	prefixLen := 1
+	switch {
+	case len(localPart) >= 8:
+		prefixLen = 3
+	case len(localPart) >= 5:
+		prefixLen = 2
+	}
+
 	if len(localPart) <= 2 {
 		localPart = strings.Repeat("*", len(localPart))
 	} else {
-		localPart = localPart[:1] + strings.Repeat("*", len(localPart)-2) + localPart[len(localPart)-1:]
+		localPart = localPart[:prefixLen] + strings.Repeat("*", len(localPart)-prefixLen-1) + localPart[len(localPart)-1:]
 	}
 
 	return localPart + "@" + domain
