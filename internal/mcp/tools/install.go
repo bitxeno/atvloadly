@@ -56,10 +56,9 @@ type installAppOutput struct {
 func registerInstallApp(server *sdkmcp.Server) {
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name: "install_app",
-		Description: "Install app from IPA URL. " +
+		Description: "Install app with IPA URL. " +
 			"If device_id/account_id is omitted, this tool returns options for interactive selection. " +
-			"When there is only one available device/account, it is selected automatically. " +
-			"After app is queued, use get_install_status with app_id to track progress.",
+			"After app install task is queued, call get_install_status with app_id to track progress.",
 	}, handleInstallApp)
 }
 
