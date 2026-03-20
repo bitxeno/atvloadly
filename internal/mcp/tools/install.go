@@ -51,7 +51,7 @@ type installAppOutput struct {
 func registerInstallApp(server *sdkmcp.Server) {
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name: "install_app",
-		Description: "Install app with IPA URL. " +
+		Description: "Install/Sideload app to AppleTV with IPA URL. " +
 			"If device_id/account_id is omitted, this tool returns options for interactive selection. " +
 			"Ensure the user has confirmed the device and account before proceeding." +
 			"After app install task is queued, call get_install_status to track progress.",
