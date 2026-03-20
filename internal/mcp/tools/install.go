@@ -58,6 +58,7 @@ func registerInstallApp(server *sdkmcp.Server) {
 		Name: "install_app",
 		Description: "Install app with IPA URL. " +
 			"If device_id/account_id is omitted, this tool returns options for interactive selection. " +
+			"Ensure the user has confirmed the device and account before proceeding." +
 			"After app install task is queued, call get_install_status with app_id to track progress.",
 	}, handleInstallApp)
 }

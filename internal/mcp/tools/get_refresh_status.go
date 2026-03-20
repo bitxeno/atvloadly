@@ -11,8 +11,7 @@ import (
 )
 
 type getRefreshStatusInput struct {
-	AppID          uint `json:"app_id,omitempty" jsonschema:"Optional app ID. If set, returns status for a single app"`
-	OnlyInProgress bool `json:"only_in_progress,omitempty" jsonschema:"If true, return only apps that are currently refreshing"`
+	AppID uint `json:"app_id,omitempty" jsonschema:"Optional app ID. If set, returns status for a single app"`
 }
 
 type getRefreshStatusItem struct {
@@ -59,10 +58,6 @@ func handleGetRefreshStatus(_ context.Context, _ *sdkmcp.CallToolRequest, input 
 	for _, app := range apps {
 		inProgress := inProgressMap[app.ID]
 		state := resolveRefreshState(app, inProgress)
-
-		if input.OnlyInProgress && !inProgress {
-			continue
-		}
 
 		item := getRefreshStatusItem{
 			AppID:             app.ID,
