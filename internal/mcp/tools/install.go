@@ -3,17 +3,13 @@ package tools
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
+	"net/url"
+	"path"
 	"sort"
 	"strings"
 
-	"github.com/bitxeno/atvloadly/internal/app"
-	atvhttp "github.com/bitxeno/atvloadly/internal/http"
-	"github.com/bitxeno/atvloadly/internal/ipa"
 	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/model"
-	"github.com/bitxeno/atvloadly/internal/service"
 	"github.com/bitxeno/atvloadly/internal/task"
 	"github.com/bitxeno/atvloadly/internal/utils"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -46,7 +42,6 @@ type installAccountOption struct {
 type installAppOutput struct {
 	Status            string                 `json:"status"`
 	Message           string                 `json:"message"`
-	AppID             uint                   `json:"app_id,omitempty"`
 	SelectedDevice    *installDeviceOption   `json:"selected_device,omitempty"`
 	SelectedAccount   *installAccountOption  `json:"selected_account,omitempty"`
 	AvailableDevices  []installDeviceOption  `json:"available_devices,omitempty"`
@@ -59,7 +54,7 @@ func registerInstallApp(server *sdkmcp.Server) {
 		Description: "Install app with IPA URL. " +
 			"If device_id/account_id is omitted, this tool returns options for interactive selection. " +
 			"Ensure the user has confirmed the device and account before proceeding." +
-			"After app install task is queued, call get_install_status with app_id to track progress.",
+			"After app install task is queued, call get_install_status to track progress.",
 	}, handleInstallApp)
 }
 
@@ -97,59 +92,22 @@ func handleInstallApp(_ context.Context, _ *sdkmcp.CallToolRequest, input instal
 		}, nil
 	}
 
-	tmpDir := filepath.Join(app.Config.Server.DataDir, "tmp")
-	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
-		return nil, installAppOutput{}, fmt.Errorf("failed to create temporary directory: %w", err)
-	}
-
-	tmpFile, err := os.CreateTemp(tmpDir, "mcp_*.ipa")
-	if err != nil {
-		return nil, installAppOutput{}, fmt.Errorf("failed to create temporary file: %w", err)
-	}
-	tmpIPAPath := tmpFile.Name()
-	_ = tmpFile.Close()
-
-	resp, err := atvhttp.NewClient().R().SetOutput(tmpIPAPath).Get(ipaURL)
-	if err != nil {
-		_ = os.Remove(tmpIPAPath)
-		return nil, installAppOutput{}, fmt.Errorf("failed to download ipa: %w", err)
-	}
-	if !resp.IsSuccess() {
-		_ = os.Remove(tmpIPAPath)
-		return nil, installAppOutput{}, fmt.Errorf("download failed with status code %d", resp.StatusCode())
-	}
-
-	packageInfo, err := ipa.ParseFile(tmpIPAPath)
-	if err != nil {
-		_ = os.Remove(tmpIPAPath)
-		return nil, installAppOutput{}, fmt.Errorf("downloaded file is not a valid ipa: %w", err)
-	}
-
 	appModel := model.InstalledApp{
-		IpaName:          packageInfo.Name(),
-		IpaPath:          tmpIPAPath,
+		IpaName:          ipaFileNameFromURL(ipaURL),
+		IpaPath:          ipaURL,
 		Device:           selectedDevice.Name,
 		DeviceClass:      selectedDevice.DeviceClass,
 		UDID:             selectedDevice.UDID,
 		Account:          selectedAccount.rawEmail,
-		BundleIdentifier: packageInfo.Identifier(),
-		Version:          packageInfo.Version(),
 		Enabled:          true,
 		RemoveExtensions: input.RemoveExtensions,
 	}
 
-	savedApp, err := service.SaveApp(appModel)
-	if err != nil {
-		_ = os.Remove(tmpIPAPath)
-		return nil, installAppOutput{}, fmt.Errorf("save app record failed: %w", err)
-	}
-
-	task.StartInstallApps([]model.InstalledApp{*savedApp}, true)
+	task.StartInstallApps([]model.InstalledApp{appModel}, true)
 
 	return nil, installAppOutput{
 		Status:          "installing",
 		Message:         "Install task queued to task.StartInstallApps.",
-		AppID:           savedApp.ID,
 		SelectedDevice:  selectedDevice,
 		SelectedAccount: selectedAccount,
 	}, nil
@@ -259,4 +217,18 @@ func isIPAURL(rawURL string) bool {
 		cleaned = cleaned[:idx]
 	}
 	return strings.HasSuffix(cleaned, ".ipa")
+}
+
+func ipaFileNameFromURL(rawURL string) string {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil || parsed.Path == "" {
+		return ""
+	}
+
+	fileName := path.Base(parsed.Path)
+	if fileName == "." || fileName == "/" {
+		return ""
+	}
+
+	return fileName
 }

@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
+	atvhttp "github.com/bitxeno/atvloadly/internal/http"
 	"github.com/bitxeno/atvloadly/internal/i18n"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/manager"
@@ -195,6 +198,14 @@ func (t *Task) runQueue() {
 
 func (t *Task) tryInstallApp(item TaskItem) {
 	v := item.App
+	resolvedIpaPath, err := t.resolveIpaPath(v.IpaPath)
+	if err != nil {
+		log.Err(err).Msgf("Prepare ipa path failed: %s", v.IpaName)
+		t.handleInstallFailure(item, v, err)
+		return
+	}
+	v.IpaPath = resolvedIpaPath
+
 	log.Infof("Start installing ipa: %s", v.IpaName)
 	provisioningProfile, err := t.runInternal(v)
 
@@ -210,21 +221,75 @@ func (t *Task) tryInstallApp(item TaskItem) {
 		v.ExpirationDate = &expirationDate
 		v.RefreshedResult = true
 		v.RefreshedError = model.RefreshedErrorNone
-		_ = service.UpdateAppRefreshResult(v)
+
+		if v.ID == 0 {
+			savedApp, saveErr := service.SaveApp(v)
+			if saveErr != nil {
+				log.Err(saveErr).Msgf("Save app failed after installation success: %s", v.IpaName)
+				t.handleInstallFailure(item, v, saveErr)
+				return
+			}
+			v = *savedApp
+		} else {
+			if updateErr := service.UpdateAppRefreshResult(v); updateErr != nil {
+				log.Err(updateErr).Msgf("Update app refresh result failed: %s", v.IpaName)
+			}
+		}
+
 		log.Infof("Installing ipa success: %s", v.IpaName)
 	} else {
-		log.Err(err).Msgf("Installing ipa failed: %s", v.IpaName)
-		v.RefreshedResult = false
-		if errors.Is(err, manager.ErrAccountInvalid) {
-			v.RefreshedError = model.RefreshedErrorInvalidAccount
-		} else {
-			v.RefreshedError = model.RefreshedErrorInvalidOther
-		}
-		_ = service.UpdateAppRefreshResult(v)
+		t.handleInstallFailure(item, v, err)
+		return
 	}
 
 	// Track batch progress and send aggregated notification
 	t.trackBatchProgress(item, success, err)
+}
+
+func (t *Task) handleInstallFailure(item TaskItem, v model.InstalledApp, err error) {
+	log.Err(err).Msgf("Installing ipa failed: %s", v.IpaName)
+	v.RefreshedResult = false
+	if errors.Is(err, manager.ErrAccountInvalid) {
+		v.RefreshedError = model.RefreshedErrorInvalidAccount
+	} else {
+		v.RefreshedError = model.RefreshedErrorInvalidOther
+	}
+	if v.ID != 0 {
+		_ = service.UpdateAppRefreshResult(v)
+	}
+
+	// Track batch progress and send aggregated notification
+	t.trackBatchProgress(item, false, err)
+}
+
+func (t *Task) resolveIpaPath(ipaPath string) (string, error) {
+	if !strings.HasPrefix(ipaPath, "http:") && !strings.HasPrefix(ipaPath, "https:") {
+		return ipaPath, nil
+	}
+
+	tmpDir := filepath.Join(app.Config.Server.DataDir, "tmp")
+	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
+		return "", fmt.Errorf("failed to create temporary directory: %w", err)
+	}
+
+	tmpFile, err := os.CreateTemp(tmpDir, "install_*.ipa")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temporary file: %w", err)
+	}
+	tmpIPAPath := tmpFile.Name()
+	_ = tmpFile.Close()
+
+	resp, err := atvhttp.NewClient().R().SetOutput(tmpIPAPath).Get(ipaPath)
+	if err != nil {
+		_ = os.Remove(tmpIPAPath)
+		return "", fmt.Errorf("failed to download ipa: %w", err)
+	}
+	if !resp.IsSuccess() {
+		_ = os.Remove(tmpIPAPath)
+		return "", fmt.Errorf("download failed with status code %d", resp.StatusCode())
+	}
+
+	return tmpIPAPath, nil
 }
 
 func (t *Task) trackBatchProgress(item TaskItem, success bool, err error) {
@@ -274,6 +339,7 @@ func (t *Task) runInternal(v model.InstalledApp) (*model.MobileProvisioningProfi
 	installMgr := manager.NewInstallManager()
 	defer func() {
 		installMgr.SaveLog(v.ID)
+		installMgr.CleanTempFiles(v.IpaPath)
 		installMgr.Close()
 	}()
 
