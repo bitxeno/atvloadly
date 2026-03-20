@@ -72,3 +72,11 @@ func MaskEmail(email string) string {
 
 	return localPart + "@" + domain
 }
+
+func RemoveAllFiles(dir string, pattern string) {
+	pat := filepath.Join(dir, pattern)
+	matches, _ := filepath.Glob(pat)
+	for _, m := range matches {
+		_ = os.RemoveAll(m)
+	}
+}

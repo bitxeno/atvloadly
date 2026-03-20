@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"image/png"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,11 +14,13 @@ import (
 	"github.com/bitxeno/atvloadly/internal/app"
 	atvhttp "github.com/bitxeno/atvloadly/internal/http"
 	"github.com/bitxeno/atvloadly/internal/i18n"
+	"github.com/bitxeno/atvloadly/internal/ipa"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/notify"
 	"github.com/bitxeno/atvloadly/internal/service"
+	"github.com/bitxeno/atvloadly/internal/utils"
 	"github.com/robfig/cron/v3"
 )
 
@@ -197,17 +200,22 @@ func (t *Task) runQueue() {
 }
 
 func (t *Task) tryInstallApp(item TaskItem) {
-	v := item.App
-	resolvedIpaPath, err := t.resolveIpaPath(v.IpaPath)
+	resolvedApp, err := t.resolveIPA(item.App)
 	if err != nil {
-		log.Err(err).Msgf("Prepare ipa path failed: %s", v.IpaName)
-		t.handleInstallFailure(item, v, err)
+		log.Err(err).Msgf("Prepare ipa path failed: %s", item.App.IpaName)
+		t.handleInstallFailure(item, item.App, err)
 		return
 	}
-	v.IpaPath = resolvedIpaPath
+	v := *resolvedApp
 
 	log.Infof("Start installing ipa: %s", v.IpaName)
-	provisioningProfile, err := t.runInternal(v)
+	installMgr := manager.NewInstallManager()
+	defer func() {
+		installMgr.SaveLog(v.ID)
+		installMgr.CleanTempFiles(v.IpaPath)
+		installMgr.Close()
+	}()
+	provisioningProfile, err := t.runInternal(v, installMgr)
 
 	success := err == nil
 	if success {
@@ -262,34 +270,63 @@ func (t *Task) handleInstallFailure(item TaskItem, v model.InstalledApp, err err
 	t.trackBatchProgress(item, false, err)
 }
 
-func (t *Task) resolveIpaPath(ipaPath string) (string, error) {
-	if !strings.HasPrefix(ipaPath, "http:") && !strings.HasPrefix(ipaPath, "https:") {
-		return ipaPath, nil
+func (t *Task) resolveIPA(v model.InstalledApp) (*model.InstalledApp, error) {
+	// Not new install, return directly to avoid unnecessary download
+	if v.ID != 0 {
+		return &v, nil
 	}
 
-	tmpDir := filepath.Join(app.Config.Server.DataDir, "tmp")
-	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
-		return "", fmt.Errorf("failed to create temporary directory: %w", err)
+	saveDir := filepath.Join(app.Config.Server.DataDir, "tmp")
+	if strings.HasPrefix(v.IpaPath, "http:") || strings.HasPrefix(v.IpaPath, "https:") {
+		if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
+			return nil, fmt.Errorf("failed to create temporary directory: %w", err)
+		}
+
+		tmpFile, err := os.CreateTemp(saveDir, "install_*.ipa")
+		if err != nil {
+			return nil, fmt.Errorf("failed to create temporary file: %w", err)
+		}
+		tmpIPAPath := tmpFile.Name()
+		_ = tmpFile.Close()
+
+		resp, err := atvhttp.NewClient().R().SetOutput(tmpIPAPath).Get(v.IpaPath)
+		if err != nil {
+			_ = os.Remove(tmpIPAPath)
+			return nil, fmt.Errorf("failed to download ipa: %w", err)
+		}
+		if !resp.IsSuccess() {
+			_ = os.Remove(tmpIPAPath)
+			return nil, fmt.Errorf("download failed with status code %d", resp.StatusCode())
+		}
+		v.IpaPath = tmpIPAPath
 	}
 
-	tmpFile, err := os.CreateTemp(tmpDir, "install_*.ipa")
+	info, err := ipa.ParseFile(v.IpaPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to create temporary file: %w", err)
-	}
-	tmpIPAPath := tmpFile.Name()
-	_ = tmpFile.Close()
-
-	resp, err := atvhttp.NewClient().R().SetOutput(tmpIPAPath).Get(ipaPath)
-	if err != nil {
-		_ = os.Remove(tmpIPAPath)
-		return "", fmt.Errorf("failed to download ipa: %w", err)
-	}
-	if !resp.IsSuccess() {
-		_ = os.Remove(tmpIPAPath)
-		return "", fmt.Errorf("download failed with status code %d", resp.StatusCode())
+		return nil, fmt.Errorf("failed to parse ipa file: %w", err)
 	}
 
-	return tmpIPAPath, nil
+	v.IpaName = info.Name()
+	v.BundleIdentifier = info.Identifier()
+	v.Version = info.Version()
+
+	// 保存icon
+	if info.Icon() != nil {
+		timestamp := time.Now().UnixMicro()
+		name := service.GetValidName(utils.FileNameWithoutExt(v.IpaPath))
+		iconName := fmt.Sprintf("%s_%d%s", name, timestamp, ".png")
+		iconDst := filepath.Join(saveDir, iconName)
+		out, err := os.Create(iconDst)
+		if err == nil {
+			defer out.Close()
+
+			if err := png.Encode(out, info.Icon()); err == nil {
+				v.Icon = iconDst
+			}
+		}
+	}
+
+	return &v, nil
 }
 
 func (t *Task) trackBatchProgress(item TaskItem, success bool, err error) {
@@ -335,14 +372,7 @@ func (t *Task) sendBatchNotification(batch *BatchInfo) {
 	}
 }
 
-func (t *Task) runInternal(v model.InstalledApp) (*model.MobileProvisioningProfile, error) {
-	installMgr := manager.NewInstallManager()
-	defer func() {
-		installMgr.SaveLog(v.ID)
-		installMgr.CleanTempFiles(v.IpaPath)
-		installMgr.Close()
-	}()
-
+func (t *Task) runInternal(v model.InstalledApp, installMgr *manager.InstallManager) (*model.MobileProvisioningProfile, error) {
 	if v.Account == "" || v.UDID == "" {
 		installMgr.WriteLog("account or UDID is empty")
 		return nil, fmt.Errorf("%s", "account or UDID is empty")
