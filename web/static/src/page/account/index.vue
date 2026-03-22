@@ -479,10 +479,10 @@ export default {
         })
         .then((res) => {
           if (res.data) {
-            toast.success(_this.$t("account.toast.delete_success"));
+            toast.success(_this.$t("device.toast.delete_success"));
             _this.fetchDevices(_this.currentAccountEmail);
           } else {
-            toast.error(_this.$t("account.toast.delete_failed"));
+            toast.error(_this.$t("device.toast.delete_failed"));
           }
         });
       close?.();
@@ -494,9 +494,7 @@ export default {
     },
     doExportCertificate() {
       if (!this.exportPassword) {
-        toast.error(this.$t("pair.toast.pin_incorrect")); // Reusing error or just generic?
-        // Better to use generic or simple string since I didn't add validation key
-        // Or "Input Required"
+        toast.error(this.$t("certificate.toast.export_password_required"));
         return;
       }
 
@@ -528,7 +526,15 @@ export default {
           });
           this.showExportModal = false;
         })
-        .catch((err) => {});
+        .catch((err) => {
+          toast.update(toastId, {
+            render:
+              err?.message || this.$t("certificate.toast.export_failed"),
+            type: "error",
+            isLoading: false,
+            autoClose: 3000,
+          });
+        });
     },
     triggerImport() {
       this.$refs.certFileInput.click();

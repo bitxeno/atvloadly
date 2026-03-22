@@ -41,3 +41,42 @@ func MergeEnvs(system, override []string) []string {
 	}
 	return merged
 }
+
+func MaskEmail(email string) string {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return email
+	}
+
+	localPart, domain, found := strings.Cut(email, "@")
+	if !found {
+		if len(email) <= 2 {
+			return strings.Repeat("*", len(email))
+		}
+		return email[:1] + strings.Repeat("*", len(email)-2) + email[len(email)-1:]
+	}
+
+	prefixLen := 1
+	switch {
+	case len(localPart) >= 8:
+		prefixLen = 3
+	case len(localPart) >= 5:
+		prefixLen = 2
+	}
+
+	if len(localPart) <= 2 {
+		localPart = strings.Repeat("*", len(localPart))
+	} else {
+		localPart = localPart[:prefixLen] + strings.Repeat("*", len(localPart)-prefixLen-1) + localPart[len(localPart)-1:]
+	}
+
+	return localPart + "@" + domain
+}
+
+func RemoveAllFiles(dir string, pattern string) {
+	pat := filepath.Join(dir, pattern)
+	matches, _ := filepath.Glob(pat)
+	for _, m := range matches {
+		_ = os.RemoveAll(m)
+	}
+}

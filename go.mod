@@ -1,6 +1,6 @@
 module github.com/bitxeno/atvloadly
 
-go 1.18
+go 1.24.0
 
 require (
 	github.com/artdarek/go-unzip v1.0.1-0.20210323073738-f9883ad8bd15
@@ -24,6 +24,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/knadh/koanf v1.5.0
 	github.com/mitchellh/go-ps v1.0.0
+	github.com/modelcontextprotocol/go-sdk v0.8.0
 	github.com/nicksnyder/go-i18n/v2 v2.4.0
 	github.com/nikoksr/notify v0.41.0
 	github.com/pkg/errors v0.9.1
@@ -53,7 +54,7 @@ require (
 	github.com/glebarez/go-sqlite v1.21.2 // indirect
 	github.com/go-redis/redis/v8 v8.11.6-0.20220405070650-99c79f7041fc // indirect
 	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/iamacarpet/go-winpty v1.0.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
@@ -81,10 +82,11 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.55.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
+	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	golang.org/x/crypto v0.24.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/libc v1.22.5 // indirect
 	modernc.org/mathutil v1.5.0 // indirect

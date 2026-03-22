@@ -71,9 +71,18 @@ func SendWithConfig(title string, message string, settings app.SettingsConfigura
 		webhookURL := settings.Notification.Webhook.URL
 		webhookURL = strings.ReplaceAll(webhookURL, "{{title}}", url.QueryEscape(title))
 		webhookURL = strings.ReplaceAll(webhookURL, "{{message}}", url.QueryEscape(message))
+		headers := stdhttp.Header{}
+		if settings.Notification.Webhook.Header != "" {
+			for _, h := range strings.Split(settings.Notification.Webhook.Header, ";") {
+				parts := strings.SplitN(h, ":", 2)
+				if len(parts) == 2 {
+					headers.Add(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
+				}
+			}
+		}
 		webhook := &http.Webhook{
 			URL:         webhookURL,
-			Header:      stdhttp.Header{},
+			Header:      headers,
 			Method:      method,
 			ContentType: contentType,
 			BuildPayload: func(subject, message string) (payload any) {

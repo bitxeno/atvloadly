@@ -118,7 +118,7 @@
              <KofiIcon class="w-6 h-6" />
              {{ $t("donate.kofi") }}
            </a>
-           <a href="https://afdian.com/a/bitxeno" target="_blank" class="btn border-none w-full normal-case text-lg gap-2 text-white hover:opacity-90" style="background-color: #946ce6;">
+           <a href="https://ifdian.net/a/bitxeno" target="_blank" class="btn border-none w-full normal-case text-lg gap-2 text-white hover:opacity-90" style="background-color: #946ce6;">
              <AfdianIcon class="w-6 h-6" />
              {{ $t("donate.afdian") }}
            </a>

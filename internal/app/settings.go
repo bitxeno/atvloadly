@@ -61,6 +61,7 @@ type SettingsConfiguration struct {
 			URL         string `koanf:"url" json:"url"`
 			Method      string `koanf:"method" json:"method" default:"POST"`
 			ContentType string `koanf:"content_type" json:"content_type" default:"application/json"`
+			Header      string `koanf:"header" json:"header"`
 			Body        string `koanf:"body" json:"body"`
 		} `koanf:"webhook" json:"webhook"`
 	} `koanf:"notification" json:"notification"`

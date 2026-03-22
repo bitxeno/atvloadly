@@ -207,6 +207,8 @@
                 "url_placeholder": "Supports {{title}} and {{message}} template variables",
                 "method": "HTTP Method",
                 "content_type": "Content-Type",
+                "header": "HTTP Headers",
+                "header_placeholder": "Separate multiple headers with semicolons, e.g.: Authorization: Bearer token; X-Custom: value",
                 "body": "Request Body",
                 "body_placeholder": "Supports {{title}} and {{message}} template variables\nExample: {\"title\": \"{{title}}\", \"message\": \"{{message}}\"}"
             },
@@ -345,6 +347,8 @@
             "revoke_success": "Certificate revoked successfully",
             "revoke_failed": "Failed to revoke certificate",
             "export_success": "Export Successful",
+            "export_failed": "Export Failed",
+            "export_password_required": "Please enter the certificate password",
             "import_success": "Import Successful",
             "import_failed": "Import Failed"
         },
@@ -361,6 +365,10 @@
                 "platform": "Platform"
             },
             "empty": "No devices found"
+        },
+        "toast": {
+            "delete_success": "Device deleted successfully",
+            "delete_failed": "Failed to delete device"
         }
     }
     ,
