@@ -127,7 +127,7 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
 
 - `/healthcheck`: Return service health status (200 indicates normal, 503 indicates that an app has expired).
 
-- `/mcp`: MCP service interface, Streamable HTTP protocol, can connect to AI Agent to install or refresh apps.
+- `/mcp`: MCP service api, streamable http transport, can connect to AI Agent to install or refresh apps.
 
 
 ## How to build
