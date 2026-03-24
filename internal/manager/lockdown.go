@@ -40,7 +40,8 @@ func loadLockdownDevices() (map[string]model.LockdownDevice, error) {
 		}
 
 		lockdownDevice.Name = utils.FileNameWithoutExt(file.Name())
-		devices[lockdownDevice.WiFiMACAddress] = lockdownDevice
+		macAddr := strings.ToLower(lockdownDevice.WiFiMACAddress)
+		devices[macAddr] = lockdownDevice
 	}
 	return devices, nil
 }

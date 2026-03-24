@@ -183,49 +183,69 @@ func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(service
 		return fmt.Errorf("Avahi new failed: %v", err)
 	}
 
-	// Browse all service types
-	stb, err := server.ServiceTypeBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceDomain, 0)
+	// Browse all advertised service types, similar to `avahi-browse -a`.
+	typeBrowser, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, "_services._dns-sd._udp", mdnsServiceDomain, 0)
 	if err != nil {
-		return fmt.Errorf("ServiceTypeBrowserNew failed: %w", err)
+		return fmt.Errorf("ServiceBrowserNew for service types failed: %w", err)
 	}
+	defer server.ServiceBrowserFree(typeBrowser)
 
 	discoveredTypes := make(map[string]bool)
 
-	// Goroutine to handle type discovery and spawn service browsers
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case t := <-stb.AddChannel:
-				if !discoveredTypes[t.Type] {
-					discoveredTypes[t.Type] = true
-					go dm.scanServiceTypeContinuous(ctx, server, t.Type, callback)
-				}
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case serviceTypeEntry, ok := <-typeBrowser.AddChannel:
+			if !ok {
+				return nil
+			}
+
+			serviceType := serviceTypeEntry.Name
+			if serviceType == "" {
+				serviceType = serviceTypeEntry.Type
+			}
+			if serviceType == "" || discoveredTypes[serviceType] {
+				continue
+			}
+
+			discoveredTypes[serviceType] = true
+			go dm.scanServiceTypeContinuous(ctx, server, serviceTypeEntry.Interface, serviceTypeEntry.Protocol, serviceType, serviceTypeEntry.Domain, callback)
+		case _, ok := <-typeBrowser.RemoveChannel:
+			if !ok {
+				return nil
 			}
 		}
-	}()
-
-	<-ctx.Done()
-	return nil
+	}
 }
 
-func (dm *DeviceManager) scanServiceTypeContinuous(ctx context.Context, server *avahi.Server, serviceType string, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) {
-	sb, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, serviceType, mdnsServiceDomain, 0)
+func (dm *DeviceManager) scanServiceTypeContinuous(ctx context.Context, server *avahi.Server, iface, protocol int32, serviceType string, domain string, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) {
+	if serviceType == "" {
+		return
+	}
+	if domain == "" {
+		domain = mdnsServiceDomain
+	}
+
+	sb, err := server.ServiceBrowserNew(iface, protocol, serviceType, domain, 0)
 	if err != nil {
 		log.Err(err).Msgf("ServiceBrowserNew failed for %s", serviceType)
 		return
 	}
+	defer server.ServiceBrowserFree(sb)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case service := <-sb.AddChannel:
+		case service, ok := <-sb.AddChannel:
+			if !ok {
+				return
+			}
 			resolved, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
 				service.Type, service.Domain, avahi.ProtoUnspec, 0)
 			if err == nil {
-				callback(serviceType, resolved.Name, resolved.Host, resolved.Address, resolved.Port, resolved.Txt)
+				callback(resolved.Type, resolved.Name, resolved.Host, resolved.Address, resolved.Port, resolved.Txt)
 			}
 		}
 	}
