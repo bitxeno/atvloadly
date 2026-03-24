@@ -183,12 +183,12 @@ func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(service
 		return fmt.Errorf("Avahi new failed: %v", err)
 	}
 
-	// Browse all advertised service types, similar to `avahi-browse -a`.
-	typeBrowser, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, "_services._dns-sd._udp", mdnsServiceDomain, 0)
+	// Use ServiceTypeBrowser to discover all advertised service types (equivalent to `avahi-browse -a`).
+	typeBrowser, err := server.ServiceTypeBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceDomain, 0)
 	if err != nil {
-		return fmt.Errorf("ServiceBrowserNew for service types failed: %w", err)
+		return fmt.Errorf("ServiceTypeBrowserNew failed: %w", err)
 	}
-	defer server.ServiceBrowserFree(typeBrowser)
+	defer server.ServiceTypeBrowserFree(typeBrowser)
 
 	discoveredTypes := make(map[string]bool)
 
@@ -196,21 +196,18 @@ func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(service
 		select {
 		case <-ctx.Done():
 			return nil
-		case serviceTypeEntry, ok := <-typeBrowser.AddChannel:
+		case entry, ok := <-typeBrowser.AddChannel:
 			if !ok {
 				return nil
 			}
 
-			serviceType := serviceTypeEntry.Name
-			if serviceType == "" {
-				serviceType = serviceTypeEntry.Type
-			}
+			serviceType := entry.Type
 			if serviceType == "" || discoveredTypes[serviceType] {
 				continue
 			}
 
 			discoveredTypes[serviceType] = true
-			go dm.scanServiceTypeContinuous(ctx, server, serviceTypeEntry.Interface, serviceTypeEntry.Protocol, serviceType, serviceTypeEntry.Domain, callback)
+			go dm.scanServiceTypeContinuous(ctx, server, entry.Interface, entry.Protocol, serviceType, entry.Domain, callback)
 		case _, ok := <-typeBrowser.RemoveChannel:
 			if !ok {
 				return nil
