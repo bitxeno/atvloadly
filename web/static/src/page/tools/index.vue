@@ -39,7 +39,7 @@ const startScan = () => {
       // Format: [Type] Name - Host (IP:Port)
       const hostPart = data.host ? ` - ${data.host}` : '';
       const formatted = `[${data.type}] ${data.name}${hostPart} (${data.address}:${data.port})`;
-      if (data.type && data.type.includes('apple-pairable')) {
+      if (data.type && data.type.includes('_remotepairing-manual-pairing')) {
         logs.value.push({ text: formatted, color: '#00dfae' });
       } else {
         logs.value.push({ text: formatted });

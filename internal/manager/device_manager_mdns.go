@@ -18,7 +18,7 @@ const (
 	discoverWaitTime = time.Second * 10
 
 	mdnsService         = "_apple-mobdev2._tcp"
-	mdnsServicePairable = "_apple-pairable._tcp"
+	mdnsServicePairable = "_remotepairing-manual-pairing._tcp"
 	mdnsServiceDomain   = "local."
 )
 
@@ -79,14 +79,13 @@ func (dm *DeviceManager) Start() {
 				log.Printf("Service discovered: name=%s type=%s ip=%v", serviceName, entry.Service, entry.AddrIPv4)
 
 				// 添加可配对设备
-				macAddr := strings.Split(serviceName, "@")[0]
-				host := dm.parseName(entry.HostName)
-				udid := fmt.Sprintf("fff%sfff", macAddr)
+				name := strings.Split(serviceName, "@")[0]
+				udid := fmt.Sprintf("%s-%s", name, entry.AddrIPv4[0].String())
 				dm.devices.Store(udid, model.Device{
 					ID:          utils.Md5(udid),
-					Name:        host,
+					Name:        name,
 					ServiceName: serviceName,
-					MacAddr:     macAddr,
+					MacAddr:     "",
 					IP:          entry.AddrIPv4[0].String(),
 					UDID:        udid,
 					Status:      model.Pairable,

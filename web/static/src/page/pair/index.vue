@@ -18,9 +18,6 @@
           >{{ device.name }}
         </p>
         <p><label class="inline-block w-16">IP：</label>{{ device.ip }}</p>
-        <p>
-          <label class="inline-block w-16">MAC：</label>{{ device.mac_addr }}
-        </p>
         <button class="btn btn-primary" @click="start">
           {{ $t("pair.step.start.button") }}
         </button>

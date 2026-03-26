@@ -17,7 +17,7 @@ import (
 
 const (
 	mdnsService         = "_apple-mobdev2._tcp"
-	mdnsServicePairable = "_apple-pairable._tcp"
+	mdnsServicePairable = "_remotepairing-manual-pairing._tcp"
 	mdnsServiceDomain   = "local"
 )
 
@@ -142,14 +142,13 @@ func (dm *DeviceManager) Start() {
 				log.Tracef(" RESOLVED >> %s", service.Address)
 
 				// 添加可配对设备
-				macAddr := strings.Split(service.Name, "@")[0]
-				name := dm.parseName(service.Host)
-				udid := fmt.Sprintf("fff%sfff", macAddr)
+				name := strings.Split(service.Name, "@")[0]
+				udid := fmt.Sprintf("%s-%s", name, service.Address)
 				device := model.Device{
 					ID:          utils.Md5(udid),
 					Name:        name,
 					ServiceName: service.Name,
-					MacAddr:     macAddr,
+					MacAddr:     "",
 					IP:          service.Address,
 					UDID:        udid,
 					Status:      model.Pairable,
@@ -161,8 +160,8 @@ func (dm *DeviceManager) Start() {
 
 		case service = <-sbPairable.RemoveChannel:
 			log.Tracef("ServiceBrowser REMOVE: %v", service)
-			macAddr := strings.Split(service.Name, "@")[0]
-			udid := fmt.Sprintf("fff%sfff", macAddr)
+			name := strings.Split(service.Name, "@")[0]
+			udid := fmt.Sprintf("%s-%s", name, service.Address)
 			dm.DeleteDevice(udid)
 		}
 	}

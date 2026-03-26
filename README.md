@@ -105,7 +105,7 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
 
 2. Unable to find AppleTV
 
-> Please turn off the VPN, restart the AppleTV, re-enter pairing mode, make sure **[Tool]** can detect devices of the `_apple-pairable._tcp` type, and pair again.
+> Please turn off the VPN, restart the AppleTV, re-enter pairing mode, make sure **[Tool]** can detect devices of the `_remotepairing-manual-pairing._tcp` type, and pair again.
 
 3. Failed to log in to Apple account
 
