@@ -2,6 +2,7 @@ package notify
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	stdhttp "net/http"
 	"net/url"
@@ -80,6 +81,9 @@ func SendWithConfig(title string, message string, settings app.SettingsConfigura
 				}
 			}
 		}
+		if headers.Get("User-Agent") == "" {
+			headers.Set("User-Agent", "atvloadly")
+		}
 		webhook := &http.Webhook{
 			URL:         webhookURL,
 			Header:      headers,
@@ -89,6 +93,14 @@ func SendWithConfig(title string, message string, settings app.SettingsConfigura
 				body := settings.Notification.Webhook.Body
 				body = strings.ReplaceAll(body, "{{title}}", subject)
 				body = strings.ReplaceAll(body, "{{message}}", message)
+
+				if strings.HasPrefix(strings.ToLower(contentType), "application/json") {
+					var parsed any
+					if err := json.Unmarshal([]byte(body), &parsed); err == nil {
+						return parsed
+					}
+				}
+
 				return body
 			},
 		}
