@@ -90,6 +90,10 @@ func SendWithConfig(title string, message string, settings app.SettingsConfigura
 			Method:      method,
 			ContentType: contentType,
 			BuildPayload: func(subject, message string) (payload any) {
+				if isJSONContentType(contentType) {
+					subject = sanitizeJSONTemplateValue(subject)
+					message = sanitizeJSONTemplateValue(message)
+				}
 				body := settings.Notification.Webhook.Body
 				body = strings.ReplaceAll(body, "{{title}}", subject)
 				body = strings.ReplaceAll(body, "{{message}}", message)
@@ -113,4 +117,17 @@ func SendWithConfig(title string, message string, settings app.SettingsConfigura
 		title,
 		message,
 	)
+}
+
+func isJSONContentType(contentType string) bool {
+	return strings.Contains(strings.ToLower(contentType), "json")
+}
+
+func sanitizeJSONTemplateValue(value string) string {
+	normalized := strings.ToValidUTF8(value, "")
+	quoted, err := json.Marshal(normalized)
+	if err != nil || len(quoted) < 2 {
+		return normalized
+	}
+	return string(quoted[1 : len(quoted)-1])
 }

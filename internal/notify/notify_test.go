@@ -43,3 +43,69 @@ func TestSendWithConfig_WebhookJSONBodyTemplate(t *testing.T) {
 		t.Fatalf("unexpected User-Agent\nwant: %s\ngot:  %s", "atvloadly", gotUserAgent)
 	}
 }
+
+func TestIsJSONContentType(t *testing.T) {
+	testCases := []struct {
+		name        string
+		contentType string
+		expected    bool
+	}{
+		{
+			name:        "plain json",
+			contentType: "application/json",
+			expected:    true,
+		},
+		{
+			name:        "json with charset",
+			contentType: "application/json; charset=utf-8",
+			expected:    true,
+		},
+		{
+			name:        "non json",
+			contentType: "text/plain",
+			expected:    false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := isJSONContentType(tc.contentType)
+			if actual != tc.expected {
+				t.Errorf("expected %v, got %v", tc.expected, actual)
+			}
+		})
+	}
+}
+
+func TestSanitizeJSONTemplateValue(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "escape quote and newline",
+			input:    "hello \"world\"\nline2",
+			expected: "hello \\\"world\\\"\\nline2",
+		},
+		{
+			name:     "remove invalid utf8 bytes",
+			input:    string([]byte{'o', 'k', 0xff, 'x'}),
+			expected: "okx",
+		},
+		{
+			name:     "escape tab and carriage return",
+			input:    "a\tb\rc",
+			expected: "a\\tb\\rc",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := sanitizeJSONTemplateValue(tc.input)
+			if actual != tc.expected {
+				t.Errorf("expected %q, got %q", tc.expected, actual)
+			}
+		})
+	}
+}
