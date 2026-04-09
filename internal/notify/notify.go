@@ -2,6 +2,7 @@ package notify
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	stdhttp "net/http"
 	"net/url"
@@ -80,12 +81,22 @@ func SendWithConfig(title string, message string, settings app.SettingsConfigura
 				}
 			}
 		}
+		if headers.Get("User-Agent") == "" {
+			headers.Set("User-Agent", "atvloadly")
+		}
 		webhook := &http.Webhook{
 			URL:         webhookURL,
 			Header:      headers,
 			Method:      method,
 			ContentType: contentType,
 			BuildPayload: func(subject, message string) (payload any) {
+				if strings.HasPrefix(strings.ToLower(contentType), "application/json") {
+					var parsed any
+					if err := json.Unmarshal([]byte(settings.Notification.Webhook.Body), &parsed); err == nil {
+						return renderWebhookJSONTemplate(parsed, subject, message)
+					}
+				}
+
 				body := settings.Notification.Webhook.Body
 				body = strings.ReplaceAll(body, "{{title}}", subject)
 				body = strings.ReplaceAll(body, "{{message}}", message)
@@ -101,4 +112,27 @@ func SendWithConfig(title string, message string, settings app.SettingsConfigura
 		title,
 		message,
 	)
+}
+
+func renderWebhookJSONTemplate(v any, title string, message string) any {
+	switch value := v.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(value))
+		for k, item := range value {
+			out[k] = renderWebhookJSONTemplate(item, title, message)
+		}
+		return out
+	case []any:
+		out := make([]any, len(value))
+		for i, item := range value {
+			out[i] = renderWebhookJSONTemplate(item, title, message)
+		}
+		return out
+	case string:
+		result := strings.ReplaceAll(value, "{{title}}", title)
+		result = strings.ReplaceAll(result, "{{message}}", message)
+		return result
+	default:
+		return value
+	}
 }
