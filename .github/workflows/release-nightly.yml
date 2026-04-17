@@ -34,7 +34,7 @@ jobs:
       contents: write
     strategy:
       matrix:
-        go_version: [1.21.x]
+        go_version: [1.25.x]
     runs-on: ubuntu-latest
     outputs:
       VERSION: ${{steps.vars.outputs.VERSION}}

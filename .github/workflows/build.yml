@@ -11,7 +11,7 @@ jobs:
   build:
     strategy:
       matrix:
-        go_version: [1.21.x]
+        go_version: [1.25.x]
 
     runs-on: ubuntu-latest
     steps:
