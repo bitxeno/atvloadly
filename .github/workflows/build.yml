@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: build frontend
         run: cd ./web/static && npm install && npm run build
       - name: golangci-lint

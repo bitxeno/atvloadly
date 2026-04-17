@@ -49,8 +49,8 @@ const (
 	DeviceClassiPad    DeviceClass = "iPad"
 	DeviceClassAppleTV DeviceClass = "AppleTV"
 
-	LockdownConnection DeviceConnection = "lockdown"
-	RemoteConnection   DeviceConnection = "remote"
+	LockdownConnection DeviceConnection = "Lockdown"
+	RemoteConnection   DeviceConnection = "RPPairing"
 )
 
 type DeviceStatus string

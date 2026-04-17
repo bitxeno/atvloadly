@@ -126,6 +126,7 @@ func (dm *DeviceManager) Start() {
 					MacAddr:     macAddr,
 					IP:          service.Address,
 					UDID:        udid,
+					Connection:  model.LockdownConnection,
 					Status:      model.Paired,
 				}
 				device.ParseDeviceClass()
