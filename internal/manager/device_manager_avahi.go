@@ -237,18 +237,18 @@ func (dm *DeviceManager) Scan() {
 func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) error {
 	conn, err := dbus.SystemBus()
 	if err != nil {
-		return fmt.Errorf("Cannot get system bus: %v", err)
+		return fmt.Errorf("cannot get system bus: %v", err)
 	}
 
 	server, err := avahi.ServerNew(conn)
 	if err != nil {
-		return fmt.Errorf("Avahi new failed: %v", err)
+		return fmt.Errorf("avahi new failed: %v", err)
 	}
 
 	// Use ServiceTypeBrowser to discover all advertised service types (equivalent to `avahi-browse -a`).
 	typeBrowser, err := server.ServiceTypeBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceDomain, 0)
 	if err != nil {
-		return fmt.Errorf("ServiceTypeBrowserNew failed: %w", err)
+		return fmt.Errorf("service type browser new failed: %w", err)
 	}
 	defer server.ServiceTypeBrowserFree(typeBrowser)
 
@@ -313,17 +313,17 @@ func (dm *DeviceManager) scanServiceTypeContinuous(ctx context.Context, server *
 func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.Duration) ([]model.Device, error) {
 	conn, err := dbus.SystemBus()
 	if err != nil {
-		return nil, fmt.Errorf("Cannot get system bus: %v", err)
+		return nil, fmt.Errorf("cannot get system bus: %v", err)
 	}
 
 	server, err := avahi.ServerNew(conn)
 	if err != nil {
-		return nil, fmt.Errorf("Avahi new failed: %v", err)
+		return nil, fmt.Errorf("avahi new failed: %v", err)
 	}
 
 	sb, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceRemotePairing, mdnsServiceDomain, 0)
 	if err != nil {
-		return nil, fmt.Errorf("ServiceBrowserNew() failed: %v", err)
+		return nil, fmt.Errorf("service browser new failed: %v", err)
 	}
 
 	devices := make([]model.Device, 0)
