@@ -34,7 +34,7 @@ RUN case ${TARGETARCH} in \
          "arm64")  PKG_ARCH=aarch64  ;; \
     esac \
     && cd /tmp \
-    && wget https://github.com/bitxeno/PlumeImpactor/releases/download/v2.0.0-patch.5/plumesign-linux-${PKG_ARCH}.tar.gz \
+    && wget https://github.com/bitxeno/PlumeImpactor/releases/download/v2.2.3-patch.1/plumesign-linux-${PKG_ARCH}.tar.gz \
     && tar zxf plumesign-linux-${PKG_ARCH}.tar.gz \
     && mv plumesign-linux-${PKG_ARCH} /usr/bin/plumesign \
     && chmod +x /usr/bin/plumesign
@@ -74,6 +74,7 @@ RUN chmod +x /etc/init.d/usbmuxd
 RUN printf '#!/bin/sh \n\n\
 
 mkdir -p /data/lockdown \n\
+mkdir -p /data/remote \n\
 mkdir -p /data/PlumeImpactor \n\
 mkdir -p $HOME/.config \n\
 [ ! -e "$HOME/.config/PlumeImpactor" ] && ln -s /data/PlumeImpactor $HOME/.config/PlumeImpactor \n\

@@ -280,7 +280,7 @@ func route(fi *fiber.App) {
 
 	api.Get("/devices/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id")
-		if device, ok := manager.GetDeviceByID(id); ok {
+		if device, ok := manager.GetDeviceDetail(id); ok {
 			return c.Status(http.StatusOK).JSON(apiSuccess(device))
 		}
 
@@ -295,26 +295,6 @@ func route(fi *fiber.App) {
 		} else {
 			return c.Status(http.StatusOK).JSON(apiSuccess("success"))
 		}
-	})
-
-	api.Post("/devices/:id/check/devmode", func(c *fiber.Ctx) error {
-		id := c.Params("id")
-
-		enabled, err := service.CheckDeveloperMode(c.Context(), id)
-		if err != nil {
-			return c.Status(http.StatusOK).JSON(apiSuccess(err.Error()))
-		}
-		result := map[string]bool{
-			"enabled": enabled,
-			"mounted": false,
-		}
-		if enabled {
-			if imageInfo, err := service.GetDeviceMountImageInfo(c.Context(), id); err == nil {
-				result["mounted"] = imageInfo.ImageMounted
-			}
-		}
-
-		return c.Status(http.StatusOK).JSON(apiSuccess(result))
 	})
 
 	api.Post("/devices/:id/check/afc", func(c *fiber.Ctx) error {
@@ -339,7 +319,7 @@ func route(fi *fiber.App) {
 	})
 
 	api.Get("/scan/wireless", func(c *fiber.Ctx) error {
-		timeout := 2
+		timeout := 3
 		if timeoutStr := c.Query("timeout"); timeoutStr != "" {
 			if t := utils.MustParseInt(timeoutStr); t > 0 {
 				timeout = t
@@ -390,14 +370,15 @@ func route(fi *fiber.App) {
 
 		override := c.FormValue("override") == "true"
 		ip := c.FormValue("ip")
+		port := c.FormValue("port")
 
 		// Call manager to process the file
-		if err := manager.ImportPairingFile(ip, data, override); err != nil {
+		if err := manager.ImportPairingFile(ip, port, data, override); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 
 		// Restart usbmuxd service to apply changes
-		_ = manager.RestartUsbmuxd()
+		_ = manager.Usbmuxd().Restart()
 
 		time.Sleep(time.Second)
 

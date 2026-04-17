@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/exec"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
 )
@@ -47,7 +48,10 @@ func (am *AccountManager) GetAccounts() (*model.Accounts, error) {
 }
 
 func (am *AccountManager) LogoutAccount(email string) error {
-	_, err := ExecuteCommand("plumesign", "account", "logout", "-u", email)
+	_, err := exec.NewCommand("plumesign", "account", "logout", "-u", email).
+		WithDir(app.Config.Server.DataDir).
+		WithEnv(GetRunEnvs()).
+		CombinedOutput()
 	if err != nil {
 		log.Err(err).Msgf("Error logout account: %s", email)
 		return err
@@ -56,7 +60,10 @@ func (am *AccountManager) LogoutAccount(email string) error {
 }
 
 func (am *AccountManager) GetAccountDevices(email string) ([]model.AccountDevice, error) {
-	output, err := ExecuteCommand("plumesign", "account", "devices", "-u", email)
+	output, err := exec.NewCommand("plumesign", "account", "devices", "-u", email).
+		WithDir(app.Config.Server.DataDir).
+		WithEnv(GetRunEnvs()).
+		CombinedOutput()
 	if err != nil {
 		log.Err(err).Msgf("Error getting devices for %s", email)
 		return nil, err
@@ -105,7 +112,10 @@ func (am *AccountManager) GetAccountDevices(email string) ([]model.AccountDevice
 }
 
 func (am *AccountManager) DeleteAccountDevice(email, deviceID string) error {
-	_, err := ExecuteCommand("plumesign", "account", "delete-device", "-u", email, "--device-id", deviceID)
+	_, err := exec.NewCommand("plumesign", "account", "delete-device", "-u", email, "--device-id", deviceID).
+		WithDir(app.Config.Server.DataDir).
+		WithEnv(GetRunEnvs()).
+		CombinedOutput()
 	if err != nil {
 		log.Err(err).Msgf("Error deleting device %s for %s", deviceID, email)
 		return err

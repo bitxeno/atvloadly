@@ -46,7 +46,13 @@ func HandleInstallMessage(c *websocket.Conn) {
 				continue
 			}
 
-			go runInstallMessage(websocketMgr, installMgr, v)
+			dev, found := manager.GetDeviceByUDID(v.UDID)
+			if !found || dev == nil {
+				_ = c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("ERROR: device not found for UDID: %s", v.UDID)))
+				continue
+			}
+
+			go runInstallMessage(websocketMgr, installMgr, v, dev)
 		case model.MessageType2FA:
 			code := msg.Data
 			installMgr.Write([]byte(code + "\n"))
@@ -57,11 +63,13 @@ func HandleInstallMessage(c *websocket.Conn) {
 	}
 }
 
-func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.InstallManager, v model.InstalledApp) {
+func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.InstallManager, v model.InstalledApp, dev *model.Device) {
 	err := installMgr.Start(mgr.Context(), manager.InstallOptions{
 		UDID:             v.UDID,
 		Account:          v.Account,
-		Password:         v.Password,
+		IP:               dev.IP,
+		Port:             dev.Port,
+		PairingFile:      dev.PairingFile,
 		IpaPath:          v.IpaPath,
 		RemoveExtensions: v.RemoveExtensions,
 		RefreshMode:      false,
@@ -216,8 +224,13 @@ func HandlePairMessage(c *websocket.Conn) {
 
 		switch msg.Type {
 		case model.MessageTypePair:
-			udid := msg.Data
-			go runPairMessage(websocketMgr, pairMgr, udid)
+			id := msg.Data
+			device, found := manager.GetDeviceByID(id)
+			if !found || device == nil {
+				websocketMgr.WriteMessage(fmt.Sprintf("ERROR: device not found: %s", id))
+				continue
+			}
+			go runPairMessage(websocketMgr, pairMgr, *device)
 		case model.MessageTypePairConfirm:
 			code := msg.Data
 			pairMgr.Write([]byte(code + "\n"))
@@ -228,8 +241,8 @@ func HandlePairMessage(c *websocket.Conn) {
 	}
 }
 
-func runPairMessage(mgr *manager.WebsocketManager, pairMgr *manager.PairManager, udid string) {
-	err := pairMgr.Start(mgr.Context(), udid)
+func runPairMessage(mgr *manager.WebsocketManager, pairMgr *manager.PairManager, device model.Device) {
+	err := pairMgr.Start(mgr.Context(), device)
 	if err != nil {
 		msg := fmt.Sprintf("ERROR: %s", err.Error())
 		mgr.WriteMessage(msg)

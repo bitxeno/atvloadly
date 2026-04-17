@@ -2,13 +2,15 @@ package manager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
-	"os/exec"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
+	execx "github.com/bitxeno/atvloadly/internal/exec"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/gookit/event"
 )
@@ -39,31 +41,31 @@ func (t *LoginManager) Start(ctx context.Context, account, password string) erro
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	t.cancel = cancel
 
-	cmd := exec.CommandContext(ctx, "plumesign", "account", "login", "-u", account, "-p", password)
-	cmd.Dir = app.Config.Server.DataDir
-	cmd.Env = GetRunEnvs()
-	cmd.Stdout = t.outputStdout
-	cmd.Stderr = t.outputStdout
-
-	var err error
-	t.stdin, err = cmd.StdinPipe()
+	stdinReader, stdinWriter, err := os.Pipe()
 	if err != nil {
 		log.Err(err).Msg("Error creating stdin pipe: ")
 		return err
 	}
-	defer t.stdin.Close()
+	t.stdin = stdinWriter
+	defer func() {
+		_ = stdinReader.Close()
+		_ = t.stdin.Close()
+		t.stdin = nil
+	}()
 
-	if err := cmd.Start(); err != nil {
-		if err == context.DeadlineExceeded {
-			_ = cmd.Process.Kill()
-			log.Err(err).Msgf("Login exceeded %d-minute timeout limit. %s", int(timeout.Minutes()), t.ErrorLog())
-			err = fmt.Errorf("Login exceeded %d-minute timeout limit. %s", int(timeout.Minutes()), err.Error())
-		}
-		return err
-	}
-
-	err = cmd.Wait()
+	err = execx.CommandContext(ctx, "plumesign", "account", "login", "-u", account, "-p", password).
+		WithTimeout(timeout).
+		WithDir(app.Config.Server.DataDir).
+		WithEnv(GetRunEnvs()).
+		WithStdout(t.outputStdout).
+		WithStderr(t.outputStdout).
+		WithStdin(stdinReader).
+		Run()
 	if err != nil {
+		if errors.Is(err, execx.ErrCommandTimeout) {
+			log.Err(err).Msgf("Login exceeded %d-minute timeout limit. %s", int(timeout.Minutes()), t.ErrorLog())
+			return fmt.Errorf("Login exceeded %d-minute timeout limit. %s", int(timeout.Minutes()), err.Error())
+		}
 		log.Err(err).Msgf("Error executing login script. %s", t.ErrorLog())
 	}
 	return err

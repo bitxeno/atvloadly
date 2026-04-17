@@ -381,8 +381,8 @@
     "laboratory": {
         "title": "Connect iPhone",
         "tips": {
-            "step1": "Please ensure that Developer Mode is enabled on your iPhone.",
-            "step2": "Please download <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a>, connect your iPhone, and export the Pairing File.",
+            "step1": "Please ensure that your iPhone has Developer Mode enabled and the system version is iOS 17.4+.",
+            "step2": "Please download <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a>, connect your iPhone, and export the <b>RPParing</b> mode Pairing File.",
             "step3": "Please use idevice_pair to enable Wireless Debugging functionality.",
             "step4": "Please ensure that your iPhone device is discoverable in the <a href=\"/#/tools\" class=\"link\">Tools</a>.",
             "step5": "Automatic refresh on iPhone is not guaranteed to be reliable; the iPhone must be unlocked for remote refresh to work properly."
@@ -393,7 +393,7 @@
             "device_unlock": "The iPhone must be unlocked to be discovered",
             "refresh": "Refresh",
             "refresh_devices": "Refresh device list",
-            "upload_label": "Upload Pair File",
+            "upload_label": "Upload Pairing File",
             "submit": "Submit"
         },
         "toast": {

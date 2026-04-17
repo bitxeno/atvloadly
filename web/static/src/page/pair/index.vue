@@ -103,8 +103,7 @@ export default {
       _this.active = 1;
 
       _this.loading = true;
-      const uuid = _this.device.udid;
-      _this.websocketsend(1, uuid);
+      _this.websocketsend(1, _this.device.id || _this.id);
     },
     confirmPin() {
       let _this = this;
@@ -168,6 +167,7 @@ export default {
         }
         if (line.indexOf("ERROR") !== -1) {
           _this.active = 2;
+          console.log(line);
           toast.error(this.$t("pair.toast.pair_error"));
           return;
         }

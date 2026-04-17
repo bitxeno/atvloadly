@@ -211,8 +211,8 @@ export default {
       try {
         _this.log.output += `product type: ${_this.device.product_type}\n`;
         _this.log.output += `product version: ${_this.device.product_version}\n`;
-        let devmode = await api.checkDeveloperMode(_this.id);
-        _this.log.output += `developer mode: ${devmode.enabled ? "enabled" : "disabled"}${devmode.mounted ? " (mounted)" : ""}\n`;
+        _this.log.output += `developer mode: ${_this.device.developer_mode_status ? "enabled" : "disabled"}\n`;
+        _this.log.output += `personalized image: ${_this.device.personalized_image_mounted ? "mounted" : "not mounted"}\n`;
 
         await _this.checkAfcService(_this.id);
 

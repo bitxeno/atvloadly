@@ -3,6 +3,8 @@ package app
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 
 	"github.com/bitxeno/atvloadly/internal/db"
 )
@@ -15,7 +17,6 @@ var (
 // is necessary for running the application.
 type Configuration struct {
 	App struct {
-		LockdownDir        string `koanf:"lockdown_dir" default:"/var/lib/lockdown"`
 		DeveloperDiskImage struct {
 			ImageSource string `koanf:"image_source" json:"image_source" default:"https://github.com/haikieu/xcode-developer-disk-image-all-platforms/raw/master/DiskImages/AppleTVOS.platform/DeviceSupport/{0}.zip"`
 			CNProxy     string `koanf:"cn_proxy" json:"cn_proxy" default:"https://mirror.ghproxy.com"`
@@ -43,5 +44,35 @@ func SideloadDataDir() string {
 		return "~/.config/PlumeImpactor"
 	} else {
 		return fmt.Sprintf("%s/.config/PlumeImpactor", home)
+	}
+}
+
+func LockdownDir() string {
+	switch runtime.GOOS {
+	case "darwin":
+		homeDir, _ := os.UserHomeDir()
+		return filepath.Join(homeDir, "/.config/atvloadly/lockdown")
+	case "windows":
+		if programData := os.Getenv("ProgramData"); programData != "" {
+			return filepath.Join(programData, "Apple", "Lockdown")
+		}
+		return `C:\ProgramData\Apple\Lockdown`
+	default:
+		return "/var/lib/lockdown"
+	}
+}
+
+func RemotePairingDir() string {
+	switch runtime.GOOS {
+	case "darwin":
+		homeDir, _ := os.UserHomeDir()
+		return filepath.Join(homeDir, "/.config/atvloadly/remote")
+	case "windows":
+		if programData := os.Getenv("ProgramData"); programData != "" {
+			return filepath.Join(programData, "Apple", "Remote")
+		}
+		return `C:\ProgramData\Apple\Remote`
+	default:
+		return filepath.Join(Config.Server.DataDir, "remote")
 	}
 }

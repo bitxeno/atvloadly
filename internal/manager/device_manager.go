@@ -3,6 +3,9 @@ package manager
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -93,15 +96,22 @@ func (dm *DeviceManager) GetDeviceByUDID(udid string) (*model.Device, bool) {
 	return nil, false
 }
 
-func (dm *DeviceManager) GetDeviceInfo(udid string) (*model.DeviceInfo, error) {
-	timeout := 5 * time.Second
-	output, err := ExecuteCommandTimeout(timeout, "ideviceinfo", "-u", udid, "-n")
-	if err != nil {
-		return nil, err
+func (dm *DeviceManager) GetDeviceInfo(dev *model.Device) (*model.DeviceInfo, error) {
+	cmd := exec.Command("plumesign", "device-info", "-u", dev.UDID).WithTimeout(5 * time.Second)
+	if dev.Connection == model.RemoteConnection {
+		pairingFile := filepath.Join(app.RemotePairingDir(), dev.PairingFile)
+		cmd = exec.Command("plumesign", "device-info", "--ip", dev.IP, "--port", fmt.Sprintf("%d", dev.Port), "-f", pairingFile).WithTimeout(5 * time.Second)
 	}
+
+	data, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Err(err).Msgf("Error getting device info for %s (%s): %s", dev.Name, dev.UDID, string(data))
+		return nil, fmt.Errorf("%s%s", string(data), err.Error())
+	}
+	output := string(data)
 	lines := strings.Split(string(output), "\n")
 
-	dev := &model.DeviceInfo{UniqueDeviceID: udid}
+	devInfo := &model.DeviceInfo{UniqueDeviceID: dev.UDID}
 	for _, line := range lines {
 		var parts = strings.Split(line, ":")
 		if len(parts) != 2 {
@@ -111,48 +121,92 @@ func (dm *DeviceManager) GetDeviceInfo(udid string) (*model.DeviceInfo, error) {
 		value := strings.TrimSpace(parts[1])
 		switch key {
 		case "UniqueDeviceID":
-			dev.UniqueDeviceID = value
+			devInfo.UniqueDeviceID = value
 		case "ProductName":
-			dev.ProductName = value
+			devInfo.ProductName = value
 		case "ProductType":
-			dev.ProductType = value
+			devInfo.ProductType = value
 		case "ProductVersion":
-			dev.ProductVersion = value
+			devInfo.ProductVersion = value
 		case "DeviceClass":
-			dev.DeviceClass = value
+			devInfo.DeviceClass = value
 		case "DeviceName":
-			dev.DeviceName = value
+			devInfo.DeviceName = value
 		case "WiFiAddress":
-			dev.WiFiAddress = value
+			devInfo.WiFiAddress = value
 		case "SerialNumber":
-			dev.SerialNumber = value
+			devInfo.SerialNumber = value
+		case "PersonalizedImageMounted":
+			devInfo.PersonalizedImageMounted = value == "true"
+		case "DeveloperModeStatus":
+			devInfo.DeveloperModeStatus = value == "true"
 		}
 	}
-	return dev, nil
+	return devInfo, nil
 }
 
 func (dm *DeviceManager) AppendProductInfo(dev *model.Device, devInfo model.DeviceInfo) {
-	if dev.Name != devInfo.DeviceName || dev.ProductVersion != devInfo.ProductVersion || dev.DeviceClass != devInfo.DeviceClass {
+	if dev.Name != devInfo.DeviceName ||
+		dev.ProductVersion != devInfo.ProductVersion ||
+		dev.DeviceClass != devInfo.DeviceClass ||
+		dev.PersonalizedImageMounted != devInfo.PersonalizedImageMounted ||
+		dev.DeveloperModeStatus != devInfo.DeveloperModeStatus {
+
+		dev.Name = devInfo.DeviceName
 		dev.ProductType = devInfo.ProductType
 		dev.ProductVersion = devInfo.ProductVersion
 		dev.DeviceClass = devInfo.DeviceClass
-		dev.Name = devInfo.DeviceName
+		dev.PersonalizedImageMounted = devInfo.PersonalizedImageMounted
+		dev.DeveloperModeStatus = devInfo.DeveloperModeStatus
 
 		dm.SaveDevice(*dev)
 	}
 }
 
 func (dm *DeviceManager) SaveDevice(dev model.Device) {
-	dm.devices.Store(dev.UDID, dev)
+	dm.devices.Store(dev.ID, dev)
 }
 
-func (dm *DeviceManager) DeleteDevice(udid string) {
-	dm.devices.Delete(udid)
+func (dm *DeviceManager) DeleteDevice(id string) {
+	dm.devices.Delete(id)
+}
+
+func (dm *DeviceManager) DeleteDeviceByUDID(udid string) {
+	dm.devices.Range(func(k, v any) bool {
+		if v.(model.Device).UDID == udid {
+			dm.devices.Delete(k)
+			return false
+		}
+		return true
+	})
 }
 
 func (dm *DeviceManager) DeleteDeviceByMacAddr(macAddr string) {
 	dm.devices.Range(func(k, v any) bool {
 		if v.(model.Device).MacAddr == macAddr {
+			dm.devices.Delete(k)
+			return false
+		}
+		return true
+	})
+}
+
+func (dm *DeviceManager) HasCheckedDevice(ip string, port uint16, name string) bool {
+	hasChecked := false
+	dm.devices.Range(func(k, v any) bool {
+		dev := v.(model.Device)
+		if dev.IP == ip && dev.Port == port && dev.Name == name && dev.Status == model.Paired {
+			hasChecked = true
+			return false
+		}
+		return true
+	})
+	return hasChecked
+}
+
+func (dm *DeviceManager) DeleteDeviceByServiceName(serviceName string, conection model.DeviceConnection) {
+	dm.devices.Range(func(k, v any) bool {
+		if v.(model.Device).Connection == conection && v.(model.Device).ServiceName == serviceName {
 			dm.devices.Delete(k)
 			return false
 		}
@@ -191,83 +245,12 @@ func (dm *DeviceManager) ReloadDevices() {
 	})
 }
 
-// Get AppleTV mounted information of DeveloperDiskImage
-// install/screenshot function need mounted DeveloperDiskImage to operate.
-func (dm *DeviceManager) GetMountImageInfo(udid string) (*model.UsbmuxdImage, error) {
-	devInfo, err := dm.GetUsbmuxdDeviceInfo(udid)
-	if err != nil {
-		log.Err(err).Msg("Cannot get device info: ")
-		return nil, err
+func (dm *DeviceManager) CheckAfcServiceStatus(dev *model.Device) error {
+	cmd := exec.Command("plumesign", "check", "afc", "--udid", dev.UDID).WithTimeout(10 * time.Second)
+	if dev.Connection == model.RemoteConnection {
+		pairingFile := filepath.Join(app.RemotePairingDir(), dev.PairingFile)
+		cmd = exec.Command("plumesign", "check", "afc", "--ip", dev.IP, "--port", fmt.Sprintf("%d", dev.Port), "-f", pairingFile).WithTimeout(10 * time.Second)
 	}
-
-	imageInfo := model.NewUsbmuxdImage(*devInfo, app.Config.App.DeveloperDiskImage.ImageSource)
-	imageMounted, err := dm.CheckHasMountImage(udid)
-	if err == nil {
-		imageInfo.ImageMounted = imageMounted
-		return imageInfo, nil
-	}
-
-	// AppleTV system has reboot, need restart usbmuxd to fix lookup_image error
-	if strings.Contains(err.Error(), "lookup_image returned -256") {
-		if err = dm.RestartUsbmuxd(); err == nil {
-			time.Sleep(5 * time.Second)
-			if imageMounted, err = dm.CheckHasMountImage(udid); err == nil {
-				imageInfo.ImageMounted = imageMounted
-				return imageInfo, nil
-			}
-		}
-	}
-
-	log.Err(err).Msg("Cannot get image signature: ")
-	return nil, err
-}
-
-func (dm *DeviceManager) GetUsbmuxdDeviceInfo(udid string) (*model.UsbmuxdDevice, error) {
-	cmd := exec.Command("ideviceinfo", "-u", udid, "-n").WithTimeout(10 * time.Second)
-
-	data, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("%s%s", string(data), err.Error())
-	}
-
-	device := new(model.UsbmuxdDevice)
-	output := string(data)
-	lines := strings.Split(output, "\n")
-	for _, v := range lines {
-		arr := strings.Split(v, ":")
-		if len(arr) == 2 {
-			switch strings.TrimSpace(arr[0]) {
-			case "ProductVersion":
-				device.ProductVersion = strings.TrimSpace(arr[1])
-			case "ProductName":
-				device.ProductName = strings.TrimSpace(arr[1])
-			case "DeviceName":
-				device.DeviceName = strings.TrimSpace(arr[1])
-			}
-		}
-	}
-
-	return device, nil
-}
-
-func (dm *DeviceManager) CheckHasMountImage(udid string) (bool, error) {
-	cmd := exec.Command("ideviceimagemounter", "list", "-u", udid, "-n").WithTimeout(10 * time.Second)
-
-	data, err := cmd.CombinedOutput()
-	if err != nil {
-		return false, fmt.Errorf("%s%s", string(data), err.Error())
-	}
-
-	output := string(data)
-	if strings.Contains(output, "ERROR") {
-		return false, fmt.Errorf("%s", output)
-	}
-
-	return strings.Contains(output, "ImageSignature") && !strings.Contains(output, "ImageSignature[0]"), nil
-}
-
-func (dm *DeviceManager) CheckAfcServiceStatus(udid string) error {
-	cmd := exec.Command("plumesign", "check", "afc", "--udid", udid).WithTimeout(10 * time.Second)
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
@@ -275,7 +258,7 @@ func (dm *DeviceManager) CheckAfcServiceStatus(udid string) error {
 	}
 
 	output := string(data)
-	if strings.Contains(output, "ERROR") {
+	if strings.Contains(output, "Error") {
 		return fmt.Errorf("%s", output)
 	}
 
@@ -286,30 +269,43 @@ func (dm *DeviceManager) CheckAfcServiceStatus(udid string) error {
 	return nil
 }
 
-func (dm *DeviceManager) CheckDeveloperMode(udid string) (bool, error) {
-	cmd := exec.Command("idevicedevmodectl", "list", "-u", udid, "-n").WithTimeout(10 * time.Second)
+func (dm *DeviceManager) CheckDevicePaired(ip string, port uint16) (*model.RemoteDevice, error) {
+	if !utils.Exists(app.RemotePairingDir()) {
+		return nil, nil
+	}
+
+	cmd := exec.Command("plumesign", "check", "pairing", "--ip", ip, "--port", fmt.Sprintf("%d", port), "--folder", app.RemotePairingDir()).WithTimeout(10 * time.Second)
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
-		return false, fmt.Errorf("%s%s", string(data), err.Error())
+		return nil, err
 	}
 
-	output := string(data)
-	if strings.Contains(output, "enabled") {
-		return true, nil
+	// Regex to parse the output by extracting contents between backticks
+	re := regexp.MustCompile("pairing file: `([^`]+)`, uuid: `([^`]+)`, DeviceClass: `([^`]+)`, UniqueDeviceID: `([^`]+)`")
+	matches := re.FindStringSubmatch(string(data))
+	if len(matches) > 4 {
+		remoteDev := model.RemoteDevice{
+			Id:             utils.Md5(matches[4]),
+			UUID:           matches[2],
+			DeviceClass:    matches[3],
+			UniqueDeviceID: matches[4],
+			PairingFile:    matches[1],
+		}
+
+		// If the pairing file name does not start with the UDID, rename it to avoid duplicates
+		if !strings.HasPrefix(remoteDev.PairingFile, remoteDev.UniqueDeviceID) {
+			newPairingFileName := remoteDev.UniqueDeviceID + ".plist"
+			if err := os.Rename(filepath.Join(app.RemotePairingDir(), remoteDev.PairingFile), filepath.Join(app.RemotePairingDir(), newPairingFileName)); err == nil {
+				log.Infof("Renamed pairing file from %s to %s", remoteDev.PairingFile, newPairingFileName)
+				remoteDev.PairingFile = newPairingFileName
+			}
+		}
+
+		return &remoteDev, nil
 	}
 
-	return false, nil
-}
-
-func (dm *DeviceManager) RestartUsbmuxd() error {
-	cmd := exec.Command("/etc/init.d/usbmuxd", "restart").WithTimeout(time.Minute)
-	data, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%s%s", string(data), err.Error())
-	}
-
-	return nil
+	return nil, fmt.Errorf("failed to parse device information")
 }
 
 func (dm *DeviceManager) parseName(host string) string {
@@ -318,7 +314,7 @@ func (dm *DeviceManager) parseName(host string) string {
 	return name
 }
 
-// SetOnDeviceConnected 设置设备连接时的回调函数
+// SetOnDeviceConnected Set the callback function for device connection
 func (dm *DeviceManager) SetOnDeviceConnected(callback func(device model.Device)) {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
@@ -327,7 +323,7 @@ func (dm *DeviceManager) SetOnDeviceConnected(callback func(device model.Device)
 	}
 }
 
-// SetOnDeviceDisconnected 设置设备断开时的回调函数
+// SetOnDeviceDisconnected Set the callback function for device disconnection
 func (dm *DeviceManager) SetOnDeviceDisconnected(callback func(device model.Device)) {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
@@ -336,7 +332,7 @@ func (dm *DeviceManager) SetOnDeviceDisconnected(callback func(device model.Devi
 	}
 }
 
-// Stop 停止设备管理器
+// Stop Stop the device manager
 func (dm *DeviceManager) Stop() {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
@@ -349,14 +345,14 @@ func (dm *DeviceManager) Stop() {
 	}
 }
 
-// 导出的函数，供外部包调用
+// Exported functions for external package usage
 
-// SetDeviceConnectedCallback 设置设备连接时的回调函数（导出函数）
+// SetDeviceConnectedCallback Set the callback function for device connection (exported function)
 func SetDeviceConnectedCallback(callback func(device model.Device)) {
 	deviceManager.SetOnDeviceConnected(callback)
 }
 
-// SetDeviceDisconnectedCallback 设置设备断开时的回调函数（导出函数）
+// SetDeviceDisconnectedCallback Set the callback function for device disconnection (exported function)
 func SetDeviceDisconnectedCallback(callback func(device model.Device)) {
 	deviceManager.SetOnDeviceDisconnected(callback)
 }

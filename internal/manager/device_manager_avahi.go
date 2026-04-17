@@ -16,9 +16,10 @@ import (
 )
 
 const (
-	mdnsService         = "_apple-mobdev2._tcp"
-	mdnsServicePairable = "_remotepairing-manual-pairing._tcp"
-	mdnsServiceDomain   = "local"
+	mdnsServiceAppleMobdev2        = "_apple-mobdev2._tcp"
+	mdnsServiceRemotePairing       = "_remotepairing._tcp"
+	mdnsServiceRemoteManualPairing = "_remotepairing-manual-pairing._tcp"
+	mdnsServiceDomain              = "local"
 )
 
 // 需要依赖socket套接字：
@@ -45,38 +46,43 @@ func (dm *DeviceManager) Start() {
 	if err != nil {
 		log.Err(err).Msgf("GetHostName() failed: ")
 	}
-	log.Tracef("GetHostName(): %s", host)
+	log.Debugf("GetHostName(): %s", host)
 
 	fqdn, err := server.GetHostNameFqdn()
 	if err != nil {
 		log.Err(err).Msgf("GetHostNameFqdn() failed: ")
 	}
-	log.Tracef("GetHostNameFqdn(): %s", fqdn)
+	log.Debugf("GetHostNameFqdn(): %s", fqdn)
 
 	s, err := server.GetAlternativeHostName(host)
 	if err != nil {
 		log.Err(err).Msgf("GetAlternativeHostName() failed: ")
 	}
-	log.Tracef("GetAlternativeHostName(): %s", s)
+	log.Debugf("GetAlternativeHostName(): %s", s)
 
 	i, err := server.GetAPIVersion()
 	if err != nil {
 		log.Err(err).Msgf("GetAPIVersion() failed: ")
 	}
-	log.Tracef("GetAPIVersion(): %v", i)
+	log.Debugf("GetAPIVersion(): %v", i)
 
 	hn, err := server.ResolveHostName(avahi.InterfaceUnspec, avahi.ProtoUnspec, fqdn, avahi.ProtoUnspec, 0)
 	if err != nil {
 		log.Err(err).Msgf("ResolveHostName() failed: ")
 	}
-	log.Tracef("ResolveHostName: %v", hn)
+	log.Debugf("ResolveHostName: %v", hn)
 
-	sb, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsService, mdnsServiceDomain, 0)
+	sbAppleMobdev, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceAppleMobdev2, mdnsServiceDomain, 0)
 	if err != nil {
 		log.Err(err).Msgf("ServiceBrowserNew() failed: ")
 	}
 
-	sbPairable, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServicePairable, mdnsServiceDomain, 0)
+	sbRemotePairing, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceRemotePairing, mdnsServiceDomain, 0)
+	if err != nil {
+		log.Err(err).Msgf("ServiceBrowserNew() failed: ")
+	}
+
+	sbRemoteManualPairing, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceRemoteManualPairing, mdnsServiceDomain, 0)
 	if err != nil {
 		log.Err(err).Msgf("ServiceBrowserNew() failed: ")
 	}
@@ -90,79 +96,135 @@ func (dm *DeviceManager) Start() {
 		case <-ctx.Done():
 			log.Info("Avahi discovery stopped")
 			return
-		case service = <-sb.AddChannel:
-			log.Tracef("ServiceBrowser ADD: %v", service)
-
+		case service = <-sbAppleMobdev.AddChannel:
 			service, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
 				service.Type, service.Domain, avahi.ProtoUnspec, 0)
-			if err == nil {
-				log.Tracef(" RESOLVED >> %s", service.Address)
-
-				macAddr := strings.Split(service.Name, "@")[0]
-				name := dm.parseName(service.Host)
-				// 检查是否已连接
-				lockdownDevices, err := loadLockdownDevices()
-				if err != nil {
-					log.Err(err).Msg("loadLockdownDevices error: ")
-					continue
-				}
-				log.Tracef("lockdown devices count >> %v", len(lockdownDevices))
-
-				// 添加已连接设备，TODO：handshake检测是否可真实连接
-				if lockdownDev, ok := lockdownDevices[macAddr]; ok {
-					log.Tracef("add lockdown device >> %v", lockdownDev)
-					udid := lockdownDev.Name
-					device := model.Device{
-						ID:          utils.Md5(udid),
-						Name:        name,
-						ServiceName: service.Name,
-						MacAddr:     macAddr,
-						IP:          service.Address,
-						UDID:        udid,
-						Status:      model.Paired,
-					}
-					device.ParseDeviceClass()
-
-					dm.SaveDevice(device)
-
-					// Trigger device connection callback
-					dm.onDeviceConnected(device)
-				}
+			if err != nil {
+				log.Err(err).Msgf("Failed to resolve service: name=%s type=%s", service.Name, service.Type)
+				continue
 			}
-		case service = <-sb.RemoveChannel:
-			log.Tracef("ServiceBrowser REMOVE: %v", service)
+			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[+]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
+
 			macAddr := strings.Split(service.Name, "@")[0]
-			dm.DeleteDeviceByMacAddr(macAddr)
-		case service = <-sbPairable.AddChannel:
-			log.Tracef("ServiceBrowser ADD: %v", service)
+			name := dm.parseName(service.Host)
+			// 检查是否已连接
+			lockdownDevices, err := loadLockdownDevices()
+			if err != nil {
+				log.Err(err).Msg("loadLockdownDevices error: ")
+				continue
+			}
+			log.Debugf("lockdown devices count >> %v", len(lockdownDevices))
 
-			service, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
-				service.Type, service.Domain, avahi.ProtoUnspec, 0)
-			if err == nil {
-				log.Tracef(" RESOLVED >> %s", service.Address)
-
-				// 添加可配对设备
-				name := strings.Split(service.Name, "@")[0]
-				udid := fmt.Sprintf("%s-%s", name, service.Address)
+			// 添加已连接设备，TODO：handshake检测是否可真实连接
+			if lockdownDev, ok := lockdownDevices[macAddr]; ok {
+				log.Debugf("add lockdown device >> %v", lockdownDev)
+				udid := lockdownDev.Name
 				device := model.Device{
 					ID:          utils.Md5(udid),
 					Name:        name,
 					ServiceName: service.Name,
-					MacAddr:     "",
+					MacAddr:     macAddr,
 					IP:          service.Address,
 					UDID:        udid,
-					Status:      model.Pairable,
+					Status:      model.Paired,
 				}
 				device.ParseDeviceClass()
+
 				dm.SaveDevice(device)
 
+				// Trigger device connection callback
+				dm.onDeviceConnected(device)
+			}
+		case service = <-sbAppleMobdev.RemoveChannel:
+			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[-]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
+
+			macAddr := strings.Split(service.Name, "@")[0]
+			dm.DeleteDeviceByMacAddr(macAddr)
+		case service = <-sbRemotePairing.AddChannel:
+			service, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
+				service.Type, service.Domain, avahi.ProtoUnspec, 0)
+			if err != nil {
+				log.Err(err).Msgf("Failed to resolve service: name=%s type=%s", service.Name, service.Type)
+				continue
+			}
+			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[+]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
+
+			name := dm.parseName(service.Host)
+
+			// WARN:
+			// when CheckDevicePaired close the rsd handshake, it may trigger mdns event again
+			// so we need to check if the device has been checked before to avoid continuous sending mdns event
+			if dm.HasCheckedDevice(service.Address, service.Port, name) {
+				continue
 			}
 
-		case service = <-sbPairable.RemoveChannel:
-			log.Tracef("ServiceBrowser REMOVE: %v", service)
-			name := strings.Split(service.Name, "@")[0]
-			udid := fmt.Sprintf("%s-%s", name, service.Address)
-			dm.DeleteDevice(udid)
+			if v, err := dm.CheckDevicePaired(service.Address, service.Port); err == nil && v != nil {
+				device := model.Device{
+					ID:          v.Id,
+					Name:        name,
+					ServiceName: service.Name,
+					MacAddr:     "",
+					IP:          service.Address,
+					Port:        service.Port,
+					UDID:        v.UniqueDeviceID,
+					Connection:  model.RemoteConnection,
+					Status:      model.Paired,
+					PairingFile: v.PairingFile,
+				}
+
+				device.ParseDeviceClass()
+
+				// remove old lockdown connection device, avoid duplicate devices with both lockdown and remote connection
+				dm.removeLockdownDevice(device.UDID)
+				dm.SaveDevice(device)
+
+				// Trigger device connection callback
+				dm.onDeviceConnected(device)
+			} else if err != nil {
+				log.Debugf("Failed to check device pairing: name=%s ip=%s err=%s", service.Name, service.Address, err.Error())
+			}
+		case service = <-sbRemotePairing.RemoveChannel:
+			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[-]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
+			// serviceName will change every mdns event, so we can't use serviceName to ignore duplicate
+			dm.DeleteDeviceByServiceName(service.Name, model.RemoteConnection)
+		case service = <-sbRemoteManualPairing.AddChannel:
+			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[+]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
+
+			service, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
+				service.Type, service.Domain, avahi.ProtoUnspec, 0)
+			if err != nil {
+				log.Err(err).Msgf("Failed to resolve service: name=%s type=%s", service.Name, service.Type)
+				continue
+			}
+
+			name := service.Name
+			if txtName := dm.parseTextRecordName(service.Txt); txtName != "" {
+				name = txtName
+			}
+			identifier := dm.parseTextRecordIndentifier(service.Txt)
+			if identifier == "" {
+				log.Warnf("Remote manual pairing service missing identifier: name=%s ip=%s", service.Name, service.Address)
+				continue
+			}
+			// use serviceName to ignore duplicate
+			id := utils.Md5(service.Name)
+			device := model.Device{
+				ID:          id,
+				Name:        name,
+				ServiceName: service.Name,
+				MacAddr:     "",
+				IP:          service.Address,
+				Port:        service.Port,
+				UDID:        identifier,
+				Connection:  model.RemoteConnection,
+				Status:      model.Pairable,
+			}
+			device.ParseDeviceClass()
+			dm.SaveDevice(device)
+
+		case service = <-sbRemoteManualPairing.RemoveChannel:
+			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[-]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
+			dm.DeleteDeviceByServiceName(service.Name, model.RemoteConnection)
 		}
 	}
 }
@@ -258,7 +320,7 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.D
 		return nil, fmt.Errorf("Avahi new failed: %v", err)
 	}
 
-	sb, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsService, mdnsServiceDomain, 0)
+	sb, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceRemotePairing, mdnsServiceDomain, 0)
 	if err != nil {
 		return nil, fmt.Errorf("ServiceBrowserNew() failed: %v", err)
 	}
@@ -266,7 +328,6 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.D
 	devices := make([]model.Device, 0)
 	deviceMap := make(map[string]bool)
 
-	// 创建超时的context
 	scanCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -281,24 +342,56 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.D
 				continue
 			}
 
-			macAddr := strings.Split(resolved.Name, "@")[0]
-			// 避免重复添加
-			if deviceMap[macAddr] {
+			// Avoid adding duplicates.
+			if deviceMap[resolved.Address] {
 				continue
 			}
-			deviceMap[macAddr] = true
+			deviceMap[resolved.Address] = true
 
 			name := dm.parseName(resolved.Host)
 			device := model.Device{
 				ID:          utils.Md5(resolved.Name),
 				Name:        name,
 				ServiceName: service.Name,
-				MacAddr:     macAddr,
+				MacAddr:     "",
 				IP:          resolved.Address,
+				Port:        resolved.Port,
 				Status:      model.Paired,
 			}
 			device.ParseDeviceClass()
 			devices = append(devices, device)
 		}
 	}
+}
+
+func (dm *DeviceManager) parseTextRecord(txt [][]byte) map[string]string {
+	result := make(map[string]string)
+	for _, item := range txt {
+		kv := strings.SplitN(string(item), "=", 2)
+		if len(kv) == 2 {
+			result[kv[0]] = kv[1]
+		}
+	}
+	return result
+}
+
+func (dm *DeviceManager) parseTextRecordName(txt [][]byte) string {
+	result := dm.parseTextRecord(txt)
+	if name, ok := result["name"]; ok {
+		return name
+	}
+	return ""
+}
+
+func (dm *DeviceManager) parseTextRecordIndentifier(txt [][]byte) string {
+	result := dm.parseTextRecord(txt)
+	if id, ok := result["identifier"]; ok {
+		return id
+	}
+	return ""
+}
+
+func (dm *DeviceManager) removeLockdownDevice(udid string) {
+	removeLockdownDevice(udid)
+	dm.DeleteDeviceByUDID(udid)
 }

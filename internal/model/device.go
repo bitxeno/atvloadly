@@ -3,18 +3,23 @@ package model
 import "strings"
 
 type Device struct {
-	ID             string       `json:"id"`
-	Name           string       `json:"name"`
-	ServiceName    string       `json:"service_name"`
-	IP             string       `json:"ip"`
-	MacAddr        string       `json:"mac_addr"`
-	UDID           string       `json:"udid"`
-	Status         DeviceStatus `json:"status"`
-	Enable         bool         `json:"enable"`
-	Message        string       `json:"message"`
-	DeviceClass    string       `json:"device_class"`
-	ProductType    string       `json:"product_type"`
-	ProductVersion string       `json:"product_version"`
+	ID                       string           `json:"id"`
+	Name                     string           `json:"name"`
+	ServiceName              string           `json:"service_name"`
+	IP                       string           `json:"ip"`
+	Port                     uint16           `json:"port,omitempty"`
+	MacAddr                  string           `json:"mac_addr"`
+	UDID                     string           `json:"udid"`
+	Connection               DeviceConnection `json:"connection"`
+	Status                   DeviceStatus     `json:"status"`
+	Enable                   bool             `json:"enable"`
+	Message                  string           `json:"message"`
+	DeviceClass              string           `json:"device_class"`
+	ProductType              string           `json:"product_type"`
+	ProductVersion           string           `json:"product_version"`
+	DeveloperModeStatus      bool             `json:"developer_mode_status"`
+	PersonalizedImageMounted bool             `json:"personalized_image_mounted"`
+	PairingFile              string           `json:"pairing_file"`
 }
 
 func (d *Device) ParseDeviceClass() {
@@ -43,7 +48,11 @@ const (
 	DeviceClassiPhone  DeviceClass = "iPhone"
 	DeviceClassiPad    DeviceClass = "iPad"
 	DeviceClassAppleTV DeviceClass = "AppleTV"
+
+	LockdownConnection DeviceConnection = "lockdown"
+	RemoteConnection   DeviceConnection = "remote"
 )
 
 type DeviceStatus string
 type DeviceClass string
+type DeviceConnection string

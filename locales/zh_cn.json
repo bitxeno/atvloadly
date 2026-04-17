@@ -381,11 +381,11 @@
     "laboratory": {
         "title": "连接 iPhone",
         "tips": {
-            "step1": "请确保您的 iPhone 已开启开发者模式。",
-            "step2": "请下载 <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a> 并连接 iPhone，导出 Pairing File。",
-            "step3": "请使用 idevice_pair 开启 Wireless Debugging 功能。",
-            "step4": "请确保 <a href=\"/#/tools\" class=\"link\">工具</a> 中能发现您的 iPhone 设备。",
-            "step5": "iPhone 自动刷新不保证稳定性，iPhone 需要解锁后才能正常远程刷新。"
+            "step1": "请确保您的 iPhone 已开启开发者模式并且系统版本是 iOS 17.4+",
+            "step2": "请下载 <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a> 并连接 iPhone，导出 <b>RPParing</b> 模式的 Pairing File",
+            "step3": "请使用 idevice_pair 开启 Wireless Debugging 功能",
+            "step4": "请确保 <a href=\"/#/tools\" class=\"link\">工具</a> 中能发现您的 iPhone 设备",
+            "step5": "iPhone 自动刷新不保证稳定性，iPhone 需要解锁后才能正常远程刷新"
         },
         "form": {
             "device_label": "选择对应设备",

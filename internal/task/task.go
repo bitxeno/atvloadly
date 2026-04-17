@@ -182,7 +182,7 @@ func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool, batchI
 
 func (t *Task) runQueue() {
 	// Wait for one minute before install at startup to avoid the usbmuxd service not being ready.
-	time.Sleep(time.Minute)
+	manager.Usbmuxd().TryWaitReady(30 * time.Second)
 
 	for {
 		select {
@@ -384,10 +384,17 @@ func (t *Task) runInternal(v model.InstalledApp, installMgr *manager.InstallMana
 		return nil, fmt.Errorf("The install account (%s) is invalid, skip install.", v.MaskAccount())
 	}
 
+	dev, found := manager.GetDeviceByUDID(v.UDID)
+	if !found || dev == nil {
+		return nil, fmt.Errorf("device not found for UDID: %s", v.UDID)
+	}
+
 	err := installMgr.TryStart(context.Background(), manager.InstallOptions{
 		UDID:             v.UDID,
 		Account:          v.Account,
-		Password:         v.Password,
+		IP:               dev.IP,
+		Port:             dev.Port,
+		PairingFile:      dev.PairingFile,
 		IpaPath:          v.IpaPath,
 		RemoveExtensions: v.RemoveExtensions,
 		RefreshMode:      true,
