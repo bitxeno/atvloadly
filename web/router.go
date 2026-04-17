@@ -235,7 +235,9 @@ func route(fi *fiber.App) {
 		if err := c.SaveFile(file, tempPath); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError("Failed to save uploaded file"))
 		}
-		defer os.Remove(tempPath)
+		defer func() {
+			_ = os.Remove(tempPath)
+		}()
 
 		if err := manager.ImportCertificate(email, password, tempPath); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError("Import failed: " + err.Error()))
@@ -259,7 +261,8 @@ func route(fi *fiber.App) {
 		case "task":
 			app.Settings.Task = settings.Task
 			if err := task.ReloadTask(); err != nil {
-				return c.Status(http.StatusOK).JSON(apiError("时间格式错误: " + err.Error()))
+				errMsg := fmt.Sprintf("invalid time format: %s", err.Error())
+				return c.Status(http.StatusOK).JSON(apiError(errMsg))
 			}
 		}
 
@@ -361,7 +364,9 @@ func route(fi *fiber.App) {
 		if err != nil {
 			return c.Status(http.StatusOK).JSON(apiError("Failed to open uploaded file"))
 		}
-		defer src.Close()
+		defer func() {
+			_ = src.Close()
+		}()
 
 		data, err := io.ReadAll(src)
 		if err != nil {
@@ -422,15 +427,17 @@ func route(fi *fiber.App) {
 			ipaFile.BundleIdentifier = info.Identifier()
 			ipaFile.Version = info.Version()
 
-			// 保存icon
-			if info.Icon() != nil {
+			icon := info.Icon()
+			if icon != nil {
 				iconName := fmt.Sprintf("%s_%d%s", name, timestamp, ".png")
 				iconDst := filepath.Join(saveDir, iconName)
 				out, err := os.Create(iconDst)
 				if err == nil {
-					defer out.Close()
+					defer func() {
+						_ = out.Close()
+					}()
 
-					if err := png.Encode(out, info.Icon()); err == nil {
+					if err := png.Encode(out, icon); err == nil {
 						ipaFile.Icon = iconDst
 					}
 				}

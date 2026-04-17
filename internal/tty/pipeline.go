@@ -97,5 +97,5 @@ func (w *PipeLine) ReadPtyAndWriteSkt(logChan chan string) {
 }
 
 func (w *PipeLine) Close() {
-	w.pty.Close()
+	_ = w.pty.Close()
 }

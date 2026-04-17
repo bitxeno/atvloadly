@@ -111,11 +111,11 @@ func Panicf(format string, v ...any) {
 }
 
 func ColorWarnf(format string, v ...any) {
-	color.New(color.FgYellow).Printf(format, v...)
+	_, _ = color.New(color.FgYellow).Printf(format, v...)
 }
 
 func ColorErrorf(format string, v ...any) {
-	color.New(color.FgRed).Printf(format, v...)
+	_, _ = color.New(color.FgRed).Printf(format, v...)
 }
 
 func CreateRollingLogFile(logPath string) io.Writer {

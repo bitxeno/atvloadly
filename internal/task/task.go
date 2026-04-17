@@ -310,17 +310,19 @@ func (t *Task) resolveIPA(v model.InstalledApp) (*model.InstalledApp, error) {
 	v.BundleIdentifier = info.Identifier()
 	v.Version = info.Version()
 
-	// 保存icon
-	if info.Icon() != nil {
+	icon := info.Icon()
+	if icon != nil {
 		timestamp := time.Now().UnixMicro()
 		name := service.GetValidName(utils.FileNameWithoutExt(v.IpaPath))
 		iconName := fmt.Sprintf("%s_%d%s", name, timestamp, ".png")
 		iconDst := filepath.Join(saveDir, iconName)
 		out, err := os.Create(iconDst)
 		if err == nil {
-			defer out.Close()
+			defer func() {
+				_ = out.Close()
+			}()
 
-			if err := png.Encode(out, info.Icon()); err == nil {
+			if err := png.Encode(out, icon); err == nil {
 				v.Icon = iconDst
 			}
 		}
@@ -381,7 +383,7 @@ func (t *Task) runInternal(v model.InstalledApp, installMgr *manager.InstallMana
 	if _, ok := t.InvalidAccounts[v.Account]; ok {
 		log.Warnf("The install account (%s) is invalid, skip install app: %s.", v.MaskAccount(), v.IpaName)
 		installMgr.WriteLog(fmt.Sprintf("The install account (%s) is invalid, skip install.", v.MaskAccount()))
-		return nil, fmt.Errorf("The install account (%s) is invalid, skip install.", v.MaskAccount())
+		return nil, fmt.Errorf("the install account (%s) is invalid, skip install", v.MaskAccount())
 	}
 
 	dev, found := manager.GetDeviceByUDID(v.UDID)

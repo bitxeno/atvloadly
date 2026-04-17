@@ -63,8 +63,8 @@ func (t *LoginManager) Start(ctx context.Context, account, password string) erro
 		Run()
 	if err != nil {
 		if errors.Is(err, execx.ErrCommandTimeout) {
-			log.Err(err).Msgf("Login exceeded %d-minute timeout limit. %s", int(timeout.Minutes()), t.ErrorLog())
-			return fmt.Errorf("Login exceeded %d-minute timeout limit. %s", int(timeout.Minutes()), err.Error())
+			log.Err(err).Msgf("login timeout exceeded after %d minutes. %s", int(timeout.Minutes()), t.ErrorLog())
+			return fmt.Errorf("login timeout exceeded after %d minutes: %s", int(timeout.Minutes()), err.Error()) //nolint:ST1005
 		}
 		log.Err(err).Msgf("Error executing login script. %s", t.ErrorLog())
 	}

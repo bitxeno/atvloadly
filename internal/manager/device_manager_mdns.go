@@ -64,7 +64,7 @@ func (dm *DeviceManager) handleMDNSEvent(e zeroconf.Event) {
 		return
 	}
 
-	serviceName := strings.Replace(e.Name, "\\@", "@", -1)
+	serviceName := strings.ReplaceAll(e.Name, "\\@", "@")
 	serviceType := e.Type.Name
 
 	// goodbye event doesn't contain host and ip address
@@ -181,7 +181,6 @@ func (dm *DeviceManager) Scan() {
 	}
 	dm.mu.Unlock()
 
-	// 等待上一个实例退出
 	time.Sleep(time.Second)
 
 	dm.devices.Range(func(k, v interface{}) bool {
@@ -191,7 +190,6 @@ func (dm *DeviceManager) Scan() {
 
 	go dm.Start()
 
-	// 等待10秒获取最新mdns数据
 	timer := time.NewTimer(discoverWaitTime)
 	<-timer.C
 }
@@ -261,7 +259,7 @@ func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(service
 						return
 					}
 
-					name := strings.Replace(e.Name, "\\@", "@", -1)
+					name := strings.ReplaceAll(e.Name, "\\@", "@")
 					callback(e.Type.Name, name, e.Hostname, address, e.Port, toTxtBytes(e.Text))
 				}, zeroconf.NewType(browserType)).
 				Open()
@@ -290,7 +288,7 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.D
 				return
 			}
 
-			serviceName := strings.Replace(e.Name, "\\@", "@", -1)
+			serviceName := strings.ReplaceAll(e.Name, "\\@", "@")
 			if e.Op == zeroconf.OpRemoved {
 				mu.Lock()
 				delete(deviceM, serviceName)
@@ -382,7 +380,7 @@ func discoverAllServiceTypes(ctx context.Context, out chan<- discoveredServiceTy
 	if err != nil {
 		return err
 	}
-	defer listenConn4.Close()
+	defer closeUDPConn(listenConn4) //nolint:errcheck
 
 	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
@@ -501,6 +499,10 @@ func sendMetaQuery(conn *net.UDPConn, targets []*net.UDPAddr) error {
 	}
 
 	return nil
+}
+
+func closeUDPConn(conn *net.UDPConn) {
+	_ = conn.Close()
 }
 
 func parseDiscoveredServiceType(ptr string) (string, string) {

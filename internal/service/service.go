@@ -72,7 +72,7 @@ func checkProcessExists(name string) bool {
 func MountDeveloperDiskImage(ctx context.Context, id string) error {
 	device, ok := manager.GetDeviceByID(id)
 	if !ok {
-		return fmt.Errorf("Device not found: %s", id)
+		return fmt.Errorf("device not found: %s", id)
 	}
 
 	// Already mounted, return directly.
@@ -154,7 +154,9 @@ func UpdateCoreADI() error {
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	if resp.StatusCode != stdhttp.StatusOK {
 		return fmt.Errorf("download failed, status: %d", resp.StatusCode)
 	}
@@ -170,10 +172,10 @@ func UpdateCoreADI() error {
 		return fmt.Errorf("create temp file failed: %w", err)
 	}
 	if _, err := io.Copy(tmpOut, resp.Body); err != nil {
-		tmpOut.Close()
+		_ = tmpOut.Close()
 		return fmt.Errorf("save temp file failed: %w", err)
 	}
-	tmpOut.Close()
+	_ = tmpOut.Close()
 
 	defer func() {
 		_ = os.Remove(tmpPath)
@@ -184,7 +186,9 @@ func UpdateCoreADI() error {
 	if err != nil {
 		return fmt.Errorf("open apk zip failed: %w", err)
 	}
-	defer zr.Close()
+	defer func() {
+		_ = zr.Close()
+	}()
 
 	destDir := filepath.Join(app.Config.Server.DataDir, "PlumeImpactor", "lib", pkgArch)
 	if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
@@ -208,16 +212,16 @@ func UpdateCoreADI() error {
 			dstPath := filepath.Join(destDir, destName)
 			outf, err := os.Create(dstPath)
 			if err != nil {
-				rc.Close()
+				_ = rc.Close()
 				return fmt.Errorf("create dest file failed: %w", err)
 			}
 			if _, err := io.Copy(outf, rc); err != nil {
-				rc.Close()
-				outf.Close()
+				_ = rc.Close()
+				_ = outf.Close()
 				return fmt.Errorf("copy entry failed: %w", err)
 			}
-			rc.Close()
-			outf.Close()
+			_ = rc.Close()
+			_ = outf.Close()
 			delete(targets, name)
 		}
 	}
