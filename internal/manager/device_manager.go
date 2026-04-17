@@ -270,7 +270,7 @@ func (dm *DeviceManager) CheckAfcServiceStatus(dev *model.Device) error {
 }
 
 func (dm *DeviceManager) CheckDevicePaired(ip string, port uint16) (*model.RemoteDevice, error) {
-	if !utils.Exists(app.RemotePairingDir()) {
+	if !utils.ExistFiles(app.RemotePairingDir(), "*.plist") {
 		return nil, nil
 	}
 

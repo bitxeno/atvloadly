@@ -74,7 +74,7 @@ RUN chmod +x /etc/init.d/usbmuxd
 RUN printf '#!/bin/sh \n\n\
 
 mkdir -p /data/lockdown \n\
-mkdir -p /data/remote \n\
+mkdir -p /data/RPPairing \n\
 mkdir -p /data/PlumeImpactor \n\
 mkdir -p $HOME/.config \n\
 [ ! -e "$HOME/.config/PlumeImpactor" ] && ln -s /data/PlumeImpactor $HOME/.config/PlumeImpactor \n\
