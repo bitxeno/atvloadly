@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 func Exists(name string) bool {
@@ -79,4 +81,15 @@ func RemoveAllFiles(dir string, pattern string) {
 	for _, m := range matches {
 		_ = os.RemoveAll(m)
 	}
+}
+
+func ExistFiles(dir string, pattern string) bool {
+	pat := filepath.Join(dir, pattern)
+	matches, _ := filepath.Glob(pat)
+	return len(matches) > 0
+}
+
+func UUID(data string) string {
+	fixedUUID := uuid.NewSHA1(uuid.NameSpaceDNS, []byte(data))
+	return fixedUUID.String()
 }

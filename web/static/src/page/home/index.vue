@@ -22,7 +22,7 @@
 
               <div class="flex flex-col justify-top">
                 <h4>{{ item.name }} ({{ item.ip }})</h4>
-                <p>{{ formatStatus(item.status) }}</p>
+                <p>{{ formatDeviceStatus(item) }}</p>
               </div>
             </a>
           </div>
@@ -53,7 +53,7 @@
 
               <div class="flex flex-col justify-top">
                 <h4>{{ item.name }} ({{ item.ip }})</h4>
-                <p>{{ formatStatus(item.status) }}</p>
+                <p>{{ formatDeviceStatus(item) }}</p>
               </div>
             </a>
           </div>
@@ -435,6 +435,19 @@ export default {
       } else {
         return this.$t("home.sidebar.device_status.unpaired");
       }
+    },
+    formatConnection(connection) {
+      return connection;
+    },
+    formatDeviceStatus(item) {
+      const status = this.formatStatus(item.status);
+      const connection = this.formatConnection(item.connection);
+
+      if (!connection) {
+        return status;
+      }
+
+      return `${status} · ${connection}`;
     },
     isIPhone(item) {
       if (item.device_class) {

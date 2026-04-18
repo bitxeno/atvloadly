@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
+	execx "github.com/bitxeno/atvloadly/internal/exec"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/utils"
@@ -35,8 +35,9 @@ type InstallManager struct {
 
 type InstallOptions struct {
 	UDID             string
+	IP               string
+	Port             uint16
 	Account          string
-	Password         string
 	IpaPath          string
 	RemoveExtensions bool
 	RefreshMode      bool
@@ -69,9 +70,9 @@ func (t *InstallManager) TryStart(ctx context.Context, opts InstallOptions) erro
 		// LOCKDOWN_E_MUX_ERROR / AFC_E_MUX_ERROR /
 		ipaName := filepath.Base(opts.IpaPath)
 		log.Infof("Try restarting usbmuxd to fix afc connect issue. %s", ipaName)
-		if errmux := RestartUsbmuxd(); errmux == nil {
+		if errmux := usbmuxdManager.Restart(); errmux == nil {
 			// iPhone reconnect may take a while, wait some time
-			time.Sleep(30 * time.Second)
+			usbmuxdManager.TryWaitReady(30 * time.Second)
 			log.Infof("Restart usbmuxd complete, try install ipa again. %s", ipaName)
 			err = t.Start(ctx, opts)
 		}
@@ -99,38 +100,44 @@ func (t *InstallManager) Start(ctx context.Context, opts InstallOptions) error {
 	}
 
 	args := []string{"sign", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--udid", opts.UDID, "-u", opts.Account, "-p", opts.IpaPath}
+	if opts.IP != "" && opts.Port != 0 && opts.UDID != "" {
+		pairingFile := filepath.Join(app.RemotePairingDir(), fmt.Sprintf("%s.plist", opts.UDID))
+		args = []string{"sign-rsd", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--ip", opts.IP, "--port", fmt.Sprintf("%d", opts.Port), "--pairing-file", pairingFile, "-u", opts.Account, "-p", opts.IpaPath}
+	}
 	if opts.RemoveExtensions {
 		args = append(args, "--remove-extensions")
 	}
 	if opts.RefreshMode {
 		args = append(args, "--refresh")
 	}
-	cmd := exec.CommandContext(ctx, "plumesign", args...)
-	cmd.Dir = app.Config.Server.DataDir
-	cmd.Env = GetRunEnvs()
-	cmd.Stdout = t.outputStdout
-	cmd.Stderr = t.outputStdout
-
-	var err error
-	t.stdin, err = cmd.StdinPipe()
+	stdinReader, stdinWriter, err := os.Pipe()
 	if err != nil {
 		log.Err(err).Msg("Error creating stdin pipe: ")
 		return err
 	}
+	t.stdin = stdinWriter
 	defer func() {
+		_ = stdinReader.Close()
 		_ = t.stdin.Close()
+		t.stdin = nil
 	}()
 
-	if err := cmd.Start(); err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
-			_ = cmd.Process.Kill()
-			log.Err(err).Msgf("Installation exceeded %d-minute timeout limit. %s", int(timeout.Minutes()), t.ErrorLog())
-			err = fmt.Errorf("Installation exceeded %d-minute timeout limit. %s", int(timeout.Minutes()), err.Error())
-		}
-		return err
-	}
+	cmd := execx.CommandContext(ctx, "plumesign", args...).
+		WithTimeout(timeout).
+		WithDir(app.Config.Server.DataDir).
+		WithEnv(GetRunEnvs()).
+		WithStdout(t.outputStdout).
+		WithStderr(t.outputStdout).
+		WithStdin(stdinReader)
 
-	if err = cmd.Wait(); err != nil {
+	log.Debugf("Install Command: %s", strings.Join(append([]string{cmd.Name}, cmd.Args...), " "))
+
+	err = cmd.Run()
+	if err != nil {
+		if errors.Is(err, execx.ErrCommandTimeout) {
+			log.Err(err).Msgf("Installation exceeded %d-minute timeout limit. %s", int(timeout.Minutes()), t.ErrorLog())
+			return fmt.Errorf("installation exceeded %d-minute timeout limit: %w", int(timeout.Minutes()), err)
+		}
 		return err
 	}
 

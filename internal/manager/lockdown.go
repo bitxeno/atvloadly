@@ -2,23 +2,23 @@ package manager
 
 import (
 	"bytes"
-	"encoding/json"
-	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/utils"
-	gidevice "github.com/electricbubble/gidevice"
 	plist "howett.net/plist"
 )
 
 func loadLockdownDevices() (map[string]model.LockdownDevice, error) {
-	files, err := os.ReadDir(app.Config.App.LockdownDir)
+	files, err := os.ReadDir(app.LockdownDir())
 	if err != nil {
-		log.Err(err).Msg("Read lockdown dir error: ")
+		if !os.IsNotExist(err) {
+			log.Debugf("Read lockdown dir error: %v", err)
+		}
 		devices := map[string]model.LockdownDevice{}
 		return devices, nil
 	}
@@ -29,7 +29,7 @@ func loadLockdownDevices() (map[string]model.LockdownDevice, error) {
 			continue
 		}
 
-		buf, err := os.ReadFile(fmt.Sprintf("%s/%s", app.Config.App.LockdownDir, file.Name()))
+		buf, err := os.ReadFile(filepath.Join(app.LockdownDir(), file.Name()))
 		if err != nil {
 			return nil, err
 		}
@@ -40,31 +40,17 @@ func loadLockdownDevices() (map[string]model.LockdownDevice, error) {
 		}
 
 		lockdownDevice.Name = utils.FileNameWithoutExt(file.Name())
-		devices[lockdownDevice.WiFiMACAddress] = lockdownDevice
+		macAddr := strings.ToLower(lockdownDevice.WiFiMACAddress)
+		devices[macAddr] = lockdownDevice
 	}
 	return devices, nil
 }
 
-func GetUsbmxudDevices() (map[string]model.UsbmuxdDevice, error) {
-	umx, err := gidevice.NewUsbmux()
-	if err != nil {
-		log.Err(err).Msgf("Cannot connect to usbmuxd: %v", err)
-		return nil, err
+func removeLockdownDevice(udid string) {
+	lockdownFile := filepath.Join(app.LockdownDir(), udid+".plist")
+	if _, err := os.Stat(lockdownFile); os.IsNotExist(err) {
+		return
 	}
 
-	gideviceDevices, err := umx.Devices()
-	if err != nil {
-		log.Err(err).Msgf("Cannot get devices from usbmuxd: %v", err)
-		return nil, err
-	}
-	devices := map[string]model.UsbmuxdDevice{}
-	for _, d := range gideviceDevices {
-		res, _ := d.GetValue("", "")
-		data, _ := json.Marshal(res)
-		devInfo := new(model.UsbmuxdDevice)
-		if err := json.Unmarshal(data, devInfo); err == nil {
-			devices[devInfo.SerialNumber] = *devInfo
-		}
-	}
-	return devices, nil
+	_ = os.Remove(lockdownFile)
 }

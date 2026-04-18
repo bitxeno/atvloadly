@@ -11,21 +11,21 @@ jobs:
   build:
     strategy:
       matrix:
-        go_version: [1.21.x]
+        go_version: [1.25.x]
 
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ matrix.go_version }}
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: build frontend
         run: cd ./web/static && npm install && npm run build
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
           version: latest
           args: --timeout=5m

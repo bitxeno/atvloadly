@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/bitxeno/atvloadly/internal/log"
 )
 
 var ErrCommandTimeout = errors.New("command execute timeout")
@@ -92,6 +94,7 @@ func (c *Cmd) Run() error {
 	ctx, cancel := context.WithTimeout(ctx, c.Timeout)
 	defer cancel()
 
+	log.Debugf(">> %s %s", c.Name, strings.Join(c.Args, " "))
 	cmd := exec.CommandContext(ctx, c.Name, c.Args...)
 	c.setupCmd(cmd)
 
@@ -115,6 +118,7 @@ func (c *Cmd) CombinedOutput() ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.Timeout)
 	defer cancel()
 
+	log.Debugf(">> %s %s", c.Name, strings.Join(c.Args, " "))
 	cmd := exec.CommandContext(ctx, c.Name, c.Args...)
 	c.setupCmd(cmd)
 

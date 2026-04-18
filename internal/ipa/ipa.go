@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	ErrInfoPlistNotFound = errors.New("Info.plist not found")
+	ErrInfoPlistNotFound = errors.New("info.plist not found")
 )
 
 var (
@@ -58,7 +58,9 @@ func ParseFile(path string) (*IPA, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	stat, err := f.Stat()
 	if err != nil {
@@ -111,7 +113,9 @@ func Parse(readerAt io.ReaderAt, size int64) (*IPA, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer pf.Close()
+		defer func() {
+			_ = pf.Close()
+		}()
 		info := &InfoPlist{}
 		err = plist.Decode(pf, info)
 		if err != nil {
@@ -189,12 +193,16 @@ func parseIconImage(iconFile *zip.File) (image.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	buf, err := seekbuf.Open(f, seekbuf.MemoryMode)
 	if err != nil {
 		return nil, err
 	}
-	defer buf.Close()
+	defer func() {
+		_ = buf.Close()
+	}()
 
 	img, err := png.Decode(buf)
 	if err != nil {
@@ -217,13 +225,17 @@ func parseIconAssets(assetFile *zip.File) (image.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	buf, err := seekbuf.Open(f, seekbuf.MemoryMode)
 	if err != nil {
 		return nil, err
 	}
-	defer buf.Close()
+	defer func() {
+		_ = buf.Close()
+	}()
 
 	a, err := asset.NewWithReadSeeker(buf)
 	if err != nil {

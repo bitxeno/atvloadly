@@ -44,13 +44,13 @@ func (t *TTY) Close() {
 
 func (t *TTY) Start() {
 	if t.cwd != "" {
-		if _, err := t.pl.pty.Write([]byte(fmt.Sprintf("cd \"%s\"\n", app.Config.Server.DataDir))); err != nil {
+		if _, err := fmt.Fprintf(t.pl.pty, "cd \"%s\"\n", app.Config.Server.DataDir); err != nil {
 			_ = t.conn.WriteMessage(websocket.TextMessage, []byte(err.Error()))
 			return
 		}
 	}
 	for _, v := range t.environ {
-		if _, err := t.pl.pty.Write([]byte(fmt.Sprintf("export %s\n", v))); err != nil {
+		if _, err := fmt.Fprintf(t.pl.pty, "export %s\n", v); err != nil {
 			_ = t.conn.WriteMessage(websocket.TextMessage, []byte(err.Error()))
 			return
 		}

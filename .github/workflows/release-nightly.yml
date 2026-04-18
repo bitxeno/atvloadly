@@ -19,7 +19,7 @@ jobs:
       new_commit_count: ${{steps.commit_check.outputs.new_commit_count}}
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
       - name: Check for new commits
@@ -34,7 +34,7 @@ jobs:
       contents: write
     strategy:
       matrix:
-        go_version: [1.21.x]
+        go_version: [1.25.x]
     runs-on: ubuntu-latest
     outputs:
       VERSION: ${{steps.vars.outputs.VERSION}}
@@ -45,21 +45,21 @@ jobs:
     steps:
       # step 1: checkout repository code
       - name: Checkout the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       # step 2: setup build envirement
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ matrix.go_version }}
       - uses: actions/setup-node@v6
         with:
           node-version: 24
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # step 3: set workflow variables
       - id: metadata
@@ -82,7 +82,7 @@ jobs:
       - name: build frontend
         run: cd ./web/static && npm install && npm run build
       - name: Generate build files
-        uses: crazy-max/ghaction-xgo@v2
+        uses: crazy-max/ghaction-xgo@v4
         env:
           CGO_ENABLED: "0"
         with:
@@ -97,7 +97,7 @@ jobs:
 
       # step 5: Upload binary to artifact
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{steps.vars.outputs.APP_NAME}}
           path: build
@@ -113,24 +113,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{needs.build.outputs.APP_NAME}}
           path: build
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPOSITORY }}
           tags: |
@@ -138,7 +138,7 @@ jobs:
             type=raw,value=test
             type=raw,value=nightly,enable=${{ github.ref == 'refs/heads/master' }}
       - name: Build and push Docker images to DockerHub
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -161,25 +161,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{needs.build.outputs.APP_NAME}}
           path: build
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
@@ -187,7 +187,7 @@ jobs:
             type=raw,value=test
             type=raw,value=nightly,enable=${{ github.ref == 'refs/heads/master' }}
       - name: Build and push Docker images to ghci
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true

@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/exec"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
 )
@@ -17,7 +19,10 @@ func newCertificateManager() *CertificateManager {
 }
 
 func (m *CertificateManager) GetCertificates(email string) ([]model.Certificate, error) {
-	output, err := ExecuteCommand("plumesign", "certificate", "list", "-u", email)
+	output, err := exec.NewCommand("plumesign", "certificate", "list", "-u", email).
+		WithDir(app.Config.Server.DataDir).
+		WithEnv(GetRunEnvs()).
+		CombinedOutput()
 	if err != nil {
 		log.Err(err).Msgf("Error getting certificates for %s", email)
 		return nil, err
@@ -47,7 +52,10 @@ func (m *CertificateManager) GetCertificates(email string) ([]model.Certificate,
 }
 
 func (m *CertificateManager) RevokeCertificate(email string, serialNumber string) error {
-	_, err := ExecuteCommand("plumesign", "certificate", "revoke", "-u", email, "-s", serialNumber)
+	_, err := exec.NewCommand("plumesign", "certificate", "revoke", "-u", email, "-s", serialNumber).
+		WithDir(app.Config.Server.DataDir).
+		WithEnv(GetRunEnvs()).
+		CombinedOutput()
 	if err != nil {
 		log.Err(err).Msgf("Error revoking certificate %s", serialNumber)
 		return err
@@ -56,7 +64,10 @@ func (m *CertificateManager) RevokeCertificate(email string, serialNumber string
 }
 
 func (m *CertificateManager) ExportCertificate(email, password, path string) (string, error) {
-	output, err := ExecuteCommand("plumesign", "certificate", "export", "-u", email, "-p", password, "-o", path)
+	output, err := exec.NewCommand("plumesign", "certificate", "export", "-u", email, "-p", password, "-o", path).
+		WithDir(app.Config.Server.DataDir).
+		WithEnv(GetRunEnvs()).
+		CombinedOutput()
 	if err != nil {
 		log.Err(err).Msgf("Error exporting certificate for %s", email)
 		return string(output), err
@@ -65,7 +76,10 @@ func (m *CertificateManager) ExportCertificate(email, password, path string) (st
 }
 
 func (m *CertificateManager) ImportCertificate(email, password, path string) error {
-	output, err := ExecuteCommand("plumesign", "certificate", "import", "-u", email, "-p", password, "-i", path)
+	output, err := exec.NewCommand("plumesign", "certificate", "import", "-u", email, "-p", password, "-i", path).
+		WithDir(app.Config.Server.DataDir).
+		WithEnv(GetRunEnvs()).
+		CombinedOutput()
 	if err != nil {
 		log.Err(err).Msgf("Error importing certificate for %s: %s", email, string(output))
 		return err

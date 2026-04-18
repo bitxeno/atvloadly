@@ -235,7 +235,9 @@ func route(fi *fiber.App) {
 		if err := c.SaveFile(file, tempPath); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError("Failed to save uploaded file"))
 		}
-		defer os.Remove(tempPath)
+		defer func() {
+			_ = os.Remove(tempPath)
+		}()
 
 		if err := manager.ImportCertificate(email, password, tempPath); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError("Import failed: " + err.Error()))
@@ -259,7 +261,8 @@ func route(fi *fiber.App) {
 		case "task":
 			app.Settings.Task = settings.Task
 			if err := task.ReloadTask(); err != nil {
-				return c.Status(http.StatusOK).JSON(apiError("时间格式错误: " + err.Error()))
+				errMsg := fmt.Sprintf("invalid time format: %s", err.Error())
+				return c.Status(http.StatusOK).JSON(apiError(errMsg))
 			}
 		}
 
@@ -280,7 +283,7 @@ func route(fi *fiber.App) {
 
 	api.Get("/devices/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id")
-		if device, ok := manager.GetDeviceByID(id); ok {
+		if device, ok := manager.GetDeviceDetail(id); ok {
 			return c.Status(http.StatusOK).JSON(apiSuccess(device))
 		}
 
@@ -295,26 +298,6 @@ func route(fi *fiber.App) {
 		} else {
 			return c.Status(http.StatusOK).JSON(apiSuccess("success"))
 		}
-	})
-
-	api.Post("/devices/:id/check/devmode", func(c *fiber.Ctx) error {
-		id := c.Params("id")
-
-		enabled, err := service.CheckDeveloperMode(c.Context(), id)
-		if err != nil {
-			return c.Status(http.StatusOK).JSON(apiSuccess(err.Error()))
-		}
-		result := map[string]bool{
-			"enabled": enabled,
-			"mounted": false,
-		}
-		if enabled {
-			if imageInfo, err := service.GetDeviceMountImageInfo(c.Context(), id); err == nil {
-				result["mounted"] = imageInfo.ImageMounted
-			}
-		}
-
-		return c.Status(http.StatusOK).JSON(apiSuccess(result))
 	})
 
 	api.Post("/devices/:id/check/afc", func(c *fiber.Ctx) error {
@@ -339,7 +322,7 @@ func route(fi *fiber.App) {
 	})
 
 	api.Get("/scan/wireless", func(c *fiber.Ctx) error {
-		timeout := 2
+		timeout := 3
 		if timeoutStr := c.Query("timeout"); timeoutStr != "" {
 			if t := utils.MustParseInt(timeoutStr); t > 0 {
 				timeout = t
@@ -381,7 +364,9 @@ func route(fi *fiber.App) {
 		if err != nil {
 			return c.Status(http.StatusOK).JSON(apiError("Failed to open uploaded file"))
 		}
-		defer src.Close()
+		defer func() {
+			_ = src.Close()
+		}()
 
 		data, err := io.ReadAll(src)
 		if err != nil {
@@ -390,14 +375,15 @@ func route(fi *fiber.App) {
 
 		override := c.FormValue("override") == "true"
 		ip := c.FormValue("ip")
+		port := c.FormValue("port")
 
 		// Call manager to process the file
-		if err := manager.ImportPairingFile(ip, data, override); err != nil {
+		if err := manager.ImportPairingFile(ip, port, data, override); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 
 		// Restart usbmuxd service to apply changes
-		_ = manager.RestartUsbmuxd()
+		_ = manager.Usbmuxd().Restart()
 
 		time.Sleep(time.Second)
 
@@ -441,15 +427,17 @@ func route(fi *fiber.App) {
 			ipaFile.BundleIdentifier = info.Identifier()
 			ipaFile.Version = info.Version()
 
-			// 保存icon
-			if info.Icon() != nil {
+			icon := info.Icon()
+			if icon != nil {
 				iconName := fmt.Sprintf("%s_%d%s", name, timestamp, ".png")
 				iconDst := filepath.Join(saveDir, iconName)
 				out, err := os.Create(iconDst)
 				if err == nil {
-					defer out.Close()
+					defer func() {
+						_ = out.Close()
+					}()
 
-					if err := png.Encode(out, info.Icon()); err == nil {
+					if err := png.Encode(out, icon); err == nil {
 						ipaFile.Icon = iconDst
 					}
 				}

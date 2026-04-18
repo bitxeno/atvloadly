@@ -45,7 +45,7 @@ var (
 
 func action(c *cli.Context) error {
 	// init config
-	debug := false
+	debug := c.Bool("debug") || c.Bool("verbose")
 	if c.Bool("debug") || c.Bool("verbose") {
 		debug = true
 	}
@@ -92,6 +92,6 @@ func action(c *cli.Context) error {
 }
 
 func printVersion() {
-	color.New(color.FgGreen).Print("Starting server version: ")
-	color.New(color.FgCyan).Printf("%s@%s@%v\n", app.Version.Version, app.Version.BuildDate, app.Mode)
+	_, _ = color.New(color.FgGreen).Print("Starting server version: ")
+	_, _ = color.New(color.FgCyan).Printf("%s@%s@%v\n", app.Version.Version, app.Version.BuildDate, app.Mode)
 }

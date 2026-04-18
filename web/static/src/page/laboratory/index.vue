@@ -37,11 +37,11 @@
             <div class="join flex w-full">
               <select
                 class="select select-bordered join-item flex-1 w-full"
-                v-model="selectedDeviceIp"
+                v-model="selectedDevice"
                 required
               >
                 <option value="" disabled>{{ $t("laboratory.form.device_placeholder") }}</option>
-                <option v-for="device in devices" :key="device.ip" :value="device.ip">
+                <option v-for="device in devices" :key="device.id" :value="device.id">
                   {{ device.name }} ({{ device.ip }})
                 </option>
               </select>
@@ -101,7 +101,7 @@ export default {
       loadingDevices: false,
       confirmDialogVisible: false,
       devices: [],
-      selectedDeviceIp: "",
+      selectedDevice: "",
     };
   },
   mounted() {
@@ -148,8 +148,14 @@ export default {
         if (override) {
             formData.append("override", "true");
         }
-        if (this.selectedDeviceIp) {
-            formData.append("ip", this.selectedDeviceIp);
+        if (this.selectedDevice) {
+            const selectedDevice = this.devices.find(d => d.id === this.selectedDevice);
+            if (selectedDevice?.ip) {
+                formData.append("ip", selectedDevice.ip);
+            }
+            if (selectedDevice?.port) {
+                formData.append("port", selectedDevice.port);
+            }
         }
         
         await api.importPair(formData);

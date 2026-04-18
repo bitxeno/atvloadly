@@ -13,15 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/artdarek/go-unzip/pkg/unzip"
 	"github.com/bitxeno/atvloadly/internal/app"
-	"github.com/bitxeno/atvloadly/internal/exec"
-	"github.com/bitxeno/atvloadly/internal/http"
 	"github.com/bitxeno/atvloadly/internal/i18n"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/model"
-	"github.com/bitxeno/atvloadly/internal/utils"
 	ps "github.com/mitchellh/go-ps"
 )
 
@@ -44,7 +40,7 @@ func GetServiceStatus() []model.ServiceStatus {
 	if runtime.GOOS == "darwin" {
 		proc := "mDNSResponder"
 		status = append(status, model.ServiceStatus{
-			Name:    proc,
+			Name:    "Apple Bonjour",
 			Running: checkProcessExists(proc),
 		})
 	}
@@ -72,63 +68,34 @@ func checkProcessExists(name string) bool {
 	return false
 }
 
-func GetDeviceMountImageInfo(ctx context.Context, id string) (*model.UsbmuxdImage, error) {
-	device, ok := manager.GetDeviceByID(id)
-	if !ok {
-		return nil, fmt.Errorf("device not found: %s", id)
-	}
-
-	imageInfo, err := manager.GetDeviceMountImageInfo(device.UDID)
-	if err != nil {
-		log.Err(err).Msg("GetDeviceMountImageInfo error: ")
-		return nil, err
-	}
-
-	return imageInfo, nil
-}
-
+// TODO: mount personalized disk image for device
 func MountDeveloperDiskImage(ctx context.Context, id string) error {
 	device, ok := manager.GetDeviceByID(id)
 	if !ok {
-		return fmt.Errorf("Device not found: %s", id)
-	}
-
-	imageInfo, err := manager.GetDeviceMountImageInfo(device.UDID)
-	if err != nil {
-		log.Err(err).Msg("GetDeviceMountImageInfo error: ")
-		return err
+		return fmt.Errorf("device not found: %s", id)
 	}
 
 	// Already mounted, return directly.
-	if imageInfo.ImageMounted {
+	if device.PersonalizedImageMounted {
 		return nil
 	}
 
-	// Download DeveloperDiskImage
-	dmg, signature, err := downloadDeveloperDiskImage(imageInfo)
-	if err != nil {
-		log.Err(err).Msg("Download Developer disk image error: ")
-		return err
-	}
+	// // Download DeveloperDiskImage
+	// dmg, signature, err := downloadDeveloperDiskImage(imageInfo)
+	// if err != nil {
+	// 	log.Err(err).Msg("Download Developer disk image error: ")
+	// 	return err
+	// }
 
-	// Start executing mounting DeveloperDiskImage
-	cmd := exec.CommandContext(ctx, "ideviceimagemounter", "-u", device.UDID, "-n", dmg, signature)
-	data, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Err(err).Msgf("Run ideviceimagemounter error: %s", string(data))
-		return fmt.Errorf("%s%s", string(data), err.Error())
-	}
+	// // Start executing mounting DeveloperDiskImage
+	// cmd := exec.CommandContext(ctx, "ideviceimagemounter", "-u", device.UDID, "-n", dmg, signature)
+	// data, err := cmd.CombinedOutput()
+	// if err != nil {
+	// 	log.Err(err).Msgf("Run ideviceimagemounter error: %s", string(data))
+	// 	return fmt.Errorf("%s%s", string(data), err.Error())
+	// }
 
 	return nil
-}
-
-func CheckDeveloperMode(ctx context.Context, id string) (bool, error) {
-	device, ok := manager.GetDeviceByID(id)
-	if !ok {
-		return false, fmt.Errorf("device not found: %s", id)
-	}
-
-	return manager.CheckDeveloperMode(device.UDID)
 }
 
 func CheckAfcService(ctx context.Context, id string) error {
@@ -141,94 +108,13 @@ func CheckAfcService(ctx context.Context, id string) error {
 	if err = manager.CheckAfcServiceStatus(device.UDID); err != nil {
 		log.Infof("check afc service status error: %s", err)
 		// try restart usbmuxd to fix afc connect issue
-		if err = manager.RestartUsbmuxd(); err == nil {
+		if err = manager.Usbmuxd().Restart(); err == nil {
 			time.Sleep(5 * time.Second)
 			err = manager.CheckAfcServiceStatus(device.UDID)
 		}
 	}
 
 	return err
-}
-
-func downloadDeveloperDiskImage(imageInfo *model.UsbmuxdImage) (dmg string, signature string, reterr error) {
-	// download current version DeveloperDiskImage
-	err := downloadDeveloperDiskImageByVersion(imageInfo.DeveloperDiskImageUrl, imageInfo.DeveloperDiskImageVersion)
-	if err == nil {
-		dmg = filepath.Join(app.Config.Server.DataDir, "DeveloperDiskImage", imageInfo.DeveloperDiskImageVersion, "DeveloperDiskImage.dmg")
-		signature = filepath.Join(app.Config.Server.DataDir, "DeveloperDiskImage", imageInfo.DeveloperDiskImageVersion, "DeveloperDiskImage.dmg.signature")
-		return
-	}
-
-	if err != nil && imageInfo.VersionMinor > 0 {
-		// current version DeveloperDiskImage not found, try fallback to last minor version
-		for fallbackMinor := imageInfo.VersionMinor - 1; fallbackMinor > 0; fallbackMinor-- {
-			fallbackVersion := fmt.Sprintf("%d.%d", imageInfo.VersionMajor, fallbackMinor)
-			fallbackImageUrl := strings.Replace(app.Config.App.DeveloperDiskImage.ImageSource, "{0}", fallbackVersion, -1)
-			log.Warnf("try downgrade developer disk image to version: %s", fallbackVersion)
-			if err := downloadDeveloperDiskImageByVersion(fallbackImageUrl, fallbackVersion); err == nil {
-				dmg = filepath.Join(app.Config.Server.DataDir, "DeveloperDiskImage", fallbackVersion, "DeveloperDiskImage.dmg")
-				signature = filepath.Join(app.Config.Server.DataDir, "DeveloperDiskImage", fallbackVersion, "DeveloperDiskImage.dmg.signature")
-				return
-			}
-		}
-	}
-
-	if err != nil {
-		log.Err(err).Msg("Download developer disk image error: ")
-		reterr = err
-	}
-
-	return
-}
-
-func downloadDeveloperDiskImageByVersion(url string, version string) error {
-	imageVersionDir := filepath.Join(app.Config.Server.DataDir, "DeveloperDiskImage", version)
-	dmg := filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg")
-	signature := filepath.Join(imageVersionDir, "DeveloperDiskImage.dmg.signature")
-	if utils.Exists(dmg) && utils.Exists(signature) {
-		return nil
-	}
-
-	tmpPath := filepath.Join(app.Config.Server.DataDir, "tmp", "DeveloperDiskImage.zip")
-	tmpUnzipPath := filepath.Join(app.Config.Server.DataDir, "tmp", "DeveloperDiskImage")
-	_ = os.RemoveAll(tmpUnzipPath)
-
-	// download current version DeveloperDiskImage
-	hasDownloaded := false
-	if app.Config.App.DeveloperDiskImage.CNProxy != "" {
-		// download by proxy
-		cnProxyUrl := strings.TrimSuffix(app.Config.App.DeveloperDiskImage.CNProxy, "/") + "/" + url
-		if resp, err := http.NewClient().R().SetOutput(tmpPath).Get(cnProxyUrl); err == nil && resp.IsSuccess() {
-			hasDownloaded = true
-		}
-	}
-	if !hasDownloaded {
-		resp, err := http.NewClient().R().SetOutput(tmpPath).Get(url)
-		if err != nil {
-			return err
-		}
-		if !resp.IsSuccess() {
-			return fmt.Errorf("developer disk image download failed.  url: %s status: %d", url, resp.StatusCode())
-		}
-	}
-
-	// unzip
-	uz := unzip.New()
-	files, err := uz.Extract(tmpPath, tmpUnzipPath)
-	if err != nil {
-		log.Err(err).Msg("Unzip Developer disk image error: ")
-		return err
-	}
-	_ = os.MkdirAll(imageVersionDir, os.ModePerm)
-	for _, f := range files {
-		if filepath.Base(f) == "DeveloperDiskImage.dmg" || filepath.Base(f) == "DeveloperDiskImage.dmg.signature" {
-			if err = os.Rename(filepath.Join(tmpUnzipPath, f), filepath.Join(imageVersionDir, filepath.Base(f))); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
 }
 
 func GetValidName(name string) string {
@@ -268,7 +154,9 @@ func UpdateCoreADI() error {
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	if resp.StatusCode != stdhttp.StatusOK {
 		return fmt.Errorf("download failed, status: %d", resp.StatusCode)
 	}
@@ -284,10 +172,10 @@ func UpdateCoreADI() error {
 		return fmt.Errorf("create temp file failed: %w", err)
 	}
 	if _, err := io.Copy(tmpOut, resp.Body); err != nil {
-		tmpOut.Close()
+		_ = tmpOut.Close()
 		return fmt.Errorf("save temp file failed: %w", err)
 	}
-	tmpOut.Close()
+	_ = tmpOut.Close()
 
 	defer func() {
 		_ = os.Remove(tmpPath)
@@ -298,7 +186,9 @@ func UpdateCoreADI() error {
 	if err != nil {
 		return fmt.Errorf("open apk zip failed: %w", err)
 	}
-	defer zr.Close()
+	defer func() {
+		_ = zr.Close()
+	}()
 
 	destDir := filepath.Join(app.Config.Server.DataDir, "PlumeImpactor", "lib", pkgArch)
 	if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
@@ -322,16 +212,16 @@ func UpdateCoreADI() error {
 			dstPath := filepath.Join(destDir, destName)
 			outf, err := os.Create(dstPath)
 			if err != nil {
-				rc.Close()
+				_ = rc.Close()
 				return fmt.Errorf("create dest file failed: %w", err)
 			}
 			if _, err := io.Copy(outf, rc); err != nil {
-				rc.Close()
-				outf.Close()
+				_ = rc.Close()
+				_ = outf.Close()
 				return fmt.Errorf("copy entry failed: %w", err)
 			}
-			rc.Close()
-			outf.Close()
+			_ = rc.Close()
+			_ = outf.Close()
 			delete(targets, name)
 		}
 	}

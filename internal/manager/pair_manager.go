@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/exec"
 	"github.com/bitxeno/atvloadly/internal/log"
+	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/gookit/event"
 )
 
@@ -36,38 +38,40 @@ func NewPairManager() *PairManager {
 	}
 }
 
-func (t *PairManager) Start(ctx context.Context, udid string) error {
-	// set execute timeout 1 miniutes
+func (t *PairManager) Start(ctx context.Context, device model.Device) error {
+	// Set execute timeout to 1 minute.
 	timeout := time.Minute
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithCancel(ctx)
 	t.cancel = cancel
 
-	cmd := exec.CommandContext(ctx, "idevicepair", "pair", "-u", udid, "-w")
-	cmd.Dir = app.Config.Server.DataDir
-	cmd.Stdout = t.outputStdout
-	cmd.Stderr = t.outputStderr
-
-	var err error
-	t.stdin, err = cmd.StdinPipe()
+	stdinReader, stdinWriter, err := os.Pipe()
 	if err != nil {
 		log.Err(err).Msg("Error creating stdin pipe: ")
 		return err
 	}
-	defer t.stdin.Close()
+	t.stdin = stdinWriter
+	defer func() {
+		_ = stdinReader.Close()
+		_ = t.stdin.Close()
+		t.stdin = nil
+	}()
 
-	if err := cmd.Start(); err != nil {
-		if err == context.DeadlineExceeded {
-			_ = cmd.Process.Kill()
-		}
-		log.Err(err).Msg("Error start pair script.")
+	port := fmt.Sprintf("%d", device.Port)
+	err = exec.CommandContext(ctx, "plumesign", "pair", "--ip", device.IP, "--port", port).
+		WithTimeout(timeout).
+		WithDir(app.Config.Server.DataDir).
+		WithEnv(GetRunEnvs()).
+		WithStdout(t.outputStdout).
+		WithStderr(t.outputStderr).
+		WithStdin(stdinReader).
+		Run()
+	if err != nil {
+		log.Err(err).Msgf("Error executing pair script. %s", t.ErrorLog())
 		return err
 	}
 
-	err = cmd.Wait()
-	if err != nil {
-		log.Err(err).Msgf("Error executing pair script. %s", t.ErrorLog())
-	}
-	return err
+	log.Infof("Pairing successful for device %s (%s)", device.Name, device.UDID)
+	return nil
 }
 
 func (t *PairManager) Close() {
@@ -88,7 +92,9 @@ func (t *PairManager) OnOutput(fn func(string)) {
 }
 
 func (t *PairManager) Write(p []byte) {
-	_, _ = t.stdin.Write(p)
+	if t.stdin != nil {
+		_, _ = t.stdin.Write(p)
+	}
 }
 
 func (t *PairManager) ErrorLog() string {
@@ -122,22 +128,27 @@ func (w *pairOutputWriter) String() string {
 	return string(w.data)
 }
 
-func ImportPairingFile(ip string, data []byte, override bool) error {
+func ImportPairingFile(ip string, port string, data []byte, override bool) error {
 	// Check if the current system is macOS, if so, importing is not supported
 	if runtime.GOOS == "darwin" {
 		return errors.New("importing pairing file is not supported on macOS")
 	}
 
-	udid, err := checkPairingFile(ip, data)
+	udid, err := checkPairingFile(ip, port, data)
 	if err != nil {
 		return fmt.Errorf("pairing file validation failed: %w", err)
+	}
+
+	savePairingFile := filepath.Join(app.RemotePairingDir(), fmt.Sprintf("%s.plist", udid))
+	if err := os.WriteFile(savePairingFile, data, 0600); err != nil {
+		return fmt.Errorf("failed to save pairing file: %w", err)
 	}
 
 	log.Infof("Pairing file imported successfully: %s", udid)
 	return nil
 }
 
-func checkPairingFile(ip string, data []byte) (string, error) {
+func checkPairingFile(ip string, port string, data []byte) (string, error) {
 	// Create a temporary file
 	tmpFile, err := os.CreateTemp("", "pairing-*.plist")
 	if err != nil {
@@ -146,23 +157,34 @@ func checkPairingFile(ip string, data []byte) (string, error) {
 	tmpFilePath := tmpFile.Name()
 
 	// Ensure the temporary file is deleted when the function exits
-	defer os.Remove(tmpFilePath)
+	defer func() {
+		if removeErr := os.Remove(tmpFilePath); removeErr != nil && !os.IsNotExist(removeErr) {
+			log.Warnf("failed to remove temp pairing file %s: %v", tmpFilePath, removeErr)
+		}
+	}()
 
 	// Write data to the temporary file
 	if _, err := tmpFile.Write(data); err != nil {
-		tmpFile.Close()
+		if closeErr := tmpFile.Close(); closeErr != nil {
+			return "", fmt.Errorf("failed to close temp file after write error: %v", closeErr)
+		}
 		return "", fmt.Errorf("failed to write temp file: %w", err)
 	}
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		return "", fmt.Errorf("failed to close temp file: %w", err)
+	}
 
 	// Execute the check command
-	output, err := ExecuteCommand("plumesign", "check", "pairing", "--save", "--ip", ip, "-f", tmpFilePath)
+	output, err := exec.NewCommand("plumesign", "check", "pairing", "--ip", ip, "--port", port, "-f", tmpFilePath).
+		WithDir(app.Config.Server.DataDir).
+		WithEnv(GetRunEnvs()).
+		CombinedOutput()
 	if err != nil {
 		return "", err
 	}
 
 	// Parse UDID
-	re := regexp.MustCompile("UDID\\s+`([^`]+)`")
+	re := regexp.MustCompile("UniqueDeviceID: `([^`]+)`")
 	matches := re.FindStringSubmatch(string(output))
 	if len(matches) >= 2 {
 		return matches[1], nil

@@ -105,7 +105,7 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
 
 2. Unable to find AppleTV
 
-> Please turn off the VPN, restart the AppleTV, re-enter pairing mode, make sure **[Tool]** can detect devices of the `_apple-pairable._tcp` type, and pair again.
+> Please turn off the VPN, restart the AppleTV, re-enter pairing mode, make sure **[Tool]** can detect devices of the `_remotepairing-manual-pairing._tcp` type, and pair again.
 
 3. Failed to log in to Apple account
 
@@ -136,12 +136,13 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
 
 ## Credits
 
-[Impactor](https://github.com/claration/Impactor): The sideload core
+[Impactor](https://github.com/claration/Impactor): the sideload core
 
 [idevice](https://github.com/jkcoxson/idevice): libimobiledevice in pure Rust
 
 [usbmuxd2](https://github.com/tihmstar/usbmuxd2): usbmuxd implementation for linux
 
+[frida-core:](https://github.com/frida/frida-core): remote pairing connection reference
 
 ## Disclaimer
 

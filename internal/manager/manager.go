@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
-	"github.com/bitxeno/atvloadly/internal/exec"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/utils"
 )
@@ -32,32 +31,24 @@ func GetDevices() ([]model.Device, error) {
 	return deviceManager.GetDevices(), nil
 }
 
-func GetDeviceByID(id string) (*model.Device, bool) {
+func GetDeviceDetail(id string) (*model.Device, bool) {
 	device, found := deviceManager.GetDeviceByID(id)
 	if found {
-		if devInfo, err := GetDeviceInfo(device.UDID); err == nil {
-			deviceManager.AppendProductInfo(device, *devInfo)
+		if device.Connection == model.LockdownConnection {
+			if devInfo, err := deviceManager.GetDeviceInfo(device); err == nil {
+				deviceManager.AppendProductInfo(device, *devInfo)
+			}
 		}
 	}
 	return device, found
+}
+
+func GetDeviceByID(id string) (*model.Device, bool) {
+	return deviceManager.GetDeviceByID(id)
 }
 
 func GetDeviceByUDID(udid string) (*model.Device, bool) {
-	device, found := deviceManager.GetDeviceByUDID(udid)
-	if found {
-		if devInfo, err := GetDeviceInfo(device.UDID); err == nil {
-			deviceManager.AppendProductInfo(device, *devInfo)
-		}
-	}
-	return device, found
-}
-
-func GetDeviceInfo(udid string) (*model.DeviceInfo, error) {
-	return deviceManager.GetDeviceInfo(udid)
-}
-
-func GetDeviceMountImageInfo(udid string) (*model.UsbmuxdImage, error) {
-	return deviceManager.GetMountImageInfo(udid)
+	return deviceManager.GetDeviceByUDID(udid)
 }
 
 func ReloadDevices() {
@@ -72,35 +63,16 @@ func ScanWirelessDevices(ctx context.Context, timeout time.Duration) ([]model.De
 	return deviceManager.ScanWirelessDevices(ctx, timeout)
 }
 
-func CheckDeveloperMode(udid string) (bool, error) {
-	return deviceManager.CheckDeveloperMode(udid)
-}
-
 func CheckAfcServiceStatus(udid string) error {
-	return deviceManager.CheckAfcServiceStatus(udid)
+	device, found := deviceManager.GetDeviceByUDID(udid)
+	if !found {
+		return fmt.Errorf("device not found: %s", udid)
+	}
+	return deviceManager.CheckAfcServiceStatus(device)
 }
 
 func CheckDeviceStatus(udid string) error {
 	return nil
-}
-
-func RestartUsbmuxd() error {
-	return deviceManager.RestartUsbmuxd()
-}
-
-func ExecuteCommand(name string, args ...string) ([]byte, error) {
-	return exec.NewCommand(name, args...).
-		WithDir(app.Config.Server.DataDir).
-		WithEnv(GetRunEnvs()).
-		CombinedOutput()
-}
-
-func ExecuteCommandTimeout(timeout time.Duration, name string, args ...string) ([]byte, error) {
-	return exec.NewCommand(name, args...).
-		WithTimeout(timeout).
-		WithDir(app.Config.Server.DataDir).
-		WithEnv(GetRunEnvs()).
-		CombinedOutput()
 }
 
 func GetAppleAccounts() (*model.Accounts, error) {
@@ -165,4 +137,8 @@ func GetRunEnvs() []string {
 		}
 	}
 	return utils.MergeEnvs(os.Environ(), envs)
+}
+
+func Usbmuxd() *UsbmuxdManager {
+	return usbmuxdManager
 }

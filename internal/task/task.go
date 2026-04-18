@@ -182,7 +182,7 @@ func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool, batchI
 
 func (t *Task) runQueue() {
 	// Wait for one minute before install at startup to avoid the usbmuxd service not being ready.
-	time.Sleep(time.Minute)
+	manager.Usbmuxd().TryWaitReady(30 * time.Second)
 
 	for {
 		select {
@@ -310,17 +310,19 @@ func (t *Task) resolveIPA(v model.InstalledApp) (*model.InstalledApp, error) {
 	v.BundleIdentifier = info.Identifier()
 	v.Version = info.Version()
 
-	// 保存icon
-	if info.Icon() != nil {
+	icon := info.Icon()
+	if icon != nil {
 		timestamp := time.Now().UnixMicro()
 		name := service.GetValidName(utils.FileNameWithoutExt(v.IpaPath))
 		iconName := fmt.Sprintf("%s_%d%s", name, timestamp, ".png")
 		iconDst := filepath.Join(saveDir, iconName)
 		out, err := os.Create(iconDst)
 		if err == nil {
-			defer out.Close()
+			defer func() {
+				_ = out.Close()
+			}()
 
-			if err := png.Encode(out, info.Icon()); err == nil {
+			if err := png.Encode(out, icon); err == nil {
 				v.Icon = iconDst
 			}
 		}
@@ -381,13 +383,19 @@ func (t *Task) runInternal(v model.InstalledApp, installMgr *manager.InstallMana
 	if _, ok := t.InvalidAccounts[v.Account]; ok {
 		log.Warnf("The install account (%s) is invalid, skip install app: %s.", v.MaskAccount(), v.IpaName)
 		installMgr.WriteLog(fmt.Sprintf("The install account (%s) is invalid, skip install.", v.MaskAccount()))
-		return nil, fmt.Errorf("The install account (%s) is invalid, skip install.", v.MaskAccount())
+		return nil, fmt.Errorf("the install account (%s) is invalid, skip install", v.MaskAccount())
+	}
+
+	dev, found := manager.GetDeviceByUDID(v.UDID)
+	if !found || dev == nil {
+		return nil, fmt.Errorf("device not found for UDID: %s", v.UDID)
 	}
 
 	err := installMgr.TryStart(context.Background(), manager.InstallOptions{
 		UDID:             v.UDID,
 		Account:          v.Account,
-		Password:         v.Password,
+		IP:               dev.IP,
+		Port:             dev.Port,
 		IpaPath:          v.IpaPath,
 		RemoveExtensions: v.RemoveExtensions,
 		RefreshMode:      true,
@@ -455,6 +463,9 @@ func (t *Task) refreshDeviceApps(device model.Device) error {
 		// The iPhone may connect and disconnect instantly (for example, briefly lighting up the screen when receiving a message).
 		// Check to ensure the device can connect truly.
 		time.Sleep(30 * time.Second)
+		if _, found := manager.GetDeviceByUDID(udid); !found {
+			return
+		}
 		if err := manager.CheckAfcServiceStatus(udid); err != nil {
 			log.Err(err).Msgf("Check AFC service status failed, skip refresh device: %s.", udid)
 			return
