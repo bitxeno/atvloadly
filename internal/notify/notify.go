@@ -2,6 +2,7 @@ package notify
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	stdhttp "net/http"
 	"net/url"
@@ -80,15 +81,30 @@ func SendWithConfig(title string, message string, settings app.SettingsConfigura
 				}
 			}
 		}
+		if headers.Get("User-Agent") == "" {
+			headers.Set("User-Agent", "atvloadly")
+		}
 		webhook := &http.Webhook{
 			URL:         webhookURL,
 			Header:      headers,
 			Method:      method,
 			ContentType: contentType,
 			BuildPayload: func(subject, message string) (payload any) {
+				if isJSONContentType(contentType) {
+					subject = sanitizeJSONTemplateValue(subject)
+					message = sanitizeJSONTemplateValue(message)
+				}
 				body := settings.Notification.Webhook.Body
 				body = strings.ReplaceAll(body, "{{title}}", subject)
 				body = strings.ReplaceAll(body, "{{message}}", message)
+
+				if strings.HasPrefix(strings.ToLower(contentType), "application/json") {
+					var parsed any
+					if err := json.Unmarshal([]byte(body), &parsed); err == nil {
+						return parsed
+					}
+				}
+
 				return body
 			},
 		}
@@ -101,4 +117,17 @@ func SendWithConfig(title string, message string, settings app.SettingsConfigura
 		title,
 		message,
 	)
+}
+
+func isJSONContentType(contentType string) bool {
+	return strings.Contains(strings.ToLower(contentType), "json")
+}
+
+func sanitizeJSONTemplateValue(value string) string {
+	normalized := strings.ToValidUTF8(value, "")
+	quoted, err := json.Marshal(normalized)
+	if err != nil || len(quoted) < 2 {
+		return normalized
+	}
+	return string(quoted[1 : len(quoted)-1])
 }
