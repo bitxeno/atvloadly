@@ -1,6 +1,9 @@
 package model
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 type Device struct {
 	ID                       string           `json:"id"`
@@ -19,7 +22,7 @@ type Device struct {
 	ProductVersion           string           `json:"product_version"`
 	DeveloperModeStatus      bool             `json:"developer_mode_status"`
 	PersonalizedImageMounted bool             `json:"personalized_image_mounted"`
-	PairingFile              string           `json:"pairing_file"`
+	DiscoveryAt              time.Time        `json:"-"`
 }
 
 func (d *Device) ParseDeviceClass() {

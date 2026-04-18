@@ -39,8 +39,6 @@ func NewPairManager() *PairManager {
 }
 
 func (t *PairManager) Start(ctx context.Context, device model.Device) error {
-	savePairingFile := filepath.Join(app.RemotePairingDir(), fmt.Sprintf("%s.plist", device.UDID))
-
 	// Set execute timeout to 1 minute.
 	timeout := time.Minute
 	ctx, cancel := context.WithCancel(ctx)
@@ -59,7 +57,7 @@ func (t *PairManager) Start(ctx context.Context, device model.Device) error {
 	}()
 
 	port := fmt.Sprintf("%d", device.Port)
-	err = exec.CommandContext(ctx, "plumesign", "pair", "--ip", device.IP, "--port", port, "--output", savePairingFile).
+	err = exec.CommandContext(ctx, "plumesign", "pair", "--ip", device.IP, "--port", port).
 		WithTimeout(timeout).
 		WithDir(app.Config.Server.DataDir).
 		WithEnv(GetRunEnvs()).
@@ -72,7 +70,7 @@ func (t *PairManager) Start(ctx context.Context, device model.Device) error {
 		return err
 	}
 
-	log.Infof("Pairing successful for device %s (%s) pairing file saved at %s", device.Name, device.UDID, savePairingFile)
+	log.Infof("Pairing successful for device %s (%s)", device.Name, device.UDID)
 	return nil
 }
 

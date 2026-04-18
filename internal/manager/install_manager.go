@@ -37,7 +37,6 @@ type InstallOptions struct {
 	UDID             string
 	IP               string
 	Port             uint16
-	PairingFile      string
 	Account          string
 	IpaPath          string
 	RemoveExtensions bool
@@ -101,8 +100,8 @@ func (t *InstallManager) Start(ctx context.Context, opts InstallOptions) error {
 	}
 
 	args := []string{"sign", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--udid", opts.UDID, "-u", opts.Account, "-p", opts.IpaPath}
-	if opts.IP != "" && opts.Port != 0 && opts.PairingFile != "" {
-		pairingFile := filepath.Join(app.RemotePairingDir(), opts.PairingFile)
+	if opts.IP != "" && opts.Port != 0 && opts.UDID != "" {
+		pairingFile := filepath.Join(app.RemotePairingDir(), fmt.Sprintf("%s.plist", opts.UDID))
 		args = []string{"sign-rsd", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--ip", opts.IP, "--port", fmt.Sprintf("%d", opts.Port), "--pairing-file", pairingFile, "-u", opts.Account, "-p", opts.IpaPath}
 	}
 	if opts.RemoveExtensions {

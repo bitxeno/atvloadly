@@ -69,7 +69,6 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		Account:          v.Account,
 		IP:               dev.IP,
 		Port:             dev.Port,
-		PairingFile:      dev.PairingFile,
 		IpaPath:          v.IpaPath,
 		RemoveExtensions: v.RemoveExtensions,
 		RefreshMode:      false,

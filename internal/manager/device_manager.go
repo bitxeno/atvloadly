@@ -99,8 +99,7 @@ func (dm *DeviceManager) GetDeviceByUDID(udid string) (*model.Device, bool) {
 func (dm *DeviceManager) GetDeviceInfo(dev *model.Device) (*model.DeviceInfo, error) {
 	cmd := exec.Command("plumesign", "device-info", "-u", dev.UDID).WithTimeout(5 * time.Second)
 	if dev.Connection == model.RemoteConnection {
-		pairingFile := filepath.Join(app.RemotePairingDir(), dev.PairingFile)
-		cmd = exec.Command("plumesign", "device-info", "--ip", dev.IP, "--port", fmt.Sprintf("%d", dev.Port), "-f", pairingFile).WithTimeout(5 * time.Second)
+		cmd = exec.Command("plumesign", "device-info", "--ip", dev.IP, "--port", fmt.Sprintf("%d", dev.Port), "-u", dev.UDID).WithTimeout(5 * time.Second)
 	}
 
 	data, err := cmd.CombinedOutput()
@@ -195,7 +194,7 @@ func (dm *DeviceManager) HasCheckedDevice(ip string, port uint16, name string) b
 	hasChecked := false
 	dm.devices.Range(func(k, v any) bool {
 		dev := v.(model.Device)
-		if dev.IP == ip && dev.Port == port && dev.Name == name && dev.Status == model.Paired {
+		if dev.IP == ip && dev.Port == port && dev.Status == model.Paired {
 			hasChecked = true
 			return false
 		}
@@ -248,8 +247,7 @@ func (dm *DeviceManager) ReloadDevices() {
 func (dm *DeviceManager) CheckAfcServiceStatus(dev *model.Device) error {
 	cmd := exec.Command("plumesign", "check", "afc", "--udid", dev.UDID).WithTimeout(10 * time.Second)
 	if dev.Connection == model.RemoteConnection {
-		pairingFile := filepath.Join(app.RemotePairingDir(), dev.PairingFile)
-		cmd = exec.Command("plumesign", "check", "afc", "--ip", dev.IP, "--port", fmt.Sprintf("%d", dev.Port), "-f", pairingFile).WithTimeout(10 * time.Second)
+		cmd = exec.Command("plumesign", "check", "afc", "--ip", dev.IP, "--port", fmt.Sprintf("%d", dev.Port), "--udid", dev.UDID).WithTimeout(10 * time.Second)
 	}
 
 	data, err := cmd.CombinedOutput()
@@ -269,36 +267,34 @@ func (dm *DeviceManager) CheckAfcServiceStatus(dev *model.Device) error {
 	return nil
 }
 
-func (dm *DeviceManager) CheckDevicePaired(ip string, port uint16) (*model.RemoteDevice, error) {
+func (dm *DeviceManager) CheckDevicePaired(identifier string, authTag string) (*model.RemoteDevice, error) {
 	if !utils.ExistFiles(app.RemotePairingDir(), "*.plist") {
 		return nil, nil
 	}
 
-	cmd := exec.Command("plumesign", "check", "pairing", "--ip", ip, "--port", fmt.Sprintf("%d", port), "--folder", app.RemotePairingDir()).WithTimeout(10 * time.Second)
+	cmd := exec.Command("plumesign", "check", "find-pairing", "--identifier", identifier, "--auth-tag", authTag).WithTimeout(10 * time.Second)
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
 	}
 
-	// Regex to parse the output by extracting contents between backticks
-	re := regexp.MustCompile("pairing file: `([^`]+)`, uuid: `([^`]+)`, DeviceClass: `([^`]+)`, UniqueDeviceID: `([^`]+)`")
+	re := regexp.MustCompile("UDID: `([^`]+)`")
 	matches := re.FindStringSubmatch(string(data))
-	if len(matches) > 4 {
+	if len(matches) > 1 {
+		udid := matches[1]
+
 		remoteDev := model.RemoteDevice{
-			Id:             utils.Md5(matches[4]),
-			UUID:           matches[2],
-			DeviceClass:    matches[3],
-			UniqueDeviceID: matches[4],
-			PairingFile:    matches[1],
+			ID:                utils.Md5(udid),
+			RemotePairingUDID: udid,
 		}
 
-		// If the pairing file name does not start with the UDID, rename it to avoid duplicates
-		if !strings.HasPrefix(remoteDev.PairingFile, remoteDev.UniqueDeviceID) {
-			newPairingFileName := remoteDev.UniqueDeviceID + ".plist"
-			if err := os.Rename(filepath.Join(app.RemotePairingDir(), remoteDev.PairingFile), filepath.Join(app.RemotePairingDir(), newPairingFileName)); err == nil {
-				log.Infof("Renamed pairing file from %s to %s", remoteDev.PairingFile, newPairingFileName)
-				remoteDev.PairingFile = newPairingFileName
+		peerDevicePath := filepath.Join(app.RemotePairingDir(), fmt.Sprintf("%s.json", udid))
+		if utils.Exists(peerDevicePath) {
+			if data, err := os.ReadFile(peerDevicePath); err == nil {
+				if err := utils.FromJSON(data, &remoteDev); err == nil {
+					remoteDev.ID = utils.Md5(remoteDev.RemotePairingUDID)
+				}
 			}
 		}
 

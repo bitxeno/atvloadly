@@ -63,16 +63,5 @@ func LockdownDir() string {
 }
 
 func RemotePairingDir() string {
-	switch runtime.GOOS {
-	case "darwin":
-		homeDir, _ := os.UserHomeDir()
-		return filepath.Join(homeDir, "/.config/atvloadly/RPPairing")
-	case "windows":
-		if programData := os.Getenv("ProgramData"); programData != "" {
-			return filepath.Join(programData, "Apple", "RPPairing")
-		}
-		return `C:\ProgramData\Apple\RPPairing`
-	default:
-		return filepath.Join(Config.Server.DataDir, "RPPairing")
-	}
+	return filepath.Join(SideloadDataDir(), "pairing_files")
 }

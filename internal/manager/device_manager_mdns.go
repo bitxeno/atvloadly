@@ -103,30 +103,47 @@ func (dm *DeviceManager) handleMDNSEvent(e zeroconf.Event) {
 				UDID:        udid,
 				Connection:  model.LockdownConnection,
 				Status:      model.Paired,
+				DiscoveryAt: time.Now(),
 			})
 		}
 	case mdnsServiceRemotePairing:
 		// WARN:
-		// when CheckDevicePaired close the rsd handshake, it may trigger mdns event again
+		// when open remote pairing port and close the rsd handshake, it may trigger mdns event again
 		// so we need to check if the device has been checked before to avoid continuous sending mdns event
-		if dm.HasCheckedDevice(ip, e.Port, host) {
+		identifier := dm.parseTextRecordIndentifier(e.Text)
+		if identifier == "" {
+			log.Warnf("Remote pairing service missing identifier: name=%s ip=%s", serviceName, ip)
 			return
 		}
-		// serviceName will change every mdns event, so we can't use serviceName to ignore duplicate
-		if v, err := dm.CheckDevicePaired(ip, e.Port); err == nil && v != nil {
+
+		authTag := dm.parseTextRecordAuthTag(e.Text)
+		if authTag == "" {
+			log.Warnf("Remote pairing service missing auth tag: name=%s ip=%s", serviceName, ip)
+			return
+		}
+
+		name := host
+		if v, err := dm.CheckDevicePaired(identifier, authTag); err == nil && v != nil {
+			if v.Name != "" {
+				name = v.Name
+			}
 			device := model.Device{
-				ID:          v.Id,
-				Name:        host,
+				ID:          v.ID,
+				Name:        name,
 				ServiceName: serviceName,
 				MacAddr:     "",
 				IP:          ip,
 				Port:        e.Port,
-				UDID:        v.UniqueDeviceID,
+				UDID:        v.RemotePairingUDID,
 				Connection:  model.RemoteConnection,
 				Status:      model.Paired,
-				PairingFile: v.PairingFile,
+				DiscoveryAt: time.Now(),
 			}
-			device.ParseDeviceClass()
+			if v.GetDeviceClass() != "" {
+				device.DeviceClass = v.GetDeviceClass()
+			} else {
+				device.ParseDeviceClass()
+			}
 			dm.SaveDevice(device)
 
 			// Trigger device connection callback
@@ -156,6 +173,7 @@ func (dm *DeviceManager) handleMDNSEvent(e zeroconf.Event) {
 			UDID:        identifier,
 			Connection:  model.RemoteConnection,
 			Status:      model.Pairable,
+			DiscoveryAt: time.Now(),
 		}
 		device.ParseDeviceClass()
 		dm.SaveDevice(device)
@@ -350,7 +368,7 @@ func firstAddrString(addrs []netip.Addr) (string, bool) {
 	}
 	// If no IPv4 address is found, return the first valid address
 	for _, addr := range addrs {
-		if addr.IsValid() && !addr.IsUnspecified() {
+		if addr.IsValid() && !addr.IsUnspecified() && !addr.IsLinkLocalUnicast() && !addr.IsLinkLocalMulticast() {
 			return addr.String(), true
 		}
 	}
@@ -544,6 +562,14 @@ func (dm *DeviceManager) parseTextRecordIndentifier(txt []string) string {
 	result := dm.parseTextRecord(txt)
 	if id, ok := result["identifier"]; ok {
 		return id
+	}
+	return ""
+}
+
+func (dm *DeviceManager) parseTextRecordAuthTag(txt []string) string {
+	result := dm.parseTextRecord(txt)
+	if authTag, ok := result["authTag"]; ok {
+		return authTag
 	}
 	return ""
 }

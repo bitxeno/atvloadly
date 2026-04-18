@@ -34,8 +34,10 @@ func GetDevices() ([]model.Device, error) {
 func GetDeviceDetail(id string) (*model.Device, bool) {
 	device, found := deviceManager.GetDeviceByID(id)
 	if found {
-		if devInfo, err := deviceManager.GetDeviceInfo(device); err == nil {
-			deviceManager.AppendProductInfo(device, *devInfo)
+		if device.Connection == model.LockdownConnection {
+			if devInfo, err := deviceManager.GetDeviceInfo(device); err == nil {
+				deviceManager.AppendProductInfo(device, *devInfo)
+			}
 		}
 	}
 	return device, found
@@ -47,17 +49,6 @@ func GetDeviceByID(id string) (*model.Device, bool) {
 
 func GetDeviceByUDID(udid string) (*model.Device, bool) {
 	return deviceManager.GetDeviceByUDID(udid)
-}
-
-func GetDeviceInfo(udid string) (*model.DeviceInfo, error) {
-	device, found := deviceManager.GetDeviceByUDID(udid)
-	if found {
-		if devInfo, err := deviceManager.GetDeviceInfo(device); err == nil {
-			deviceManager.AppendProductInfo(device, *devInfo)
-			return devInfo, nil
-		}
-	}
-	return nil, errors.New("device not found")
 }
 
 func ReloadDevices() {

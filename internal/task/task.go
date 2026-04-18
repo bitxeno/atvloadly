@@ -396,7 +396,6 @@ func (t *Task) runInternal(v model.InstalledApp, installMgr *manager.InstallMana
 		Account:          v.Account,
 		IP:               dev.IP,
 		Port:             dev.Port,
-		PairingFile:      dev.PairingFile,
 		IpaPath:          v.IpaPath,
 		RemoveExtensions: v.RemoveExtensions,
 		RefreshMode:      true,
@@ -464,6 +463,9 @@ func (t *Task) refreshDeviceApps(device model.Device) error {
 		// The iPhone may connect and disconnect instantly (for example, briefly lighting up the screen when receiving a message).
 		// Check to ensure the device can connect truly.
 		time.Sleep(30 * time.Second)
+		if _, found := manager.GetDeviceByUDID(udid); !found {
+			return
+		}
 		if err := manager.CheckAfcServiceStatus(udid); err != nil {
 			log.Err(err).Msgf("Check AFC service status failed, skip refresh device: %s.", udid)
 			return

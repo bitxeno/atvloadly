@@ -113,7 +113,7 @@ func (dm *DeviceManager) Start() {
 				log.Err(err).Msg("loadLockdownDevices error: ")
 				continue
 			}
-			log.Debugf("lockdown devices count >> %v", len(lockdownDevices))
+			log.Tracef("lockdown devices count >> %v", len(lockdownDevices))
 
 			// 添加已连接设备，TODO：handshake检测是否可真实连接
 			if lockdownDev, ok := lockdownDevices[macAddr]; ok {
@@ -128,6 +128,7 @@ func (dm *DeviceManager) Start() {
 					UDID:        udid,
 					Connection:  model.LockdownConnection,
 					Status:      model.Paired,
+					DiscoveryAt: time.Now(),
 				}
 				device.ParseDeviceClass()
 
@@ -152,28 +153,40 @@ func (dm *DeviceManager) Start() {
 
 			name := dm.parseName(service.Host)
 
-			// WARN:
-			// when CheckDevicePaired close the rsd handshake, it may trigger mdns event again
-			// so we need to check if the device has been checked before to avoid continuous sending mdns event
-			if dm.HasCheckedDevice(service.Address, service.Port, name) {
-				continue
+			identifier := dm.parseTextRecordIndentifier(service.Txt)
+			if identifier == "" {
+				log.Warnf("Remote pairing service missing identifier: name=%s ip=%s", service.Name, service.Address)
+				return
 			}
 
-			if v, err := dm.CheckDevicePaired(service.Address, service.Port); err == nil && v != nil {
+			authTag := dm.parseTextRecordAuthTag(service.Txt)
+			if authTag == "" {
+				log.Warnf("Remote pairing service missing auth tag: name=%s ip=%s", service.Name, service.Address)
+				return
+			}
+
+			if v, err := dm.CheckDevicePaired(identifier, authTag); err == nil && v != nil {
+				if v.Name != "" {
+					name = v.Name
+				}
 				device := model.Device{
-					ID:          v.Id,
+					ID:          v.ID,
 					Name:        name,
 					ServiceName: service.Name,
 					MacAddr:     "",
 					IP:          service.Address,
 					Port:        service.Port,
-					UDID:        v.UniqueDeviceID,
+					UDID:        v.RemotePairingUDID,
 					Connection:  model.RemoteConnection,
 					Status:      model.Paired,
-					PairingFile: v.PairingFile,
+					DiscoveryAt: time.Now(),
 				}
 
-				device.ParseDeviceClass()
+				if v.GetDeviceClass() != "" {
+					device.DeviceClass = v.GetDeviceClass()
+				} else {
+					device.ParseDeviceClass()
+				}
 
 				// remove old lockdown connection device, avoid duplicate devices with both lockdown and remote connection
 				dm.removeLockdownDevice(device.UDID)
@@ -219,6 +232,7 @@ func (dm *DeviceManager) Start() {
 				UDID:        identifier,
 				Connection:  model.RemoteConnection,
 				Status:      model.Pairable,
+				DiscoveryAt: time.Now(),
 			}
 			device.ParseDeviceClass()
 			dm.SaveDevice(device)
@@ -387,6 +401,14 @@ func (dm *DeviceManager) parseTextRecordName(txt [][]byte) string {
 func (dm *DeviceManager) parseTextRecordIndentifier(txt [][]byte) string {
 	result := dm.parseTextRecord(txt)
 	if id, ok := result["identifier"]; ok {
+		return id
+	}
+	return ""
+}
+
+func (dm *DeviceManager) parseTextRecordAuthTag(txt [][]byte) string {
+	result := dm.parseTextRecord(txt)
+	if id, ok := result["authTag"]; ok {
 		return id
 	}
 	return ""
