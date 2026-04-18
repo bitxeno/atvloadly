@@ -209,12 +209,15 @@ export default {
       _this.startUpdateLog();
       _this.log.output += "checking device status...\n";
       try {
-        _this.log.output += `product type: ${_this.device.product_type}\n`;
-        _this.log.output += `product version: ${_this.device.product_version}\n`;
-        _this.log.output += `developer mode: ${_this.device.developer_mode_status ? "enabled" : "disabled"}\n`;
-        _this.log.output += `personalized image: ${_this.device.personalized_image_mounted ? "mounted" : "not mounted"}\n`;
+        _this.log.output += `connection mode: ${_this.device.connection}\n`;
+        if (_this.device.connection === "Lockdown") {
+          _this.log.output += `product type: ${_this.device.product_type}\n`;
+          _this.log.output += `product version: ${_this.device.product_version}\n`;
+          _this.log.output += `developer mode: ${_this.device.developer_mode_status ? "enabled" : "disabled"}\n`;
+          _this.log.output += `personalized image: ${_this.device.personalized_image_mounted ? "mounted" : "not mounted"}\n`;
 
-        await _this.checkAfcService(_this.id);
+          await _this.checkAfcService(_this.id);
+        }
 
         let formData = new FormData();
         for (let i = 0; i < _this.files.length; i++) {
