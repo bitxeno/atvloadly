@@ -156,13 +156,13 @@ func (dm *DeviceManager) Start() {
 			identifier := dm.parseTextRecordIndentifier(service.Txt)
 			if identifier == "" {
 				log.Warnf("Remote pairing service missing identifier: name=%s ip=%s", service.Name, service.Address)
-				return
+				continue
 			}
 
 			authTag := dm.parseTextRecordAuthTag(service.Txt)
 			if authTag == "" {
 				log.Warnf("Remote pairing service missing auth tag: name=%s ip=%s", service.Name, service.Address)
-				return
+				continue
 			}
 
 			if v, err := dm.CheckDevicePaired(identifier, authTag); err == nil && v != nil {
