@@ -101,8 +101,7 @@ func (t *InstallManager) Start(ctx context.Context, opts InstallOptions) error {
 
 	args := []string{"sign", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--udid", opts.UDID, "-u", opts.Account, "-p", opts.IpaPath}
 	if opts.IP != "" && opts.Port != 0 && opts.UDID != "" {
-		pairingFile := filepath.Join(app.RemotePairingDir(), fmt.Sprintf("%s.plist", opts.UDID))
-		args = []string{"sign-rsd", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--ip", opts.IP, "--port", fmt.Sprintf("%d", opts.Port), "--pairing-file", pairingFile, "-u", opts.Account, "-p", opts.IpaPath}
+		args = []string{"sign-rsd", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--ip", opts.IP, "--port", fmt.Sprintf("%d", opts.Port), "--udid", opts.UDID, "-u", opts.Account, "-p", opts.IpaPath}
 	}
 	if opts.RemoveExtensions {
 		args = append(args, "--remove-extensions")

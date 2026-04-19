@@ -126,7 +126,7 @@ func (dm *DeviceManager) Start() {
 					MacAddr:     macAddr,
 					IP:          service.Address,
 					UDID:        udid,
-					Connection:  model.LockdownConnection,
+					Connection:  model.DeviceConnectionLockdown,
 					Status:      model.Paired,
 					DiscoveryAt: time.Now(),
 				}
@@ -177,7 +177,7 @@ func (dm *DeviceManager) Start() {
 					IP:          service.Address,
 					Port:        service.Port,
 					UDID:        v.RemotePairingUDID,
-					Connection:  model.RemoteConnection,
+					Connection:  model.DeviceConnectionRemote,
 					Status:      model.Paired,
 					DiscoveryAt: time.Now(),
 				}
@@ -200,7 +200,7 @@ func (dm *DeviceManager) Start() {
 		case service = <-sbRemotePairing.RemoveChannel:
 			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[-]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
 			// serviceName will change every mdns event, so we can't use serviceName to ignore duplicate
-			dm.DeleteDeviceByServiceName(service.Name, model.RemoteConnection)
+			dm.DeleteDeviceByServiceName(service.Name, model.DeviceConnectionRemote)
 		case service = <-sbRemoteManualPairing.AddChannel:
 			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[+]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
 
@@ -230,7 +230,7 @@ func (dm *DeviceManager) Start() {
 				IP:          service.Address,
 				Port:        service.Port,
 				UDID:        identifier,
-				Connection:  model.RemoteConnection,
+				Connection:  model.DeviceConnectionRemote,
 				Status:      model.Pairable,
 				DiscoveryAt: time.Now(),
 			}
@@ -239,7 +239,7 @@ func (dm *DeviceManager) Start() {
 
 		case service = <-sbRemoteManualPairing.RemoveChannel:
 			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[-]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
-			dm.DeleteDeviceByServiceName(service.Name, model.RemoteConnection)
+			dm.DeleteDeviceByServiceName(service.Name, model.DeviceConnectionRemote)
 		}
 	}
 }

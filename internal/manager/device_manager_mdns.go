@@ -101,7 +101,7 @@ func (dm *DeviceManager) handleMDNSEvent(e zeroconf.Event) {
 				MacAddr:     macAddr,
 				IP:          ip,
 				UDID:        udid,
-				Connection:  model.LockdownConnection,
+				Connection:  model.DeviceConnectionLockdown,
 				Status:      model.Paired,
 				DiscoveryAt: time.Now(),
 			})
@@ -135,7 +135,7 @@ func (dm *DeviceManager) handleMDNSEvent(e zeroconf.Event) {
 				IP:          ip,
 				Port:        e.Port,
 				UDID:        v.RemotePairingUDID,
-				Connection:  model.RemoteConnection,
+				Connection:  model.DeviceConnectionRemote,
 				Status:      model.Paired,
 				DiscoveryAt: time.Now(),
 			}
@@ -171,7 +171,7 @@ func (dm *DeviceManager) handleMDNSEvent(e zeroconf.Event) {
 			IP:          ip,
 			Port:        e.Port,
 			UDID:        identifier,
-			Connection:  model.RemoteConnection,
+			Connection:  model.DeviceConnectionRemote,
 			Status:      model.Pairable,
 			DiscoveryAt: time.Now(),
 		}
@@ -186,9 +186,9 @@ func (dm *DeviceManager) handleMDNSGoodbye(serviceType string, serviceName strin
 		macAddr := strings.Split(serviceName, "@")[0]
 		dm.DeleteDeviceByMacAddr(macAddr)
 	case mdnsServiceRemotePairing:
-		dm.DeleteDeviceByServiceName(serviceName, model.RemoteConnection)
+		dm.DeleteDeviceByServiceName(serviceName, model.DeviceConnectionRemote)
 	case mdnsServiceRemoteManualPairing:
-		dm.DeleteDeviceByServiceName(serviceName, model.RemoteConnection)
+		dm.DeleteDeviceByServiceName(serviceName, model.DeviceConnectionRemote)
 	}
 }
 

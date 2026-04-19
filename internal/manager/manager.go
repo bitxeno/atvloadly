@@ -34,7 +34,7 @@ func GetDevices() ([]model.Device, error) {
 func GetDeviceDetail(id string) (*model.Device, bool) {
 	device, found := deviceManager.GetDeviceByID(id)
 	if found {
-		if device.Connection == model.LockdownConnection {
+		if device.Connection == model.DeviceConnectionLockdown {
 			if devInfo, err := deviceManager.GetDeviceInfo(device); err == nil {
 				deviceManager.AppendProductInfo(device, *devInfo)
 			}
