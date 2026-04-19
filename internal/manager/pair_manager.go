@@ -2,13 +2,9 @@ package manager
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
-	"regexp"
-	"runtime"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
@@ -129,30 +125,10 @@ func (w *pairOutputWriter) String() string {
 }
 
 func ImportPairingFile(ip string, port string, data []byte, override bool) error {
-	// Check if the current system is macOS, if so, importing is not supported
-	if runtime.GOOS == "darwin" {
-		return errors.New("importing pairing file is not supported on macOS")
-	}
-
-	udid, err := checkPairingFile(ip, port, data)
-	if err != nil {
-		return fmt.Errorf("pairing file validation failed: %w", err)
-	}
-
-	savePairingFile := filepath.Join(app.RemotePairingDir(), fmt.Sprintf("%s.plist", udid))
-	if err := os.WriteFile(savePairingFile, data, 0600); err != nil {
-		return fmt.Errorf("failed to save pairing file: %w", err)
-	}
-
-	log.Infof("Pairing file imported successfully: %s", udid)
-	return nil
-}
-
-func checkPairingFile(ip string, port string, data []byte) (string, error) {
 	// Create a temporary file
 	tmpFile, err := os.CreateTemp("", "pairing-*.plist")
 	if err != nil {
-		return "", fmt.Errorf("failed to create temp file: %w", err)
+		return fmt.Errorf("failed to create temp file: %w", err)
 	}
 	tmpFilePath := tmpFile.Name()
 
@@ -166,29 +142,22 @@ func checkPairingFile(ip string, port string, data []byte) (string, error) {
 	// Write data to the temporary file
 	if _, err := tmpFile.Write(data); err != nil {
 		if closeErr := tmpFile.Close(); closeErr != nil {
-			return "", fmt.Errorf("failed to close temp file after write error: %v", closeErr)
+			return fmt.Errorf("failed to close temp file after write error: %v", closeErr)
 		}
-		return "", fmt.Errorf("failed to write temp file: %w", err)
+		return fmt.Errorf("failed to write temp file: %w", err)
 	}
 	if err := tmpFile.Close(); err != nil {
-		return "", fmt.Errorf("failed to close temp file: %w", err)
+		return fmt.Errorf("failed to close temp file: %w", err)
 	}
 
 	// Execute the check command
-	output, err := exec.NewCommand("plumesign", "check", "pairing", "--ip", ip, "--port", port, "-f", tmpFilePath).
+	_, err = exec.NewCommand("plumesign", "check", "pairing", "--ip", ip, "--port", port, "-f", tmpFilePath).
 		WithDir(app.Config.Server.DataDir).
 		WithEnv(GetRunEnvs()).
 		CombinedOutput()
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	// Parse UDID
-	re := regexp.MustCompile("UniqueDeviceID: `([^`]+)`")
-	matches := re.FindStringSubmatch(string(output))
-	if len(matches) >= 2 {
-		return matches[1], nil
-	}
-
-	return "", errors.New("UDID not found in output")
+	return nil
 }
