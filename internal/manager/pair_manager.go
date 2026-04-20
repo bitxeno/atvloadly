@@ -124,7 +124,7 @@ func (w *pairOutputWriter) String() string {
 	return string(w.data)
 }
 
-func ImportPairingFile(ip string, port string, data []byte, override bool) error {
+func ImportPairingFile(ip string, port string, data []byte) error {
 	// Create a temporary file
 	tmpFile, err := os.CreateTemp("", "pairing-*.plist")
 	if err != nil {
