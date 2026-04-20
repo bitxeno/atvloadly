@@ -93,6 +93,7 @@ func (dm *DeviceManager) handleMDNSEvent(e zeroconf.Event) {
 		}
 
 		if lockdownDev, ok := lockdownDevices[macAddr]; ok {
+			log.Debugf("add lockdown device >> %v", lockdownDev)
 			udid := lockdownDev.Name
 			dm.devices.Store(udid, model.Device{
 				ID:          utils.Md5(udid),
@@ -124,6 +125,7 @@ func (dm *DeviceManager) handleMDNSEvent(e zeroconf.Event) {
 
 		name := host
 		if v, err := dm.CheckDevicePaired(identifier, authTag); err == nil && v != nil {
+			log.Debugf("add rppairing device >> %v", v)
 			if v.Name != "" {
 				name = v.Name
 			}

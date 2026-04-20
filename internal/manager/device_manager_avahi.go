@@ -166,6 +166,7 @@ func (dm *DeviceManager) Start() {
 			}
 
 			if v, err := dm.CheckDevicePaired(identifier, authTag); err == nil && v != nil {
+				log.Debugf("add rppairing device >> %v", v)
 				if v.Name != "" {
 					name = v.Name
 				}
