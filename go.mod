@@ -14,6 +14,7 @@ require (
 	github.com/godbus/dbus/v5 v5.0.4
 	github.com/gofiber/contrib/websocket v1.0.0
 	github.com/gofiber/fiber/v2 v2.52.5
+	github.com/google/uuid v1.6.0
 	github.com/gookit/event v1.1.2
 	github.com/holoplot/go-avahi v1.0.1
 	github.com/iineva/CgbiPngFix v0.0.0-20210523041253-b8869b346914
@@ -53,7 +54,6 @@ require (
 	github.com/go-redis/redis/v8 v8.11.6-0.20220405070650-99c79f7041fc // indirect
 	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible // indirect
 	github.com/google/jsonschema-go v0.4.2 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/iamacarpet/go-winpty v1.0.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
@@ -91,4 +91,4 @@ require (
 	modernc.org/sqlite v1.23.1 // indirect
 )
 
-replace github.com/iineva/bom v0.0.0-20210605043415-7d45ba1bcca3 => github.com/bitxeno/bom v0.0.0-20230705034132-b3d31612b8ac
+replace github.com/iineva/bom v0.0.0-20210605043415-7d45ba1bcca3 => github.com/bitxeno/bom v0.0.0-20260423071057-bad20f64cd73

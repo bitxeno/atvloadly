@@ -373,22 +373,13 @@ func route(fi *fiber.App) {
 			return c.Status(http.StatusOK).JSON(apiError("Failed to read file content"))
 		}
 
-		override := c.FormValue("override") == "true"
 		ip := c.FormValue("ip")
 		port := c.FormValue("port")
 
 		// Call manager to process the file
-		if err := manager.ImportPairingFile(ip, port, data, override); err != nil {
+		if err := service.ImportPairingFile(ip, port, data); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
-
-		// Restart usbmuxd service to apply changes
-		_ = manager.Usbmuxd().Restart()
-
-		time.Sleep(time.Second)
-
-		// force reload devices
-		manager.StartDeviceManager()
 
 		return c.Status(http.StatusOK).JSON(apiSuccess("success"))
 	})

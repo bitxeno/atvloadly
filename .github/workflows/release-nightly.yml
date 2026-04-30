@@ -16,7 +16,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     outputs:
-      new_commit_count: ${{steps.commit_check.outputs.new_commit_count}}
+      require_build: ${{steps.commit_check.outputs.require_build}}
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v6
@@ -24,11 +24,22 @@ jobs:
           fetch-depth: 1
       - name: Check for new commits
         id: commit_check
-        run: echo "new_commit_count=$(git log --oneline --since '24 hours ago' | wc -l)" >> $GITHUB_OUTPUT
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "require_build=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            if [ "$(git log --oneline --since '24 hours ago' | wc -l | xargs)" -gt 0 ]; then
+              echo "require_build=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "require_build=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "require_build=false" >> "$GITHUB_OUTPUT"
+          fi
 
   build:
     name: Generate cross-platform builds
-    if: ${{needs.check.outputs.new_commit_count > 0}}
+    if: ${{needs.check.outputs.require_build == 'true'}}
     needs: [check]
     permissions:
       contents: write

@@ -237,3 +237,15 @@ func UpdateCoreADI() error {
 	log.Infof("Update CoreADI success. path: %s", destDir)
 	return nil
 }
+
+func ImportPairingFile(ip string, port string, data []byte) error {
+	// Call manager to process the file
+	if err := manager.ImportPairingFile(ip, port, data); err != nil {
+		return err
+	}
+
+	// force reload devices
+	manager.StartDeviceManager()
+
+	return nil
+}

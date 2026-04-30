@@ -242,16 +242,5 @@ func parseIconAssets(assetFile *zip.File) (image.Image, error) {
 		return nil, err
 	}
 
-	var img image.Image
-	err = a.ImageWalker(func(name string, i image.Image) (end bool) {
-		if strings.Contains(strings.ToLower(name), "icon") {
-			img = i
-			return true
-		}
-		return false
-	})
-	if err != nil {
-		return nil, err
-	}
-	return img, err
+	return a.LargestImage("icon")
 }
