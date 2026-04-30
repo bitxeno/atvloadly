@@ -27,7 +27,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "require_build=true" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event_name }}" = "schedule" ]; }; then
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
             if [ "$(git log --oneline --since '24 hours ago' | wc -l | xargs)" -gt 0 ]; then
               echo "require_build=true" >> "$GITHUB_OUTPUT"
             else
