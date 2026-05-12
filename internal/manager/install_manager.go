@@ -146,8 +146,7 @@ func (t *InstallManager) Start(ctx context.Context, opts InstallOptions) error {
 
 func buildInstallArgs(opts InstallOptions, provisionPath string) []string {
 	if opts.IP != "" && opts.Port != 0 && opts.UDID != "" {
-		pairingFile := filepath.Join(app.RemotePairingDir(), opts.UDID+".plist")
-		return []string{"sign-rsd", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--ip", opts.IP, "--port", fmt.Sprintf("%d", opts.Port), "--pairing-file", pairingFile, "-u", opts.Account, "-p", opts.IpaPath}
+		return []string{"sign-rsd", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--ip", opts.IP, "--port", fmt.Sprintf("%d", opts.Port), "--udid", opts.UDID, "-u", opts.Account, "-p", opts.IpaPath}
 	}
 
 	return []string{"sign", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--udid", opts.UDID, "-u", opts.Account, "-p", opts.IpaPath}
