@@ -398,7 +398,7 @@ func (t *Task) runInternal(v model.InstalledApp, installMgr *manager.InstallMana
 		Port:             dev.Port,
 		IpaPath:          v.IpaPath,
 		RemoveExtensions: v.RemoveExtensions,
-		RefreshMode:      true,
+		RefreshMode:      shouldUseRefreshMode(v),
 	})
 	if err != nil {
 		installMgr.WriteLog(err.Error())
@@ -414,6 +414,10 @@ func (t *Task) runInternal(v model.InstalledApp, installMgr *manager.InstallMana
 	} else {
 		return nil, fmt.Errorf("install failed with unknown error. %s", installMgr.ErrorLog())
 	}
+}
+
+func shouldUseRefreshMode(v model.InstalledApp) bool {
+	return v.ID != 0
 }
 
 func (t *Task) autoRefreshDeviceApps(device model.Device) error {

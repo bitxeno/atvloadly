@@ -83,8 +83,8 @@ func (t *InstallManager) TryStart(ctx context.Context, opts InstallOptions) erro
 func (t *InstallManager) Start(ctx context.Context, opts InstallOptions) error {
 	t.outputStdout.Reset()
 
-	// set execute timeout 30 miniutes
-	timeout := 30 * time.Minute
+	// Large tvOS apps can take longer than 30 minutes to sign and install.
+	timeout := 60 * time.Minute
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	t.cancel = cancel
 
@@ -99,10 +99,7 @@ func (t *InstallManager) Start(ctx context.Context, opts InstallOptions) error {
 		return fmt.Errorf("afc service not available: %w", err)
 	}
 
-	args := []string{"sign", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--udid", opts.UDID, "-u", opts.Account, "-p", opts.IpaPath}
-	if opts.IP != "" && opts.Port != 0 && opts.UDID != "" {
-		args = []string{"sign-rsd", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--ip", opts.IP, "--port", fmt.Sprintf("%d", opts.Port), "--udid", opts.UDID, "-u", opts.Account, "-p", opts.IpaPath}
-	}
+	args := buildInstallArgs(opts, provisionPath)
 	if opts.RemoveExtensions {
 		args = append(args, "--remove-extensions")
 	}
@@ -145,6 +142,14 @@ func (t *InstallManager) Start(ctx context.Context, opts InstallOptions) error {
 	}
 
 	return nil
+}
+
+func buildInstallArgs(opts InstallOptions, provisionPath string) []string {
+	if opts.IP != "" && opts.Port != 0 && opts.UDID != "" {
+		return []string{"sign-rsd", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--ip", opts.IP, "--port", fmt.Sprintf("%d", opts.Port), "--udid", opts.UDID, "-u", opts.Account, "-p", opts.IpaPath}
+	}
+
+	return []string{"sign", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--udid", opts.UDID, "-u", opts.Account, "-p", opts.IpaPath}
 }
 
 func (t *InstallManager) GetMobileProvisionPath() string {
