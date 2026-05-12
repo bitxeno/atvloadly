@@ -60,10 +60,11 @@ github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6r
 github.com/betamos/zeroconf v0.1.8-0.20250208023331-d559d61612b7 h1:346DHdnom9oYdeJiddWOeVcCiFfyVVIwoH1U3Jq9EtA=
 github.com/betamos/zeroconf v0.1.8-0.20250208023331-d559d61612b7/go.mod h1:DJFwPpvRAX5q/rc4vLsr0srQVN/7MockudtrP/55Doo=
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
-github.com/bitxeno/bom v0.0.0-20260423071057-bad20f64cd73 h1:C8RIE0efepmpyR9cBdtbrMxiJvDrtZUAtOrIW4F+iSo=
-github.com/bitxeno/bom v0.0.0-20260423071057-bad20f64cd73/go.mod h1:rmgDVmuKwATfPhtwIVMPHPs9f/Q26Ad2z8hsHCkHSOA=
-github.com/blacktop/lzfse-cgo v1.1.19 h1:1I/1y9/sjyDLomACLrR4f7GFJ1fTaIjhWb1PQrEtKiw=
+github.com/bitxeno/bom v0.0.0-20260510094010-52f38f79659f h1:8FxgKYtiNv3otQhYI0Jyld4Jen5Wzr7NNwGe8spCBdc=
+github.com/bitxeno/bom v0.0.0-20260510094010-52f38f79659f/go.mod h1:rmgDVmuKwATfPhtwIVMPHPs9f/Q26Ad2z8hsHCkHSOA=
 github.com/blacktop/lzfse-cgo v1.1.19/go.mod h1:VoBC8Nle73KZg/4X9NW94jkFrQkNwQ18SMMu5ev8zSA=
+github.com/blacktop/lzfse-cgo v1.1.20 h1:xlfMq7g1aaMCyWr8/hHqsWzvfaF8QaliU1YxDCfMx68=
+github.com/blacktop/lzfse-cgo v1.1.20/go.mod h1:VoBC8Nle73KZg/4X9NW94jkFrQkNwQ18SMMu5ev8zSA=
 github.com/bradfitz/gomemcache v0.0.0-20220106215444-fb4bf637b56d h1:pVrfxiGfwelyab6n21ZBkbkmbevaf+WvMIiR7sr97hw=
 github.com/bradfitz/gomemcache v0.0.0-20220106215444-fb4bf637b56d/go.mod h1:H0wQNHz2YrLsuXOZozoeDmnHXkNCRmMW0gwFWDfEZDA=
 github.com/casbin/casbin/v2 v2.1.2/go.mod h1:YcPU1XXisHhLzuxH9coDNf2FbKpjGlbCg3n9yuLkIJQ=
@@ -285,8 +286,6 @@ github.com/iamacarpet/go-winpty v1.0.2/go.mod h1:/GHKJicG/EVRQIK1IQikMYBakBkhj/3
 github.com/ianlancetaylor/demangle v0.0.0-20200824232613-28f6c0f3b639/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/iineva/CgbiPngFix v0.0.0-20210523041253-b8869b346914 h1:l/3SkoXjUmXjj90Ho9FHksi6OVJDIOGU0Ow2KSZnNjE=
 github.com/iineva/CgbiPngFix v0.0.0-20210523041253-b8869b346914/go.mod h1:caygohjd8B7TXErEL2NYMdJNLO9jIddQIALUKcoszZo=
-github.com/iineva/bom v0.0.0-20210604102127-81d8bcf0765e/go.mod h1:O7ivqgPZeHUc3Dk9ZA+bqH/+7Qr/2lo1pogmk78RaQQ=
-github.com/iineva/go-lzfse v1.1.13-0.20210604101847-2a555776c20a/go.mod h1:yysDM+nYHHoh/0FCrKiXZf1qSvZGJdLySbGZ3dKYOAo=
 github.com/iineva/ipa-server v0.0.0-20210613102156-5a07a87df9a8 h1:30jNE/E83sj3eYwH+aTOnEtVMHuNXQ2WTiW8ri3HvSU=
 github.com/iineva/ipa-server v0.0.0-20210613102156-5a07a87df9a8/go.mod h1:0mF6lD6EOrGHZbpI2mx/EqJJUORFFuZQQSPTnVDhoZQ=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=

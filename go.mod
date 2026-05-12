@@ -18,7 +18,7 @@ require (
 	github.com/gookit/event v1.1.2
 	github.com/holoplot/go-avahi v1.0.1
 	github.com/iineva/CgbiPngFix v0.0.0-20210523041253-b8869b346914
-	github.com/iineva/bom v0.0.0-20210605043415-7d45ba1bcca3
+	github.com/iineva/bom v1.0.0
 	github.com/iineva/ipa-server v0.0.0-20210613102156-5a07a87df9a8
 	github.com/json-iterator/go v1.1.12
 	github.com/knadh/koanf v1.5.0
@@ -41,7 +41,7 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
-	github.com/blacktop/lzfse-cgo v1.1.19 // indirect
+	github.com/blacktop/lzfse-cgo v1.1.20 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20220106215444-fb4bf637b56d // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
@@ -91,4 +91,4 @@ require (
 	modernc.org/sqlite v1.23.1 // indirect
 )
 
-replace github.com/iineva/bom v0.0.0-20210605043415-7d45ba1bcca3 => github.com/bitxeno/bom v0.0.0-20260423071057-bad20f64cd73
+replace github.com/iineva/bom => github.com/bitxeno/bom v0.0.0-20260510094010-52f38f79659f
