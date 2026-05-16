@@ -60,7 +60,7 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
    
    **Docker:**
    ```
-   docker run --privileged -d --name=atvloadly --restart=always -p 5533:80 -v /path/to/mount/dir:/data -v /var/run/dbus:/var/run/dbus -v /var/run/avahi-daemon:/var/run/avahi-daemon bitxeno/atvloadly:latest
+   docker run --security-opt seccomp:unconfined -d --name=atvloadly --restart=always -p 5533:80 -v /path/to/mount/dir:/data -v /var/run/dbus:/var/run/dbus -v /var/run/avahi-daemon:/var/run/avahi-daemon bitxeno/atvloadly:latest
    ```
 
    The `/var/run/dbus` and `/var/run/avahi-daemon` of the host machine need to be shared with the docker container for use.

@@ -4,7 +4,8 @@ services:
     container_name: atvloadly
     hostname: atvloadly
     image: bitxeno/atvloadly:latest
-    privileged: true
+    security_opt:
+      - seccomp:unconfined
     volumes:
       - /etc/atvloadly:/data
       - /var/run/dbus:/var/run/dbus
