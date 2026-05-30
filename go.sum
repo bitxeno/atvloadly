@@ -60,8 +60,8 @@ github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6r
 github.com/betamos/zeroconf v0.1.8-0.20250208023331-d559d61612b7 h1:346DHdnom9oYdeJiddWOeVcCiFfyVVIwoH1U3Jq9EtA=
 github.com/betamos/zeroconf v0.1.8-0.20250208023331-d559d61612b7/go.mod h1:DJFwPpvRAX5q/rc4vLsr0srQVN/7MockudtrP/55Doo=
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
-github.com/bitxeno/bom v0.0.0-20260510094010-52f38f79659f h1:8FxgKYtiNv3otQhYI0Jyld4Jen5Wzr7NNwGe8spCBdc=
-github.com/bitxeno/bom v0.0.0-20260510094010-52f38f79659f/go.mod h1:rmgDVmuKwATfPhtwIVMPHPs9f/Q26Ad2z8hsHCkHSOA=
+github.com/bitxeno/bom v0.0.0-20260530035119-b9344cebb86e h1:aNt7yvrJ6MrAI0oR4j6Co/mMr8k+FtArKslUiDE1kVs=
+github.com/bitxeno/bom v0.0.0-20260530035119-b9344cebb86e/go.mod h1:rmgDVmuKwATfPhtwIVMPHPs9f/Q26Ad2z8hsHCkHSOA=
 github.com/blacktop/lzfse-cgo v1.1.19/go.mod h1:VoBC8Nle73KZg/4X9NW94jkFrQkNwQ18SMMu5ev8zSA=
 github.com/blacktop/lzfse-cgo v1.1.20 h1:xlfMq7g1aaMCyWr8/hHqsWzvfaF8QaliU1YxDCfMx68=
 github.com/blacktop/lzfse-cgo v1.1.20/go.mod h1:VoBC8Nle73KZg/4X9NW94jkFrQkNwQ18SMMu5ev8zSA=

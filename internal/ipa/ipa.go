@@ -242,5 +242,19 @@ func parseIconAssets(assetFile *zip.File) (image.Image, error) {
 		return nil, err
 	}
 
-	return a.LargestImage("icon")
+	if candidates, err := a.ImageCandidates("icon"); err == nil && len(candidates) > 0 {
+		var best *asset.ImageCandidateInfo
+		for i := range candidates {
+			if strings.Contains(candidates[i].Name, "/Content") {
+				continue
+			}
+			if best == nil || candidates[i].Width > best.Width {
+				best = &candidates[i]
+			}
+		}
+		if best != nil {
+			return best.Image, nil
+		}
+	}
+	return nil, errors.New("icon not found")
 }
