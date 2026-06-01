@@ -1,6 +1,6 @@
 module github.com/bitxeno/atvloadly
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/betamos/zeroconf v0.1.8-0.20250208023331-d559d61612b7
@@ -33,7 +33,8 @@ require (
 	github.com/runletapp/go-console v0.0.0-20211204140000-27323a28410a
 	github.com/silenceper/wechat/v2 v2.1.5
 	github.com/urfave/cli/v2 v2.3.0
-	golang.org/x/text v0.26.0
+	golang.org/x/image v0.41.0
+	golang.org/x/text v0.37.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gorm.io/gorm v1.25.7
 	howett.net/plist v1.0.0
@@ -78,12 +79,12 @@ require (
 	github.com/valyala/fasthttp v1.55.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
-	golang.org/x/crypto v0.39.0 // indirect
-	golang.org/x/mod v0.25.0 // indirect
-	golang.org/x/net v0.41.0 // indirect
-	golang.org/x/sync v0.15.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/tools v0.34.0 // indirect
+	golang.org/x/crypto v0.50.0 // indirect
+	golang.org/x/mod v0.35.0 // indirect
+	golang.org/x/net v0.53.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/tools v0.44.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/libc v1.22.5 // indirect
 	modernc.org/mathutil v1.5.0 // indirect

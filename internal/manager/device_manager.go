@@ -166,6 +166,18 @@ func (dm *DeviceManager) SaveDevice(dev model.Device) {
 	dm.devices.Store(dev.ID, dev)
 }
 
+// UpdateDevice stores a copy of the device under both its ID and UDID so the
+// updated fields (e.g. PersonalizedImageMounted) are visible to subsequent
+// GetDeviceByID / GetDeviceByUDID lookups.
+func (dm *DeviceManager) UpdateDevice(dev model.Device) {
+	if dev.ID != "" {
+		dm.devices.Store(dev.ID, dev)
+	}
+	if dev.UDID != "" {
+		dm.devices.Store(dev.UDID, dev)
+	}
+}
+
 func (dm *DeviceManager) DeleteDevice(id string) {
 	dm.devices.Delete(id)
 }

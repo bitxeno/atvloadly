@@ -68,34 +68,54 @@ func checkProcessExists(name string) bool {
 	return false
 }
 
-// TODO: mount personalized disk image for device
+// MountDeveloperDiskImage mounts the personalized developer disk image on
+// the target device. The operation is idempotent within the lifetime of the
+// process — subsequent calls for the same device are no-ops.
 func MountDeveloperDiskImage(ctx context.Context, id string) error {
 	device, ok := manager.GetDeviceByID(id)
 	if !ok {
 		return fmt.Errorf("device not found: %s", id)
 	}
 
-	// Already mounted, return directly.
+	// Already mounted according to cached device info, return directly.
 	if device.PersonalizedImageMounted {
 		return nil
 	}
 
-	// // Download DeveloperDiskImage
-	// dmg, signature, err := downloadDeveloperDiskImage(imageInfo)
-	// if err != nil {
-	// 	log.Err(err).Msg("Download Developer disk image error: ")
-	// 	return err
-	// }
+	if device.Connection != model.DeviceConnectionRemote {
+		return fmt.Errorf("mount is only supported on remote paired (RSD) devices")
+	}
 
-	// // Start executing mounting DeveloperDiskImage
-	// cmd := exec.CommandContext(ctx, "ideviceimagemounter", "-u", device.UDID, "-n", dmg, signature)
-	// data, err := cmd.CombinedOutput()
-	// if err != nil {
-	// 	log.Err(err).Msgf("Run ideviceimagemounter error: %s", string(data))
-	// 	return fmt.Errorf("%s%s", string(data), err.Error())
-	// }
+	mgr := manager.NewScreenshotManager()
+	if _, err := mgr.EnsureMounted(ctx, device); err != nil {
+		return err
+	}
+
+	// Update cached device info so subsequent reads see the mounted state.
+	device.PersonalizedImageMounted = true
+	manager.UpdateDevice(*device)
 
 	return nil
+}
+
+// TakeDeviceScreenshot captures a screenshot of the target device and
+// returns it base64-encoded so it can be embedded directly in JSON.
+func TakeDeviceScreenshot(ctx context.Context, id string) (string, error) {
+	device, ok := manager.GetDeviceByID(id)
+	if !ok {
+		return "", fmt.Errorf("device not found: %s", id)
+	}
+
+	if device.Connection != model.DeviceConnectionRemote {
+		return "", fmt.Errorf("screenshot is only supported on remote paired (RSD) devices")
+	}
+
+	mgr := manager.NewScreenshotManager()
+	jpgBytes, err := mgr.TakeScreenshot(ctx, device)
+	if err != nil {
+		return "", err
+	}
+	return manager.ScreenshotDataBase64(jpgBytes), nil
 }
 
 func CheckAfcService(ctx context.Context, id string) error {

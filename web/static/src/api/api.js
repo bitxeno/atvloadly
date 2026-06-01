@@ -95,6 +95,13 @@ export default {
         });
     });
   },
+  takeDeviceScreenshot: (id) => {
+    return request({
+      url: `/api/devices/${id}/screenshot`,
+      timeout: 300000,
+      method: "post",
+    });
+  },
   checkAfcService: (id) => {
     return new Promise((resolve, reject) => {
       request({

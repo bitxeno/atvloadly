@@ -172,6 +172,25 @@
                 "login": "Login",
                 "add_account": "Add Account"
             }
+        },
+        "screenshot": {
+            "title": "Device Screenshot",
+            "action": "Screenshot",
+            "empty": "No screenshot yet",
+            "status": {
+                "capturing": "Capturing screenshot…",
+                "success": "Screenshot captured",
+                "failed": "Screenshot failed"
+            },
+            "toast": {
+                "device_not_ready": "Device information is not ready, please try again later",
+                "failed": "Screenshot failed"
+            },
+            "button": {
+                "close": "Close",
+                "refresh": "Refresh",
+                "download": "Download"
+            }
         }
     },
     "settings": {

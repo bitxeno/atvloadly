@@ -18,6 +18,15 @@
             <span>{{ device.name }}</span>
             <span>({{ device.ip }})</span>
           </div>
+          <button
+            v-if="canShowScreenshotAction(device)"
+            class="btn btn-sm gap-x-2 px-3"
+            @click="openScreenshotDialog"
+            :disabled="screenshot.loading || !device.id"
+          >
+            <span class="w-4 h-4"><CameraIcon /></span>
+            <span>{{ $t("install.screenshot.action") }}</span>
+          </button>
         </div>
 
         <div class="divider divider-horizontal"></div>
@@ -74,7 +83,7 @@
                 </button>
               </div>
               <label class="label">
-                <span class="label-text-alt stat-title">{{
+                <span class="label-text-alt block whitespace-normal break-words">{{
                   $t("install.form.account.alt")
                 }}</span>
               </label>
@@ -127,6 +136,70 @@
         v-model="log.output"
       ></textarea>
     </div>
+
+    <!-- Screenshot Modal -->
+    <dialog
+      ref="screenshotModal"
+      :class="['modal', { 'modal-open': screenshot.visible }]"
+    >
+      <div class="modal-box max-w-3xl">
+        <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" @click="closeScreenshotDialog">✕</button>
+        <h3 class="font-bold text-lg flex items-center gap-x-2">
+          <span class="w-5 h-5"><CameraIcon /></span>
+          {{ $t("install.screenshot.title") }}
+        </h3>
+
+        <div class="mt-4 flex flex-col gap-y-3">
+          <div
+            class="flex flex-row items-center gap-x-2 text-sm"
+            v-show="screenshot.status"
+          >
+            <span
+              class="loading loading-spinner loading-xs"
+              v-show="screenshot.loading"
+            ></span>
+            <span class="text-base-content/70">{{ screenshot.status }}</span>
+          </div>
+
+          <div
+            class="flex items-center justify-center bg-neutral rounded overflow-hidden mx-auto w-full max-w-[640px] aspect-[16/9]"
+            :class="{ 'p-2': !screenshot.image }"
+          >
+            <img
+              v-if="screenshot.image"
+              :src="screenshot.image"
+              :alt="$t('install.screenshot.title')"
+              class="w-full h-full object-contain"
+            />
+            <span
+              v-else-if="!screenshot.loading"
+              class="text-base-100/70 text-sm"
+            >
+              {{ $t("install.screenshot.empty") }}
+            </span>
+          </div>
+        </div>
+
+        <div class="modal-action">
+          <button
+            class="btn gap-x-2"
+            @click="downloadScreenshot"
+            :disabled="!screenshot.image || screenshot.loading"
+          >
+            <span class="w-4 h-4"><DownloadIcon /></span>
+            <span>{{ $t("install.screenshot.button.download") }}</span>
+          </button>
+          <button
+            class="btn btn-primary gap-x-2"
+            @click="captureScreenshot"
+            :disabled="screenshot.loading"
+          >
+            <span class="w-4 h-4"><RefreshIcon /></span>
+            <span>{{ $t("install.screenshot.button.refresh") }}</span>
+          </button>
+        </div>
+      </div>
+    </dialog>
   </div>
 </template>
   
@@ -158,8 +231,15 @@ export default {
         output: "",
         show: false,
       },
-      
+
       refreshLogInterval: null,
+
+      screenshot: {
+        visible: false,
+        loading: false,
+        image: "",
+        status: "",
+      },
     };
   },
   created() {
@@ -398,6 +478,77 @@ export default {
       }
       return item.name && (item.name.toLowerCase().includes("iphone") || item.name.toLowerCase().includes("ipad"));
     },
+    isAppleTV(item) {
+      if (item.device_class) {
+        return item.device_class.toLowerCase() === "appletv";
+      }
+      return item.name && item.name.toLowerCase().includes("appletv");
+    },
+    canShowScreenshotAction(item) {
+      return !!item && this.isAppleTV(item) && item.connection === "RPPairing";
+    },
+    openScreenshotDialog() {
+      if (!this.device || !this.device.id) {
+        toast.error(this.$t("install.screenshot.toast.device_not_ready"));
+        return;
+      }
+      this.screenshot.visible = true;
+      this.screenshot.image = "";
+      this.captureScreenshot();
+    },
+    closeScreenshotDialog() {
+      this.screenshot.visible = false;
+    },
+    captureScreenshot() {
+      if (!this.device || !this.device.id) {
+        toast.error(this.$t("install.screenshot.toast.device_not_ready"));
+        return;
+      }
+      this.screenshot.loading = true;
+      this.screenshot.status = this.$t("install.screenshot.status.capturing");
+      api
+        .takeDeviceScreenshot(this.device.id)
+        .then((res) => {
+          const payload = (res && res.data) || {};
+          if (payload.type === "screenshot" && payload.data) {
+            this.screenshot.image = "data:image/jpeg;base64," + payload.data;
+            this.screenshot.status = this.$t("install.screenshot.status.success");
+          } else {
+            this.screenshot.status = this.$t("install.screenshot.status.failed");
+            toast.error(this.$t("install.screenshot.toast.failed"));
+          }
+        })
+        .catch((err) => {
+          this.screenshot.status = this.$t("install.screenshot.status.failed");
+          // request.js already shows a toast on error; we just keep a status line.
+          console.error("screenshot failed", err);
+        })
+        .finally(() => {
+          this.screenshot.loading = false;
+        });
+    },
+    downloadScreenshot() {
+      if (!this.screenshot.image) {
+        return;
+      }
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      const stamp =
+        now.getFullYear() +
+        pad(now.getMonth() + 1) +
+        pad(now.getDate()) +
+        "-" +
+        pad(now.getHours()) +
+        pad(now.getMinutes()) +
+        pad(now.getSeconds());
+      const filename = `screenshot-${stamp}.jpg`;
+      const a = document.createElement("a");
+      a.href = this.screenshot.image;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    },
   },
 };
 </script>
@@ -408,6 +559,9 @@ import IPhoneIcon from "@/assets/icons/iphone.svg";
 import WarningIcon from "@/assets/icons/warning.svg";
 import PersonIcon from "@/assets/icons/person.badge.plus.svg";
 import HelpIcon from "@/assets/icons/help.svg";
+import CameraIcon from "@/assets/icons/camera.svg";
+import RefreshIcon from "@/assets/icons/refresh.svg";
+import DownloadIcon from "@/assets/icons/download.svg";
 </script>
   
   <style scoped>

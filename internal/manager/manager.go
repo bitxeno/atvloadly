@@ -51,6 +51,10 @@ func GetDeviceByUDID(udid string) (*model.Device, bool) {
 	return deviceManager.GetDeviceByUDID(udid)
 }
 
+func UpdateDevice(dev model.Device) {
+	deviceManager.UpdateDevice(dev)
+}
+
 func ReloadDevices() {
 	deviceManager.ReloadDevices()
 }
