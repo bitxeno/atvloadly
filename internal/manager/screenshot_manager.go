@@ -85,8 +85,8 @@ func (m *ScreenshotManager) EnsureMounted(ctx context.Context, dev *model.Device
 		WithEnv(GetRunEnvs()).
 		CombinedOutput()
 	if err != nil {
-		log.Err(err).Msgf("Mount developer disk image failed: %s", string(output))
-		return string(output), fmt.Errorf("mount developer disk image failed: %s%s", err.Error(), string(output))
+		log.Err(err).Msgf("Mount developer disk image failed")
+		return string(output), fmt.Errorf("mount developer disk image failed: %s", err.Error())
 	}
 
 	mountedDevices.Store(dev.ID, struct{}{})
