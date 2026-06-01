@@ -55,8 +55,8 @@ RUN mkdir -p /keep \
     && cd /tmp \
     && wget -O DeveloperDiskImages.zip https://github.com/bitxeno/DeveloperDiskImages/archive/refs/heads/main.zip \
     && unzip DeveloperDiskImages.zip \
-    && mv DeveloperDiskImages-main /keep/DeveloperDiskImages
-    && rm -rf /keep/DeveloperDiskImages/iOS_DDI
+    && mv DeveloperDiskImages-main /keep/DeveloperDiskImages \
+    && rm -rf /keep/DeveloperDiskImages/iOS_DDI \
     && rm -rf /keep/DeveloperDiskImages/.gitignore
 
 # Install tzdata to support timezone updates.
@@ -97,7 +97,6 @@ fi  \n\
 if [ -d "/keep/DeveloperDiskImages" ]; then  \n\
     rm -rf /data/DeveloperDiskImages \n\
     cp -rf /keep/DeveloperDiskImages /data/DeveloperDiskImages \n\
-    rm -rf /keep/DeveloperDiskImages \n\
 fi  \n\
 
 if [ ! -f "/data/config.yaml" ]; then  \n\
