@@ -63,10 +63,6 @@ func (m *ScreenshotManager) EnsureMounted(ctx context.Context, dev *model.Device
 		return "", fmt.Errorf("mount is only supported on remote paired (RSD) devices")
 	}
 
-	if _, ok := mountedDevices.Load(dev.ID); ok {
-		return "", nil
-	}
-
 	imagePath, manifestPath, trustCachePath, err := resolveDeveloperDiskImage(dev)
 	if err != nil {
 		return "", err
@@ -89,7 +85,6 @@ func (m *ScreenshotManager) EnsureMounted(ctx context.Context, dev *model.Device
 		return string(output), fmt.Errorf("mount developer disk image failed: %s", err.Error())
 	}
 
-	mountedDevices.Store(dev.ID, struct{}{})
 	log.Infof("Mounted developer disk image for device %s (%s)", dev.Name, dev.UDID)
 	return string(output), nil
 }
@@ -123,6 +118,9 @@ func (m *ScreenshotManager) TakeScreenshot(ctx context.Context, dev *model.Devic
 	defer func() { _ = os.Remove(outputPath) }()
 	if err != nil {
 		log.Err(err).Msgf("Screenshot failed")
+		if strings.Contains(err.Error(), "missing screenshot data in dvt response") {
+			return nil, fmt.Errorf("screenshot failed: please ensure the device is awake and unlocked")
+		}
 		return nil, fmt.Errorf("screenshot failed: %s", err.Error())
 	}
 

@@ -77,11 +77,6 @@ func MountDeveloperDiskImage(ctx context.Context, id string) error {
 		return fmt.Errorf("device not found: %s", id)
 	}
 
-	// Already mounted according to cached device info, return directly.
-	if device.PersonalizedImageMounted {
-		return nil
-	}
-
 	if device.Connection != model.DeviceConnectionRemote {
 		return fmt.Errorf("mount is only supported on remote paired (RSD) devices")
 	}

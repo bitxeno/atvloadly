@@ -487,17 +487,32 @@ export default {
     canShowScreenshotAction(item) {
       return !!item && this.isAppleTV(item) && item.connection === "RPPairing";
     },
-    openScreenshotDialog() {
+    async openScreenshotDialog() {
       if (!this.device || !this.device.id) {
         toast.error(this.$t("install.screenshot.toast.device_not_ready"));
         return;
       }
       this.screenshot.visible = true;
       this.screenshot.image = "";
-      this.captureScreenshot();
+      if (await this.mountDeviceImageAsync(this.device.id)) {
+        this.captureScreenshot();
+      }
     },
     closeScreenshotDialog() {
       this.screenshot.visible = false;
+    },
+    async mountDeviceImageAsync(deviceId) {
+      try {
+        this.screenshot.loading = true;
+        this.screenshot.status = this.$t("install.screenshot.status.capturing");
+        await api.mountDeviceImageAsync(deviceId);
+        return true;
+      } catch (error) {
+        this.screenshot.status = this.$t("install.screenshot.status.failed");
+        toast.error(error.message || this.$t("install.screenshot.toast.mount_failed"));
+        this.screenshot.loading = false;
+        return false;
+      }
     },
     captureScreenshot() {
       if (!this.device || !this.device.id) {

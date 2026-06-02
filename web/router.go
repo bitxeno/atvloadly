@@ -303,12 +303,6 @@ func route(fi *fiber.App) {
 	api.Post("/devices/:id/screenshot", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 
-		// Mount first; the operation is a no-op when the disk image is
-		// already mounted for this device.
-		if err := service.MountDeveloperDiskImage(c.Context(), id); err != nil {
-			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
-		}
-
 		data, err := service.TakeDeviceScreenshot(c.Context(), id)
 		if err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
