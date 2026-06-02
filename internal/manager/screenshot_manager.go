@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	_ "image/png" // register PNG decoder for image.Decode
@@ -32,11 +31,6 @@ const (
 	jpegMaxHeight = 1080
 	jpegQuality   = 80
 )
-
-// mountedDevices tracks devices for which the personalized developer disk
-// image has already been mounted. The mount operation is expensive so we
-// keep a per-process cache and skip it on subsequent screenshot requests.
-var mountedDevices sync.Map
 
 const defaultDeveloperDiskImageRepoBaseURL = "https://raw.githubusercontent.com/bitxeno/DeveloperDiskImages/main"
 
@@ -181,11 +175,6 @@ func fitWithin(srcW, srcH, maxW, maxH int) (int, int) {
 // ScreenshotDataBase64 returns the base64 encoding of the screenshot bytes.
 func ScreenshotDataBase64(png []byte) string {
 	return base64.StdEncoding.EncodeToString(png)
-}
-
-// ResetMountedState clears the cached mount state. Intended for tests.
-func ResetMountedState() {
-	mountedDevices = sync.Map{}
 }
 
 // resolveDeveloperDiskImage locates the developer disk image files for the device.
