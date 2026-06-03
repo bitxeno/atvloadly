@@ -18,7 +18,7 @@ var (
 type Configuration struct {
 	App struct {
 		DeveloperDiskImage struct {
-			ImageSource string `koanf:"image_source" json:"image_source" default:"https://github.com/haikieu/xcode-developer-disk-image-all-platforms/raw/master/DiskImages/AppleTVOS.platform/DeviceSupport/{0}.zip"`
+			ImageSource string `koanf:"image_source" json:"image_source" default:"https://raw.githubusercontent.com/bitxeno/DeveloperDiskImages/main"`
 			CNProxy     string `koanf:"cn_proxy" json:"cn_proxy" default:"https://mirror.ghproxy.com"`
 		} `koanf:"developer_disk_image" json:"developer_disk_image"`
 	} `koanf:"app" json:"app"`

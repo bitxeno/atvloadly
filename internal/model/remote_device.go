@@ -12,11 +12,11 @@ type RemoteDevice struct {
 
 func (d *RemoteDevice) GetDeviceClass() string {
 	if d.Model != "" {
-		if strings.HasSuffix(d.Model, "AppleTV") {
+		if strings.Contains(d.Model, "AppleTV") {
 			return string(DeviceClassAppleTV)
-		} else if strings.HasSuffix(d.Model, "iPad") {
+		} else if strings.Contains(d.Model, "iPad") {
 			return string(DeviceClassiPad)
-		} else if strings.HasSuffix(d.Model, "iPhone") {
+		} else if strings.Contains(d.Model, "iPhone") {
 			return string(DeviceClassiPhone)
 		} else {
 			return string(DeviceClassAppleTV)

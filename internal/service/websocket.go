@@ -248,3 +248,6 @@ func runPairMessage(mgr *manager.WebsocketManager, pairMgr *manager.PairManager,
 		return
 	}
 }
+
+// HandleScreenshotMessage removed — the screenshot flow now uses the
+// POST /api/devices/:id/screenshot REST endpoint instead of WebSocket.

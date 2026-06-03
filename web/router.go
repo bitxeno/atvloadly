@@ -294,10 +294,23 @@ func route(fi *fiber.App) {
 		id := c.Params("id")
 
 		if err := service.MountDeveloperDiskImage(c.Context(), id); err != nil {
-			return c.Status(http.StatusOK).JSON(apiSuccess(err.Error()))
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		} else {
 			return c.Status(http.StatusOK).JSON(apiSuccess("success"))
 		}
+	})
+
+	api.Post("/devices/:id/screenshot", func(c *fiber.Ctx) error {
+		id := c.Params("id")
+
+		data, err := service.TakeDeviceScreenshot(c.Context(), id)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(map[string]string{
+			"type": "screenshot",
+			"data": data,
+		}))
 	})
 
 	api.Post("/devices/:id/check/afc", func(c *fiber.Ctx) error {

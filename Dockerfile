@@ -34,7 +34,7 @@ RUN case ${TARGETARCH} in \
          "arm64")  PKG_ARCH=aarch64  ;; \
     esac \
     && cd /tmp \
-    && wget https://github.com/bitxeno/PlumeImpactor/releases/download/v2.2.3-patch.3/plumesign-linux-${PKG_ARCH}.tar.gz \
+    && wget https://github.com/bitxeno/PlumeImpactor/releases/download/v2.2.3-patch.4/plumesign-linux-${PKG_ARCH}.tar.gz \
     && tar zxf plumesign-linux-${PKG_ARCH}.tar.gz \
     && mv plumesign-linux-${PKG_ARCH} /usr/bin/plumesign \
     && chmod +x /usr/bin/plumesign
@@ -49,6 +49,15 @@ RUN case ${TARGETARCH} in \
     && wget https://apps.mzstatic.com/content/android-apple-music-apk/applemusic.apk \
     && unzip applemusic.apk lib/${PKG_ARCH}/libstoreservicescore.so lib/${PKG_ARCH}/libCoreADI.so \
     && rm applemusic.apk
+
+# Download DeveloperDiskImages snapshot
+RUN mkdir -p /keep \
+    && cd /tmp \
+    && wget -O DeveloperDiskImages.zip https://github.com/bitxeno/DeveloperDiskImages/archive/refs/heads/main.zip \
+    && unzip DeveloperDiskImages.zip \
+    && mv DeveloperDiskImages-main /keep/DeveloperDiskImages \
+    && rm -rf /keep/DeveloperDiskImages/iOS_DDI \
+    && rm -rf /keep/DeveloperDiskImages/.gitignore
 
 # Install tzdata to support timezone updates.
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install tzdata
@@ -83,6 +92,11 @@ if [ -d "/keep/lib" ]; then  \n\
     rm -rf /data/PlumeImpactor/lib \n\
     cp -rf /keep/lib /data/PlumeImpactor/lib \n\
     rm -rf /keep/lib \n\
+fi  \n\
+
+if [ -d "/keep/DeveloperDiskImages" ]; then  \n\
+    rm -rf /data/DeveloperDiskImages \n\
+    cp -rf /keep/DeveloperDiskImages /data/DeveloperDiskImages \n\
 fi  \n\
 
 if [ ! -f "/data/config.yaml" ]; then  \n\
