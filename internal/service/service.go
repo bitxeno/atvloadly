@@ -86,10 +86,6 @@ func MountDeveloperDiskImage(ctx context.Context, id string) error {
 		return err
 	}
 
-	// Update cached device info so subsequent reads see the mounted state.
-	device.PersonalizedImageMounted = true
-	manager.UpdateDevice(*device)
-
 	return nil
 }
 
