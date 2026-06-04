@@ -52,6 +52,14 @@
                   {{ $t("nav.settings") }}
                 </router-link>
               </li>
+              <li>
+                <button @click="showAboutModal = true">
+                  <span class="inline-flex h-5 w-5 items-center justify-center">
+                    <HelpIcon class="h-5 w-5" />
+                  </span>
+                  {{ $t("nav.about") }}
+                </button>
+              </li>
             </ul>
           </div>
 
@@ -125,6 +133,34 @@
         </div>
       </div>
     </div>
+
+    <div v-if="showAboutModal" class="modal modal-open modal-middle" @click.self="showAboutModal = false">
+      <div class="modal-box relative overflow-hidden border border-base-300 bg-gradient-to-br from-base-100 via-base-100 to-info/10 shadow-2xl">
+        <label @click="showAboutModal = false" class="btn btn-sm btn-circle absolute right-2 top-2">✕</label>
+        <div class="absolute inset-0 pointer-events-none opacity-60">
+          <div class="absolute -top-12 -left-10 h-40 w-40 rounded-full bg-info/20 blur-3xl"></div>
+          <div class="absolute -bottom-10 -right-6 h-36 w-36 rounded-full bg-secondary/20 blur-3xl"></div>
+        </div>
+        <div class="relative flex flex-col items-center text-center gap-5 py-6">
+          <div class="flex h-20 w-20 items-center justify-center rounded-3xl bg-base-100/80 shadow-lg ring-1 ring-base-300 backdrop-blur">
+            <AppIcon class="w-12 h-12" />
+          </div>
+          <div class="space-y-2">
+            <h3 class="font-bold text-3xl tracking-tight">atvloadly</h3>
+          </div>
+          <div class="grid w-full max-w-md grid-cols-2 gap-3 pt-2">
+            <div class="rounded-2xl border border-base-300 bg-base-100/80 px-4 py-3 shadow-sm backdrop-blur">
+              <div class="text-xs uppercase tracking-wide text-base-content/50">Year</div>
+              <div class="mt-1 text-lg font-semibold">{{ currentYear }}</div>
+            </div>
+            <div class="rounded-2xl border border-base-300 bg-base-100/80 px-4 py-3 shadow-sm backdrop-blur">
+              <div class="text-xs uppercase tracking-wide text-base-content/50">Version</div>
+              <div class="mt-1 text-lg font-semibold">v{{ appVersion }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
   
@@ -136,10 +172,16 @@ export default {
     return {
       languages: [],
       showDonateModal: false,
+      showAboutModal: false,
+      currentYear: new Date().getFullYear(),
+      appVersion: "unknown",
     };
   },
   created() {
     api.syncLang({lang: this.$i18next.language})
+    api.getVersion().then((res) => {
+      this.appVersion = res.data?.version || "unknown";
+    });
     let keys = Object.keys(this.$i18next.options.resources);
     for (const key of keys) {
       this.languages.push({
@@ -169,6 +211,7 @@ import AfdianIcon from "@/assets/icons/afdian.svg";
 import KofiIcon from "@/assets/icons/kofi.svg";
 import ToolsIcon from "@/assets/icons/tools.svg";
 import FlaskIcon from "@/assets/icons/flask.svg";
+import HelpIcon from "@/assets/icons/help.svg";
 </script>
 
 <style lang="postcss" scoped>

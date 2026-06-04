@@ -8,6 +8,12 @@ export default {
       params
     });
   },
+  getVersion: () => {
+    return request({
+      url: "/api/version",
+      method: "get",
+    });
+  },
   getDevice: (id) => {
     return request({
       url: `/api/devices/${id}`,
