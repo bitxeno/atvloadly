@@ -150,12 +150,12 @@
           </div>
           <div class="grid w-full max-w-md grid-cols-2 gap-3 pt-2">
             <div class="rounded-2xl border border-base-300 bg-base-100/80 px-4 py-3 shadow-sm backdrop-blur">
-              <div class="text-xs uppercase tracking-wide text-base-content/50">Year</div>
-              <div class="mt-1 text-lg font-semibold">{{ currentYear }}</div>
-            </div>
-            <div class="rounded-2xl border border-base-300 bg-base-100/80 px-4 py-3 shadow-sm backdrop-blur">
               <div class="text-xs uppercase tracking-wide text-base-content/50">Version</div>
               <div class="mt-1 text-lg font-semibold">v{{ appVersion }}</div>
+            </div>
+            <div class="rounded-2xl border border-base-300 bg-base-100/80 px-4 py-3 shadow-sm backdrop-blur">
+              <div class="text-xs uppercase tracking-wide text-base-content/50">Build Date</div>
+              <div class="mt-1 text-lg font-semibold">{{ buildDate }}</div>
             </div>
           </div>
         </div>
@@ -173,14 +173,15 @@ export default {
       languages: [],
       showDonateModal: false,
       showAboutModal: false,
-      currentYear: new Date().getFullYear(),
       appVersion: "unknown",
+      buildDate: "unknown",
     };
   },
   created() {
     api.syncLang({lang: this.$i18next.language})
     api.getVersion().then((res) => {
       this.appVersion = res.data?.version || "unknown";
+      this.buildDate = this.formatBuildDate(res.data?.build_date);
     });
     let keys = Object.keys(this.$i18next.options.resources);
     for (const key of keys) {
@@ -191,6 +192,25 @@ export default {
     }
   },
   methods: {
+    formatBuildDate(buildDate) {
+      if (!buildDate) {
+        return "unknown";
+      }
+
+      const matched = String(buildDate).match(/^(\d{4})[-/](\d{2})/);
+      if (matched) {
+        return `${matched[1]}-${matched[2]}`;
+      }
+
+      const parsed = new Date(buildDate);
+      if (Number.isNaN(parsed.getTime())) {
+        return buildDate;
+      }
+
+      const year = parsed.getFullYear();
+      const month = String(parsed.getMonth() + 1).padStart(2, "0");
+      return `${year}-${month}`;
+    },
     changeLanguage(lang) {
       this.$i18next.changeLanguage(lang);
       api.syncLang({lang: lang})
