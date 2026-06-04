@@ -151,7 +151,7 @@
           <div class="grid w-full max-w-md grid-cols-2 gap-3 pt-2">
             <div class="rounded-2xl border border-base-300 bg-base-100/80 px-4 py-3 shadow-sm backdrop-blur">
               <div class="text-xs uppercase tracking-wide text-base-content/50">Version</div>
-              <div class="mt-1 text-lg font-semibold">v{{ appVersion }}</div>
+              <div class="mt-1 text-lg font-semibold">{{ appVersion }}</div>
             </div>
             <div class="rounded-2xl border border-base-300 bg-base-100/80 px-4 py-3 shadow-sm backdrop-blur">
               <div class="text-xs uppercase tracking-wide text-base-content/50">Build Date</div>
