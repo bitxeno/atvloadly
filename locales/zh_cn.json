@@ -20,7 +20,8 @@
         "preferences": "选项",
         "account": "帐号",
         "devices": "设备",
-        "donate": "赞助"
+        "donate": "赞助",
+        "about": "关于"
     },
     "donate": {
         "title": "赞助",

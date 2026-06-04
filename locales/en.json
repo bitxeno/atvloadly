@@ -20,7 +20,8 @@
         "preferences": "Preferences",
         "account": "Accounts",
         "devices": "Devices",
-        "donate": "Donate"
+        "donate": "Donate",
+        "about": "About"
     },
     "donate": {
         "title": "Donate",

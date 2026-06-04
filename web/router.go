@@ -119,6 +119,9 @@ func route(fi *fiber.App) {
 		}
 		return c.Status(http.StatusOK).JSON(apiSuccess(i18n.Localize("language")))
 	})
+	api.Get("/version", func(c *fiber.Ctx) error {
+		return c.Status(http.StatusOK).JSON(apiSuccess(app.Version))
+	})
 	api.Get("/settings", func(c *fiber.Ctx) error {
 		return c.Status(http.StatusOK).JSON(apiSuccess(app.Settings))
 	})

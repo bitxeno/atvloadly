@@ -3,10 +3,10 @@ package ipa
 import (
 	"archive/zip"
 	"errors"
-	"fmt"
 	"image"
 	"image/png"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -149,7 +149,7 @@ func Parse(readerAt io.ReaderAt, size int64) (*IPA, error) {
 		if img, err := parseIconAssets(assetFile); err == nil {
 			app.icon = img
 		} else {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	}
 
@@ -244,6 +244,8 @@ func parseIconAssets(assetFile *zip.File) (image.Image, error) {
 
 	if candidates, err := a.ImageCandidates("icon"); err == nil && len(candidates) > 0 {
 		var best *asset.ImageCandidateInfo
+
+		// find not layered icon and return
 		for i := range candidates {
 			if strings.Contains(candidates[i].Name, "/Content") {
 				continue
@@ -254,6 +256,13 @@ func parseIconAssets(assetFile *zip.File) (image.Image, error) {
 		}
 		if best != nil {
 			return best.Image, nil
+		}
+
+		// find /Front/Content layered icon and return
+		for i := range candidates {
+			if strings.Contains(candidates[i].Name, "/Front/Content") {
+				return candidates[i].Image, nil
+			}
 		}
 	}
 	return nil, errors.New("icon not found")
