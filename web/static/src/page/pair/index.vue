@@ -31,10 +31,15 @@
         <div v-show="!loading" class="flex flex-col gap-y-4">
           <input
             ref="pinInput"
-            type="number"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            maxlength="6"
+            autocomplete="one-time-code"
             :placeholder="$t('pair.step.pin.placeholder')"
             class="input input-bordered input-primary w-full"
             v-model="pin"
+            @input="onPinInput"
           />
           <button
             class="btn btn-primary"
@@ -111,6 +116,9 @@ export default {
 
       _this.websocketsend(2, _this.pin);
       return;
+    },
+    onPinInput() {
+      this.pin = this.pin.replace(/\D/g, "").slice(0, 6);
     },
     onSubmit() {
       this.$message("submit!");
@@ -208,11 +216,8 @@ export default {
 <script setup>
 import CheckMarkIcon from "@/assets/icons/checkmark.svg";
 </script>
-
-  
-  <style scoped>
+<style scoped>
 .line {
   text-align: center;
 }
 </style>
-  
