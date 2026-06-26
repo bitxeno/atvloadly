@@ -6,6 +6,8 @@ services:
     image: bitxeno/atvloadly:latest
     security_opt:
       - seccomp:unconfined
+    ulimits:
+      core: 0
     volumes:
       - /etc/atvloadly:/data
       - /var/run/dbus:/var/run/dbus

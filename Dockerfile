@@ -77,37 +77,11 @@ RUN rm -rf /var/lib/lockdown && mkdir -p /data/lockdown && ln -s /data/lockdown 
 
 
 
-# Generate startup script
+# Install startup script
 COPY ./doc/scripts/usbmuxd /etc/init.d/usbmuxd
 RUN chmod +x /etc/init.d/usbmuxd
-RUN printf '#!/bin/sh \n\n\
-
-mkdir -p /data/lockdown \n\
-mkdir -p /data/PlumeImpactor \n\
-mkdir -p /data/PlumeImpactor/pairing_files \n\
-mkdir -p $HOME/.config \n\
-[ ! -e "$HOME/.config/PlumeImpactor" ] && ln -s /data/PlumeImpactor $HOME/.config/PlumeImpactor \n\
-
-if [ -d "/keep/lib" ]; then  \n\
-    rm -rf /data/PlumeImpactor/lib \n\
-    cp -rf /keep/lib /data/PlumeImpactor/lib \n\
-    rm -rf /keep/lib \n\
-fi  \n\
-
-if [ -d "/keep/DeveloperDiskImages" ]; then  \n\
-    rm -rf /data/DeveloperDiskImages \n\
-    cp -rf /keep/DeveloperDiskImages /data/DeveloperDiskImages \n\
-fi  \n\
-
-if [ ! -f "/data/config.yaml" ]; then  \n\
-    cp /keep/config.yaml /data/config.yaml \n\
-fi  \n\
-
-/etc/init.d/usbmuxd start \n\
-
-/usr/bin/%s server -p ${SERVICE_PORT:-80} -c /data/config.yaml  \n\
-\n\
-' ${APP_NAME} >> /entrypoint.sh
+COPY ./doc/scripts/entrypoint.sh /entrypoint.sh
+RUN sed -i "s/__APP_NAME__/${APP_NAME}/g" /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
