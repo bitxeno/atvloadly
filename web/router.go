@@ -5,8 +5,11 @@ import (
 	"image/png"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
@@ -454,6 +457,101 @@ func route(fi *fiber.App) {
 		}
 
 		return c.Status(http.StatusOK).JSON(apiSuccess(result))
+	})
+
+	api.Post("/install", func(c *fiber.Ctx) error {
+		account := strings.TrimSpace(c.FormValue("account"))
+		ipaURL := strings.TrimSpace(c.FormValue("url"))
+		deviceID := strings.TrimSpace(c.FormValue("device_id"))
+		removeExt := c.FormValue("remove_extensions") == "true"
+
+		if account == "" {
+			return c.Status(http.StatusOK).JSON(apiError("account is required"))
+		}
+
+		var ipaPath string
+		var ipaName string
+
+		file, err := c.FormFile("file")
+		if err == nil {
+			saveDir := filepath.Join(app.Config.Server.DataDir, "tmp")
+			if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
+				return c.Status(http.StatusOK).JSON(apiError("failed to create directory: " + saveDir))
+			}
+			timestamp := time.Now().UnixMicro()
+			name := service.GetValidName(utils.FileNameWithoutExt(file.Filename))
+			dstName := fmt.Sprintf("%s_%d%s", name, timestamp, filepath.Ext(file.Filename))
+			dst := filepath.Join(saveDir, dstName)
+
+			if err := c.SaveFile(file, dst); err != nil {
+				return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+			}
+			ipaPath = dst
+			ipaName = file.Filename
+		} else if ipaURL != "" {
+			ipaPath = ipaURL
+			if parsed, err := url.Parse(ipaURL); err == nil && parsed.Path != "" {
+				ipaName = path.Base(parsed.Path)
+			}
+		} else {
+			return c.Status(http.StatusOK).JSON(apiError("either file upload or url parameter is required"))
+		}
+
+		manager.ReloadDevices()
+		devices, err := manager.GetDevices()
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		if len(devices) == 0 {
+			return c.Status(http.StatusOK).JSON(apiError("no available devices found"))
+		}
+
+		var selectedDevice model.Device
+		if deviceID != "" {
+			found := false
+			for _, d := range devices {
+				if d.ID == deviceID {
+					selectedDevice = d
+					found = true
+					break
+				}
+			}
+			if !found {
+				return c.Status(http.StatusOK).JSON(apiError("device_id not found: " + deviceID))
+			}
+		} else {
+			atvDevices := []model.Device{}
+			for _, d := range devices {
+				if d.DeviceClass == string(model.DeviceClassAppleTV) {
+					atvDevices = append(atvDevices, d)
+				}
+			}
+			if len(atvDevices) == 0 {
+				return c.Status(http.StatusOK).JSON(apiError("no Apple TV devices found"))
+			}
+			selectedDevice = atvDevices[0]
+		}
+
+		appModel := model.InstalledApp{
+			IpaName:          ipaName,
+			IpaPath:          ipaPath,
+			Device:           selectedDevice.Name,
+			DeviceClass:      selectedDevice.DeviceClass,
+			UDID:             selectedDevice.UDID,
+			Account:          account,
+			Enabled:          true,
+			RemoveExtensions: removeExt,
+		}
+
+		task.StartInstallApps([]model.InstalledApp{appModel}, true)
+
+		return c.Status(http.StatusOK).JSON(apiSuccess(map[string]interface{}{
+			"status":  "installing",
+			"message": "Install task queued",
+			"device":  selectedDevice.Name,
+			"udid":    selectedDevice.UDID,
+			"account": account,
+		}))
 	})
 
 	api.Get("/apps", func(c *fiber.Ctx) error {
