@@ -280,6 +280,7 @@ export default {
       services: [],
       installingApps: [],
       checkInstallingTimer: null,
+      newInstallToastId: null,
       sortKey: "",
       sortOrder: "asc",
     };
@@ -315,6 +316,14 @@ export default {
   },
   unmounted() {
     this.checkInstallingTimer && clearTimeout(this.checkInstallingTimer);
+    if (this.newInstallToastId) {
+      toast.update(this.newInstallToastId, {
+        type: "success",
+        isLoading: false,
+        autoClose: 3000,
+      });
+      this.newInstallToastId = null;
+    }
   },
   methods: {
     fetchData() {
@@ -345,9 +354,26 @@ export default {
         // res.data returns empty, indicating that the installation has been completed.
         if (_this.installingApps && (res.data || []).length == 0) {
           _this.fetchAppList();
+
+          if (_this.newInstallToastId) {
+            toast.remove(_this.newInstallToastId);
+            _this.newInstallToastId = null;
+          }
         }
 
         _this.installingApps = res.data || [];
+
+        // Show persistent toast for new installs triggered via REST API (ID == 0)
+        let newInstall = (_this.installingApps || []).find(a => a.ID == 0);
+        if (newInstall) {
+          if (!_this.newInstallToastId) {
+            _this.newInstallToastId = toast.loading(
+              _this.$t("home.toast.installing_app", { name: newInstall.ipa_name }),
+              { autoClose: false }
+            );
+          }
+        }
+
         if (_this.installingApps && _this.installingApps.length > 0) {
           // Repeat the detection until it is completed.
           _this.checkInstallingAppDelay();

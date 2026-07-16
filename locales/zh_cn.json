@@ -49,7 +49,7 @@
         },
         "toast": {
             "refresh_app_started": "已启动刷新 {{name}}",
-            "installing_app": "安装中..."
+            "installing_app": "{{name}} 安装中..."
         },
         "sidebar": {
             "device_status": {
