@@ -49,7 +49,7 @@
         },
         "toast": {
             "refresh_app_started": "Refresh of {{name}} started",
-            "installing_app": "Installing…"
+            "installing_app": "Installing {{name}}…"
         },
         "sidebar": {
             "device_status": {
