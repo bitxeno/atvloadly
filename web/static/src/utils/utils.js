@@ -47,4 +47,14 @@ export function getStringSimilarity(s1, s2) {
   return (longer.length - editDistance(longer, shorter)) / parseFloat(longer.length);
 }
 
-export default { maskEmail, getStringSimilarity };
+import { parse } from "plist";
+
+export function parseBundleIdFromPlist(data) {
+  const plist = parse(data);
+  if (plist && plist.CFBundleIdentifier) {
+    return plist.CFBundleIdentifier;
+  }
+  return null;
+}
+
+export default { maskEmail, getStringSimilarity, parseBundleIdFromPlist };

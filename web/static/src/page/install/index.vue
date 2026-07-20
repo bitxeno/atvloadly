@@ -206,7 +206,8 @@
   <script>
 import api from "@/api/api";
 import { toast } from "vue3-toastify";
-import { maskEmail, getStringSimilarity } from "@/utils/utils";
+import { parseBundleIdFromPlist } from "@/utils/utils";
+import JSZip from "jszip";
 import Login from "@/components/Login.vue";
 
 export default {
@@ -337,25 +338,35 @@ export default {
     goBack() {
       this.$router.push("/");
     },
-    onFileChange(e) {
+    async onFileChange(e) {
       this.files = e.target.files;
       this.recommendedAccount = "";
       if (this.files.length > 0) {
-        let filename = this.files[0].name.replace(/\.(ipa|tipa)$/i, "");
-        let maxSimilarity = 0;
-        let bestAccount = "";
+        const file = this.files[0];
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const zip = await JSZip.loadAsync(arrayBuffer);
 
-        for (let app of this.installedApps) {
-          let appIpaName = (app.ipa_name || "").replace(/\.(ipa|tipa)$/i, "");
-          let s = getStringSimilarity(filename, appIpaName);
-          if (s > maxSimilarity) {
-            maxSimilarity = s;
-            bestAccount = app.account;
+          const plistEntries = Object.keys(zip.files).filter((name) =>
+            name.match(/^Payload\/[^/]+\.app\/Info\.plist$/)
+          );
+
+          for (const entry of plistEntries) {
+            const plistData = await zip.files[entry].async("arraybuffer");
+            const bundleId = parseBundleIdFromPlist(plistData);
+
+            if (bundleId) {
+              for (let app of this.installedApps) {
+                if (app.bundle_identifier === bundleId) {
+                  this.recommendedAccount = app.account;
+                  break;
+                }
+              }
+              if (this.recommendedAccount) break;
+            }
           }
-        }
-
-        if (maxSimilarity > 0.5) {
-          this.recommendedAccount = bestAccount;
+        } catch (err) {
+          console.error("Failed to read IPA bundle identifier:", err);
         }
       }
     },
