@@ -71,7 +71,7 @@
                     {{ account.email }}
                     {{
                       account.email === recommendedAccount
-                        ? "(" + $t("install.form.account.recommended") + ")"
+                        ? "(" + $t("install.form.account.last_used") + ")"
                         : "(" + account.status + ")"
                     }}
                   </option>
@@ -359,6 +359,7 @@ export default {
               for (let app of this.installedApps) {
                 if (app.bundle_identifier === bundleId) {
                   this.recommendedAccount = app.account;
+                  this.form.account = app.account;
                   break;
                 }
               }
