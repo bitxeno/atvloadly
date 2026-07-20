@@ -50,7 +50,13 @@ export function getStringSimilarity(s1, s2) {
 import { parse } from "plist";
 
 export function parseBundleIdFromPlist(data) {
-  const plist = parse(data);
+  const bytes = new Uint8Array(data);
+  let plist;
+  if (String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5]) === "bplist") {
+    plist = parse(data);
+  } else {
+    plist = parse(new TextDecoder().decode(bytes));
+  }
   if (plist && plist.CFBundleIdentifier) {
     return plist.CFBundleIdentifier;
   }
