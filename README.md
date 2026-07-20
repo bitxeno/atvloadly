@@ -106,6 +106,8 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
 2. Unable to find AppleTV
 
 > Please turn off the VPN, restart the AppleTV, re-enter pairing mode, make sure **[Tool]** can detect devices of the `_remotepairing-manual-pairing._tcp` type, and pair again.
+>
+> Try using `privileged: true` in your docker-compose.yml or `--privileged` in your docker run command instead of `--security-opt seccomp:unconfined`.
 
 3. Failed to log in to Apple account
 
