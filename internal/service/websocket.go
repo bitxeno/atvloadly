@@ -3,8 +3,15 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/bitxeno/atvloadly/internal/app"
+	atvhttp "github.com/bitxeno/atvloadly/internal/http"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/model"
@@ -64,12 +71,38 @@ func HandleInstallMessage(c *websocket.Conn) {
 }
 
 func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.InstallManager, v model.InstalledApp, dev *model.Device) {
+	ipaPath := v.IpaPath
+	if strings.HasPrefix(ipaPath, "http:") || strings.HasPrefix(ipaPath, "https:") {
+		mgr.WriteMessage("Downloading IPA from URL...\n")
+		lastPct := int64(-1)
+		tmpPath, err := downloadIPAFromURL(ipaPath, func(downloaded, total int64) {
+			if total <= 0 {
+				return
+			}
+			pct := downloaded * 100 / total
+			if pct >= lastPct+5 {
+				lastPct = pct - (pct % 5)
+				mgr.WriteMessage(fmt.Sprintf("Download progress: %d%%\n", lastPct))
+			}
+		})
+		if err != nil {
+			msg := fmt.Sprintf("ERROR: failed to download IPA: %s", err.Error())
+			mgr.WriteMessage(msg)
+			mgr.WriteMessage("\n")
+			mgr.WriteMessage("Installation Failed!")
+			return
+		}
+		ipaPath = tmpPath
+		defer os.Remove(tmpPath)
+		mgr.WriteMessage("Download complete!\n")
+	}
+
 	err := installMgr.Start(mgr.Context(), manager.InstallOptions{
 		UDID:             v.UDID,
 		Account:          v.Account,
 		IP:               dev.IP,
 		Port:             dev.Port,
-		IpaPath:          v.IpaPath,
+		IpaPath:          ipaPath,
 		RemoveExtensions: v.RemoveExtensions,
 		RefreshMode:      false,
 	})
@@ -247,6 +280,71 @@ func runPairMessage(mgr *manager.WebsocketManager, pairMgr *manager.PairManager,
 		mgr.WriteMessage(msg)
 		return
 	}
+}
+
+func downloadIPAFromURL(rawURL string, progressFn func(downloaded, total int64)) (string, error) {
+	saveDir := filepath.Join(app.Config.Server.DataDir, "tmp")
+	if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
+		return "", fmt.Errorf("failed to create temporary directory: %w", err)
+	}
+
+	tmpFile, err := os.CreateTemp(saveDir, "install_url_*.ipa")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temporary file: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+
+	req, err := http.NewRequest("GET", rawURL, nil)
+	if err != nil {
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpPath)
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set(atvhttp.HEADER_USER_AGENT, atvhttp.HTTP_USER_AGENT)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpPath)
+		return "", fmt.Errorf("failed to download ipa: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpPath)
+		return "", fmt.Errorf("download failed with status code %d", resp.StatusCode)
+	}
+
+	writer := &progressWriter{
+		dest:       tmpFile,
+		total:      resp.ContentLength,
+		progressFn: progressFn,
+	}
+	if _, err := io.Copy(writer, resp.Body); err != nil {
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpPath)
+		return "", fmt.Errorf("failed to write ipa file: %w", err)
+	}
+	_ = tmpFile.Close()
+
+	return tmpPath, nil
+}
+
+type progressWriter struct {
+	dest       io.WriteCloser
+	total      int64
+	downloaded int64
+	progressFn func(downloaded, total int64)
+}
+
+func (pw *progressWriter) Write(p []byte) (int, error) {
+	n, err := pw.dest.Write(p)
+	pw.downloaded += int64(n)
+	if pw.progressFn != nil {
+		pw.progressFn(pw.downloaded, pw.total)
+	}
+	return n, err
 }
 
 // HandleScreenshotMessage removed — the screenshot flow now uses the

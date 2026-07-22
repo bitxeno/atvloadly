@@ -145,6 +145,9 @@
             "choose_ipa": {
                 "label": "选择ipa:"
             },
+            "ipa_url": {
+                "label": "IPA链接:"
+            },
             "account": {
                 "label": "Apple帐号:",
                 "select": {

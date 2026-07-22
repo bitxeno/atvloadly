@@ -31,21 +31,37 @@
 
         <div class="divider divider-horizontal"></div>
 
-        <div class="p-6 flex flex-col gap-y-4">
+        <div class="p-6 flex flex-col gap-y-4 w-full max-w-lg">
           <form id="form" class="flex flex-col gap-y-4">
             <div class="form-control w-full">
               <label class="label">
-                <span class="label-text">{{
-                  $t("install.form.choose_ipa.label")
-                }}</span>
+                <span class="label-text">
+                  <template v-if="installMode === 'file'">{{ $t("install.form.choose_ipa.label") }}</template>
+                  <template v-else>{{ $t("install.form.ipa_url.label") }}</template>
+                </span>
               </label>
-              <input
-                type="file"
-                class="file-input file-input-bordered w-full"
-                @change="onFileChange"
-                accept=".ipa,.tipa"
-                required
-              />
+              <div class="join flex w-full">
+                <input
+                  v-if="installMode === 'file'"
+                  type="file"
+                  class="file-input file-input-bordered join-item flex-1 min-w-0"
+                  @change="onFileChange"
+                  accept=".ipa,.tipa"
+                  :required="installMode === 'file'"
+                />
+                <input
+                  v-else
+                  type="url"
+                  class="input input-bordered join-item flex-1 min-w-0"
+                  v-model="ipaUrl"
+                  placeholder="https://example.com/app.ipa"
+                  :required="installMode === 'link'"
+                />
+                <button class="btn join-item w-16" @click.prevent="toggleInstallMode">
+                  <span class="w-6 h-6" v-if="installMode === 'file'"><LinkIcon /></span>
+                  <span class="w-6 h-6" v-else><FolderOpenIcon /></span>
+                </button>
+              </div>
             </div>
 
             <div class="form-control w-full">
@@ -215,6 +231,8 @@ export default {
   data() {
     return {
       id: "",
+      installMode: "file",
+      ipaUrl: "",
       files: [],
       ipa: {},
       device: {},
@@ -300,14 +318,26 @@ export default {
           await _this.checkAfcService(_this.id);
         }
 
-        let formData = new FormData();
-        for (let i = 0; i < _this.files.length; i++) {
-          let file = _this.files[i];
-          formData.append("files", file);
+        let ipa;
+        if (_this.installMode === "file") {
+          let formData = new FormData();
+          for (let i = 0; i < _this.files.length; i++) {
+            let file = _this.files[i];
+            formData.append("files", file);
+          }
+          _this.log.output += "IPA uploading...\n";
+          let data = await api.upload(formData)
+          ipa = data[0];
+        } else {
+          _this.log.output += "IPA URL: " + _this.ipaUrl + "\n";
+          ipa = {
+            name: _this.ipaUrl.split('/').pop() || 'remote.ipa',
+            path: _this.ipaUrl,
+            icon: '',
+            bundle_identifier: '',
+            version: '',
+          };
         }
-        _this.log.output += "IPA uploading...\n";
-        let data = await api.upload(formData)
-        let ipa = data[0];
         _this.ipa = ipa;
         // send start install msg
         _this.websocketsend(1, {
@@ -337,6 +367,11 @@ export default {
     },
     goBack() {
       this.$router.push("/");
+    },
+    toggleInstallMode() {
+      this.installMode = this.installMode === "file" ? "link" : "file";
+      this.files = [];
+      this.ipaUrl = "";
     },
     async onFileChange(e) {
       this.files = e.target.files;
@@ -589,6 +624,8 @@ import HelpIcon from "@/assets/icons/help.svg";
 import CameraIcon from "@/assets/icons/camera.svg";
 import RefreshIcon from "@/assets/icons/refresh.svg";
 import DownloadIcon from "@/assets/icons/download.svg";
+import FolderOpenIcon from "@/assets/icons/folder-open.svg";
+import LinkIcon from "@/assets/icons/link.svg";
 </script>
   
   <style scoped>
