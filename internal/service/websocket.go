@@ -93,7 +93,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 			return
 		}
 		ipaPath = tmpPath
-		defer os.Remove(tmpPath)
+		defer func() { _ = os.Remove(tmpPath) }()
 		mgr.WriteMessage("Download complete!\n")
 	}
 
@@ -309,7 +309,7 @@ func downloadIPAFromURL(rawURL string, progressFn func(downloaded, total int64))
 		_ = os.Remove(tmpPath)
 		return "", fmt.Errorf("failed to download ipa: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		_ = tmpFile.Close()
 		_ = os.Remove(tmpPath)
