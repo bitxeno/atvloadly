@@ -4,15 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"image/png"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
-	atvhttp "github.com/bitxeno/atvloadly/internal/http"
 	"github.com/bitxeno/atvloadly/internal/i18n"
 	"github.com/bitxeno/atvloadly/internal/ipa"
 	"github.com/bitxeno/atvloadly/internal/log"
@@ -20,7 +16,6 @@ import (
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/notify"
 	"github.com/bitxeno/atvloadly/internal/service"
-	"github.com/bitxeno/atvloadly/internal/utils"
 	"github.com/robfig/cron/v3"
 )
 
@@ -276,56 +271,25 @@ func (t *Task) resolveIPA(v model.InstalledApp) (*model.InstalledApp, error) {
 		return &v, nil
 	}
 
-	saveDir := filepath.Join(app.Config.Server.DataDir, "tmp")
 	if strings.HasPrefix(v.IpaPath, "http:") || strings.HasPrefix(v.IpaPath, "https:") {
-		if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
-			return nil, fmt.Errorf("failed to create temporary directory: %w", err)
-		}
-
-		tmpFile, err := os.CreateTemp(saveDir, "install_*.ipa")
+		result, err := ipa.DownloadAndParse(v.IpaPath, nil)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create temporary file: %w", err)
-		}
-		tmpIPAPath := tmpFile.Name()
-		_ = tmpFile.Close()
-
-		resp, err := atvhttp.NewClient().R().SetOutput(tmpIPAPath).Get(v.IpaPath)
-		if err != nil {
-			_ = os.Remove(tmpIPAPath)
 			return nil, fmt.Errorf("failed to download ipa: %w", err)
 		}
-		if !resp.IsSuccess() {
-			_ = os.Remove(tmpIPAPath)
-			return nil, fmt.Errorf("download failed with status code %d", resp.StatusCode())
+		v.IpaPath = result.LocalPath
+		v.IpaName = result.Name
+		v.BundleIdentifier = result.BundleIdentifier
+		v.Version = result.Version
+		v.Icon = result.IconPath
+	} else {
+		result, err := ipa.ParseLocalIPA(v.IpaPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse ipa file: %w", err)
 		}
-		v.IpaPath = tmpIPAPath
-	}
-
-	info, err := ipa.ParseFile(v.IpaPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse ipa file: %w", err)
-	}
-
-	v.IpaName = info.Name()
-	v.BundleIdentifier = info.Identifier()
-	v.Version = info.Version()
-
-	icon := info.Icon()
-	if icon != nil {
-		timestamp := time.Now().UnixMicro()
-		name := service.GetValidName(utils.FileNameWithoutExt(v.IpaPath))
-		iconName := fmt.Sprintf("%s_%d%s", name, timestamp, ".png")
-		iconDst := filepath.Join(saveDir, iconName)
-		out, err := os.Create(iconDst)
-		if err == nil {
-			defer func() {
-				_ = out.Close()
-			}()
-
-			if err := png.Encode(out, icon); err == nil {
-				v.Icon = iconDst
-			}
-		}
+		v.IpaName = result.Name
+		v.BundleIdentifier = result.BundleIdentifier
+		v.Version = result.Version
+		v.Icon = result.IconPath
 	}
 
 	return &v, nil
