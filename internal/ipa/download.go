@@ -137,7 +137,7 @@ func parseIPAMetadata(ipaPath string, saveDir string) (*DownloadResult, error) {
 	icon := info.Icon()
 	if icon != nil {
 		timestamp := time.Now().UnixMicro()
-		name := sanitizeName(utils.FileNameWithoutExt(ipaPath))
+		name := sanitizeName(utils.FileNameWithoutExt(filepath.Base(ipaPath)))
 		iconName := fmt.Sprintf("%s_%d.png", name, timestamp)
 		iconPath := filepath.Join(saveDir, iconName)
 		iconFile, err := os.Create(iconPath)
