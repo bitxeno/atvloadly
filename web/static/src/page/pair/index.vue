@@ -17,7 +17,7 @@
             >{{ $t("pair.step.start.device") }}：</label
           >{{ device.name }}
         </p>
-        <p><label class="inline-block w-16">IP：</label>{{ device.ip }}</p>
+        <p><label class="inline-block w-16">IP：</label>{{ truncateIP(device.ip) }}</p>
         <button class="btn btn-primary" @click="start">
           {{ $t("pair.step.start.button") }}
         </button>
@@ -71,6 +71,7 @@
   <script>
 import api from "@/api/api";
 import { toast } from "vue3-toastify";
+import { truncateIP } from "@/utils/utils";
 export default {
   data() {
     return {

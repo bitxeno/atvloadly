@@ -16,7 +16,7 @@
           </div>
           <div class="flex flex-col gap-y-2 items-center justify-center">
             <span>{{ device.name }}</span>
-            <span>({{ device.ip }})</span>
+            <span>({{ truncateIP(device.ip) }})</span>
           </div>
           <button
             v-if="canShowScreenshotAction(device)"
@@ -616,6 +616,7 @@ export default {
 </script>
 
 <script setup>
+import { truncateIP } from "@/utils/utils";
 import AppleTVIcon from "@/assets/icons/appletv.svg";
 import IPhoneIcon from "@/assets/icons/iphone.svg";
 import WarningIcon from "@/assets/icons/warning.svg";

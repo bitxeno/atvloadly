@@ -1,3 +1,9 @@
+export function truncateIP(ip) {
+  if (!ip || typeof ip !== 'string') return ip;
+  if (ip.length <= 20) return ip;
+  return ip.slice(0, 9) + '...' + ip.slice(-8);
+}
+
 export function maskEmail(email) {
   if (!email || typeof email !== 'string') return email;
   const atIndex = email.indexOf('@');
