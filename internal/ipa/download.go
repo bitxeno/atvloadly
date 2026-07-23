@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/bitxeno/atvloadly/internal/app"
 	atvhttp "github.com/bitxeno/atvloadly/internal/http"
 	"github.com/bitxeno/atvloadly/internal/utils"
 )
@@ -37,7 +38,7 @@ type DownloadProgressFn func(downloaded, total int64)
 //
 // If progressFn is nil, no progress is reported.
 func DownloadAndParse(rawURL string, progressFn DownloadProgressFn) (*DownloadResult, error) {
-	tmpDir := filepath.Join(os.TempDir(), "atvloadly_ipa")
+	tmpDir := filepath.Join(app.Config.Server.DataDir, "tmp")
 	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
@@ -61,7 +62,7 @@ func DownloadAndParse(rawURL string, progressFn DownloadProgressFn) (*DownloadRe
 // ParseLocalIPA parses a locally-available IPA file and extracts its icon.
 // The caller is responsible for removing the icon file when no longer needed.
 func ParseLocalIPA(localPath string) (*DownloadResult, error) {
-	tmpDir := filepath.Join(os.TempDir(), "atvloadly_ipa")
+	tmpDir := filepath.Join(app.Config.Server.DataDir, "tmp")
 	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
