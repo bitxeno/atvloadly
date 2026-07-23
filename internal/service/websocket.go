@@ -95,6 +95,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		}
 		mgr.WriteMessage("Download complete!\n")
 
+		v.IpaPath = result.LocalPath
 		v.IpaName = result.Name
 		v.BundleIdentifier = result.BundleIdentifier
 		v.Version = result.Version
