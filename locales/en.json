@@ -145,12 +145,15 @@
             "choose_ipa": {
                 "label": "Choose IPA:"
             },
+            "ipa_url": {
+                "label": "IPA URL:"
+            },
             "account": {
                 "label": "Apple Account:",
                 "select": {
                     "placeholder": "Select an account"
                 },
-                "recommended": "Recommended",
+                "last_used": "Last used",
                 "alt": "For account security, please do not use your primary account for installation."
             },
             "password": {

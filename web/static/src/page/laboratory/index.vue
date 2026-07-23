@@ -42,7 +42,7 @@
               >
                 <option value="" disabled>{{ $t("laboratory.form.device_placeholder") }}</option>
                 <option v-for="device in devices" :key="device.id" :value="device.id">
-                  {{ device.name }} ({{ device.ip }})
+                  {{ device.name }} ({{ truncateIP(device.ip) }})
                 </option>
               </select>
               <button 
@@ -89,9 +89,10 @@
   </div>
 </template>
 
-<script>
+  <script>
 import api from "@/api/api";
 import { toast } from "vue3-toastify";
+import { truncateIP } from "@/utils/utils";
 
 export default {
   data() {

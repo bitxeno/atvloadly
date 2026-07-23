@@ -1,3 +1,9 @@
+export function truncateIP(ip) {
+  if (!ip || typeof ip !== 'string') return ip;
+  if (ip.length <= 20) return ip;
+  return ip.slice(0, 9) + '...' + ip.slice(-8);
+}
+
 export function maskEmail(email) {
   if (!email || typeof email !== 'string') return email;
   const atIndex = email.indexOf('@');
@@ -47,4 +53,20 @@ export function getStringSimilarity(s1, s2) {
   return (longer.length - editDistance(longer, shorter)) / parseFloat(longer.length);
 }
 
-export default { maskEmail, getStringSimilarity };
+import { parse } from "plist";
+
+export function parseBundleIdFromPlist(data) {
+  const bytes = new Uint8Array(data);
+  let plist;
+  if (String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5]) === "bplist") {
+    plist = parse(data);
+  } else {
+    plist = parse(new TextDecoder().decode(bytes));
+  }
+  if (plist && plist.CFBundleIdentifier) {
+    return plist.CFBundleIdentifier;
+  }
+  return null;
+}
+
+export default { maskEmail, getStringSimilarity, parseBundleIdFromPlist };

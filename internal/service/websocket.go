@@ -3,8 +3,11 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
+	"github.com/bitxeno/atvloadly/internal/ipa"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/model"
@@ -64,12 +67,47 @@ func HandleInstallMessage(c *websocket.Conn) {
 }
 
 func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.InstallManager, v model.InstalledApp, dev *model.Device) {
+	ipaPath := v.IpaPath
+	if strings.HasPrefix(ipaPath, "http:") || strings.HasPrefix(ipaPath, "https:") {
+		mgr.WriteMessage("Downloading IPA from URL...\n")
+		lastPct := int64(-1)
+		result, err := ipa.DownloadAndParse(ipaPath, func(downloaded, total int64) {
+			if total <= 0 {
+				return
+			}
+			pct := downloaded * 100 / total
+			if pct >= lastPct+5 {
+				lastPct = pct - (pct % 5)
+				mgr.WriteMessage(fmt.Sprintf("Download progress: %d%%\n", lastPct))
+			}
+		})
+		if err != nil {
+			msg := fmt.Sprintf("ERROR: failed to download IPA: %s", err.Error())
+			mgr.WriteMessage(msg)
+			mgr.WriteMessage("\n")
+			mgr.WriteMessage("Installation Failed!")
+			return
+		}
+		ipaPath = result.LocalPath
+		defer func() { _ = os.Remove(result.LocalPath) }()
+		if result.IconPath != "" {
+			defer func() { _ = os.Remove(result.IconPath) }()
+		}
+		mgr.WriteMessage("Download complete!\n")
+
+		v.IpaPath = result.LocalPath
+		v.IpaName = result.Name
+		v.BundleIdentifier = result.BundleIdentifier
+		v.Version = result.Version
+		v.Icon = result.IconPath
+	}
+
 	err := installMgr.Start(mgr.Context(), manager.InstallOptions{
 		UDID:             v.UDID,
 		Account:          v.Account,
 		IP:               dev.IP,
 		Port:             dev.Port,
-		IpaPath:          v.IpaPath,
+		IpaPath:          ipaPath,
 		RemoveExtensions: v.RemoveExtensions,
 		RefreshMode:      false,
 	})

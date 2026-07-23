@@ -16,7 +16,7 @@
           </div>
           <div class="flex flex-col gap-y-2 items-center justify-center">
             <span>{{ device.name }}</span>
-            <span>({{ device.ip }})</span>
+            <span>({{ truncateIP(device.ip) }})</span>
           </div>
           <button
             v-if="canShowScreenshotAction(device)"
@@ -31,21 +31,37 @@
 
         <div class="divider divider-horizontal"></div>
 
-        <div class="p-6 flex flex-col gap-y-4">
+        <div class="p-6 flex flex-col gap-y-4 w-full max-w-lg">
           <form id="form" class="flex flex-col gap-y-4">
             <div class="form-control w-full">
               <label class="label">
-                <span class="label-text">{{
-                  $t("install.form.choose_ipa.label")
-                }}</span>
+                <span class="label-text">
+                  <template v-if="installMode === 'file'">{{ $t("install.form.choose_ipa.label") }}</template>
+                  <template v-else>{{ $t("install.form.ipa_url.label") }}</template>
+                </span>
               </label>
-              <input
-                type="file"
-                class="file-input file-input-bordered w-full"
-                @change="onFileChange"
-                accept=".ipa,.tipa"
-                required
-              />
+              <div class="join flex w-full">
+                <input
+                  v-if="installMode === 'file'"
+                  type="file"
+                  class="file-input file-input-bordered join-item flex-1 min-w-0"
+                  @change="onFileChange"
+                  accept=".ipa,.tipa"
+                  :required="installMode === 'file'"
+                />
+                <input
+                  v-else
+                  type="url"
+                  class="input input-bordered join-item flex-1 min-w-0"
+                  v-model="ipaUrl"
+                  placeholder="https://example.com/app.ipa"
+                  :required="installMode === 'link'"
+                />
+                <button class="btn join-item w-16" @click.prevent="toggleInstallMode">
+                  <span class="w-6 h-6" v-if="installMode === 'file'"><LinkIcon /></span>
+                  <span class="w-6 h-6" v-else><FolderOpenIcon /></span>
+                </button>
+              </div>
             </div>
 
             <div class="form-control w-full">
@@ -71,7 +87,7 @@
                     {{ account.email }}
                     {{
                       account.email === recommendedAccount
-                        ? "(" + $t("install.form.account.recommended") + ")"
+                        ? "(" + $t("install.form.account.last_used") + ")"
                         : "(" + account.status + ")"
                     }}
                   </option>
@@ -206,7 +222,8 @@
   <script>
 import api from "@/api/api";
 import { toast } from "vue3-toastify";
-import { maskEmail, getStringSimilarity } from "@/utils/utils";
+import { parseBundleIdFromPlist } from "@/utils/utils";
+import JSZip from "jszip";
 import Login from "@/components/Login.vue";
 
 export default {
@@ -214,6 +231,8 @@ export default {
   data() {
     return {
       id: "",
+      installMode: "file",
+      ipaUrl: "",
       files: [],
       ipa: {},
       device: {},
@@ -299,14 +318,26 @@ export default {
           await _this.checkAfcService(_this.id);
         }
 
-        let formData = new FormData();
-        for (let i = 0; i < _this.files.length; i++) {
-          let file = _this.files[i];
-          formData.append("files", file);
+        let ipa;
+        if (_this.installMode === "file") {
+          let formData = new FormData();
+          for (let i = 0; i < _this.files.length; i++) {
+            let file = _this.files[i];
+            formData.append("files", file);
+          }
+          _this.log.output += "IPA uploading...\n";
+          let data = await api.upload(formData)
+          ipa = data[0];
+        } else {
+          _this.log.output += "IPA URL: " + _this.ipaUrl + "\n";
+          ipa = {
+            name: _this.ipaUrl.split('/').pop() || 'remote.ipa',
+            path: _this.ipaUrl,
+            icon: '',
+            bundle_identifier: '',
+            version: '',
+          };
         }
-        _this.log.output += "IPA uploading...\n";
-        let data = await api.upload(formData)
-        let ipa = data[0];
         _this.ipa = ipa;
         // send start install msg
         _this.websocketsend(1, {
@@ -337,25 +368,41 @@ export default {
     goBack() {
       this.$router.push("/");
     },
-    onFileChange(e) {
+    toggleInstallMode() {
+      this.installMode = this.installMode === "file" ? "link" : "file";
+      this.files = [];
+      this.ipaUrl = "";
+    },
+    async onFileChange(e) {
       this.files = e.target.files;
       this.recommendedAccount = "";
       if (this.files.length > 0) {
-        let filename = this.files[0].name.replace(/\.(ipa|tipa)$/i, "");
-        let maxSimilarity = 0;
-        let bestAccount = "";
+        const file = this.files[0];
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const zip = await JSZip.loadAsync(arrayBuffer);
 
-        for (let app of this.installedApps) {
-          let appIpaName = (app.ipa_name || "").replace(/\.(ipa|tipa)$/i, "");
-          let s = getStringSimilarity(filename, appIpaName);
-          if (s > maxSimilarity) {
-            maxSimilarity = s;
-            bestAccount = app.account;
+          const plistEntries = Object.keys(zip.files).filter((name) =>
+            name.match(/^Payload\/[^/]+\.app\/Info\.plist$/)
+          );
+
+          for (const entry of plistEntries) {
+            const plistData = await zip.files[entry].async("arraybuffer");
+            const bundleId = parseBundleIdFromPlist(plistData);
+
+            if (bundleId) {
+              for (let app of this.installedApps) {
+                if (app.bundle_identifier === bundleId) {
+                  this.recommendedAccount = app.account;
+                  this.form.account = app.account;
+                  break;
+                }
+              }
+              if (this.recommendedAccount) break;
+            }
           }
-        }
-
-        if (maxSimilarity > 0.5) {
-          this.recommendedAccount = bestAccount;
+        } catch (err) {
+          console.error("Failed to read IPA bundle identifier:", err);
         }
       }
     },
@@ -569,6 +616,7 @@ export default {
 </script>
 
 <script setup>
+import { truncateIP } from "@/utils/utils";
 import AppleTVIcon from "@/assets/icons/appletv.svg";
 import IPhoneIcon from "@/assets/icons/iphone.svg";
 import WarningIcon from "@/assets/icons/warning.svg";
@@ -577,6 +625,8 @@ import HelpIcon from "@/assets/icons/help.svg";
 import CameraIcon from "@/assets/icons/camera.svg";
 import RefreshIcon from "@/assets/icons/refresh.svg";
 import DownloadIcon from "@/assets/icons/download.svg";
+import FolderOpenIcon from "@/assets/icons/folder-open.svg";
+import LinkIcon from "@/assets/icons/link.svg";
 </script>
   
   <style scoped>

@@ -145,12 +145,15 @@
             "choose_ipa": {
                 "label": "选择ipa:"
             },
+            "ipa_url": {
+                "label": "IPA链接:"
+            },
             "account": {
                 "label": "Apple帐号:",
                 "select": {
                     "placeholder": "请选择帐号"
                 },
-                "recommended": "推荐",
+                "last_used": "上次使用",
                 "alt": "为了帐号安全，请不要使用常用帐号安装"
             },
             "password": {

@@ -21,7 +21,7 @@
               </div>
 
               <div class="flex flex-col justify-top">
-                <h4>{{ item.name }} ({{ item.ip }})</h4>
+                <h4>{{ item.name }} ({{ truncateIP(item.ip) }})</h4>
                 <p>{{ formatDeviceStatus(item) }}</p>
               </div>
             </a>
@@ -52,7 +52,7 @@
               </div>
 
               <div class="flex flex-col justify-top">
-                <h4>{{ item.name }} ({{ item.ip }})</h4>
+                <h4>{{ item.name }} ({{ truncateIP(item.ip) }})</h4>
                 <p>{{ formatDeviceStatus(item) }}</p>
               </div>
             </a>
@@ -254,6 +254,7 @@
 import dayjs from "dayjs";
 import api from "@/api/api";
 import { toast } from "vue3-toastify";
+import { truncateIP } from "@/utils/utils";
 
 export default {
   name: "Home",
@@ -557,7 +558,7 @@ export default {
       for (let i = 0; i < _this.devices.length; i++) {
         const dev = _this.devices[i];
         if (dev.udid == item.udid && dev.status == "paired") {
-          return `${dev.name}<br/>(${dev.ip})`;
+          return `${dev.name}<br/>(${truncateIP(dev.ip)})`;
         }
       }
       return this.$t("home.sidebar.device_status.unpaired");

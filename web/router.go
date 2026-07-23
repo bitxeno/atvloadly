@@ -2,7 +2,6 @@ package web
 
 import (
 	"fmt"
-	"image/png"
 	"io"
 	"net/http"
 	"net/url"
@@ -428,30 +427,15 @@ func route(fi *fiber.App) {
 				Path: dst,
 			}
 
-			info, err := ipa.ParseFile(dst)
+			parsed, err := ipa.ParseLocalIPA(dst)
 			if err != nil {
 				return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 			}
 
-			ipaFile.Name = info.Name()
-			ipaFile.BundleIdentifier = info.Identifier()
-			ipaFile.Version = info.Version()
-
-			icon := info.Icon()
-			if icon != nil {
-				iconName := fmt.Sprintf("%s_%d%s", name, timestamp, ".png")
-				iconDst := filepath.Join(saveDir, iconName)
-				out, err := os.Create(iconDst)
-				if err == nil {
-					defer func() {
-						_ = out.Close()
-					}()
-
-					if err := png.Encode(out, icon); err == nil {
-						ipaFile.Icon = iconDst
-					}
-				}
-			}
+			ipaFile.Name = parsed.Name
+			ipaFile.BundleIdentifier = parsed.BundleIdentifier
+			ipaFile.Version = parsed.Version
+			ipaFile.Icon = parsed.IconPath
 
 			result = append(result, ipaFile)
 		}
