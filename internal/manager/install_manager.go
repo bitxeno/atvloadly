@@ -39,6 +39,7 @@ type InstallOptions struct {
 	Port             uint16
 	Account          string
 	IpaPath          string
+	CustomName       string
 	RemoveExtensions bool
 	RefreshMode      bool
 }
@@ -145,11 +146,21 @@ func (t *InstallManager) Start(ctx context.Context, opts InstallOptions) error {
 }
 
 func buildInstallArgs(opts InstallOptions, provisionPath string) []string {
+	var args []string
 	if opts.IP != "" && opts.Port != 0 && opts.UDID != "" {
-		return []string{"sign-rsd", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--ip", opts.IP, "--port", fmt.Sprintf("%d", opts.Port), "--udid", opts.UDID, "-u", opts.Account, "-p", opts.IpaPath}
+		args = []string{"sign-rsd", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--ip", opts.IP, "--port", fmt.Sprintf("%d", opts.Port), "--udid", opts.UDID, "-u", opts.Account, "-p", opts.IpaPath}
+	} else {
+		args = []string{"sign", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--udid", opts.UDID, "-u", opts.Account, "-p", opts.IpaPath}
 	}
 
-	return []string{"sign", "--apple-id", "--register-and-install", "--output-provision", provisionPath, "--udid", opts.UDID, "-u", opts.Account, "-p", opts.IpaPath}
+	// Renames the app on the home screen. The bundle identifier is deliberately
+	// left untouched, so a renamed install still replaces the previous one
+	// instead of registering a second App ID.
+	if opts.CustomName != "" {
+		args = append(args, "--custom-name", opts.CustomName)
+	}
+
+	return args
 }
 
 func (t *InstallManager) GetMobileProvisionPath() string {

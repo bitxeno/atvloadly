@@ -3,6 +3,7 @@ package service
 import (
 	"archive/zip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	stdhttp "net/http"
@@ -12,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/i18n"
@@ -23,8 +25,31 @@ import (
 
 var (
 	regValidName   = regexp.MustCompile("[^0-9a-zA-Z]+")
+	regCustomName  = regexp.MustCompile(`^[\p{L}\p{N}][\p{L}\p{N} .-]*$`)
 	avahiDaemonPid = "/var/run/avahi-daemon/pid"
 )
+
+// MaxCustomNameLength caps the home-screen name so an over-long value cannot
+// reach Apple's App ID registration.
+const MaxCustomNameLength = 64
+
+// ValidateCustomName checks a user-supplied app name. Apple rejects characters
+// such as underscores in the App ID name derived from the app name (see issue
+// #21, "An invalid value 'tv_shelf' was provided for the parameter
+// 'appIdName'"), so reject them here instead of failing during signing.
+// Letters and digits of any script are allowed, so non-Latin app names work.
+func ValidateCustomName(name string) error {
+	if name == "" {
+		return nil
+	}
+	if utf8.RuneCountInString(name) > MaxCustomNameLength {
+		return fmt.Errorf("app name must be at most %d characters", MaxCustomNameLength)
+	}
+	if !regCustomName.MatchString(name) {
+		return errors.New("app name may only contain letters, numbers, spaces, dots and hyphens, and must start with a letter or number")
+	}
+	return nil
+}
 
 func GetServiceStatus() []model.ServiceStatus {
 	status := []model.ServiceStatus{}

@@ -361,6 +361,7 @@ func (t *Task) runInternal(v model.InstalledApp, installMgr *manager.InstallMana
 		IP:               dev.IP,
 		Port:             dev.Port,
 		IpaPath:          v.IpaPath,
+		CustomName:       v.CustomName,
 		RemoveExtensions: v.RemoveExtensions,
 		RefreshMode:      shouldUseRefreshMode(v),
 	})

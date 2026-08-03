@@ -106,6 +106,22 @@
             </div>
 
             <div class="form-control">
+              <label class="label">
+                <span class="label-text">{{ $t("install.form.custom_name.label") }}</span>
+                <div class="tooltip" :data-tip="$t('install.form.custom_name.tips')">
+                  <div class="w-4 h-4 text-secondary-content"><HelpIcon /></div>
+                </div>
+              </label>
+              <input
+                type="text"
+                class="input input-bordered w-full"
+                maxlength="64"
+                :placeholder="$t('install.form.custom_name.placeholder')"
+                v-model="form.custom_name"
+              />
+            </div>
+
+            <div class="form-control">
               <label class="label cursor-pointer justify-between items-center gap-x-4">
                 <div class="flex items-center">
                   <span class="label-text">{{
@@ -243,6 +259,7 @@ export default {
       form: {
         account: "",
         password: "",
+        custom_name: "",
         remove_extensions: false,
       },
       log: {
@@ -352,6 +369,7 @@ export default {
             icon: _this.ipa.icon,
             bundle_identifier: _this.ipa.bundle_identifier,
             version: _this.ipa.version,
+            custom_name: _this.form.custom_name.trim(),
             remove_extensions: _this.form.remove_extensions,
         });
       } catch (error) {

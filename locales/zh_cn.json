@@ -156,6 +156,11 @@
                 "last_used": "上次使用",
                 "alt": "为了帐号安全，请不要使用常用帐号安装"
             },
+            "custom_name": {
+                "label": "应用名称：",
+                "placeholder": "留空则使用应用自带的名称",
+                "tips": "修改主屏幕上显示的应用名称。Bundle Identifier 保持不变，刷新时仍会覆盖原应用。"
+            },
             "password": {
                 "label": "Apple密码:"
             },

@@ -49,6 +49,11 @@ func HandleInstallMessage(c *websocket.Conn) {
 				continue
 			}
 
+			if err := ValidateCustomName(v.CustomName); err != nil {
+				_ = c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("ERROR: %s", err.Error())))
+				continue
+			}
+
 			dev, found := manager.GetDeviceByUDID(v.UDID)
 			if !found || dev == nil {
 				_ = c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("ERROR: device not found for UDID: %s", v.UDID)))
@@ -108,6 +113,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		IP:               dev.IP,
 		Port:             dev.Port,
 		IpaPath:          ipaPath,
+		CustomName:       v.CustomName,
 		RemoveExtensions: v.RemoveExtensions,
 		RefreshMode:      false,
 	})

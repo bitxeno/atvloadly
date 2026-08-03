@@ -87,6 +87,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 		cur.RefreshedResult = app.RefreshedResult
 		cur.RefreshedError = app.RefreshedError
 		cur.Password = app.Password
+		cur.CustomName = app.CustomName
 
 		// 把 ipa/icon 移动到 ipa 保存目录
 		saveDir := filepath.Join(conf.Config.Server.DataDir, "ipa", fmt.Sprintf("%d", app.ID))
@@ -116,6 +117,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 			"refreshed_result": cur.RefreshedResult,
 			"refreshed_error":  cur.RefreshedError,
 			"password":         cur.Password,
+			"custom_name":      cur.CustomName,
 		}
 		if result := db.Store().Model(&cur).Updates(updateData); result.Error != nil {
 			return nil, result.Error

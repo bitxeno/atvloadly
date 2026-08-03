@@ -156,6 +156,11 @@
                 "last_used": "Last used",
                 "alt": "For account security, please do not use your primary account for installation."
             },
+            "custom_name": {
+                "label": "App Name:",
+                "placeholder": "Leave blank to keep the app's own name",
+                "tips": "Renames the app on the home screen. The bundle identifier is unchanged, so the app is still replaced on refresh."
+            },
             "password": {
                 "label": "Apple Password:"
             },
