@@ -447,7 +447,12 @@ func route(fi *fiber.App) {
 		account := strings.TrimSpace(c.FormValue("account"))
 		ipaURL := strings.TrimSpace(c.FormValue("url"))
 		deviceID := strings.TrimSpace(c.FormValue("device_id"))
+		customName := strings.TrimSpace(c.FormValue("custom_name"))
 		removeExt := c.FormValue("remove_extensions") == "true"
+
+		if err := service.ValidateCustomName(customName); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
 
 		if account == "" {
 			return c.Status(http.StatusOK).JSON(apiError("account is required"))
@@ -524,6 +529,7 @@ func route(fi *fiber.App) {
 			UDID:             selectedDevice.UDID,
 			Account:          account,
 			Enabled:          true,
+			CustomName:       customName,
 			RemoveExtensions: removeExt,
 		}
 
