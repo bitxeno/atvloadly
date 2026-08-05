@@ -413,6 +413,9 @@ export default {
                 if (app.bundle_identifier === bundleId) {
                   this.recommendedAccount = app.account;
                   this.form.account = app.account;
+                  if (app.custom_name) {
+                    this.form.custom_name = app.custom_name;
+                  }
                   break;
                 }
               }
