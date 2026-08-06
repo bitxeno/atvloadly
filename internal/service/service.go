@@ -70,12 +70,6 @@ func GetServiceStatus() []model.ServiceStatus {
 		})
 	}
 
-	proc := "usbmuxd"
-	status = append(status, model.ServiceStatus{
-		Name:    proc,
-		Running: checkProcessExists(proc),
-	})
-
 	return status
 }
 
