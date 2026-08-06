@@ -161,7 +161,7 @@
                   </div>
 
                   <div class="flex flex-col justify-start prose">
-                    <div>{{ item.ipa_name }}</div>
+                    <div>{{ appName(item) }}</div>
                     <div class="stat-title text-sm">{{ item.version }}</div>
                     <div class="stat-title text-sm">
                       <a
@@ -201,7 +201,7 @@
                         <div class="py-2">
                           {{
                             $t("home.dialog.delete_confirm.title", {
-                              name: item.ipa_name,
+                              name: appName(item),
                             })
                           }}
                         </div>
@@ -420,6 +420,9 @@ export default {
     },
     installIpa(device) {
       this.$router.push({ name: "install", params: { id: device.id } });
+    },
+    appName(item) {
+      return item.custom_name || item.ipa_name;
     },
     formatExpiredTime(item) {
       let time = item.refreshed_date || item.installed_date;
