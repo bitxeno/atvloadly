@@ -77,7 +77,7 @@
         <h4 class="mb-2">{{ $t("home.heading.service_status") }}</h4>
         <div class="flex flex-col w-full border-opacity-50">
           <div
-            class="grid card bg-base-300 rounded-box p-4 h-32 overflow-hidden"
+            class="grid card bg-base-300 rounded-box p-4 min-h-24 overflow-hidden"
           >
             <ui class="flex flex-col gap-y-2">
               <li
