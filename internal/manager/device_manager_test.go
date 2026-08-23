@@ -32,3 +32,29 @@ func TestCheckPairingThrottle(t *testing.T) {
 		t.Errorf("check after interval should not be throttled")
 	}
 }
+
+// TestPairingThrottleClearedOnDisconnect verifies that a disconnect
+// (Remove event) clears the throttle, so a reconnect within the throttle
+// window is processed immediately instead of being skipped.
+func TestPairingThrottleClearedOnDisconnect(t *testing.T) {
+	dm := newDeviceManager()
+
+	// Device connects (first check passes) and then re-announces
+	// (duplicate is throttled within the window).
+	if dm.checkPairingThrottle("device-a") {
+		t.Errorf("first check should not be throttled")
+	}
+	if !dm.checkPairingThrottle("device-a") {
+		t.Errorf("duplicate check should be throttled")
+	}
+
+	// Simulate the Remove event clearing the throttle for the device.
+	dm.pairingMu.Lock()
+	delete(dm.pairingCheckedAt, "device-a")
+	dm.pairingMu.Unlock()
+
+	// Reconnect within the window must not be throttled.
+	if dm.checkPairingThrottle("device-a") {
+		t.Errorf("reconnect after disconnect should not be throttled")
+	}
+}

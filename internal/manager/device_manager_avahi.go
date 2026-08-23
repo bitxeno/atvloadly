@@ -217,6 +217,13 @@ func (dm *DeviceManager) Start() {
 			}
 		case service = <-sbRemotePairing.RemoveChannel:
 			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[-]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
+			// Clear the pairing throttle for this device: when an iPhone
+			// disconnects and reconnects within the throttle window, the
+			// Add event would otherwise be skipped and the device would
+			// never reappear on the home page.
+			dm.pairingMu.Lock()
+			delete(dm.pairingCheckedAt, service.Name)
+			dm.pairingMu.Unlock()
 			// serviceName will change every mdns event, so we can't use serviceName to ignore duplicate
 			dm.DeleteDeviceByServiceName(service.Name, model.DeviceConnectionRemote)
 		case service = <-sbRemoteManualPairing.AddChannel:

@@ -195,6 +195,12 @@ func (dm *DeviceManager) handleMDNSGoodbye(serviceType string, serviceName strin
 		macAddr := strings.Split(serviceName, "@")[0]
 		dm.DeleteDeviceByMacAddr(macAddr)
 	case mdnsServiceRemotePairing:
+		// Clear the pairing throttle for this device: a disconnect and
+		// reconnect within the throttle window must not be skipped,
+		// otherwise the device never reappears on the home page.
+		dm.pairingMu.Lock()
+		delete(dm.pairingCheckedAt, serviceName)
+		dm.pairingMu.Unlock()
 		dm.DeleteDeviceByServiceName(serviceName, model.DeviceConnectionRemote)
 	case mdnsServiceRemoteManualPairing:
 		dm.DeleteDeviceByServiceName(serviceName, model.DeviceConnectionRemote)
