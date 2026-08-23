@@ -92,4 +92,4 @@ require (
 	modernc.org/sqlite v1.23.1 // indirect
 )
 
-replace github.com/iineva/bom => github.com/bitxeno/bom v0.0.0-20260823044728-a10be028c135
+replace github.com/iineva/bom => github.com/bitxeno/bom v0.0.0-20260823051148-16148bb9e854
