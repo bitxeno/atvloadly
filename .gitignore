@@ -24,3 +24,5 @@ main
 AltServerData/
 atvloadly
 /.vscode
+doc/todo/
+.agents

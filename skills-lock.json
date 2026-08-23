@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "go": {
+      "source": "spf13/go-skills",
+      "sourceType": "github",
+      "skillPath": "go/SKILL.md",
+      "computedHash": "e651ec9fdfa9b241f3636e3ad8513e8b9833b684af1d6b3390f34a1531d8fe45"
+    }
+  }
+}
