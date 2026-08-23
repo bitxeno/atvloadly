@@ -41,6 +41,14 @@ func (dm *DeviceManager) Start() {
 	if err != nil {
 		log.Err(err).Msgf("Avahi new failed: ")
 	}
+	// Free the avahi server (and its dbus connection) when the discovery
+	// loop stops, otherwise each StartDeviceManager() call leaks the dbus
+	// connection and its signal delivery goroutines.
+	defer func() {
+		if server != nil {
+			server.Close()
+		}
+	}()
 
 	host, err := server.GetHostName()
 	if err != nil {
@@ -165,6 +173,15 @@ func (dm *DeviceManager) Start() {
 				continue
 			}
 
+			// The iPhone re-announces/withdraws the remote pairing service
+			// every few seconds. Skip duplicate events so the slow
+			// find-pairing subprocess below cannot stall the avahi event
+			// loop (which would back up the dbus signal channel and leak
+			// one goroutine per signal).
+			if dm.checkPairingThrottle(identifier) {
+				continue
+			}
+
 			if v, err := dm.CheckDevicePaired(identifier, authTag); err == nil && v != nil {
 				log.Debugf("add rppairing device >> %v", v)
 				if v.Name != "" {
@@ -259,6 +276,10 @@ func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(service
 	if err != nil {
 		return fmt.Errorf("avahi new failed: %v", err)
 	}
+	// server.Close frees all signal emitters and closes the dbus connection.
+	// Without it every scan leaks a dbus connection plus its signal
+	// delivery goroutines.
+	defer server.Close()
 
 	// Use ServiceTypeBrowser to discover all advertised service types (equivalent to `avahi-browse -a`).
 	typeBrowser, err := server.ServiceTypeBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceDomain, 0)
@@ -340,6 +361,9 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.D
 	if err != nil {
 		return nil, fmt.Errorf("service browser new failed: %v", err)
 	}
+	defer server.ServiceBrowserFree(sb)
+	// server.Close frees all signal emitters and closes the dbus connection.
+	defer server.Close()
 
 	devices := make([]model.Device, 0)
 	deviceMap := make(map[string]bool)

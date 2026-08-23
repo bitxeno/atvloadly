@@ -123,6 +123,13 @@ func (dm *DeviceManager) handleMDNSEvent(e zeroconf.Event) {
 			return
 		}
 
+		// Throttle duplicate events for the same device: the iPhone
+		// re-announces the remote pairing service every few seconds, and
+		// every Add event would otherwise run a slow find-pairing subprocess.
+		if dm.checkPairingThrottle(identifier) {
+			return
+		}
+
 		name := host
 		if v, err := dm.CheckDevicePaired(identifier, authTag); err == nil && v != nil {
 			log.Debugf("add rppairing device >> %v", v)

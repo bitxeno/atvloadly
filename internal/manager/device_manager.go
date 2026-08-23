@@ -20,6 +20,14 @@ import (
 
 var deviceManager = newDeviceManager()
 
+// pairingCheckInterval throttles remote-pairing mDNS events for the same
+// device. Some iPhones re-announce and withdraw the _remotepairing service
+// every few seconds, and each Add event would otherwise spawn a slow
+// `plumesign check find-pairing` subprocess inside the avahi event loop.
+// Without throttling the event loop falls behind, the avahi signal channel
+// backs up, and godbus leaks one goroutine per undelivered signal.
+const pairingCheckInterval = 60 * time.Second
+
 type DeviceManager struct {
 	devices              sync.Map
 	ctx                  context.Context
@@ -27,13 +35,33 @@ type DeviceManager struct {
 	mu                   sync.Mutex
 	onDeviceConnected    func(device model.Device) // 设备连接时的回调函数
 	onDeviceDisconnected func(device model.Device) // 设备断开时的回调函数
+
+	// pairingCheckedAt remembers the last time a remote-pairing event for a
+	// given device identifier was processed, so duplicate mDNS events within
+	// pairingCheckInterval are ignored instead of re-running the slow check.
+	pairingMu        sync.Mutex
+	pairingCheckedAt map[string]time.Time
 }
 
 func newDeviceManager() *DeviceManager {
 	return &DeviceManager{
 		onDeviceConnected:    func(device model.Device) {},
 		onDeviceDisconnected: func(device model.Device) {},
+		pairingCheckedAt:     make(map[string]time.Time),
 	}
+}
+
+// checkPairingThrottle returns true when an event for identifier should be
+// skipped because the same device was already processed recently.
+func (dm *DeviceManager) checkPairingThrottle(identifier string) bool {
+	dm.pairingMu.Lock()
+	defer dm.pairingMu.Unlock()
+
+	if last, ok := dm.pairingCheckedAt[identifier]; ok && time.Since(last) < pairingCheckInterval {
+		return true
+	}
+	dm.pairingCheckedAt[identifier] = time.Now()
+	return false
 }
 
 func (dm *DeviceManager) GetDevices() []model.Device {
