@@ -87,6 +87,12 @@ func (t *InstallManager) Start(ctx context.Context, opts InstallOptions) error {
 	// Large tvOS apps can take longer than 30 minutes to sign and install.
 	timeout := 60 * time.Minute
 	ctx, cancel := context.WithTimeout(ctx, timeout)
+	// Release the previous install context: overwriting t.cancel without
+	// calling it would keep the old 60-minute timeout timer alive until it
+	// fires, leaking the context and its timer on every repeated install.
+	if t.cancel != nil {
+		t.cancel()
+	}
 	t.cancel = cancel
 
 	provisionPath := t.GetMobileProvisionPath()

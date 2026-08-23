@@ -49,7 +49,14 @@ func (mgr *WebsocketManager) ReadMessage() (*model.Message, error) {
 }
 
 func (mgr *WebsocketManager) WriteMessage(msg string) {
-	mgr.chMsg <- msg
+	// Never block on a full channel: if the writer goroutine has exited
+	// (connection cancelled), a plain send would block forever and pin the
+	// caller — e.g. exec.Cmd's stdout copy goroutine during an install —
+	// leaking the whole install session.
+	select {
+	case mgr.chMsg <- msg:
+	case <-mgr.ctx.Done():
+	}
 }
 
 func (mgr *WebsocketManager) Cancel() {

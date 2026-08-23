@@ -39,6 +39,9 @@ func (t *LoginManager) Start(ctx context.Context, account, password string) erro
 	// set execute timeout 10 minutes
 	timeout := 10 * time.Minute
 	ctx, cancel := context.WithTimeout(ctx, timeout)
+	if t.cancel != nil {
+		t.cancel()
+	}
 	t.cancel = cancel
 
 	stdinReader, stdinWriter, err := os.Pipe()

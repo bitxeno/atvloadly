@@ -41,6 +41,14 @@ func (dm *DeviceManager) Start() {
 	if err != nil {
 		log.Err(err).Msgf("Avahi new failed: ")
 	}
+	// Free the avahi server (and its dbus connection) when the discovery
+	// loop stops, otherwise each StartDeviceManager() call leaks the dbus
+	// connection and its signal delivery goroutines.
+	defer func() {
+		if server != nil {
+			server.Close()
+		}
+	}()
 
 	host, err := server.GetHostName()
 	if err != nil {
@@ -165,41 +173,31 @@ func (dm *DeviceManager) Start() {
 				continue
 			}
 
-			if v, err := dm.CheckDevicePaired(identifier, authTag); err == nil && v != nil {
-				log.Debugf("add rppairing device >> %v", v)
-				if v.Name != "" {
-					name = v.Name
-				}
-				device := model.Device{
-					ID:          v.ID,
-					Name:        name,
-					ServiceName: service.Name,
-					MacAddr:     "",
-					IP:          service.Address,
-					Port:        service.Port,
-					UDID:        v.RemotePairingUDID,
-					Connection:  model.DeviceConnectionRemote,
-					Status:      model.Paired,
-					DiscoveryAt: time.Now(),
-				}
-
-				if v.GetDeviceClass() != "" {
-					device.DeviceClass = v.GetDeviceClass()
-				} else {
-					device.ParseDeviceClass()
-				}
-
-				// remove old lockdown connection device, avoid duplicate devices with both lockdown and remote connection
-				dm.removeLockdownDevice(device.UDID)
-				dm.SaveDevice(device)
-
-				// Trigger device connection callback
-				dm.onDeviceConnected(device)
-			} else if err != nil {
-				log.Debugf("Failed to check device pairing: name=%s ip=%s err=%s", service.Name, service.Address, err.Error())
+			// The iPhone re-announces/withdraws the remote pairing service
+			// every few seconds. The throttle skips duplicate events so the
+			// slow find-pairing subprocess cannot stall the avahi event
+			// loop (which would back up the dbus signal channel and leak
+			// one goroutine per signal). Connection metadata is still
+			// refreshed so a device that reconnects without a goodbye
+			// reflects its new address immediately.
+			if dm.checkPairingThrottle(identifier) {
+				dm.updateRemotePairingDevice(service.Name, service.Address, service.Port)
+				continue
 			}
+
+			// Run the slow pairing check off the event loop: the loop
+			// stays responsive under event bursts, and a Remove event can
+			// cancel the check (killing the plumesign subprocess) to
+			// release the goroutine immediately.
+			go dm.checkRemotePairingAsync(ctx, identifier, authTag, service.Name, name, service.Address, service.Port)
 		case service = <-sbRemotePairing.RemoveChannel:
 			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[-]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
+			// Clear the pairing throttle for this device: when an iPhone
+			// disconnects and reconnects within the throttle window, the
+			// Add event would otherwise be skipped and the device would
+			// never reappear on the home page.
+			dm.cancelPairingCheck(service.Name)
+			dm.clearPairingThrottle(service.Name)
 			// serviceName will change every mdns event, so we can't use serviceName to ignore duplicate
 			dm.DeleteDeviceByServiceName(service.Name, model.DeviceConnectionRemote)
 		case service = <-sbRemoteManualPairing.AddChannel:
@@ -259,6 +257,10 @@ func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(service
 	if err != nil {
 		return fmt.Errorf("avahi new failed: %v", err)
 	}
+	// server.Close frees all signal emitters and closes the dbus connection.
+	// Without it every scan leaks a dbus connection plus its signal
+	// delivery goroutines.
+	defer server.Close()
 
 	// Use ServiceTypeBrowser to discover all advertised service types (equivalent to `avahi-browse -a`).
 	typeBrowser, err := server.ServiceTypeBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceDomain, 0)
@@ -340,6 +342,9 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.D
 	if err != nil {
 		return nil, fmt.Errorf("service browser new failed: %v", err)
 	}
+	defer server.ServiceBrowserFree(sb)
+	// server.Close frees all signal emitters and closes the dbus connection.
+	defer server.Close()
 
 	devices := make([]model.Device, 0)
 	deviceMap := make(map[string]bool)
@@ -413,9 +418,4 @@ func (dm *DeviceManager) parseTextRecordAuthTag(txt [][]byte) string {
 		return id
 	}
 	return ""
-}
-
-func (dm *DeviceManager) removeLockdownDevice(udid string) {
-	removeLockdownDevice(udid)
-	dm.DeleteDeviceByUDID(udid)
 }
