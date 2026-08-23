@@ -126,40 +126,17 @@ func (dm *DeviceManager) handleMDNSEvent(e zeroconf.Event) {
 		// Throttle duplicate events for the same device: the iPhone
 		// re-announces the remote pairing service every few seconds, and
 		// every Add event would otherwise run a slow find-pairing subprocess.
+		// Connection metadata is still refreshed so a device that
+		// reconnects without a goodbye reflects its new address immediately.
 		if dm.checkPairingThrottle(identifier) {
+			dm.updateRemotePairingDevice(serviceName, ip, e.Port)
 			return
 		}
 
-		name := host
-		if v, err := dm.CheckDevicePaired(identifier, authTag); err == nil && v != nil {
-			log.Debugf("add rppairing device >> %v", v)
-			if v.Name != "" {
-				name = v.Name
-			}
-			device := model.Device{
-				ID:          v.ID,
-				Name:        name,
-				ServiceName: serviceName,
-				MacAddr:     "",
-				IP:          ip,
-				Port:        e.Port,
-				UDID:        v.RemotePairingUDID,
-				Connection:  model.DeviceConnectionRemote,
-				Status:      model.Paired,
-				DiscoveryAt: time.Now(),
-			}
-			if v.GetDeviceClass() != "" {
-				device.DeviceClass = v.GetDeviceClass()
-			} else {
-				device.ParseDeviceClass()
-			}
-			dm.SaveDevice(device)
-
-			// Trigger device connection callback
-			dm.onDeviceConnected(device)
-		} else if err != nil {
-			log.Debugf("Failed to check device pairing: name=%s ip=%s err=%s", serviceName, ip, err.Error())
-		}
+		// Run the slow pairing check off the event loop: the loop stays
+		// responsive under event bursts, and a Remove event can cancel the
+		// check (killing the plumesign subprocess) to release the goroutine.
+		go dm.checkRemotePairingAsync(dm.ctx, identifier, authTag, serviceName, host, ip, e.Port)
 	case mdnsServiceRemoteManualPairing:
 		name := serviceName
 		if txtName := dm.parseTextRecordName(e.Text); txtName != "" {
@@ -195,12 +172,12 @@ func (dm *DeviceManager) handleMDNSGoodbye(serviceType string, serviceName strin
 		macAddr := strings.Split(serviceName, "@")[0]
 		dm.DeleteDeviceByMacAddr(macAddr)
 	case mdnsServiceRemotePairing:
-		// Clear the pairing throttle for this device: a disconnect and
-		// reconnect within the throttle window must not be skipped,
-		// otherwise the device never reappears on the home page.
-		dm.pairingMu.Lock()
-		delete(dm.pairingCheckedAt, serviceName)
-		dm.pairingMu.Unlock()
+		// Cancel any in-flight pairing check and clear the throttle for
+		// this device: a disconnect and reconnect within the throttle
+		// window must not be skipped, otherwise the device never
+		// reappears on the home page.
+		dm.cancelPairingCheck(serviceName)
+		dm.clearPairingThrottle(serviceName)
 		dm.DeleteDeviceByServiceName(serviceName, model.DeviceConnectionRemote)
 	case mdnsServiceRemoteManualPairing:
 		dm.DeleteDeviceByServiceName(serviceName, model.DeviceConnectionRemote)

@@ -41,6 +41,10 @@ type DeviceManager struct {
 	// pairingCheckInterval are ignored instead of re-running the slow check.
 	pairingMu        sync.Mutex
 	pairingCheckedAt map[string]time.Time
+	// pairingCancel tracks the in-flight remote-pairing check for each
+	// device identifier, so a disconnect (Remove event) can cancel the
+	// slow plumesign subprocess immediately and release the goroutine.
+	pairingCancel map[string]context.CancelFunc
 }
 
 func newDeviceManager() *DeviceManager {
@@ -48,6 +52,7 @@ func newDeviceManager() *DeviceManager {
 		onDeviceConnected:    func(device model.Device) {},
 		onDeviceDisconnected: func(device model.Device) {},
 		pairingCheckedAt:     make(map[string]time.Time),
+		pairingCancel:        make(map[string]context.CancelFunc),
 	}
 }
 
@@ -62,6 +67,105 @@ func (dm *DeviceManager) checkPairingThrottle(identifier string) bool {
 	}
 	dm.pairingCheckedAt[identifier] = time.Now()
 	return false
+}
+
+// updateRemotePairingDevice refreshes the connection metadata (IP, port,
+// discovery time) of a remote-pairing device without re-running the slow
+// pairing check. It is called even when an event is throttled, so a device
+// that reconnects without a goodbye (no Remove event) reflects its new
+// address immediately instead of keeping stale data for the whole window.
+func (dm *DeviceManager) updateRemotePairingDevice(serviceName, ip string, port uint16) {
+	dm.devices.Range(func(k, v any) bool {
+		dev := v.(model.Device)
+		if dev.ServiceName == serviceName && dev.Connection == model.DeviceConnectionRemote {
+			dev.IP = ip
+			dev.Port = port
+			dev.DiscoveryAt = time.Now()
+			dm.devices.Store(k, dev)
+			return false
+		}
+		return true
+	})
+}
+
+// cancelPairingCheck cancels the in-flight pairing check for a device and
+// removes it from the tracking map. Safe to call when no check is running.
+func (dm *DeviceManager) cancelPairingCheck(identifier string) {
+	dm.pairingMu.Lock()
+	defer dm.pairingMu.Unlock()
+	if cancel, ok := dm.pairingCancel[identifier]; ok {
+		cancel()
+		delete(dm.pairingCancel, identifier)
+	}
+}
+
+// clearPairingThrottle removes the throttle record for a device, so its
+// next Add event is processed even within the throttle window.
+func (dm *DeviceManager) clearPairingThrottle(identifier string) {
+	dm.pairingMu.Lock()
+	defer dm.pairingMu.Unlock()
+	delete(dm.pairingCheckedAt, identifier)
+}
+
+// checkRemotePairingAsync runs the slow plumesign pairing check off the
+// mDNS/avahi event loop so bursts of Add/Remove events can never stall
+// signal consumption. The check is cancelled when the device disconnects
+// (Remove event) or a newer Add supersedes it; cancellation kills the
+// plumesign subprocess and the goroutine returns promptly.
+func (dm *DeviceManager) checkRemotePairingAsync(ctx context.Context, identifier, authTag, serviceName, name, ip string, port uint16) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	checkCtx, cancel := context.WithCancel(ctx)
+	dm.pairingMu.Lock()
+	if prev, ok := dm.pairingCancel[identifier]; ok {
+		prev() // a newer event supersedes the previous check
+	}
+	dm.pairingCancel[identifier] = cancel
+	dm.pairingMu.Unlock()
+	defer func() {
+		cancel()
+		dm.pairingMu.Lock()
+		delete(dm.pairingCancel, identifier)
+		dm.pairingMu.Unlock()
+	}()
+
+	v, err := dm.CheckDevicePairedContext(checkCtx, identifier, authTag)
+	if err != nil || v == nil {
+		return
+	}
+	if checkCtx.Err() != nil {
+		return // cancelled by a Remove event or a newer Add
+	}
+
+	if v.Name != "" {
+		name = v.Name
+	}
+	device := model.Device{
+		ID:          v.ID,
+		Name:        name,
+		ServiceName: serviceName,
+		MacAddr:     "",
+		IP:          ip,
+		Port:        port,
+		UDID:        v.RemotePairingUDID,
+		Connection:  model.DeviceConnectionRemote,
+		Status:      model.Paired,
+		DiscoveryAt: time.Now(),
+	}
+	if v.GetDeviceClass() != "" {
+		device.DeviceClass = v.GetDeviceClass()
+	} else {
+		device.ParseDeviceClass()
+	}
+
+	// remove old lockdown connection device, avoid duplicate devices with both lockdown and remote connection
+	removeLockdownDevice(device.UDID)
+	dm.DeleteDeviceByUDID(device.UDID)
+	dm.SaveDevice(device)
+
+	// Trigger device connection callback
+	dm.onDeviceConnected(device)
 }
 
 func (dm *DeviceManager) GetDevices() []model.Device {
@@ -296,14 +400,24 @@ func (dm *DeviceManager) CheckAfcServiceStatus(dev *model.Device) error {
 }
 
 func (dm *DeviceManager) CheckDevicePaired(identifier string, authTag string) (*model.RemoteDevice, error) {
+	return dm.CheckDevicePairedContext(context.Background(), identifier, authTag)
+}
+
+// CheckDevicePairedContext is CheckDevicePaired with a cancellable
+// context: when ctx is cancelled (e.g. the device disconnects), the
+// plumesign subprocess is killed and the goroutine returns promptly.
+func (dm *DeviceManager) CheckDevicePairedContext(ctx context.Context, identifier string, authTag string) (*model.RemoteDevice, error) {
 	if !utils.ExistFiles(app.RemotePairingDir(), "*.plist") {
 		return nil, nil
 	}
 
-	cmd := exec.Command("plumesign", "check", "find-pairing", "--identifier", identifier, "--auth-tag", authTag).WithTimeout(10 * time.Second)
+	cmd := exec.CommandContext(ctx, "plumesign", "check", "find-pairing", "--identifier", identifier, "--auth-tag", authTag).WithTimeout(10 * time.Second)
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		return nil, err
 	}
 

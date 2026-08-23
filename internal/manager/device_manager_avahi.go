@@ -174,56 +174,30 @@ func (dm *DeviceManager) Start() {
 			}
 
 			// The iPhone re-announces/withdraws the remote pairing service
-			// every few seconds. Skip duplicate events so the slow
-			// find-pairing subprocess below cannot stall the avahi event
+			// every few seconds. The throttle skips duplicate events so the
+			// slow find-pairing subprocess cannot stall the avahi event
 			// loop (which would back up the dbus signal channel and leak
-			// one goroutine per signal).
+			// one goroutine per signal). Connection metadata is still
+			// refreshed so a device that reconnects without a goodbye
+			// reflects its new address immediately.
 			if dm.checkPairingThrottle(identifier) {
+				dm.updateRemotePairingDevice(service.Name, service.Address, service.Port)
 				continue
 			}
 
-			if v, err := dm.CheckDevicePaired(identifier, authTag); err == nil && v != nil {
-				log.Debugf("add rppairing device >> %v", v)
-				if v.Name != "" {
-					name = v.Name
-				}
-				device := model.Device{
-					ID:          v.ID,
-					Name:        name,
-					ServiceName: service.Name,
-					MacAddr:     "",
-					IP:          service.Address,
-					Port:        service.Port,
-					UDID:        v.RemotePairingUDID,
-					Connection:  model.DeviceConnectionRemote,
-					Status:      model.Paired,
-					DiscoveryAt: time.Now(),
-				}
-
-				if v.GetDeviceClass() != "" {
-					device.DeviceClass = v.GetDeviceClass()
-				} else {
-					device.ParseDeviceClass()
-				}
-
-				// remove old lockdown connection device, avoid duplicate devices with both lockdown and remote connection
-				dm.removeLockdownDevice(device.UDID)
-				dm.SaveDevice(device)
-
-				// Trigger device connection callback
-				dm.onDeviceConnected(device)
-			} else if err != nil {
-				log.Debugf("Failed to check device pairing: name=%s ip=%s err=%s", service.Name, service.Address, err.Error())
-			}
+			// Run the slow pairing check off the event loop: the loop
+			// stays responsive under event bursts, and a Remove event can
+			// cancel the check (killing the plumesign subprocess) to
+			// release the goroutine immediately.
+			go dm.checkRemotePairingAsync(ctx, identifier, authTag, service.Name, name, service.Address, service.Port)
 		case service = <-sbRemotePairing.RemoveChannel:
 			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[-]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
 			// Clear the pairing throttle for this device: when an iPhone
 			// disconnects and reconnects within the throttle window, the
 			// Add event would otherwise be skipped and the device would
 			// never reappear on the home page.
-			dm.pairingMu.Lock()
-			delete(dm.pairingCheckedAt, service.Name)
-			dm.pairingMu.Unlock()
+			dm.cancelPairingCheck(service.Name)
+			dm.clearPairingThrottle(service.Name)
 			// serviceName will change every mdns event, so we can't use serviceName to ignore duplicate
 			dm.DeleteDeviceByServiceName(service.Name, model.DeviceConnectionRemote)
 		case service = <-sbRemoteManualPairing.AddChannel:
@@ -444,9 +418,4 @@ func (dm *DeviceManager) parseTextRecordAuthTag(txt [][]byte) string {
 		return id
 	}
 	return ""
-}
-
-func (dm *DeviceManager) removeLockdownDevice(udid string) {
-	removeLockdownDevice(udid)
-	dm.DeleteDeviceByUDID(udid)
 }

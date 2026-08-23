@@ -1,9 +1,22 @@
 package manager
 
 import (
+	"context"
 	"testing"
 	"time"
+
+	"github.com/bitxeno/atvloadly/internal/model"
 )
+
+// devicesCount returns the number of registered devices.
+func (dm *DeviceManager) devicesCount() int {
+	n := 0
+	dm.devices.Range(func(k, v any) bool {
+		n++
+		return true
+	})
+	return n
+}
 
 func TestCheckPairingThrottle(t *testing.T) {
 	dm := newDeviceManager()
@@ -49,12 +62,73 @@ func TestPairingThrottleClearedOnDisconnect(t *testing.T) {
 	}
 
 	// Simulate the Remove event clearing the throttle for the device.
-	dm.pairingMu.Lock()
-	delete(dm.pairingCheckedAt, "device-a")
-	dm.pairingMu.Unlock()
+	dm.clearPairingThrottle("device-a")
 
 	// Reconnect within the window must not be throttled.
 	if dm.checkPairingThrottle("device-a") {
 		t.Errorf("reconnect after disconnect should not be throttled")
+	}
+}
+
+// TestUpdateRemotePairingDevice verifies that a throttled Add event still
+// refreshes the connection metadata, so a device that reconnects without a
+// goodbye reflects its new address instead of keeping stale data.
+func TestUpdateRemotePairingDevice(t *testing.T) {
+	dm := newDeviceManager()
+	dm.SaveDevice(model.Device{
+		ID:          "id-1",
+		ServiceName: "UUID-1",
+		Connection:  model.DeviceConnectionRemote,
+		IP:          "192.168.1.100",
+		Port:        49152,
+	})
+
+	dm.updateRemotePairingDevice("UUID-1", "192.168.1.200", 5000)
+
+	dev, ok := dm.GetDeviceByID("id-1")
+	if !ok {
+		t.Fatalf("device not found")
+	}
+	if dev.IP != "192.168.1.200" || dev.Port != 5000 {
+		t.Errorf("device metadata not updated: ip=%s port=%d", dev.IP, dev.Port)
+	}
+}
+
+// TestCancelPairingCheck verifies that cancelling a device's in-flight
+// pairing check invokes its cancel func and removes it from the tracking
+// map, and that cancelling an unknown device is a no-op.
+func TestCancelPairingCheck(t *testing.T) {
+	dm := newDeviceManager()
+
+	cancelled := false
+	dm.pairingMu.Lock()
+	dm.pairingCancel["device-a"] = func() { cancelled = true }
+	dm.pairingMu.Unlock()
+
+	dm.cancelPairingCheck("device-a")
+	if !cancelled {
+		t.Errorf("cancel func should have been called")
+	}
+	if _, ok := dm.pairingCancel["device-a"]; ok {
+		t.Errorf("cancel entry should be removed after cancel")
+	}
+
+	// Cancelling unknown devices must not panic.
+	dm.cancelPairingCheck("device-a")
+	dm.cancelPairingCheck("nonexistent")
+}
+
+// TestCheckRemotePairingAsyncCancelled verifies that a cancelled async
+// check does not add the device (simulating a Remove arriving mid-check).
+func TestCheckRemotePairingAsyncCancelled(t *testing.T) {
+	dm := newDeviceManager()
+
+	// Cancelled context: the check must not register the device.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	dm.checkRemotePairingAsync(ctx, "UUID-1", "auth", "UUID-1", "iPhone", "192.168.1.100", 49152)
+
+	if n := dm.devicesCount(); n != 0 {
+		t.Errorf("no device should be registered after cancelled check, got %d", n)
 	}
 }
