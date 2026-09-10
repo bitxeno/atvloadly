@@ -327,7 +327,27 @@ func (dm *DeviceManager) scanServiceTypeContinuous(ctx context.Context, server *
 	}
 }
 
+// avahiServiceRef carries the fields needed to resolve a browsed service
+// without keeping a reference to the channel element itself.
+type avahiServiceRef struct {
+	iface       int32
+	protocol    int32
+	name        string
+	serviceType string
+	domain      string
+}
+
 func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.Duration) ([]model.Device, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if timeout <= 0 {
+		timeout = 3 * time.Second
+	}
+	if timeout > 10*time.Second {
+		timeout = 10 * time.Second
+	}
+
 	conn, err := dbus.SystemBus()
 	if err != nil {
 		return nil, fmt.Errorf("cannot get system bus: %v", err)
@@ -340,11 +360,15 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.D
 
 	sb, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceRemotePairing, mdnsServiceDomain, 0)
 	if err != nil {
+		server.Close()
 		return nil, fmt.Errorf("service browser new failed: %v", err)
 	}
-	defer server.ServiceBrowserFree(sb)
-	// server.Close frees all signal emitters and closes the dbus connection.
+	// NOTE: Free must run before Close. Close frees every remaining signal
+	// emitter, so running Close first would free sb and the following Free
+	// would panic with "close of closed channel", killing the HTTP handler
+	// (observed as 502 from the reverse proxy).
 	defer server.Close()
+	defer server.ServiceBrowserFree(sb)
 
 	devices := make([]model.Device, 0)
 	deviceMap := make(map[string]bool)
@@ -352,14 +376,50 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.D
 	scanCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
+	// ResolveService is a synchronous D-Bus call without its own timeout.
+	// Run it in a goroutine so a hanging avahi-daemon can never stall the
+	// scan past scanCtx's deadline (which the gateway would report as 502).
+	resolveService := func(svc avahiServiceRef) (avahi.Service, bool) {
+		type result struct {
+			service avahi.Service
+			err     error
+		}
+		ch := make(chan result, 1)
+		go func() {
+			resolved, err := server.ResolveService(svc.iface, svc.protocol, svc.name,
+				svc.serviceType, svc.domain, avahi.ProtoUnspec, 0)
+			ch <- result{service: resolved, err: err}
+		}()
+		select {
+		case <-scanCtx.Done():
+			return avahi.Service{}, false
+		case r := <-ch:
+			if r.err != nil {
+				return avahi.Service{}, false
+			}
+			return r.service, true
+		}
+	}
+
 	for {
 		select {
 		case <-scanCtx.Done():
 			return devices, nil
-		case service := <-sb.AddChannel:
-			resolved, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
-				service.Type, service.Domain, avahi.ProtoUnspec, 0)
-			if err != nil {
+		case service, ok := <-sb.AddChannel:
+			if !ok {
+				return devices, nil
+			}
+			resolved, ok := resolveService(avahiServiceRef{
+				iface:       service.Interface,
+				protocol:    service.Protocol,
+				name:        service.Name,
+				serviceType: service.Type,
+				domain:      service.Domain,
+			})
+			if !ok {
+				if scanCtx.Err() != nil {
+					return devices, nil
+				}
 				continue
 			}
 
@@ -381,6 +441,12 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.D
 			}
 			device.ParseDeviceClass()
 			devices = append(devices, device)
+		case _, ok := <-sb.RemoveChannel:
+			// Drain removals so the avahi signal dispatch goroutine never
+			// blocks on an unread channel while this one-shot scan runs.
+			if !ok {
+				return devices, nil
+			}
 		}
 	}
 }

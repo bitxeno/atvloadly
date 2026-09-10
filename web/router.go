@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -346,8 +347,20 @@ func route(fi *fiber.App) {
 				timeout = t
 			}
 		}
+		if timeout <= 0 {
+			timeout = 3
+		}
+		if timeout > 10 {
+			timeout = 10
+		}
 
-		devices, err := manager.ScanWirelessDevices(c.Context(), time.Duration(timeout)*time.Second)
+		// Detach the scan from the fasthttp request context: the scan owns
+		// its own deadline so a recycled request context or a huge timeout
+		// query can never hang the handler past the gateway's limit (502).
+		scanCtx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+		defer cancel()
+
+		devices, err := manager.ScanWirelessDevices(scanCtx, time.Duration(timeout)*time.Second)
 
 		if err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
