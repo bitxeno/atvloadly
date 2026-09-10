@@ -341,14 +341,14 @@ func route(fi *fiber.App) {
 	})
 
 	api.Get("/scan/wireless", func(c *fiber.Ctx) error {
-		timeout := 3
+		timeout := 5
 		if timeoutStr := c.Query("timeout"); timeoutStr != "" {
 			if t := utils.MustParseInt(timeoutStr); t > 0 {
 				timeout = t
 			}
 		}
 		if timeout <= 0 {
-			timeout = 3
+			timeout = 5
 		}
 		if timeout > 10 {
 			timeout = 10

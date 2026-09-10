@@ -288,7 +288,7 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.D
 		ctx = context.Background()
 	}
 	if timeout <= 0 {
-		timeout = 3 * time.Second
+		timeout = 5 * time.Second
 	}
 	if timeout > 10*time.Second {
 		timeout = 10 * time.Second
