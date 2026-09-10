@@ -284,6 +284,15 @@ func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(service
 }
 
 func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.Duration) ([]model.Device, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if timeout <= 0 {
+		timeout = 5 * time.Second
+	}
+	if timeout > 10*time.Second {
+		timeout = 10 * time.Second
+	}
 	scanCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 

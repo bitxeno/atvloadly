@@ -197,9 +197,15 @@ export default {
         return "unknown";
       }
 
-      const matched = String(buildDate).match(/^(\d{4})[-/](\d{2})/);
+      const text = String(buildDate);
+      const matched = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
       if (matched) {
-        return `${matched[1]}-${matched[2]}`;
+        return `${matched[1]}-${matched[2].padStart(2, "0")}-${matched[3].padStart(2, "0")}`;
+      }
+
+      const monthOnly = text.match(/^(\d{4})[-/](\d{2})/);
+      if (monthOnly) {
+        return `${monthOnly[1]}-${monthOnly[2]}`;
       }
 
       const parsed = new Date(buildDate);
@@ -209,7 +215,8 @@ export default {
 
       const year = parsed.getFullYear();
       const month = String(parsed.getMonth() + 1).padStart(2, "0");
-      return `${year}-${month}`;
+      const day = String(parsed.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
     },
     changeLanguage(lang) {
       this.$i18next.changeLanguage(lang);
