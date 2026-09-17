@@ -1,0 +1,437 @@
+{
+  "language": "sv",
+  "common": {
+    "loading": "Laddar…",
+    "button": {
+      "close": "Stäng"
+    }
+  },
+  "notify": {
+    "title": "[{{.name}}] Automatisk uppdatering misslyckades",
+    "content": "Konto: {{.account}}\nFel: {{.error}}",
+    "batch_title": "atvloadly: automatisk uppdatering misslyckades",
+    "batch_content": "{{.name}}: {{.error}}\n\n"
+  },
+  "nav": {
+    "settings": "Inställningar",
+    "tools": "Verktyg",
+    "laboratory": "Laboratorium",
+    "language": "Svenska",
+    "preferences": "Alternativ",
+    "account": "Konton",
+    "devices": "Enheter",
+    "donate": "Donera",
+    "about": "Om"
+  },
+  "donate": {
+    "title": "Stöd projektet",
+    "desc": "Om du har nytta av projektet får du gärna stödja utvecklingen. Ditt bidrag hjälper projektet att leva vidare!",
+    "github_sponsor": "Stöd via GitHub Sponsors",
+    "kofi": "Stöd via Ko-fi",
+    "afdian": "Stöd via Afadian",
+    "close": "Stäng"
+  },
+  "home": {
+    "heading": {
+      "pairable_devices": "Enheter som kan parkopplas",
+      "paired_devices": "Parkopplade enheter",
+      "service_status": "Tjänststatus",
+      "installed_app": "Installerade appar"
+    },
+    "dialog": {
+      "delete_confirm": {
+        "title": "Vill du verkligen ta bort {{name}}?",
+        "button": {
+          "cancel": "Avbryt",
+          "confirm": "Bekräfta"
+        }
+      }
+    },
+    "toast": {
+      "refresh_app_started": "Uppdatering av {{name}} har startat",
+      "installing_app": "Installerar {{name}}…"
+    },
+    "sidebar": {
+      "device_status": {
+        "pairable": "Kan parkopplas",
+        "paired": "Parkopplad",
+        "unpaired": "Inte parkopplad"
+      },
+      "tips": {
+        "no_paired_devices": "Inga parkopplade enheter",
+        "how_pair_device": "På Apple TV: öppna Inställningar → Fjärrkontroller och enheter → Fjärrapp och enheter för att starta parkopplingen."
+      }
+    },
+    "table": {
+      "header": {
+        "app": "App",
+        "device": "Enhet",
+        "account": "Konto",
+        "expired_date": "Utgångsdatum",
+        "operate": "Åtgärd"
+      },
+      "expired_time_format": {
+        "expired_tips": "Utgången",
+        "days": "{{num}} dagar",
+        "hours": "{{num}} timmar",
+        "less_than_hour": "Under 1 timme"
+      },
+      "refresh_date_format": {
+        "installing_tips": "Installerar…",
+        "seconds": "För {{num}} sekunder sedan",
+        "miniutes": "För {{num}} minuter sedan",
+        "hours": "För {{num}} timmar sedan",
+        "days": "För {{num}} dagar sedan"
+      },
+      "button": {
+        "refresh": "Uppdatera",
+        "delete": "Ta bort"
+      },
+      "tips": {
+        "view_log": "Klicka för att visa installationsloggen",
+        "account_invalid": "Det finns ett problem med kontot. Kontrollera loggarna och åtgärda felet.",
+        "no_data": "Inga uppgifter",
+        "footer": "Som standard uppdateras appar automatiskt mellan kl. 03 och 06 när mindre än ett dygn återstår till utgångsdatumet."
+      }
+    }
+  },
+  "pair": {
+    "toast": {
+      "pin_incorrect": "Fel PIN-kod",
+      "pair_error": "Parkopplingen misslyckades. Se konsolen för mer information.",
+      "no_device_found": "Enheten hittades inte. Kontrollera att tjänsten usbmuxd körs."
+    },
+    "step": {
+      "start": {
+        "title": "Start",
+        "device": "Enhet",
+        "button": "Starta parkoppling"
+      },
+      "pin": {
+        "title": "Ange PIN-kod",
+        "loading": "Ansluter…",
+        "placeholder": "Ange PIN-koden som visas på Apple TV",
+        "button": "Bekräfta"
+      },
+      "completed": {
+        "title": "Parkoppling slutförd",
+        "msg": "Parkopplingen lyckades",
+        "button": "Tillbaka"
+      }
+    }
+  },
+  "install": {
+    "tips": {
+      "warning": "Enheten kommer att efterlikna en MacBook. Ha en iPhone eller annan betrodd enhet till hands när du loggar in med installationskontot, så att du kan ta emot verifieringskoder för tvåfaktorsautentisering."
+    },
+    "dialog": {
+      "input_pin": {
+        "title": "Ange verifieringskoden för tvåfaktorsautentisering",
+        "input": {
+          "placeholder": ""
+        },
+        "button": {
+          "submit": "Bekräfta"
+        }
+      }
+    },
+    "toast": {
+      "install_success": "Installationen lyckades",
+      "install_failed": "Installationen misslyckades. Se loggarna för mer information.",
+      "login_success": "Inloggningen lyckades"
+    },
+    "form": {
+      "choose_ipa": {
+        "label": "Välj IPA-fil:"
+      },
+      "ipa_url": {
+        "label": "IPA-URL:"
+      },
+      "account": {
+        "label": "Apple-konto:",
+        "select": {
+          "placeholder": "Välj ett konto"
+        },
+        "last_used": "Senast använt",
+        "alt": "Använd inte ditt huvudsakliga Apple-konto för installationer av säkerhetsskäl."
+      },
+      "custom_name": {
+        "label": "Appnamn:",
+        "placeholder": "Lämna tomt för att behålla appens namn",
+        "tips": "Byter namn på appen på hemskärmen. Paketidentifieraren ändras inte, så appen ersätts fortfarande vid uppdatering."
+      },
+      "password": {
+        "label": "Apple-lösenord:"
+      },
+      "button": {
+        "back": "Tillbaka",
+        "submit": "Installera"
+      },
+      "extensions": {
+        "remove_extensions": "Ta bort tillägg (insticksprogram)",
+        "tips": "Användbart när det inte finns tillräckligt många lediga app-ID:n för registrering"
+      }
+    },
+    "login_modal": {
+      "title": "Logga in på ett Apple-konto",
+      "button": {
+        "close": "Stäng",
+        "login": "Logga in",
+        "add_account": "Lägg till konto"
+      }
+    },
+    "screenshot": {
+      "title": "Skärmbild från enheten",
+      "action": "Ta skärmbild",
+      "empty": "Ingen skärmbild ännu",
+      "status": {
+        "capturing": "Tar skärmbild…",
+        "success": "Skärmbilden har tagits",
+        "failed": "Kunde inte ta skärmbild"
+      },
+      "toast": {
+        "device_not_ready": "Enhetsinformationen är inte klar. Försök igen senare.",
+        "failed": "Kunde inte ta skärmbild"
+      },
+      "button": {
+        "close": "Stäng",
+        "refresh": "Uppdatera",
+        "download": "Ladda ned"
+      }
+    }
+  },
+  "settings": {
+    "toast": {
+      "save_success": "Inställningarna har sparats",
+      "notify_success": "Aviseringen har skickats"
+    },
+    "notification": {
+      "title": "Avisering vid misslyckad installation",
+      "toggle": {
+        "label": "Aktivera"
+      },
+      "type": {
+        "label": "Aviseringstyp"
+      },
+      "weixin": {
+        "title": "WeCom",
+        "corp_id": "Företags-ID",
+        "corp_secret": "Företagshemlig nyckel",
+        "agent_id": "Agent-ID",
+        "touser": "Mottagare"
+      },
+      "email": {
+        "smtp_host": "SMTP-server",
+        "smtp_port": "SMTP-port",
+        "username": "Användarnamn",
+        "password": "Lösenord",
+        "from": "Avsändaradress",
+        "to": "Mottagaradress"
+      },
+      "webhook": {
+        "url": "URL",
+        "url_placeholder": "Stöder mallvariablerna {{title}} och {{message}}",
+        "method": "HTTP-metod",
+        "content_type": "Innehållstyp",
+        "header": "HTTP-rubriker",
+        "header_placeholder": "Avgränsa flera rubriker med semikolon, t.ex.: Authorization: Bearer token; X-Custom: value",
+        "body": "Begärans innehåll",
+        "body_placeholder": "Stöder mallvariablerna {{title}} och {{message}}\nExempel: {\"title\": \"{{title}}\", \"message\": \"{{message}}\"}"
+      },
+      "button": {
+        "submit": "Spara",
+        "send_test": "Skicka testavisering"
+      }
+    },
+    "refresh": {
+      "title": "Automatisk appuppdatering",
+      "toggle": {
+        "label": "Aktivera"
+      },
+      "iphone_toggle": {
+        "label": "Automatisk uppdatering på iPhone",
+        "tips": "Uppdatering på iPhone begränsas inte av det inställda tidsintervallet. Ett uppdateringsförsök görs när iPhone är ansluten till Wi-Fi."
+      },
+      "mode": {
+        "label": "Uppdateringsläge",
+        "day_before_expired": "En dag före utgångsdatum",
+        "custom": "Anpassat"
+      },
+      "advance_days": {
+        "label": "Dagar i förväg",
+        "1_day": "1 dag",
+        "2_days": "2 dagar",
+        "3_days": "3 dagar"
+      },
+      "run_time": {
+        "label": "Tidsintervall för körning",
+        "format_tips": "Linux crontab-format; begränsas av uppdateringsläget"
+      },
+      "button": {
+        "submit": "Spara"
+      }
+    },
+    "network": {
+      "title": "Nätverksinställningar",
+      "proxy_toggle": {
+        "label": "Aktivera proxy"
+      },
+      "http_proxy": {
+        "label": "HTTP-proxy",
+        "placeholder": "t.ex. http://proxy.example.com:8080"
+      },
+      "https_proxy": {
+        "label": "HTTPS-proxy",
+        "placeholder": "t.ex. http://proxy.example.com:8080"
+      },
+      "button": {
+        "submit": "Spara"
+      }
+    },
+    "advanced": {
+      "title": "Avancerat",
+      "update_coreadi": "Uppdatera CoreADI",
+      "update_coreadi_confirm": "Vill du verkligen uppdatera CoreADI-biblioteken?",
+      "cancel": "Avbryt",
+      "confirm": "Bekräfta",
+      "toast": {
+        "downloading": "Laddar ned…",
+        "success": "Uppdateringen är klar",
+        "failed": "Uppdateringen misslyckades"
+      }
+    }
+  },
+  "account": {
+    "select_account": "Välj konto",
+    "select_placeholder": "Välj ett konto",
+    "table": {
+      "header": {
+        "email": "E-post",
+        "account": "Konto",
+        "status": "Status",
+        "machine_name": "Datornamn"
+      },
+      "button": {
+        "certificate": "Certifikat",
+        "devices": "Enheter",
+        "logout": "Logga ut"
+      },
+      "empty": "Inga konton hittades"
+    },
+    "dialog": {
+      "logout_confirm": {
+        "title": "Vill du verkligen logga ut från {{name}}?"
+      }
+    },
+    "toast": {
+      "delete_success": "Kontot har tagits bort",
+      "delete_failed": "Kunde inte ta bort kontot",
+      "logout_success": "Kontot har loggats ut",
+      "logout_failed": "Kunde inte logga ut från kontot"
+    }
+  },
+  "certificate": {
+    "modal": {
+      "title": "Certifikathantering – {{email}}",
+      "import_title": "Importera certifikat",
+      "export_title": "Exportera certifikat"
+    },
+    "button": {
+      "import": "Importera"
+    },
+    "import": {
+      "file_selected": "Vald fil: {{name}}"
+    },
+    "import_form": {
+      "password_label": "Certifikatlösenord",
+      "password_placeholder": "Ange P12-lösenord"
+    },
+    "export_form": {
+      "password_label": "P12-lösenord",
+      "password_placeholder": "Ange P12-lösenord"
+    },
+    "table": {
+      "header": {
+        "serial": "Serienummer",
+        "name": "Namn",
+        "machine_name": "Datornamn",
+        "expiration": "Utgångsdatum"
+      },
+      "button": {
+        "revoke": "Återkalla",
+        "export": "Exportera",
+        "import": "Importera"
+      }
+    },
+    "dialog": {
+      "revoke_confirm": {
+        "title": "Vill du verkligen återkalla certifikatet {{serial}}?"
+      }
+    },
+    "toast": {
+      "revoke_success": "Certifikatet har återkallats",
+      "revoke_failed": "Kunde inte återkalla certifikatet",
+      "export_success": "Exporten lyckades",
+      "export_failed": "Exporten misslyckades",
+      "export_password_required": "Ange certifikatlösenordet",
+      "import_success": "Importen lyckades",
+      "import_failed": "Importen misslyckades"
+    },
+    "no_certificates": "Inga certifikat hittades"
+  },
+  "device": {
+    "modal": {
+      "title": "Enheter – {{email}}"
+    },
+    "table": {
+      "header": {
+        "name": "Namn",
+        "udid": "UDID",
+        "platform": "Plattform"
+      },
+      "empty": "Inga enheter hittades"
+    },
+    "toast": {
+      "delete_success": "Enheten har tagits bort",
+      "delete_failed": "Kunde inte ta bort enheten"
+    }
+  },
+  "tools": {
+    "ssdp": {
+      "title": "SSDP-skanner",
+      "pairable_label": "Tjänstetyp för parkopplingsbara enheter: _remotepairing-manual-pairing._tcp"
+    }
+  },
+  "laboratory": {
+    "title": "Anslut iPhone",
+    "tips": {
+      "step1": "Kontrollera att utvecklarläget är aktiverat på din iPhone och att iOS 17.4 eller senare är installerat.",
+      "step2": "Ladda ned <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a>, anslut din iPhone och exportera en parkopplingsfil i läget <b>RPPairing</b>.",
+      "step3": "Använd idevice_pair för att aktivera trådlös felsökning.",
+      "step4": "Kontrollera att din iPhone går att hitta under <a href=\"/#/tools\" class=\"link\">Verktyg</a>.",
+      "step5": "Automatisk uppdatering på iPhone är inte garanterat tillförlitlig. Enheten måste vara upplåst för att fjärruppdatering ska fungera korrekt."
+    },
+    "form": {
+      "device_label": "Välj motsvarande enhet",
+      "device_placeholder": "Välj en enhet",
+      "device_unlock": "Din iPhone måste vara upplåst för att hittas",
+      "refresh": "Uppdatera",
+      "refresh_devices": "Uppdatera enhetslistan",
+      "upload_label": "Ladda upp parkopplingsfil",
+      "submit": "Skicka"
+    },
+    "toast": {
+      "import_success": "Importen lyckades",
+      "import_failed": "Importen misslyckades: {{msg}}",
+      "load_devices_failed": "Kunde inte läsa in enhetslistan: {{msg}}"
+    },
+    "dialog": {
+      "override": {
+        "title": "Bekräfta överskrivning",
+        "content": "En parkopplingsfil med samma namn finns redan. Vill du skriva över den?",
+        "cancel": "Avbryt",
+        "confirm": "Skriv över"
+      }
+    }
+  }
+}
