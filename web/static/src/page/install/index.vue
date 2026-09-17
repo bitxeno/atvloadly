@@ -1,13 +1,13 @@
 <template>
   <div class="max-w-screen-md mx-auto flex flex-col gap-y-6">
-    <div class="alert alert-warning">
+    <div class="alert atv-warning">
       <div class="w-8">
         <WarningIcon />
       </div>
       <span class="text-sm">{{ $t("install.tips.warning") }}</span>
     </div>
 
-    <div class="border rounded p-6 bg-base-100">
+    <div class="card">
       <div class="lg:flex lg:flex-row">
         <div class="flex flex-col justify-center place-items-center gap-y-4">
           <div class="w-32 rounded">

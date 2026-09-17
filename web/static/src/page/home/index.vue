@@ -4,9 +4,9 @@
       <div v-show="pairableDevices.length > 0">
         <h4 class="mb-2">{{ $t("home.heading.pairable_devices") }}</h4>
         <div class="flex flex-col w-full border-opacity-50">
-          <div class="grid card bg-base-300 rounded-box p-4">
+          <div class="grid card atv-device-panel">
             <a
-              class="flex flex-row gap-x-2 cursor-pointer"
+              class="atv-device-row flex flex-row gap-x-3 cursor-pointer"
               v-for="item in pairableDevices"
               v-bind:key="item.id"
               @click="startPair(item)"
@@ -33,11 +33,11 @@
         <h4 class="mb-2">{{ $t("home.heading.paired_devices") }}</h4>
         <div class="flex flex-col w-full border-opacity-50">
           <div
-            class="grid card bg-base-300 rounded-box p-4"
+            class="grid card atv-device-panel"
             v-show="pairedDevices.length > 0"
           >
             <a
-              class="flex flex-row gap-x-2 cursor-pointer"
+              class="atv-device-row flex flex-row gap-x-3 cursor-pointer"
               v-for="item in pairedDevices"
               v-bind:key="item.id"
               @click="installIpa(item)"
@@ -59,7 +59,7 @@
           </div>
 
           <div
-            class="grid card bg-base-300 rounded-box p-4 h-36 overflow-hidden"
+            class="grid card atv-device-panel h-36 overflow-hidden"
             v-show="pairedDevices.length == 0"
           >
             <h4 class="flex justify-center items-center">
@@ -77,7 +77,7 @@
         <h4 class="mb-2">{{ $t("home.heading.service_status") }}</h4>
         <div class="flex flex-col w-full border-opacity-50">
           <div
-            class="grid card bg-base-300 rounded-box p-4 min-h-24 overflow-hidden"
+            class="grid card atv-device-panel min-h-24 overflow-hidden"
           >
             <ui class="flex flex-col gap-y-2">
               <li
@@ -143,11 +143,8 @@
                       >!</span
                     >
                     <div class="inline-flex">
-                      <div class="w-32 h-20 rounded relative flex items-center justify-center">
-                        <img
-                          :src="iconUrl(item)"
-                          class="max-w-full max-h-full rounded-md object-contain shadow-sm"
-                        />
+                      <div class="atv-app-icon relative flex items-center justify-center">
+                        <img :src="iconUrl(item)" :alt="appName(item)" loading="lazy" />
                         <div
                           class="absolute w-full h-full top-0 flex items-center justify-center bg-[#00000066] rounded"
                           v-show="isInstalling(item)"
@@ -186,15 +183,16 @@
                 </div>
               </td>
               <td>
-                <div class="badge badge-ghost min-w-max">
+                <div :class="expiryHue(item) === null ? 'badge badge-ghost min-w-max' : 'badge atv-expiry min-w-max'"
+                  :style="{ '--expiry-hue': expiryHue(item) }">
                   {{ formatExpiredTime(item) }}
                 </div>
               </td>
               <td>
                 <div class="flex gap-x-2">
-                  <a class="link link-primary" @click="refreshApp(item)">{{
+                  <button type="button" class="btn atv-action atv-action--refresh" @click="refreshApp(item)">{{
                     $t("home.table.button.refresh")
-                  }}</a>
+                  }}</button>
                   <Popper placement="top" arrow="true">
                     <template #content="{ close }">
                       <div class="flex flex-col gap-y-2">
@@ -224,9 +222,9 @@
                         </div>
                       </div>
                     </template>
-                    <a class="link link-error">{{
+                    <button type="button" class="btn atv-action atv-action--danger">{{
                       $t("home.table.button.delete")
-                    }}</a>
+                    }}</button>
                   </Popper>
                 </div>
               </td>
@@ -424,6 +422,14 @@ export default {
     appName(item) {
       return item.custom_name || item.ipa_name;
     },
+    expiryHue(item) {
+      const date = item.expiration_date || item.refreshed_date || item.installed_date;
+      if (!date) return null;
+      const expires = item.expiration_date ? dayjs(date) : dayjs(date).add(7, "day");
+      if (!expires.isValid()) return null;
+      const days = Math.max(1, Math.min(6, expires.diff(dayjs(), "day")));
+      return (days - 1) * 24;
+    },
     formatExpiredTime(item) {
       let time = item.refreshed_date || item.installed_date;
       if (!time) return "-";
@@ -615,11 +621,12 @@ import DismissIcon from "@/assets/icons/dismiss.svg";
 }
 
 :deep(.popper) {
-  background: #ffffff;
+  background: var(--atv-surface);
   padding: 12px;
-  border-radius: 4px;
-  border: 1px solid #ebeef5;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  border: 1px solid var(--atv-border);
+  box-shadow: var(--atv-menu-shadow);
+  color: var(--atv-ink);
   word-break: break-all;
   text-align: justify;
   min-width: 150px;
@@ -627,10 +634,10 @@ import DismissIcon from "@/assets/icons/dismiss.svg";
 
 :deep(.popper:hover),
 :deep(.popper:hover > #arrow::before) {
-  background: #ffffff;
+  background: var(--atv-surface);
 }
 
 :deep(.popper #arrow::before) {
-  background: #ffffff;
+  background: var(--atv-surface);
 }
 </style>
