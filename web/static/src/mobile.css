@@ -141,10 +141,13 @@
     width: 76px;
     height: 48px;
     flex-basis: 76px;
+    border-radius: 6px;
+    overflow: hidden;
   }
 
   .app-container .main-container .table:has(.atv-app-icon) .atv-app-icon img {
     object-fit: contain;
+    border-radius: 6px;
   }
 
   .app-container .main-container .table:has(.atv-app-icon) tbody td:nth-child(2),
