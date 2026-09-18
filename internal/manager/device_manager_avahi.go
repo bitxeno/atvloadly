@@ -31,7 +31,9 @@ func (dm *DeviceManager) Start() {
 	ctx := dm.ctx
 	dm.mu.Unlock()
 
-	conn, err := dbus.SystemBus()
+	// Each Avahi server must own its D-Bus connection: Server.Close()
+	// closes it, and closing a shared SystemBus connection disrupts other browsers.
+	conn, err := dbus.ConnectSystemBus()
 	if err != nil {
 		log.Printf("Cannot get system bus: %v", err)
 		return
@@ -248,7 +250,9 @@ func (dm *DeviceManager) Scan() {
 }
 
 func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) error {
-	conn, err := dbus.SystemBus()
+	// Each Avahi server must own its D-Bus connection: Server.Close()
+	// closes it, and closing a shared SystemBus connection disrupts other browsers.
+	conn, err := dbus.ConnectSystemBus()
 	if err != nil {
 		return fmt.Errorf("cannot get system bus: %v", err)
 	}
@@ -348,7 +352,9 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.D
 		timeout = 10 * time.Second
 	}
 
-	conn, err := dbus.SystemBus()
+	// Each Avahi server must own its D-Bus connection: Server.Close()
+	// closes it, and closing a shared SystemBus connection disrupts other browsers.
+	conn, err := dbus.ConnectSystemBus()
 	if err != nil {
 		return nil, fmt.Errorf("cannot get system bus: %v", err)
 	}
