@@ -396,3 +396,16 @@
   }
 
 }
+
+/* mobile-footer-clean-test-v1 */
+@media (max-width: 768px) {
+  .atv-refresh-footer-note {
+    display: block !important;
+    margin-top: 1rem !important;
+    padding-top: 0.9rem !important;
+    border-top: 1px solid rgba(148, 163, 184, 0.22) !important;
+    line-height: 1.55 !important;
+    font-size: 0.98rem !important;
+    color: rgba(226, 232, 240, 0.84) !important;
+  }
+}
