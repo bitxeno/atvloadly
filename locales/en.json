@@ -76,15 +76,21 @@
             },
             "expired_time_format": {
                 "expired_tips": "Expired",
+                "days_one": "{{num}} DAY",
                 "days": "{{num}} DAYS",
+                "hours_one": "{{num}} HOUR",
                 "hours": "{{num}} HOURS",
                 "less_than_hour": "Soon"
             },
             "refresh_date_format": {
                 "installing_tips": "Installing...",
+                "seconds_one": "{{num}} second ago",
                 "seconds": "{{num}} seconds ago",
+                "miniutes_one": "{{num}} minute ago",
                 "miniutes": "{{num}} minutes ago",
+                "hours_one": "{{num}} hour ago",
                 "hours": "{{num}} hours ago",
+                "days_one": "{{num}} day ago",
                 "days": "{{num}} days ago"
             },
             "button": {

@@ -462,6 +462,7 @@ export default {
       if (days >= 1) {
         return this.$t("home.table.expired_time_format.days", {
           num: days,
+          count: days,
         });
       }
 
@@ -470,6 +471,7 @@ export default {
       if (hours >= 1) {
         return this.$t("home.table.expired_time_format.hours", {
           num: hours,
+          count: hours,
         });
       }
 
@@ -516,23 +518,27 @@ export default {
       if (seconds < 60) {
         return _this.$t("home.table.refresh_date_format.seconds", {
           num: seconds,
+          count: seconds,
         });
       }
       let miniutes = parseInt(seconds / 60, 10);
       if (miniutes < 60) {
         return _this.$t("home.table.refresh_date_format.miniutes", {
           num: miniutes,
+          count: miniutes,
         });
       }
       let hours = parseInt(seconds / 3600, 10);
       if (hours < 24) {
         return _this.$t("home.table.refresh_date_format.hours", {
           num: hours,
+          count: hours,
         });
       }
       let days = parseInt(seconds / 24 / 3600, 10);
       return _this.$t("home.table.refresh_date_format.days", {
         num: days,
+        count: days,
       });
     },
     formatRefreshResult(item) {
