@@ -85,6 +85,25 @@
             </ul>
           </div>
 
+<div class="dropdown dropdown-hover">
+            <label tabindex="0" class="btn btn-ghost rounded-btn px-2 md:px-4"
+              :aria-label="$t('nav.theme')">
+              <span class="atv-theme-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3 A9 9 0 0 0 12 21 Z" fill="currentColor"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.4"/></svg></span>
+              <span class="hidden sm:inline">{{ $t("nav.theme") }}</span>
+            </label>
+            <ul tabindex="0"
+              class="dropdown-content z-[1] menu menu-sm p-2 shadow bg-base-200 rounded-box w-44 gap-1">
+              <li v-for="mode in ['system', 'light', 'dark']" :key="mode">
+                <button type="button"
+                  :class="{ active: themePreference === mode }"
+                  :aria-pressed="themePreference === mode"
+                  @click="changeTheme(mode)">
+                  {{ $t('nav.theme_' + mode) }}
+                </button>
+              </li>
+            </ul>
+          </div>
+
           <div>
             <label tabindex="0" class="btn btn-ghost rounded-btn px-2 md:px-4" @click="showDonateModal = true">
                 <DonateThumbIcon class="w-5 h-5" />
@@ -171,6 +190,8 @@ export default {
   data() {
     return {
       languages: [],
+      themePreference: "light",
+      colorSchemeQuery: null,
       showDonateModal: false,
       showAboutModal: false,
       appVersion: "unknown",
@@ -178,6 +199,8 @@ export default {
     };
   },
   created() {
+    const saved = window.localStorage.getItem("atvloadly-theme");
+    this.themePreference = ["system", "light", "dark"].includes(saved) ? saved : "light";
     api.syncLang({lang: this.$i18next.language})
     api.getVersion().then((res) => {
       this.appVersion = res.data?.version || "unknown";
@@ -191,7 +214,26 @@ export default {
       });
     }
   },
+  mounted() {
+    this.colorSchemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    this.colorSchemeQuery.addEventListener("change", this.applyTheme);
+    this.applyTheme();
+  },
+  beforeUnmount() {
+    this.colorSchemeQuery?.removeEventListener("change", this.applyTheme);
+  },
   methods: {
+    applyTheme() {
+      const dark = this.themePreference === "dark" ||
+        (this.themePreference === "system" && this.colorSchemeQuery?.matches);
+      document.documentElement.setAttribute("data-theme", dark ? "dark" : "winter");
+    },
+    changeTheme(mode) {
+      if (!["system", "light", "dark"].includes(mode)) return;
+      this.themePreference = mode;
+      window.localStorage.setItem("atvloadly-theme", mode);
+      this.applyTheme();
+    },
     formatBuildDate(buildDate) {
       if (!buildDate) {
         return "unknown";
@@ -270,4 +312,7 @@ import HelpIcon from "@/assets/icons/help.svg";
 .main-container {
   @apply px-6 lg:px-16 py-8 gap-y-16;
 }
+
+.atv-theme-glyph { display: inline-flex; width: 20px; height: 20px; }
+.atv-theme-glyph svg { display: block; width: 100%; height: 100%; }
 </style>
