@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-screen-md mx-auto flex flex-col gap-y-6">
+  <div class="max-w-screen-md mx-auto flex flex-col gap-y-6 atv-install-page">
     <div class="alert atv-warning">
       <div class="w-8">
         <WarningIcon />
@@ -7,9 +7,9 @@
       <span class="text-sm">{{ $t("install.tips.warning") }}</span>
     </div>
 
-    <div class="card">
+    <div class="card atv-install-card">
       <div class="lg:flex lg:flex-row">
-        <div class="flex flex-col justify-center place-items-center gap-y-4">
+        <div class="flex flex-col justify-center place-items-center gap-y-4 atv-install-device">
           <div class="w-32 rounded">
             <IPhoneIcon v-if="isIPhone(device)" />
             <AppleTVIcon v-else />
@@ -31,7 +31,7 @@
 
         <div class="divider divider-horizontal"></div>
 
-        <div class="p-6 flex flex-col gap-y-4 w-full max-w-lg">
+        <div class="p-6 flex flex-col gap-y-4 w-full max-w-lg atv-install-form-wrap">
           <form id="form" class="flex flex-col gap-y-4">
             <div class="form-control w-full">
               <label class="label">
@@ -40,7 +40,7 @@
                   <template v-else>{{ $t("install.form.ipa_url.label") }}</template>
                 </span>
               </label>
-              <div class="join flex w-full">
+              <div class="join flex w-full atv-install-ipa-picker">
                 <input
                   v-if="installMode === 'file'"
                   type="file"
@@ -57,9 +57,18 @@
                   placeholder="https://example.com/app.ipa"
                   :required="installMode === 'link'"
                 />
-                <button class="btn join-item w-16" @click.prevent="toggleInstallMode">
+                <button class="btn join-item w-16"
+                  @click.prevent="toggleInstallMode"
+                  :aria-label="installMode === 'file'
+                    ? $t('install.form.ipa_url.label')
+                    : $t('install.form.choose_ipa.label')">
                   <span class="w-6 h-6" v-if="installMode === 'file'"><LinkIcon /></span>
                   <span class="w-6 h-6" v-else><FolderOpenIcon /></span>
+                  <span class="atv-install-mode-label hidden">
+                    {{ installMode === 'file'
+                      ? $t('install.form.ipa_url.label')
+                      : $t('install.form.choose_ipa.label') }}
+                  </span>
                 </button>
               </div>
             </div>
@@ -70,7 +79,7 @@
                   $t("install.form.account.label")
                 }}</span>
               </label>
-              <div class="join flex w-full">
+              <div class="join flex w-full atv-install-account-picker">
                 <select
                   class="select select-bordered join-item flex-1 w-full"
                   v-model="form.account"
