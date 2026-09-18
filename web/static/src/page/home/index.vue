@@ -145,9 +145,17 @@
                     <div class="inline-flex">
                       <div class="w-32 h-20 rounded relative flex items-center justify-center">
                         <img
+                          v-if="!failedIcons[item.ID]"
                           :src="iconUrl(item)"
+                          :alt="appName(item)"
+                          @error="markIconFailed(item.ID)"
                           class="max-w-full max-h-full rounded-md object-contain shadow-sm"
                         />
+                        <span
+                          v-else
+                          class="flex h-full w-full items-center justify-center rounded-md bg-base-200 text-base-content text-xl font-bold"
+                          :aria-label="appName(item)"
+                        >{{ (appName(item) || "?").charAt(0).toUpperCase() }}</span>
                         <div
                           class="absolute w-full h-full top-0 flex items-center justify-center bg-[#00000066] rounded"
                           v-show="isInstalling(item)"
@@ -284,6 +292,7 @@ export default {
       newInstallToastId: null,
       sortKey: "",
       sortOrder: "asc",
+      failedIcons: {},
     };
   },
   computed: {
@@ -575,6 +584,9 @@ export default {
         }
       }
       return false;
+    },
+    markIconFailed(id) {
+      this.failedIcons[id] = true;
     },
     iconUrl(app) {
       if (app.icon) {
