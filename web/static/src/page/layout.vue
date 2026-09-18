@@ -65,8 +65,10 @@
 
           <div class="dropdown dropdown-hover">
             <label tabindex="0" class="btn btn-ghost rounded-btn px-2 md:px-4">
-              <span class="w-5">
-                <LanguageIcon />
+              <span class="inline-flex w-5 h-4 items-center" aria-hidden="true">
+                <span v-if="flagCode($i18next.language)" class="fi text-base"
+                  :class="'fi-' + flagCode($i18next.language)"></span>
+                <LanguageIcon v-else class="w-5 h-4" />
               </span>
               <span class="hidden sm:inline">{{ $t("nav.language") }}</span></label
             >
@@ -79,6 +81,11 @@
                   :class="[{ active: $i18next.language == item.key }]"
                   v-on:click="changeLanguage(item.key)"
                 >
+                  <span class="inline-flex w-5 h-4 shrink-0 items-center" aria-hidden="true">
+                    <span v-if="flagCode(item.key)" class="fi text-base"
+                      :class="'fi-' + flagCode(item.key)"></span>
+                    <LanguageIcon v-else class="w-5 h-4" />
+                  </span>
                   {{ item.name }}
                 </button>
               </li>
@@ -166,6 +173,7 @@
   
   <script>
 import api from "@/api/api";
+import { languageFlagCode } from "@/utils/language-flag";
 export default {
   name: "App",
   data() {
@@ -217,6 +225,9 @@ export default {
       const month = String(parsed.getMonth() + 1).padStart(2, "0");
       const day = String(parsed.getDate()).padStart(2, "0");
       return `${year}-${month}-${day}`;
+    },
+    flagCode(lang) {
+      return languageFlagCode(lang);
     },
     changeLanguage(lang) {
       this.$i18next.changeLanguage(lang);

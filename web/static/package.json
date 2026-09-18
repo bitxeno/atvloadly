@@ -11,6 +11,7 @@
     "braces": "^3.0.3",
     "crypto-js": "^4.1.1",
     "dayjs": "^1.11.8",
+    "flag-icons": "7.5.0",
     "follow-redirects": "^1.15.6",
     "i18next": "^23.2.11",
     "i18next-browser-languagedetector": "^7.1.0",
