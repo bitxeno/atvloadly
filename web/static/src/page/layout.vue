@@ -87,7 +87,7 @@
 
           <div>
             <label tabindex="0" class="btn btn-ghost rounded-btn px-2 md:px-4" @click="showDonateModal = true">
-                <LikeIcon class="w-5 h-5" />
+                <DonateThumbIcon class="w-5 h-5" />
               <span class="hidden sm:inline">{{ $t("nav.donate") }}</span>
             </label>
           </div>
@@ -234,6 +234,7 @@ import GithubIcon from "@/assets/icons/github.svg";
 import AccountIcon from "@/assets/icons/person.svg";
 import OptionIcon from "@/assets/icons/slider.svg";
 import LikeIcon from "@/assets/icons/like.svg";
+import DonateThumbIcon from "@/assets/icons/donate-thumb.svg";
 import AfdianIcon from "@/assets/icons/afdian.svg";
 import KofiIcon from "@/assets/icons/kofi.svg";
 import ToolsIcon from "@/assets/icons/tools.svg";
