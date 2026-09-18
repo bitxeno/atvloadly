@@ -288,26 +288,10 @@ import HelpIcon from "@/assets/icons/help.svg";
 .app-container {
   width: 100%;
   min-height: 100vh;
-  background-attachment: fixed;
+  background-color: var(--atv-canvas);
+  background-image: var(--atv-page-background);
   background-size: cover;
-  background-repeat: no-repeat;
-  background-image: radial-gradient(
-      circle 800px at 700px 200px,
-      hsl(276 100% 99%),
-      #fdfcfd00
-    ),
-    radial-gradient(circle 800px at right center, hsl(193 99% 94.7%), #fdfcfd00),
-    radial-gradient(
-      circle 800px at right bottom,
-      hsl(193 100% 98.8%),
-      #fdfcfd00
-    ),
-    radial-gradient(
-      circle 800px at calc(50% - 600px) calc(100% - 100px),
-      hsl(323 86.3% 96.5%),
-      hsl(322 100% 99.4%),
-      #fdfcfd00
-    );
+  background-attachment: fixed;
 }
 .main-container {
   @apply px-6 lg:px-16 py-8 gap-y-16;
