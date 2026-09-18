@@ -1,7 +1,7 @@
 <template>
   <div class="max-w-screen-lg mx-auto">
     <div class="flex justify-between items-center mb-4 px-1">
-      <button class="btn btn-soft btn-sm" @click="showLoginDialog">
+      <button class="btn btn-primary btn-sm atv-toolbar-btn" @click="showLoginDialog">
         <PersonIcon class="w-4 h-4 mr-1" />
         {{ $t("install.login_modal.button.add_account") }}
       </button>
@@ -612,6 +612,7 @@ export default {
 .headline {
   @apply prose mb-2;
 }
+
 .empty {
   background-image: repeating-linear-gradient(
     45deg,
@@ -620,15 +621,16 @@ export default {
     hsl(var(--b2)) 13px,
     hsl(var(--b2)) 14px
   );
-  @apply border-base-300 bg-base-100 rounded-b-box flex min-h-[6rem]  flex-wrap items-center justify-center gap-2 overflow-x-hidden border bg-cover bg-top p-4;
+  @apply border-base-300 bg-base-100 rounded-b-box flex min-h-[6rem] flex-wrap items-center justify-center gap-2 overflow-x-hidden border bg-cover bg-top p-4;
 }
 
 :deep(.popper) {
-  background: #ffffff;
-  padding: 12px;
-  border-radius: 4px;
-  border: 1px solid #ebeef5;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  background: var(--atv-surface);
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--atv-border);
+  box-shadow: var(--atv-menu-shadow);
+  color: var(--atv-ink);
   word-break: break-all;
   text-align: justify;
   min-width: 150px;
@@ -636,14 +638,13 @@ export default {
 
 :deep(.popper:hover),
 :deep(.popper:hover > #arrow::before) {
-  background: #ffffff;
+  background: var(--atv-surface);
 }
 
 :deep(.popper #arrow::before) {
-  background: #ffffff;
+  background: var(--atv-surface);
 }
 
-/* Disabled link styles */
 a[disabled],
 .link[disabled],
 a[aria-disabled="true"],
@@ -651,7 +652,7 @@ a[aria-disabled="true"],
   pointer-events: none;
   opacity: 0.5;
   cursor: not-allowed;
-  color: var(--b2) !important;
+  color: var(--atv-muted) !important;
   text-decoration: none;
 }
 

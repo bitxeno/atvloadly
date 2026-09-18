@@ -1,6 +1,6 @@
 <template>
   <div class="max-w-screen-md mx-auto flex flex-col gap-y-6">
-    <div class="alert alert-warning">
+    <div class="alert atv-warning">
       <div class="w-8">
         <WarningIcon />
       </div>
@@ -15,9 +15,9 @@
       </div>
     </div>
 
-    <div class="border rounded p-6 bg-base-100">
-      <div class="p-6 flex flex-col gap-y-4">
-        <h2 class="text-xl font-bold">{{ $t("laboratory.title") }}</h2>
+    <div class="card bg-base-100">
+      <div class="flex flex-col gap-y-5">
+        <h2 class="atv-section-heading">{{ $t("laboratory.title") }}</h2>
         <form id="form" class="flex flex-col gap-y-4">
           <div class="form-control w-full">
             <label class="label">

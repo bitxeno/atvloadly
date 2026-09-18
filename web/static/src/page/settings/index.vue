@@ -1,7 +1,7 @@
 <template>
   <div class="settings-page max-w-screen-lg mx-auto">
-    <fieldset class="section bg-base-100">
-      <legend>{{ $t("settings.notification.title") }}</legend>
+    <section class="section bg-base-100">
+      <h2 class="atv-section-heading">{{ $t("settings.notification.title") }}</h2>
       <form>
         <div class="form-item">
           <label class="form-item-label">
@@ -98,10 +98,10 @@
           </div>
         </div>
       </form>
-    </fieldset>
+    </section>
 
-    <fieldset class="section bg-base-100">
-      <legend>{{ $t("settings.refresh.title") }}</legend>
+    <section class="section bg-base-100">
+      <h2 class="atv-section-heading">{{ $t("settings.refresh.title") }}</h2>
       <form>
         <div class="form-item">
           <label class="form-item-label">
@@ -260,10 +260,10 @@
           </div>
         </div>
       </form>
-    </fieldset>
+    </section>
 
-    <fieldset class="section bg-base-100">
-      <legend>{{ $t("settings.network.title") }}</legend>
+    <section class="section bg-base-100">
+      <h2 class="atv-section-heading">{{ $t("settings.network.title") }}</h2>
       <form>
         <div class="form-item">
           <label class="form-item-label">
@@ -309,9 +309,9 @@
           </div>
         </div>
       </form>
-    </fieldset>
-    <fieldset class="section bg-base-100">
-      <legend>{{ $t('settings.advanced.title') }}</legend>
+    </section>
+    <section class="section bg-base-100">
+      <h2 class="atv-section-heading">{{ $t('settings.advanced.title') }}</h2>
       <form>
         <div class="form-item">
           <label class="form-item-label">
@@ -335,7 +335,7 @@
           </div>
         </div>
       </form>
-    </fieldset>
+    </section>
   </div>
 </template>
           
@@ -520,44 +520,73 @@ export default {
 };
 </script>
 
-<style lang="postcss">
+<style lang="postcss" scoped>
 .section {
-  border: 1px solid #ebebeb;
-  border-radius: 5px;
-  padding: 28px;
-  margin-bottom: 30px;
+  border: 1px solid var(--atv-border);
+  border-radius: 22px;
+  padding: 30px;
+  margin-bottom: 34px;
 }
 
-legend {
-  -webkit-box-sizing: border-box;
-  box-sizing: border-box;
-  color: inherit;
-  display: table;
-  max-width: 100%;
-  padding: 0;
-  white-space: normal;
-}
 
 form {
-  @apply flex flex-col gap-y-4;
+  @apply flex flex-col gap-y-5;
 }
 
-.form-item {
-  @apply form-control w-full lg:flex lg:flex-row lg:items-center;
+:deep(.form-item) {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  gap: 16px 20px;
+  align-items: center;
 }
-.form-item-label {
-  @apply label w-48 lg:justify-end pr-4 font-medium;
+
+:deep(.form-item-label) {
+  @apply label;
+  width: auto;
+  justify-content: flex-start;
+  padding-right: 0;
+  font-weight: 650;
+  color: var(--atv-muted);
 }
-.form-item-content {
-  @apply grow;
+
+:deep(.form-item-content) {
+  width: 100%;
+  max-width: none;
+}
+
+.form-item-content :deep(.input),
+.form-item-content :deep(.select),
+.form-item-content :deep(.textarea) {
+  width: 100% !important;
+  min-height: 46px;
+}
+
+.section :deep(.btn.w-48) {
+  width: 11.5rem;
+  justify-content: center;
+}
+
+.section :deep(.btn) {
+  box-shadow: none;
+}
+
+.section :deep(a) {
+  color: var(--atv-accent);
+  font-weight: 650;
+  text-underline-offset: 3px;
+}
+
+.section :deep(a:hover) {
+  color: var(--atv-accent-hover);
 }
 
 :deep(.popper) {
-  background: #ffffff;
-  padding: 12px;
-  border-radius: 4px;
-  border: 1px solid #ebeef5;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  background: var(--atv-surface);
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--atv-border);
+  box-shadow: var(--atv-menu-shadow);
+  color: var(--atv-ink);
   word-break: break-all;
   text-align: justify;
   min-width: 150px;
@@ -565,10 +594,29 @@ form {
 
 :deep(.popper:hover),
 :deep(.popper:hover > #arrow::before) {
-  background: #ffffff;
+  background: var(--atv-surface);
 }
 
 :deep(.popper #arrow::before) {
-  background: #ffffff;
+  background: var(--atv-surface);
+}
+
+@media (max-width: 980px) {
+  .section {
+    padding: 20px;
+  }
+
+  :deep(.form-item) {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  :deep(.form-item-label) {
+    padding-bottom: 0;
+  }
+
+  .section :deep(.btn.w-48) {
+    width: 100%;
+  }
 }
 </style>
