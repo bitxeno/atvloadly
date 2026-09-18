@@ -185,4 +185,40 @@
     height: 36px;
     padding-inline: 9px;
   }
+
+  /* mobile-menu-local-test-v1: anchor every menu to the full nav row */
+  .app-container > .navbar > .flex-none > nav.navbar {
+    position: relative;
+  }
+
+  .app-container > .navbar > .flex-none > nav.navbar > .dropdown {
+    position: static;
+  }
+
+  .app-container > .navbar > .flex-none > nav.navbar > .dropdown > .dropdown-content {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0 !important;
+    right: 0 !important;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    max-height: min(60dvh, 420px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    z-index: 9999;
+  }
+
+  .app-container > .navbar > .flex-none > nav.navbar > .dropdown:not(.dropdown-open) > .dropdown-content {
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  .app-container > .navbar > .flex-none > nav.navbar > .dropdown.dropdown-open > .dropdown-content {
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
 }

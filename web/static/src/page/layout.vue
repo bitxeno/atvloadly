@@ -9,8 +9,13 @@
       </div>
       <div class="flex-none">
         <nav class="navbar w-full"> 
-          <div class="dropdown dropdown-hover">
-            <label tabindex="0" class="btn btn-ghost rounded-btn px-2 md:px-4">
+          <div class="dropdown" :class="{ 'dropdown-hover': !isMobile, 'dropdown-open': isMobile && openMobileMenu === 'preferences' }" @click="closeMobileMenu">
+            <label tabindex="0" class="btn btn-ghost rounded-btn px-2 md:px-4"
+              @click.stop="toggleMobileMenu('preferences')"
+              @keydown.enter.prevent="toggleMobileMenu('preferences')"
+              @keydown.space.prevent="toggleMobileMenu('preferences')"
+              :aria-expanded="isMobile ? openMobileMenu === 'preferences' : undefined"
+              :aria-label="$t('nav.preferences')">
               <span class="w-5">
                   <OptionIcon />
                 </span>
@@ -63,8 +68,13 @@
             </ul>
           </div>
 
-          <div class="dropdown dropdown-hover">
-            <label tabindex="0" class="btn btn-ghost rounded-btn px-2 md:px-4">
+          <div class="dropdown" :class="{ 'dropdown-hover': !isMobile, 'dropdown-open': isMobile && openMobileMenu === 'language' }" @click="closeMobileMenu">
+            <label tabindex="0" class="btn btn-ghost rounded-btn px-2 md:px-4"
+              @click.stop="toggleMobileMenu('language')"
+              @keydown.enter.prevent="toggleMobileMenu('language')"
+              @keydown.space.prevent="toggleMobileMenu('language')"
+              :aria-expanded="isMobile ? openMobileMenu === 'language' : undefined"
+              :aria-label="$t('nav.language')">
               <span class="w-5">
                 <LanguageIcon />
               </span>
@@ -85,9 +95,13 @@
             </ul>
           </div>
 
-<div class="dropdown dropdown-hover">
+<div class="dropdown" :class="{ 'dropdown-hover': !isMobile, 'dropdown-open': isMobile && openMobileMenu === 'theme' }" @click="closeMobileMenu">
             <label tabindex="0" class="btn btn-ghost rounded-btn px-2 md:px-4"
-              :aria-label="$t('nav.theme')">
+              :aria-label="$t('nav.theme')"
+              @click.stop="toggleMobileMenu('theme')"
+              @keydown.enter.prevent="toggleMobileMenu('theme')"
+              @keydown.space.prevent="toggleMobileMenu('theme')"
+              :aria-expanded="isMobile ? openMobileMenu === 'theme' : undefined">
               <span class="atv-theme-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3 A9 9 0 0 0 12 21 Z" fill="currentColor"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.4"/></svg></span>
               <span class="hidden sm:inline">{{ $t("nav.theme") }}</span>
             </label>
@@ -190,6 +204,9 @@ export default {
   data() {
     return {
       languages: [],
+      isMobile: window.matchMedia("(max-width: 767px)").matches,
+      mobileMediaQuery: null,
+      openMobileMenu: null,
       themePreference: "light",
       colorSchemeQuery: null,
       showDonateModal: false,
@@ -215,14 +232,52 @@ export default {
     }
   },
   mounted() {
+    this.mobileMediaQuery = window.matchMedia("(max-width: 767px)");
+    this.mobileMediaQuery.addEventListener("change", this.onMobileBreakpointChange);
+    document.addEventListener("click", this.onDocumentClick);
+    document.addEventListener("keydown", this.onDocumentKeydown);
     this.colorSchemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
     this.colorSchemeQuery.addEventListener("change", this.applyTheme);
     this.applyTheme();
   },
   beforeUnmount() {
     this.colorSchemeQuery?.removeEventListener("change", this.applyTheme);
+    this.mobileMediaQuery?.removeEventListener("change", this.onMobileBreakpointChange);
+    document.removeEventListener("click", this.onDocumentClick);
+    document.removeEventListener("keydown", this.onDocumentKeydown);
   },
   methods: {
+    onMobileBreakpointChange(event) {
+      this.isMobile = event.matches;
+      this.openMobileMenu = null;
+    },
+    toggleMobileMenu(menu) {
+      if (!this.isMobile) return;
+      if (this.openMobileMenu === menu) {
+        this.closeMobileMenu();
+      } else {
+        this.openMobileMenu = menu;
+      }
+    },
+    closeMobileMenu() {
+      if (!this.isMobile) return;
+      this.openMobileMenu = null;
+      const focused = document.activeElement;
+      if (focused?.closest?.(".app-container > .navbar .dropdown")) {
+        focused.blur();
+      }
+    },
+    onDocumentClick(event) {
+      if (this.isMobile &&
+          !event.target?.closest?.(".app-container > .navbar .dropdown")) {
+        this.closeMobileMenu();
+      }
+    },
+    onDocumentKeydown(event) {
+      if (this.isMobile && event.key === "Escape") {
+        this.closeMobileMenu();
+      }
+    },
     applyTheme() {
       const dark = this.themePreference === "dark" ||
         (this.themePreference === "system" && this.colorSchemeQuery?.matches);
