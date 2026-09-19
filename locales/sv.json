@@ -312,6 +312,7 @@
     }
   },
   "account": {
+    "status_labels": {"valid": "Giltigt", "invalid": "Ogiltigt"},
     "select_account": "Välj konto",
     "select_placeholder": "Välj ett konto",
     "table": {

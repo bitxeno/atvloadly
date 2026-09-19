@@ -309,6 +309,7 @@
             }
     },
     "account": {
+      "status_labels": {"valid": "有效", "invalid": "无效"},
         "select_account": "选择帐号",
         "select_placeholder": "请选择一个帐号",
         "table": {
