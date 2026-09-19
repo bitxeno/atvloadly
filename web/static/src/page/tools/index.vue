@@ -1,8 +1,8 @@
 <template>
-  <div class="container mx-auto p-4">
+  <div class="container mx-auto p-4 atv-scanner-page">
     <h1 class="text-2xl font-bold mb-4">{{ $t('tools.ssdp.title') }}</h1>
 
-    <div class="mockup-code overflow-y-auto h-[600px]">
+    <div class="mockup-code overflow-y-auto h-[600px] atv-scanner-log">
       <pre v-for="(log, index) in logs" :key="index" class="px-4 py-1"><code :style="log.color ? { color: log.color } : {}">{{ typeof log === 'string' ? log : log.text }}</code></pre>
     </div>
 

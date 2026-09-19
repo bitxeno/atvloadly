@@ -250,9 +250,8 @@
       </div>
 
       <div
-        class="stat-title text-sm flex flex-row items-center gap-x-1 whitespace-break-spaces"
+        class="stat-title text-sm whitespace-normal atv-refresh-footer-note"
       >
-        <div class="w-4"><HelpIcon /></div>
         {{ $t("home.table.tips.footer") }}
       </div>
     </div>

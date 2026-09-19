@@ -6,6 +6,7 @@ import Popper from "vue3-popper";
 import I18NextVue from "i18next-vue";
 import i18next from "./i18n";
 import "./app.css";
+import "./mobile.css";
 import "vue3-toastify/dist/index.css";
 
 createApp(App)
