@@ -28,6 +28,12 @@ var deviceManager = newDeviceManager()
 // backs up, and godbus leaks one goroutine per undelivered signal.
 const pairingCheckInterval = 60 * time.Second
 
+// pairingCheck identifies one in-flight check so an older check cannot
+// remove the cancellation function belonging to a newer check.
+type pairingCheck struct {
+	cancel context.CancelFunc
+}
+
 type DeviceManager struct {
 	devices              sync.Map
 	ctx                  context.Context
@@ -44,7 +50,7 @@ type DeviceManager struct {
 	// pairingCancel tracks the in-flight remote-pairing check for each
 	// device identifier, so a disconnect (Remove event) can cancel the
 	// slow plumesign subprocess immediately and release the goroutine.
-	pairingCancel map[string]context.CancelFunc
+	pairingCancel map[string]*pairingCheck
 }
 
 func newDeviceManager() *DeviceManager {
@@ -52,7 +58,7 @@ func newDeviceManager() *DeviceManager {
 		onDeviceConnected:    func(device model.Device) {},
 		onDeviceDisconnected: func(device model.Device) {},
 		pairingCheckedAt:     make(map[string]time.Time),
-		pairingCancel:        make(map[string]context.CancelFunc),
+		pairingCancel:        make(map[string]*pairingCheck),
 	}
 }
 
@@ -93,8 +99,19 @@ func (dm *DeviceManager) updateRemotePairingDevice(serviceName, ip string, port 
 func (dm *DeviceManager) cancelPairingCheck(identifier string) {
 	dm.pairingMu.Lock()
 	defer dm.pairingMu.Unlock()
-	if cancel, ok := dm.pairingCancel[identifier]; ok {
-		cancel()
+	if check, ok := dm.pairingCancel[identifier]; ok {
+		check.cancel()
+		delete(dm.pairingCancel, identifier)
+	}
+}
+
+// finishPairingCheck removes only the check that is finishing. An older
+// check must not erase a newer check's cancellation function.
+func (dm *DeviceManager) finishPairingCheck(identifier string, check *pairingCheck) {
+	check.cancel()
+	dm.pairingMu.Lock()
+	defer dm.pairingMu.Unlock()
+	if dm.pairingCancel[identifier] == check {
 		delete(dm.pairingCancel, identifier)
 	}
 }
@@ -117,18 +134,14 @@ func (dm *DeviceManager) checkRemotePairingAsync(ctx context.Context, identifier
 		ctx = context.Background()
 	}
 	checkCtx, cancel := context.WithCancel(ctx)
+	check := &pairingCheck{cancel: cancel}
 	dm.pairingMu.Lock()
 	if prev, ok := dm.pairingCancel[identifier]; ok {
-		prev() // a newer event supersedes the previous check
+		prev.cancel() // a newer event supersedes the previous check
 	}
-	dm.pairingCancel[identifier] = cancel
+	dm.pairingCancel[identifier] = check
 	dm.pairingMu.Unlock()
-	defer func() {
-		cancel()
-		dm.pairingMu.Lock()
-		delete(dm.pairingCancel, identifier)
-		dm.pairingMu.Unlock()
-	}()
+	defer dm.finishPairingCheck(identifier, check)
 
 	v, err := dm.CheckDevicePairedContext(checkCtx, identifier, authTag)
 	if err != nil || v == nil {
