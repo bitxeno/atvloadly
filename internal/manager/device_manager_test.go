@@ -102,7 +102,7 @@ func TestCancelPairingCheck(t *testing.T) {
 
 	cancelled := false
 	dm.pairingMu.Lock()
-	dm.pairingCancel["device-a"] = func() { cancelled = true }
+	dm.pairingCancel["device-a"] = &pairingCheck{cancel: func() { cancelled = true }}
 	dm.pairingMu.Unlock()
 
 	dm.cancelPairingCheck("device-a")
@@ -130,5 +130,72 @@ func TestCheckRemotePairingAsyncCancelled(t *testing.T) {
 
 	if n := dm.devicesCount(); n != 0 {
 		t.Errorf("no device should be registered after cancelled check, got %d", n)
+	}
+}
+
+// TestPairingCheckCleanupOwnership covers an old check finishing after a
+// replacement check has started. The old cleanup must not remove the new
+// check's cancellation function.
+func TestPairingCheckCleanupOwnership(t *testing.T) {
+	dm := newDeviceManager()
+
+	oldCtx, oldCancel := context.WithCancel(context.Background())
+	defer oldCancel()
+	newCtx, newCancel := context.WithCancel(context.Background())
+	defer newCancel()
+
+	oldCheck := &pairingCheck{cancel: oldCancel}
+	newCheck := &pairingCheck{cancel: newCancel}
+
+	// Check B replaces check A before A has finished cleaning up.
+	dm.pairingMu.Lock()
+	dm.pairingCancel["device-a"] = oldCheck
+	dm.pairingCancel["device-a"] = newCheck
+	dm.pairingMu.Unlock()
+
+	// A finishes late. B must remain registered and running.
+	dm.finishPairingCheck("device-a", oldCheck)
+
+	if oldCtx.Err() != context.Canceled {
+		t.Fatal("the finished check was not cancelled")
+	}
+
+	dm.pairingMu.Lock()
+	current := dm.pairingCancel["device-a"]
+	dm.pairingMu.Unlock()
+
+	if current != newCheck {
+		t.Fatal("old cleanup removed the newer check")
+	}
+	if newCtx.Err() != nil {
+		t.Fatal("old cleanup cancelled the newer check")
+	}
+
+	// A subsequent disconnect must still be able to cancel B.
+	dm.cancelPairingCheck("device-a")
+
+	if newCtx.Err() != context.Canceled {
+		t.Fatal("disconnect could not cancel the newer check")
+	}
+	if _, ok := dm.pairingCancel["device-a"]; ok {
+		t.Fatal("disconnect left a stale cancellation entry")
+	}
+
+	// Finishing an active check normally must also clean up its entry.
+	lastCtx, lastCancel := context.WithCancel(context.Background())
+	defer lastCancel()
+	lastCheck := &pairingCheck{cancel: lastCancel}
+
+	dm.pairingMu.Lock()
+	dm.pairingCancel["device-b"] = lastCheck
+	dm.pairingMu.Unlock()
+
+	dm.finishPairingCheck("device-b", lastCheck)
+
+	if lastCtx.Err() != context.Canceled {
+		t.Fatal("normal completion did not cancel its context")
+	}
+	if _, ok := dm.pairingCancel["device-b"]; ok {
+		t.Fatal("normal completion left a stale cancellation entry")
 	}
 }
