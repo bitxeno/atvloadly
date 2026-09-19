@@ -45,7 +45,7 @@ func TestAppleTouchIconProductionAsset(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open built index: %v", err)
 	}
-	defer index.Close()
+	defer func() { _ = index.Close() }()
 
 	indexData, err := io.ReadAll(index)
 	if err != nil {
@@ -64,7 +64,7 @@ func TestAppleTouchIconProductionAsset(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open built icon: %v", err)
 	}
-	defer icon.Close()
+	defer func() { _ = icon.Close() }()
 	iconData, err := io.ReadAll(icon)
 	if err != nil {
 		t.Fatalf("read built icon: %v", err)
@@ -77,7 +77,7 @@ func TestAppleTouchIconProductionAsset(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request icon: %v", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode != http.StatusOK {
 		t.Fatalf("icon status = %d, want %d", response.StatusCode, http.StatusOK)
 	}
