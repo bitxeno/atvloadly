@@ -220,6 +220,16 @@ func HandleScanMessage(c *websocket.Conn) {
 	log.Info("Starting service scan via WebSocket...")
 	ctx := websocketMgr.Context()
 
+	// Detect browser disconnects so discovery stops when the scanner page closes.
+	go func() {
+		for {
+			if _, err := websocketMgr.ReadMessage(); err != nil {
+				websocketMgr.Cancel()
+				return
+			}
+		}
+	}()
+
 	err := manager.ScanServices(ctx, func(serviceType string, name string, host string, address string, port uint16, txt [][]byte) {
 		// Convert txt to string array for JSON
 		txtStrs := make([]string, len(txt))
