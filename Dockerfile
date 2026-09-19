@@ -78,10 +78,12 @@ RUN rm -rf /var/lib/lockdown && mkdir -p /data/lockdown && ln -s /data/lockdown 
 
 
 # Generate startup script
+# Prevent repeated crashes from filling /data with core dumps (#116).
 COPY ./doc/scripts/usbmuxd /etc/init.d/usbmuxd
 RUN chmod +x /etc/init.d/usbmuxd
 RUN printf '#!/bin/sh \n\n\
 
+ulimit -c 0 \n\
 mkdir -p /data/lockdown \n\
 mkdir -p /data/PlumeImpactor \n\
 mkdir -p /data/PlumeImpactor/pairing_files \n\

@@ -12,4 +12,6 @@ services:
       - /var/run/avahi-daemon:/var/run/avahi-daemon 
     ports:
       - 5533:80/tcp
+    ulimits:
+      core: 0
     restart: unless-stopped
