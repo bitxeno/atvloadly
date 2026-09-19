@@ -76,15 +76,21 @@
       },
       "expired_time_format": {
         "expired_tips": "Utgången",
+        "days_one": "{{num}} dag",
         "days": "{{num}} dagar",
+        "hours_one": "{{num}} timme",
         "hours": "{{num}} timmar",
         "less_than_hour": "Under 1 timme"
       },
       "refresh_date_format": {
         "installing_tips": "Installerar…",
+        "seconds_one": "För {{num}} sekund sedan",
         "seconds": "För {{num}} sekunder sedan",
+        "miniutes_one": "För {{num}} minut sedan",
         "miniutes": "För {{num}} minuter sedan",
+        "hours_one": "För {{num}} timme sedan",
         "hours": "För {{num}} timmar sedan",
+        "days_one": "För {{num}} dag sedan",
         "days": "För {{num}} dagar sedan"
       },
       "button": {
