@@ -315,6 +315,7 @@
             }
     },
     "account": {
+      "status_labels": {"valid": "Valid", "invalid": "Invalid"},
         "select_account": "Select Account",
         "select_placeholder": "Please select an account",
         "table": {

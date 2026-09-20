@@ -439,14 +439,17 @@ export default {
       if (!date) return null;
       const expires = item.expiration_date ? dayjs(date) : dayjs(date).add(7, "day");
       if (!expires.isValid()) return null;
-      const days = Math.max(1, Math.min(6, expires.diff(dayjs(), "day")));
-      return (days - 1) * 24;
+
+      const remainingMs = expires.diff(dayjs());
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      const fraction = Math.max(0, Math.min(1, remainingMs / sevenDaysMs));
+      return Math.round(fraction * 120);
     },
     formatExpiredTime(item) {
       let time = item.refreshed_date || item.installed_date;
-      if (!time) return "-";
+      if (!time && !item.expiration_date) return "-";
 
-      let expired_date = dayjs(time).add(7, "day");
+      let expired_date = time ? dayjs(time).add(7, "day") : null;
       if (item.expiration_date) {
         expired_date = dayjs(item.expiration_date);
       }

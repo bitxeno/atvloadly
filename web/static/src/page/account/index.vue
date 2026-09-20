@@ -24,7 +24,7 @@
           <template v-else>
             <tr v-for="(account, email) in accounts" :key="email">
               <td class="break-all">{{ email }}</td>
-              <td>{{ account.status }}</td>
+              <td><span class="atv-status" :class="statusClass(account.status)">{{ statusLabel(account.status) }}</span></td>
               <td class="flex gap-x-4">
                 <a class="link link-primary" @click="openCertModal(email)">{{
                   $t("account.table.button.certificate")
@@ -119,7 +119,7 @@
                   </div>
                 </td>
                 <td>{{ cert.machineName }}</td>
-                <td class="hidden md:table-cell">{{ cert.status }}</td>
+                <td class="hidden md:table-cell"><span class="atv-status" :class="statusClass(cert.status)">{{ statusLabel(cert.status) }}</span></td>
                 <td>
                   <div class="flex gap-x-1">
                   <a
@@ -398,6 +398,20 @@ export default {
     this.fetchData();
   },
   methods: {
+    statusLabel(status) {
+      const value = String(status ?? "").trim();
+      const key = value.toLowerCase();
+      if (key === "valid" || key === "invalid") {
+        return this.$t(`account.status_labels.${key}`);
+      }
+      return value || "—";
+    },
+    statusClass(status) {
+      const key = String(status ?? "").trim().toLowerCase();
+      if (key === "valid") return "atv-status--valid";
+      if (key === "invalid") return "atv-status--invalid";
+      return "";
+    },
     fetchData() {
       this.loading = true;
       api

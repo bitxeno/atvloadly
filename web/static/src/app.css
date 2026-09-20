@@ -738,18 +738,65 @@ html[data-theme="dark"] {
   }
 }
 
-/* Expiration status: 6+ days green, 1 day or less red. */
+/* Continuous expiry scale: green -> yellow -> red. */
 .app-container .atv-expiry {
-  color: hsl(var(--expiry-hue) 72% 31%);
-  background: hsl(var(--expiry-hue) 75% 43% / 0.13);
-  border: 1px solid hsl(var(--expiry-hue) 70% 43% / 0.35);
+  color: hsl(var(--expiry-hue) 76% 28%);
+  background: linear-gradient(
+    125deg,
+    hsl(var(--expiry-hue) 82% 48% / .20),
+    hsl(var(--expiry-hue) 82% 48% / .065)
+  );
+  border: 1px solid hsl(var(--expiry-hue) 73% 44% / .42);
   border-radius: 999px;
   min-height: 27px;
   padding-inline: 11px;
   font-weight: 750;
+  white-space: nowrap;
 }
 html[data-theme="dark"] .app-container .atv-expiry {
-  color: hsl(var(--expiry-hue) 76% 76%);
+  color: hsl(var(--expiry-hue) 82% 76%);
+  background: linear-gradient(
+    125deg,
+    hsl(var(--expiry-hue) 78% 55% / .24),
+    hsl(var(--expiry-hue) 78% 55% / .075)
+  );
+}
+
+/* Status colours aligned with the existing light/dark theme. */
+html[data-theme="winter"],
+html[data-theme="light"] {
+  --atv-success-text: #166534;
+  --atv-success-soft: #e9f7ed;
+  --atv-success-border: #a9dfba;
+}
+html[data-theme="dark"] {
+  --atv-success-text: #86efac;
+  --atv-success-soft: #17372b;
+  --atv-success-border: #32694b;
+}
+.app-container .atv-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 3px 10px;
+  border: 1px solid var(--atv-border);
+  border-radius: 999px;
+  background: var(--atv-surface-alt);
+  color: var(--atv-muted);
+  font-size: .75rem;
+  line-height: 1.25;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.app-container .atv-status--valid {
+  color: var(--atv-success-text);
+  background: var(--atv-success-soft);
+  border-color: var(--atv-success-border);
+}
+.app-container .atv-status--invalid {
+  color: var(--atv-danger);
+  background: var(--atv-danger-soft);
+  border-color: var(--atv-danger);
 }
 
 /* device-warning-design-v1 */
