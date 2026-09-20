@@ -35,6 +35,10 @@
         "afdian": "在爱发电上支持",
         "close": "关闭"
     },
+    "result": {
+        "success": "成功",
+        "fail": "失败"
+    },
     "home": {
         "heading": {
             "pairable_devices": "待配对设备",
@@ -197,6 +201,7 @@
             },
             "toast": {
                 "device_not_ready": "设备信息未就绪，请稍后再试",
+                "mount_failed": "无法为设备截屏做好准备",
                 "failed": "截屏失败"
             },
             "button": {

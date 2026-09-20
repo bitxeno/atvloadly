@@ -35,6 +35,10 @@
         "afdian": "Support on Afadian",
         "close": "Close"
     },
+    "result": {
+        "success": "Success",
+        "fail": "Failed"
+    },
     "home": {
         "heading": {
             "pairable_devices": "Pairable Devices",
@@ -203,6 +207,7 @@
             },
             "toast": {
                 "device_not_ready": "Device information is not ready, please try again later",
+                "mount_failed": "Could not prepare the device for a screenshot",
                 "failed": "Screenshot failed"
             },
             "button": {
