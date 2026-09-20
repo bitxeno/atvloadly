@@ -854,3 +854,42 @@ html[data-theme="dark"] {
   border: 1px solid var(--atv-warning-border);
   color: var(--atv-warning-text);
 }
+
+/* Account actions remain visible and usable in both themes. */
+.app-container .atv-account-page .atv-account-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-container .atv-account-page .atv-account-action {
+  color: var(--atv-accent);
+  font-weight: 670;
+  border: 1px solid var(--atv-border);
+  background: var(--atv-surface-alt);
+  border-radius: 10px;
+}
+
+.app-container .atv-account-page .atv-account-action:hover:not(:disabled),
+.app-container .atv-account-page .atv-account-action:focus-visible:not(:disabled) {
+  color: var(--atv-accent-hover);
+  border-color: var(--atv-accent);
+  background: var(--atv-accent-soft);
+}
+
+.app-container .atv-account-page .atv-account-action--danger {
+  color: var(--atv-danger);
+}
+
+.app-container .atv-account-page .atv-account-action--danger:hover:not(:disabled),
+.app-container .atv-account-page .atv-account-action--danger:focus-visible:not(:disabled) {
+  color: var(--atv-danger-hover);
+  border-color: var(--atv-danger);
+  background: var(--atv-danger-soft);
+}
+
+.app-container .atv-account-page .atv-account-action:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}

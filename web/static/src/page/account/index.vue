@@ -1,13 +1,13 @@
 <template>
-  <div class="max-w-screen-lg mx-auto">
+  <div class="atv-account-page max-w-screen-lg mx-auto">
     <div class="flex justify-between items-center mb-4 px-1">
-      <button class="btn btn-primary btn-sm atv-toolbar-btn" @click="showLoginDialog">
+      <button type="button" class="btn btn-primary btn-sm atv-toolbar-btn" @click="showLoginDialog">
         <PersonIcon class="w-4 h-4 mr-1" />
         {{ $t("install.login_modal.button.add_account") }}
       </button>
     </div>
     <div>
-      <table class="table w-full">
+      <table class="table w-full atv-responsive-table atv-account-table">
         <thead>
           <tr>
             <th>{{ $t("account.table.header.account") }}</th>
@@ -16,24 +16,22 @@
           </tr>
         </thead>
         <tbody class="bg-base-100">
-          <tr v-if="loading">
+          <tr v-if="loading" class="atv-state-row">
             <td colspan="3" class="text-center">
               <span class="loading loading-spinner loading-md"></span>
             </td>
           </tr>
           <template v-else>
             <tr v-for="(account, email) in accounts" :key="email">
-              <td class="break-all">{{ email }}</td>
-              <td><span class="atv-status" :class="statusClass(account.status)">{{ statusLabel(account.status) }}</span></td>
-              <td class="flex gap-x-4">
-                <a class="link link-primary" @click="openCertModal(email)">{{
+              <td class="atv-account-identity break-all">{{ email }}</td>
+              <td class="atv-field" :data-label="$t('account.table.header.status')"><span class="atv-status" :class="statusClass(account.status)">{{ statusLabel(account.status) }}</span></td>
+              <td class="atv-action-cell">
+                <div class="atv-account-action-row">
+                <button type="button" class="btn btn-sm btn-ghost atv-account-action" @click="openCertModal(email)">{{
                   $t("account.table.button.certificate")
-                }}</a>
-                <a
-                  class="link link-primary"
-                  @click="openDeviceModal(email)"
-                  >{{ $t("account.table.button.devices") }}</a
-                >
+                }}</button>
+                <button type="button" class="btn btn-sm btn-ghost atv-account-action"
+                  @click="openDeviceModal(email)">{{ $t("account.table.button.devices") }}</button>
                 <Popper placement="top" arrow="true">
                   <template #content="{ close }">
                     <div class="flex flex-col gap-y-2">
@@ -45,13 +43,9 @@
                         }}
                       </div>
                       <div class="flex gap-x-2 justify-end items-center">
-                        <a
-                          class="link link-primary link-hover"
-                          @click="close"
-                          >{{
+                        <button type="button" class="btn btn-ghost btn-sm" @click="close">{{
                             $t("home.dialog.delete_confirm.button.cancel")
-                          }}</a
-                        >
+                          }}</button>
                         <button
                           class="btn btn-primary btn-xs"
                           @click="logoutAccount(email, close)"
@@ -61,13 +55,14 @@
                       </div>
                     </div>
                   </template>
-                  <a class="link link-error">{{
+                  <button type="button" class="btn btn-sm btn-ghost atv-account-action atv-account-action--danger">{{
                     $t("account.table.button.logout")
-                  }}</a>
+                  }}</button>
                 </Popper>
+                </div>
               </td>
             </tr>
-            <tr v-if="Object.keys(accounts).length === 0">
+            <tr v-if="Object.keys(accounts).length === 0" class="atv-state-row">
               <td colspan="3" class="text-center">
                 {{ $t("account.table.empty") }}
               </td>
@@ -88,7 +83,7 @@
           {{ $t("certificate.modal.title", { email: currentAccountEmail }) }}
         </h3>
 
-        <table class="table w-full">
+        <table class="table w-full atv-responsive-table atv-cert-table">
           <thead>
             <tr>
               <th>{{ $t("certificate.table.header.name") }}</th>
@@ -100,7 +95,7 @@
             </tr>
           </thead>
           <tbody class="bg-base-100">
-            <tr v-if="certLoading">
+            <tr v-if="certLoading" class="atv-state-row">
               <td colspan="4" class="text-center">
                 <span class="loading loading-spinner loading-md"></span>
               </td>
@@ -118,16 +113,13 @@
                     ({{ cert.serialNumber }})
                   </div>
                 </td>
-                <td>{{ cert.machineName }}</td>
-                <td class="hidden md:table-cell"><span class="atv-status" :class="statusClass(cert.status)">{{ statusLabel(cert.status) }}</span></td>
-                <td>
-                  <div class="flex gap-x-1">
-                  <a
-                    class="link link-primary mr-2"
-                    @click="cert.inUse && openExportModal(cert)"
-                    :aria-disabled="!cert.inUse"
-                    >{{ $t("certificate.table.button.export") }}</a
-                  >
+                <td class="atv-field" :data-label="$t('certificate.table.header.machine_name')">{{ cert.machineName }}</td>
+                <td class="hidden md:table-cell atv-field" :data-label="$t('account.table.header.status')"><span class="atv-status" :class="statusClass(cert.status)">{{ statusLabel(cert.status) }}</span></td>
+                <td class="atv-action-cell">
+                  <div class="atv-account-action-row">
+                  <button type="button" class="btn btn-sm btn-ghost atv-account-action"
+                    @click="openExportModal(cert)"
+                    :disabled="!cert.inUse">{{ $t("certificate.table.button.export") }}</button>
                   <Popper placement="top" arrow="true">
                     <template #content="{ close }">
                       <div class="flex flex-col gap-y-2">
@@ -139,13 +131,9 @@
                           }}
                         </div>
                         <div class="flex gap-x-2 justify-end items-center">
-                          <a
-                            class="link link-primary link-hover"
-                            @click="close"
-                            >{{
+                          <button type="button" class="btn btn-ghost btn-sm" @click="close">{{
                               $t("home.dialog.delete_confirm.button.cancel")
-                            }}</a
-                          >
+                            }}</button>
                           <button
                             class="btn btn-primary btn-xs"
                             @click="revokeCertificate(cert.serialNumber, close)"
@@ -157,14 +145,14 @@
                         </div>
                       </div>
                     </template>
-                    <a class="link link-error">{{
+                    <button type="button" class="btn btn-sm btn-ghost atv-account-action atv-account-action--danger">{{
                       $t("certificate.table.button.revoke")
-                    }}</a>
+                    }}</button>
                   </Popper>
                   </div>
                 </td>
               </tr>
-              <tr v-if="certificates.length === 0">
+              <tr v-if="certificates.length === 0" class="atv-state-row">
                 <td colspan="4" class="text-center">
                   {{ $t("certificate.no_certificates") }}
                 </td>
@@ -202,7 +190,7 @@
           {{ $t("device.modal.title", { email: currentAccountEmail }) }}
         </h3>
 
-        <table class="table w-full">
+        <table class="table w-full atv-responsive-table atv-device-table">
           <thead>
             <tr>
               <th>{{ $t("device.table.header.name") }}</th>
@@ -214,22 +202,22 @@
             </tr>
           </thead>
           <tbody class="bg-base-100">
-            <tr v-if="deviceLoading">
-              <td colspan="5" class="text-center">
+            <tr v-if="deviceLoading" class="atv-state-row">
+              <td colspan="4" class="text-center">
                 <span class="loading loading-spinner loading-md"></span>
               </td>
             </tr>
             <template v-else>
               <tr v-for="dev in devices" :key="dev.deviceId">
-                <td>
+                <td class="atv-device-identity">
                   <div class="font-bold">{{ dev.name }}</div>
                   <div class="text-sm opacity-50">({{ dev.deviceId }})</div>
                 </td>
                 <td class="hidden md:table-cell break-all">
                   {{ dev.deviceNumber }}
                 </td>
-                <td>{{ dev.deviceClass }}</td>
-                <td>
+                <td class="atv-field" :data-label="$t('device.table.header.platform')">{{ dev.deviceClass }}</td>
+                <td class="atv-action-cell">
                   <Popper placement="top" arrow="true">
                     <template #content="{ close }">
                       <div class="flex flex-col gap-y-2">
@@ -241,13 +229,9 @@
                           }}
                         </div>
                         <div class="flex gap-x-2 justify-end items-center">
-                          <a
-                            class="link link-primary link-hover"
-                            @click="close"
-                            >{{
+                          <button type="button" class="btn btn-ghost btn-sm" @click="close">{{
                               $t("home.dialog.delete_confirm.button.cancel")
-                            }}</a
-                          >
+                            }}</button>
                           <button
                             class="btn btn-primary btn-xs"
                             @click="deleteDevice(dev.deviceId, close)"
@@ -259,14 +243,14 @@
                         </div>
                       </div>
                     </template>
-                    <a class="link link-error">{{
+                    <button type="button" class="btn btn-sm btn-ghost atv-account-action atv-account-action--danger">{{
                       $t("home.table.button.delete")
-                    }}</a>
+                    }}</button>
                   </Popper>
                 </td>
               </tr>
-              <tr v-if="devices.length === 0">
-                <td colspan="5" class="text-center">
+              <tr v-if="devices.length === 0" class="atv-state-row">
+                <td colspan="4" class="text-center">
                   {{ $t("device.table.empty") }}
                 </td>
               </tr>
@@ -390,7 +374,6 @@ export default {
       exportingCert: null,
       showImportModal: false,
       importPassword: "",
-      selectedCertFile: null,
       selectedCertFile: null,
     };
   },

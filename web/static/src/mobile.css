@@ -412,3 +412,170 @@
     color: rgba(226, 232, 240, 0.84) !important;
   }
 }
+
+/* Account, certificate, and device tables become cards on narrow screens. */
+@media (max-width: 767px) {
+  .app-container .main-container .atv-account-page {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .app-container .main-container .atv-account-page > .flex:first-child {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .app-container .main-container .atv-account-page .atv-toolbar-btn {
+    min-height: 44px;
+  }
+
+  .app-container #cert_modal .modal-box,
+  .app-container #device_modal .modal-box {
+    width: calc(100vw - 24px);
+    max-width: none;
+    max-height: calc(100dvh - 24px);
+    padding: 16px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .app-container .atv-account-page .modal-box h3 {
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+  }
+
+  .app-container .main-container .table.atv-responsive-table,
+  .app-container #cert_modal .table.atv-responsive-table,
+  .app-container #device_modal .table.atv-responsive-table {
+    display: block;
+    min-width: 0;
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .app-container #cert_modal .table.atv-responsive-table th:first-child,
+  .app-container #cert_modal .table.atv-responsive-table td:first-child {
+    min-width: 0;
+  }
+
+  .app-container .atv-account-page .atv-responsive-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .app-container .atv-account-page .atv-responsive-table tbody {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    background: transparent;
+  }
+
+  .app-container .atv-account-page .atv-responsive-table tbody tr {
+    display: block;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--atv-border);
+    border-radius: 16px;
+    background: var(--atv-surface);
+    box-shadow: var(--atv-shadow);
+  }
+
+  .app-container .atv-account-page .atv-responsive-table tbody td {
+    display: block;
+    min-width: 0;
+    padding: 7px 0;
+    border: 0;
+    background: transparent;
+    overflow-wrap: anywhere;
+  }
+
+  .app-container .atv-account-page .atv-responsive-table tbody tr:not(.atv-state-row) > td:first-child {
+    padding: 0 0 12px;
+    margin-bottom: 5px;
+    border-bottom: 1px solid var(--atv-border);
+    font-size: .95rem;
+    font-weight: 730;
+    line-height: 1.45;
+  }
+
+  .app-container .atv-account-page .atv-responsive-table tbody td.atv-field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    font-size: .86rem;
+  }
+
+  .app-container .atv-account-page .atv-responsive-table td.atv-field::before {
+    content: attr(data-label);
+    color: var(--atv-muted);
+    font-size: .76rem;
+    font-weight: 650;
+  }
+
+  .app-container .atv-account-page .atv-responsive-table td.atv-field > * {
+    justify-self: end;
+  }
+
+  .app-container #cert_modal .table.atv-cert-table tbody td:nth-child(3) {
+    display: grid !important;
+  }
+
+  .app-container .atv-account-page .atv-responsive-table tbody td.atv-action-cell {
+    display: block;
+    padding: 12px 0 0;
+    margin-top: 4px;
+    border-top: 1px solid var(--atv-border);
+  }
+
+  .app-container .atv-account-page .atv-account-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .app-container .atv-account-page .atv-account-action {
+    min-height: 42px;
+    min-width: 0;
+    padding-inline: 12px;
+  }
+
+  .app-container .atv-account-page .atv-responsive-table tbody tr.atv-state-row {
+    text-align: center;
+  }
+
+  .app-container .atv-account-page .atv-responsive-table tbody tr.atv-state-row td {
+    padding: 14px 4px;
+    margin: 0;
+    border: 0;
+    font-weight: 500;
+  }
+
+  .app-container .atv-account-page .modal-action {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .app-container .atv-account-page .modal-action > .btn {
+    min-height: 44px;
+  }
+
+  .app-container .atv-account-page input:is([type="text"], [type="password"], [type="email"]) {
+    font-size: 16px;
+    max-width: 100%;
+  }
+}
