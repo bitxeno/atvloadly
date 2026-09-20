@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/log"
@@ -249,6 +250,88 @@ func (dm *DeviceManager) Scan() {
 	// TODO: AppleTV端删除连接后，本地自动删除已连接设备
 }
 
+// avahiScanSession owns one avahi Server (and its D-Bus connection) for the
+// lifetime of a scan and keeps track of every browser created on it.
+//
+// Browsers must be freed before the server is closed: Server.Close frees
+// every signal emitter it still knows about, and freeing one afterwards
+// closes an already-closed channel and panics. Browsers are created from
+// per-service-type goroutines while the scan loop may return at any moment,
+// so the session serializes registration against teardown.
+type avahiScanSession struct {
+	server *avahi.Server
+
+	mu       sync.Mutex
+	closed   bool
+	cleanups []func()
+}
+
+func newAvahiScanSession(server *avahi.Server) *avahiScanSession {
+	return &avahiScanSession{server: server}
+}
+
+// track registers a cleanup func. It returns false when the session is
+// already closed, which means the underlying object has been freed by
+// close and must not be freed again.
+func (s *avahiScanSession) track(cleanup func()) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.closed {
+		return false
+	}
+	s.cleanups = append(s.cleanups, cleanup)
+	return true
+}
+
+// newServiceTypeBrowser creates a browser for all advertised service types
+// (equivalent to `avahi-browse -a`).
+func (s *avahiScanSession) newServiceTypeBrowser(iface, protocol int32, domain string) *avahi.ServiceTypeBrowser {
+	tb, err := s.server.ServiceTypeBrowserNew(iface, protocol, domain, 0)
+	if err != nil {
+		log.Err(err).Msg("ServiceTypeBrowserNew failed")
+		return nil
+	}
+
+	if !s.track(func() { s.server.ServiceTypeBrowserFree(tb) }) {
+		return nil
+	}
+	return tb
+}
+
+// newServiceBrowser creates a browser for one service type.
+func (s *avahiScanSession) newServiceBrowser(iface, protocol int32, serviceType string, domain string) *avahi.ServiceBrowser {
+	sb, err := s.server.ServiceBrowserNew(iface, protocol, serviceType, domain, 0)
+	if err != nil {
+		log.Err(err).Msgf("ServiceBrowserNew failed for %s", serviceType)
+		return nil
+	}
+
+	if !s.track(func() { s.server.ServiceBrowserFree(sb) }) {
+		return nil
+	}
+	return sb
+}
+
+// close frees every browser and then closes the avahi server, releasing the
+// D-Bus connection and its signal delivery goroutines.
+func (s *avahiScanSession) close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.closed {
+		return
+	}
+	s.closed = true
+
+	for _, cleanup := range s.cleanups {
+		cleanup()
+	}
+	s.cleanups = nil
+
+	s.server.Close()
+}
+
 func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) error {
 	// Each Avahi server must own its D-Bus connection: Server.Close()
 	// closes it, and closing a shared SystemBus connection disrupts other browsers.
@@ -261,17 +344,17 @@ func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(service
 	if err != nil {
 		return fmt.Errorf("avahi new failed: %v", err)
 	}
-	// server.Close frees all signal emitters and closes the dbus connection.
+	// Free every browser and close the dbus connection when the scan ends.
 	// Without it every scan leaks a dbus connection plus its signal
 	// delivery goroutines.
-	defer server.Close()
+	session := newAvahiScanSession(server)
+	defer session.close()
 
 	// Use ServiceTypeBrowser to discover all advertised service types (equivalent to `avahi-browse -a`).
-	typeBrowser, err := server.ServiceTypeBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceDomain, 0)
-	if err != nil {
-		return fmt.Errorf("service type browser new failed: %w", err)
+	typeBrowser := session.newServiceTypeBrowser(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceDomain)
+	if typeBrowser == nil {
+		return fmt.Errorf("service type browser new failed")
 	}
-	defer server.ServiceTypeBrowserFree(typeBrowser)
 
 	discoveredTypes := make(map[string]bool)
 
@@ -290,7 +373,7 @@ func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(service
 			}
 
 			discoveredTypes[serviceType] = true
-			go dm.scanServiceTypeContinuous(ctx, server, entry.Interface, entry.Protocol, serviceType, entry.Domain, callback)
+			go dm.scanServiceTypeContinuous(ctx, session, entry.Interface, entry.Protocol, serviceType, entry.Domain, callback)
 		case _, ok := <-typeBrowser.RemoveChannel:
 			if !ok {
 				return nil
@@ -299,7 +382,7 @@ func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(service
 	}
 }
 
-func (dm *DeviceManager) scanServiceTypeContinuous(ctx context.Context, server *avahi.Server, iface, protocol int32, serviceType string, domain string, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) {
+func (dm *DeviceManager) scanServiceTypeContinuous(ctx context.Context, session *avahiScanSession, iface, protocol int32, serviceType string, domain string, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) {
 	if serviceType == "" {
 		return
 	}
@@ -307,12 +390,11 @@ func (dm *DeviceManager) scanServiceTypeContinuous(ctx context.Context, server *
 		domain = mdnsServiceDomain
 	}
 
-	sb, err := server.ServiceBrowserNew(iface, protocol, serviceType, domain, 0)
-	if err != nil {
-		log.Err(err).Msgf("ServiceBrowserNew failed for %s", serviceType)
+	sb := session.newServiceBrowser(iface, protocol, serviceType, domain)
+	if sb == nil {
 		return
 	}
-	defer server.ServiceBrowserFree(sb)
+	server := session.server
 
 	for {
 		select {
