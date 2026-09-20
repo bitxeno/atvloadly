@@ -35,6 +35,10 @@
     "afdian": "Stöd via Afadian",
     "close": "Stäng"
   },
+  "result": {
+    "success": "Lyckades",
+    "fail": "Misslyckades"
+  },
   "home": {
     "heading": {
       "pairable_devices": "Enheter som kan parkopplas",
@@ -201,6 +205,7 @@
       },
       "toast": {
         "device_not_ready": "Enhetsinformationen är inte klar. Försök igen senare.",
+        "mount_failed": "Kunde inte förbereda enheten för skärmbild",
         "failed": "Kunde inte ta skärmbild"
       },
       "button": {
