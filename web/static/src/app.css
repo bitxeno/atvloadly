@@ -81,7 +81,11 @@ html[data-theme="dark"] {
   background: var(--atv-surface-hover);
 }
 
-.app-container > .navbar a.normal-case {
+.app-container > .navbar .atv-brand {
+  text-decoration: none;
+}
+
+.app-container > .navbar .atv-brand .normal-case {
   font-size: 1.12rem;
   font-weight: 760;
   letter-spacing: -.035em;

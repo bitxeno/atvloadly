@@ -2,10 +2,10 @@
   <div class="app-container">
     <header class="navbar border-b pt-0 pb-0">
       <div class="flex-1">
-        <label tabindex="0" class="btn btn-ghost rounded-btn">
-         <AppIcon class="w-7 h-7"/>
-        <a href="/" class="normal-case text-xl">atvloadly</a>
-        </label>
+        <a href="/" class="btn btn-ghost rounded-btn atv-brand">
+          <AppIcon class="w-7 h-7" />
+          <span class="normal-case text-xl">atvloadly</span>
+        </a>
       </div>
       <div class="flex-none">
         <nav class="navbar w-full"> 
