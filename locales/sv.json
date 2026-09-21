@@ -152,6 +152,7 @@
     "toast": {
       "install_success": "Installationen lyckades",
       "install_failed": "Installationen misslyckades. Se loggarna för mer information.",
+      "app_group_unavailable": "Appens delade lagringsgrupp kunde inte registreras med detta Apple-konto. Kontrollera att kontot får skapa App Groups och har stöd för appens nödvändiga funktioner. Se den tekniska loggen för detaljer.",
       "login_success": "Inloggningen lyckades"
     },
     "form": {

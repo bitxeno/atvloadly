@@ -145,7 +145,8 @@
         },
         "toast": {
             "install_success": "安装成功",
-            "install_failed": "安装失败，请查看日志了解详细信息"
+            "install_failed": "安装失败，请查看日志了解详细信息",
+            "app_group_unavailable": "无法使用此 Apple 帐号注册该应用的共享存储组。请确认该帐号有创建 App Groups 的权限，并支持该应用所需的功能。详情请查看技术日志。"
         ,
             "login_success": "登录成功"
         },

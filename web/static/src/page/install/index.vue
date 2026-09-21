@@ -248,6 +248,7 @@
 import api from "@/api/api";
 import { toast } from "vue3-toastify";
 import { parseBundleIdFromPlist } from "@/utils/utils";
+import { installFailureMessage as formatInstallFailureMessage } from "@/utils/install-error-feedback.mjs";
 import JSZip from "jszip";
 import Login from "@/components/Login.vue";
 
@@ -497,9 +498,16 @@ export default {
       // Installation error
       if (line.indexOf("Installation Failed") !== -1) {
         _this.loading = false;
-        toast.error(_this.$t("install.toast.install_failed"));
+        toast.error(_this.installFailureMessage());
         return;
       }
+    },
+
+    installFailureMessage() {
+      return formatInstallFailureMessage(
+        this.log.output + this.log.newcontent,
+        (key) => this.$t(key),
+      );
     },
 
     websocketsend(t, data) {
@@ -664,4 +672,3 @@ import LinkIcon from "@/assets/icons/link.svg";
   text-align: center;
 }
 </style>
-  
