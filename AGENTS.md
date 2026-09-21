@@ -47,6 +47,9 @@ go test ./internal/service/
 
 ## Lint Commands
 
+**MANDATORY**: Run `golangci-lint` before every commit (see
+[Git Commit Messages](#git-commit-messages)).
+
 ```bash
 # Run golangci-lint (used in CI)
 golangci-lint run --timeout=5m
@@ -126,6 +129,13 @@ c.Status(http.StatusOK).JSON(apiError("error message"))
 - Container requires `--privileged` for USB access
 
 ## Git Commit Messages
+
+**MANDATORY**: Run `golangci-lint` before every commit and fix all reported
+issues. CI runs it on every push, so committing unlinted code breaks the build.
+
+```bash
+golangci-lint run --timeout=5m
+```
 
 **MANDATORY**: Use Conventional Commits specification:
 
