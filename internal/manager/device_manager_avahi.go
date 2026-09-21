@@ -83,7 +83,7 @@ func (p *avahiServerProvider) get() (*avahi.Server, error) {
 
 	server, err := avahi.ServerNew(conn)
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("avahi new failed: %v", err)
 	}
 
