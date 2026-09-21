@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "vite build --emptyOutDir --sourcemap --mode development --watch",
     "build": "vite build",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "test": "node --test"
   },
   "dependencies": {
     "axios": "^1.6.0",
