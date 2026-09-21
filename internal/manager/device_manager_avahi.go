@@ -4,8 +4,10 @@ package manager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/log"
@@ -20,7 +22,74 @@ const (
 	mdnsServiceRemotePairing       = "_remotepairing._tcp"
 	mdnsServiceRemoteManualPairing = "_remotepairing-manual-pairing._tcp"
 	mdnsServiceDomain              = "local"
+
+	// avahiRestartDelay is how long discovery waits before rebuilding its
+	// browsers after the Avahi connection dropped.
+	avahiRestartDelay = 5 * time.Second
 )
+
+// errAvahiBrowserFreed reports that a discovery browser was freed because the
+// provider dropped a dead D-Bus connection.
+var errAvahiBrowserFreed = errors.New("avahi browser freed")
+
+// avahiDaemon is the process-wide Avahi connection.
+//
+// go-avahi ties a Server to a D-Bus connection: Server.Close() closes the
+// connection, and ServerNew() starts a signal dispatch goroutine that only
+// Server.Close() stops. Creating a Server per operation therefore leaks a
+// connection, a goroutine and a registered signal channel every time. Sharing
+// dbus.SystemBus() instead is not an option: godbus forbids Close on shared
+// connections, and go-avahi never removes its signal channel, so the server
+// could never be cleaned up.
+//
+// One long-lived Server avoids both problems. Browsers are still created per
+// operation and freed when it ends.
+var avahiDaemon = newAvahiServerProvider()
+
+type avahiServerProvider struct {
+	mu     sync.Mutex
+	server *avahi.Server
+	conn   *dbus.Conn
+}
+
+func newAvahiServerProvider() *avahiServerProvider {
+	return &avahiServerProvider{}
+}
+
+// get returns the shared Avahi server, reconnecting when the D-Bus connection
+// has died (e.g. avahi-daemon restarted). The returned server is owned by the
+// provider and must not be closed by the caller.
+func (p *avahiServerProvider) get() (*avahi.Server, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.server != nil && p.conn.Connected() {
+		return p.server, nil
+	}
+
+	if p.server != nil {
+		// The connection is dead. Closing frees the browsers registered on
+		// it, which makes their channels readable-as-closed so the
+		// operations using them return instead of hanging. Safe to close:
+		// this connection is private to the provider.
+		p.server.Close()
+		p.server, p.conn = nil, nil
+	}
+
+	conn, err := dbus.ConnectSystemBus()
+	if err != nil {
+		return nil, fmt.Errorf("cannot get system bus: %v", err)
+	}
+
+	server, err := avahi.ServerNew(conn)
+	if err != nil {
+		_ = conn.Close()
+		return nil, fmt.Errorf("avahi new failed: %v", err)
+	}
+
+	p.server, p.conn = server, conn
+	return server, nil
+}
 
 // 需要依赖socket套接字：
 // /var/run/dbus
@@ -31,26 +100,40 @@ func (dm *DeviceManager) Start() {
 	ctx := dm.ctx
 	dm.mu.Unlock()
 
-	// Each Avahi server must own its D-Bus connection: Server.Close()
-	// closes it, and closing a shared SystemBus connection disrupts other browsers.
-	conn, err := dbus.ConnectSystemBus()
-	if err != nil {
-		log.Printf("Cannot get system bus: %v", err)
-		return
-	}
-
-	server, err := avahi.ServerNew(conn)
-	if err != nil {
-		log.Err(err).Msgf("Avahi new failed: ")
-	}
-	// Free the avahi server (and its dbus connection) when the discovery
-	// loop stops, otherwise each StartDeviceManager() call leaks the dbus
-	// connection and its signal delivery goroutines.
-	defer func() {
-		if server != nil {
-			server.Close()
+	// A browser freed because the provider dropped a dead connection ends
+	// runDiscovery. Reconnect and restart discovery instead of leaving the
+	// daemon permanently without device discovery.
+	for {
+		server, err := avahiDaemon.get()
+		if err != nil {
+			log.Err(err).Msg("Avahi server unavailable")
+		} else {
+			stopped := dm.runDiscovery(ctx, server)
+			if ctx.Err() != nil {
+				log.Info("Avahi discovery stopped")
+				return
+			}
+			log.Warnf("Avahi discovery interrupted: %v, restarting in %s", stopped, avahiRestartDelay)
 		}
-	}()
+
+		// Back off so a permanently unavailable avahi-daemon cannot spin
+		// the process.
+		select {
+		case <-ctx.Done():
+			log.Info("Avahi discovery stopped")
+			return
+		case <-time.After(avahiRestartDelay):
+		}
+	}
+}
+
+// runDiscovery consumes the three device browsers until the context is
+// cancelled or a browser is freed. It returns why it stopped.
+func (dm *DeviceManager) runDiscovery(ctx context.Context, server *avahi.Server) error {
+	// Free the browsers when discovery stops. The shared server itself
+	// stays open for the next Start() and for concurrent scans.
+	browsers := newAvahiBrowsers(server)
+	defer browsers.Close()
 
 	host, err := server.GetHostName()
 	if err != nil {
@@ -82,31 +165,34 @@ func (dm *DeviceManager) Start() {
 	}
 	log.Debugf("ResolveHostName: %v", hn)
 
-	sbAppleMobdev, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceAppleMobdev2, mdnsServiceDomain, 0)
-	if err != nil {
-		log.Err(err).Msgf("ServiceBrowserNew() failed: ")
+	sbAppleMobdev := browsers.newServiceBrowser(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceAppleMobdev2, mdnsServiceDomain)
+	if sbAppleMobdev == nil {
+		return fmt.Errorf("apple-mobdev2 browser unavailable")
 	}
 
-	sbRemotePairing, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceRemotePairing, mdnsServiceDomain, 0)
-	if err != nil {
-		log.Err(err).Msgf("ServiceBrowserNew() failed: ")
+	sbRemotePairing := browsers.newServiceBrowser(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceRemotePairing, mdnsServiceDomain)
+	if sbRemotePairing == nil {
+		return fmt.Errorf("remote pairing browser unavailable")
 	}
 
-	sbRemoteManualPairing, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceRemoteManualPairing, mdnsServiceDomain, 0)
-	if err != nil {
-		log.Err(err).Msgf("ServiceBrowserNew() failed: ")
+	sbRemoteManualPairing := browsers.newServiceBrowser(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceRemoteManualPairing, mdnsServiceDomain)
+	if sbRemoteManualPairing == nil {
+		return fmt.Errorf("remote manual pairing browser unavailable")
 	}
 
 	log.Info("Avahi discovery started...")
 
-	var service avahi.Service
-
+	// A closed channel means the browser was freed, which happens when the
+	// provider drops a dead connection. Return instead of spinning: on a
+	// closed channel every receive succeeds immediately with a zero value.
 	for {
 		select {
 		case <-ctx.Done():
-			log.Info("Avahi discovery stopped")
-			return
-		case service = <-sbAppleMobdev.AddChannel:
+			return nil
+		case service, ok := <-sbAppleMobdev.AddChannel:
+			if !ok {
+				return errAvahiBrowserFreed
+			}
 			service, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
 				service.Type, service.Domain, avahi.ProtoUnspec, 0)
 			if err != nil {
@@ -147,12 +233,18 @@ func (dm *DeviceManager) Start() {
 				// Trigger device connection callback
 				dm.onDeviceConnected(device)
 			}
-		case service = <-sbAppleMobdev.RemoveChannel:
+		case service, ok := <-sbAppleMobdev.RemoveChannel:
+			if !ok {
+				return errAvahiBrowserFreed
+			}
 			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[-]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
 
 			macAddr := strings.Split(service.Name, "@")[0]
 			dm.DeleteDeviceByMacAddr(macAddr)
-		case service = <-sbRemotePairing.AddChannel:
+		case service, ok := <-sbRemotePairing.AddChannel:
+			if !ok {
+				return errAvahiBrowserFreed
+			}
 			service, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
 				service.Type, service.Domain, avahi.ProtoUnspec, 0)
 			if err != nil {
@@ -192,7 +284,10 @@ func (dm *DeviceManager) Start() {
 			// cancel the check (killing the plumesign subprocess) to
 			// release the goroutine immediately.
 			go dm.checkRemotePairingAsync(ctx, identifier, authTag, service.Name, name, service.Address, service.Port)
-		case service = <-sbRemotePairing.RemoveChannel:
+		case service, ok := <-sbRemotePairing.RemoveChannel:
+			if !ok {
+				return errAvahiBrowserFreed
+			}
 			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[-]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
 			// Clear the pairing throttle for this device: when an iPhone
 			// disconnects and reconnects within the throttle window, the
@@ -202,7 +297,10 @@ func (dm *DeviceManager) Start() {
 			dm.clearPairingThrottle(service.Name)
 			// serviceName will change every mdns event, so we can't use serviceName to ignore duplicate
 			dm.DeleteDeviceByServiceName(service.Name, model.DeviceConnectionRemote)
-		case service = <-sbRemoteManualPairing.AddChannel:
+		case service, ok := <-sbRemoteManualPairing.AddChannel:
+			if !ok {
+				return errAvahiBrowserFreed
+			}
 			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[+]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
 
 			service, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
@@ -238,7 +336,10 @@ func (dm *DeviceManager) Start() {
 			device.ParseDeviceClass()
 			dm.SaveDevice(device)
 
-		case service = <-sbRemoteManualPairing.RemoveChannel:
+		case service, ok := <-sbRemoteManualPairing.RemoveChannel:
+			if !ok {
+				return errAvahiBrowserFreed
+			}
 			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[-]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
 			dm.DeleteDeviceByServiceName(service.Name, model.DeviceConnectionRemote)
 		}
@@ -249,29 +350,103 @@ func (dm *DeviceManager) Scan() {
 	// TODO: AppleTV端删除连接后，本地自动删除已连接设备
 }
 
-func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) error {
-	// Each Avahi server must own its D-Bus connection: Server.Close()
-	// closes it, and closing a shared SystemBus connection disrupts other browsers.
-	conn, err := dbus.ConnectSystemBus()
+// avahiBrowsers tracks the avahi browsers created for one operation on the
+// shared server, so all of them are freed when the operation ends.
+//
+// A browser must be freed exactly once. Server.Close() frees every browser it
+// still knows about, and freeing one afterwards closes an already-closed
+// channel and panics. Browsers are created from per-service-type goroutines
+// while the owning loop may return at any moment, so registration is
+// serialized against teardown: Close marks the set closed first, so a browser
+// created concurrently is either freed here or never freed at all.
+type avahiBrowsers struct {
+	server *avahi.Server
+
+	mu       sync.Mutex
+	closed   bool
+	cleanups []func()
+}
+
+func newAvahiBrowsers(server *avahi.Server) *avahiBrowsers {
+	return &avahiBrowsers{server: server}
+}
+
+// track registers a cleanup func. It returns false when the set is already
+// closed, which means the underlying object has been freed by Close and must
+// not be freed again.
+func (b *avahiBrowsers) track(cleanup func()) bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if b.closed {
+		return false
+	}
+	b.cleanups = append(b.cleanups, cleanup)
+	return true
+}
+
+// newServiceTypeBrowser creates a browser for all advertised service types
+// (equivalent to `avahi-browse -a`).
+func (b *avahiBrowsers) newServiceTypeBrowser(iface, protocol int32, domain string) *avahi.ServiceTypeBrowser {
+	tb, err := b.server.ServiceTypeBrowserNew(iface, protocol, domain, 0)
 	if err != nil {
-		return fmt.Errorf("cannot get system bus: %v", err)
+		log.Err(err).Msg("ServiceTypeBrowserNew failed")
+		return nil
 	}
 
-	server, err := avahi.ServerNew(conn)
-	if err != nil {
-		return fmt.Errorf("avahi new failed: %v", err)
+	if !b.track(func() { b.server.ServiceTypeBrowserFree(tb) }) {
+		return nil
 	}
-	// server.Close frees all signal emitters and closes the dbus connection.
-	// Without it every scan leaks a dbus connection plus its signal
-	// delivery goroutines.
-	defer server.Close()
+	return tb
+}
+
+// newServiceBrowser creates a browser for one service type.
+func (b *avahiBrowsers) newServiceBrowser(iface, protocol int32, serviceType string, domain string) *avahi.ServiceBrowser {
+	sb, err := b.server.ServiceBrowserNew(iface, protocol, serviceType, domain, 0)
+	if err != nil {
+		log.Err(err).Msgf("ServiceBrowserNew failed for %s", serviceType)
+		return nil
+	}
+
+	if !b.track(func() { b.server.ServiceBrowserFree(sb) }) {
+		return nil
+	}
+	return sb
+}
+
+// Close frees every browser created for this operation. The shared server
+// stays open. Close is idempotent.
+func (b *avahiBrowsers) Close() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if b.closed {
+		return
+	}
+	b.closed = true
+
+	for _, cleanup := range b.cleanups {
+		cleanup()
+	}
+	b.cleanups = nil
+}
+
+func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) error {
+	server, err := avahiDaemon.get()
+	if err != nil {
+		return err
+	}
+
+	// Free every browser when the scan ends. Without it each scan leaves
+	// its browsers registered on the shared server forever.
+	browsers := newAvahiBrowsers(server)
+	defer browsers.Close()
 
 	// Use ServiceTypeBrowser to discover all advertised service types (equivalent to `avahi-browse -a`).
-	typeBrowser, err := server.ServiceTypeBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceDomain, 0)
-	if err != nil {
-		return fmt.Errorf("service type browser new failed: %w", err)
+	typeBrowser := browsers.newServiceTypeBrowser(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceDomain)
+	if typeBrowser == nil {
+		return fmt.Errorf("service type browser new failed")
 	}
-	defer server.ServiceTypeBrowserFree(typeBrowser)
 
 	discoveredTypes := make(map[string]bool)
 
@@ -290,7 +465,7 @@ func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(service
 			}
 
 			discoveredTypes[serviceType] = true
-			go dm.scanServiceTypeContinuous(ctx, server, entry.Interface, entry.Protocol, serviceType, entry.Domain, callback)
+			go dm.scanServiceTypeContinuous(ctx, browsers, server, entry.Interface, entry.Protocol, serviceType, entry.Domain, callback)
 		case _, ok := <-typeBrowser.RemoveChannel:
 			if !ok {
 				return nil
@@ -299,7 +474,7 @@ func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(service
 	}
 }
 
-func (dm *DeviceManager) scanServiceTypeContinuous(ctx context.Context, server *avahi.Server, iface, protocol int32, serviceType string, domain string, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) {
+func (dm *DeviceManager) scanServiceTypeContinuous(ctx context.Context, browsers *avahiBrowsers, server *avahi.Server, iface, protocol int32, serviceType string, domain string, callback func(serviceType string, name string, host string, address string, port uint16, txt [][]byte)) {
 	if serviceType == "" {
 		return
 	}
@@ -307,12 +482,10 @@ func (dm *DeviceManager) scanServiceTypeContinuous(ctx context.Context, server *
 		domain = mdnsServiceDomain
 	}
 
-	sb, err := server.ServiceBrowserNew(iface, protocol, serviceType, domain, 0)
-	if err != nil {
-		log.Err(err).Msgf("ServiceBrowserNew failed for %s", serviceType)
+	sb := browsers.newServiceBrowser(iface, protocol, serviceType, domain)
+	if sb == nil {
 		return
 	}
-	defer server.ServiceBrowserFree(sb)
 
 	for {
 		select {
@@ -326,6 +499,14 @@ func (dm *DeviceManager) scanServiceTypeContinuous(ctx context.Context, server *
 				service.Type, service.Domain, avahi.ProtoUnspec, 0)
 			if err == nil {
 				callback(resolved.Type, resolved.Name, resolved.Host, resolved.Address, resolved.Port, resolved.Txt)
+			}
+		case _, ok := <-sb.RemoveChannel:
+			// Drain removals so the avahi signal dispatch goroutine never
+			// blocks on an unread channel. ItemRemove is sent
+			// unbuffered, so an undrained removal stalls signal delivery
+			// for every browser on the server.
+			if !ok {
+				return
 			}
 		}
 	}
@@ -352,29 +533,18 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.D
 		timeout = 10 * time.Second
 	}
 
-	// Each Avahi server must own its D-Bus connection: Server.Close()
-	// closes it, and closing a shared SystemBus connection disrupts other browsers.
-	conn, err := dbus.ConnectSystemBus()
+	server, err := avahiDaemon.get()
 	if err != nil {
-		return nil, fmt.Errorf("cannot get system bus: %v", err)
+		return nil, err
 	}
 
-	server, err := avahi.ServerNew(conn)
-	if err != nil {
-		return nil, fmt.Errorf("avahi new failed: %v", err)
-	}
+	browsers := newAvahiBrowsers(server)
+	defer browsers.Close()
 
-	sb, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceRemotePairing, mdnsServiceDomain, 0)
-	if err != nil {
-		server.Close()
-		return nil, fmt.Errorf("service browser new failed: %v", err)
+	sb := browsers.newServiceBrowser(avahi.InterfaceUnspec, avahi.ProtoUnspec, mdnsServiceRemotePairing, mdnsServiceDomain)
+	if sb == nil {
+		return nil, fmt.Errorf("service browser new failed")
 	}
-	// NOTE: Free must run before Close. Close frees every remaining signal
-	// emitter, so running Close first would free sb and the following Free
-	// would panic with "close of closed channel", killing the HTTP handler
-	// (observed as 502 from the reverse proxy).
-	defer server.Close()
-	defer server.ServiceBrowserFree(sb)
 
 	devices := make([]model.Device, 0)
 	deviceMap := make(map[string]bool)
