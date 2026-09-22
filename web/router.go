@@ -34,6 +34,7 @@ func route(fi *fiber.App) {
 	fi.All("/mcp", mcpHandler)
 	fi.All("/mcp/*", mcpHandler)
 
+	fi.Use("/", preventDocumentCaching)
 	fi.Use("/", filesystem.New(filesystem.Config{
 		Root: http.FS(StaticAssets()),
 	}))
@@ -663,4 +664,17 @@ func route(fi *fiber.App) {
 		}
 	})
 
+}
+
+const documentCacheControl = "no-cache, no-store, must-revalidate"
+
+func preventDocumentCaching(c *fiber.Ctx) error {
+	if c.Method() == fiber.MethodGet || c.Method() == fiber.MethodHead {
+		switch c.Path() {
+		case "/", "/index.html":
+			c.Set(fiber.HeaderCacheControl, documentCacheControl)
+		}
+	}
+
+	return c.Next()
 }

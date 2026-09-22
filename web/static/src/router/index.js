@@ -1,4 +1,8 @@
 import { createRouter, createWebHashHistory } from "vue-router";
+import {
+  currentBundleURL,
+  recoverFromStaleAssetLoadError,
+} from "@/utils/stale-asset-recovery.mjs";
 
 const routes = [
   {
@@ -85,6 +89,15 @@ const routes = [
 const router = createRouter({
   history: createWebHashHistory(),
   routes,
+});
+
+router.onError((error) => {
+  recoverFromStaleAssetLoadError(
+    error,
+    currentBundleURL(document, window.location),
+    window.sessionStorage,
+    () => window.location.reload(),
+  );
 });
 
 export default router;
