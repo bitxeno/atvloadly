@@ -97,7 +97,7 @@
                     {{
                       account.email === recommendedAccount
                         ? "(" + $t("install.form.account.last_used") + ")"
-                        : "(" + account.status + ")"
+                        : "(" + accountStatusLabel(account.status) + ")"
                     }}
                   </option>
                 </select>
@@ -249,6 +249,7 @@ import api from "@/api/api";
 import { toast } from "vue3-toastify";
 import { parseBundleIdFromPlist } from "@/utils/utils";
 import { installFailureMessage as formatInstallFailureMessage } from "@/utils/install-error-feedback.mjs";
+import { accountStatusLabel as formatAccountStatus } from "@/utils/install-feedback.mjs";
 import JSZip from "jszip";
 import Login from "@/components/Login.vue";
 
@@ -508,6 +509,10 @@ export default {
         this.log.output + this.log.newcontent,
         (key) => this.$t(key),
       );
+    },
+    
+    accountStatusLabel(status) {
+      return formatAccountStatus(status, (key) => this.$t(key));
     },
 
     websocketsend(t, data) {
