@@ -151,7 +151,8 @@
         },
         "toast": {
             "install_success": "Installation Successful",
-            "install_failed": "Installation Failed. Please check logs for more information."
+            "install_failed": "Installation Failed. Please check logs for more information.",
+            "app_group_unavailable": "The app's shared storage group could not be registered with this Apple account. Check that the account can create App Groups and supports the app's required capabilities. See the technical log for details."
         ,
             "login_success": "Login Success"
         },
