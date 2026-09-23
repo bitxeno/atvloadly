@@ -27,7 +27,7 @@ func setupTestDB(t *testing.T) {
 	app.Settings.Task.Enabled = true
 	t.Cleanup(func() { app.Config, app.Settings = oldConfig, oldSettings })
 
-	if err := db.Open(db.Config{Path: t.TempDir(), FileName: "test.db"}).AutoMigrate(&model.InstalledApp{}); err != nil {
+	if err := db.Open(db.Config{Path: t.TempDir(), FileName: "test.db"}).AutoMigrate(&model.InstalledApp{}, &model.SavedSource{}); err != nil {
 		t.Fatalf("AutoMigrate: %v", err)
 	}
 	sqlDB, err := db.Store().DB()

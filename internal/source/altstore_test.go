@@ -76,7 +76,7 @@ func TestAltStoreNuvio(t *testing.T) {
 	if b.Name != "NuvioTVOS" || b.Version != "3.3.7" || !b.Date.Equal(wantDate) || b.Size != 23972092 ||
 		b.DownloadURL != "https://github.com/bobsupra/NuvioTVOS/releases/download/tvos-beta-3.3.7/NuvioTV-3.3.7-unsigned-release.ipa" ||
 		b.PageURL != "" || b.IconURL != "https://example.com/nuviotvos-icon.png" || b.BundleID != "com.pyksel.nuviotvos" ||
-		b.Platform != PlatformTVOS || b.Filter != "com.pyksel.nuviotvos" || b.Prerelease {
+		b.Developer != "bobsupra" || b.Subtitle != "Nuvio TV for tvOS" || b.Platform != PlatformTVOS || b.Filter != "com.pyksel.nuviotvos" || b.Prerelease {
 		t.Fatalf("unexpected build %+v", b)
 	}
 
@@ -102,7 +102,8 @@ func TestAltStoreNuvio(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if older.Version != "3.3.6 (42)" || older.Size != 23900000 || !older.Date.Equal(time.Date(2026, 9, 10, 0, 0, 0, 0, time.UTC)) {
+	if older.Version != "3.3.6 (42)" || older.Size != 23900000 || !older.Date.Equal(time.Date(2026, 9, 10, 0, 0, 0, 0, time.UTC)) ||
+		older.Developer != "bobsupra" || older.Subtitle != "Nuvio TV for tvOS" {
 		t.Fatalf("unexpected older build %+v", older)
 	}
 	if _, err := feed.Find("0000000000000000"); !errors.Is(err, ErrNoMatch) {

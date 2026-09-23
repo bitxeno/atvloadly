@@ -208,7 +208,19 @@
         },
         "auto_update": "Installera nya versioner automatiskt",
         "auto_update_tips": "Nya versioner installeras under tidsintervallet för automatisk appuppdatering och signeras med samma konto.",
-        "select_build": "Hämta källan och välj en IPA att installera."
+        "select_build": "Hämta källan och välj en IPA att installera.",
+        "choose_saved_app_tips": "Dina sparade källor innehåller flera appar. Välj den som ska installeras.",
+        "saved": {
+          "label": "Sparade källor",
+          "all": "Alla sparade källor"
+        },
+        "search_placeholder": "Sök appar…",
+        "more_results": "{{num}} till – förfina sökningen",
+        "no_match": "Ingen app matchar sökningen",
+        "save_source": "Spara källan",
+        "toast": {
+          "source_saved": "{{name}} har lagts till i de sparade källorna"
+        }
       },
       "choose_ipa": {
         "label": "Välj IPA-fil:"
@@ -276,7 +288,7 @@
       "notify_success": "Aviseringen har skickats"
     },
     "notification": {
-      "title": "Avisering vid misslyckad installation",
+      "title": "Aviseringar",
       "toggle": {
         "label": "Aktivera"
       },
@@ -353,6 +365,28 @@
       "task_disabled": "Automatisk appuppdatering är avstängd: nya versioner upptäcks fortfarande, men uppgraderingar installeras inte automatiskt.",
       "button": {
         "submit": "Spara"
+      }
+    },
+    "sources": {
+      "title": "AltStore-källor",
+      "list": {
+        "label": "Sparade källor",
+        "empty": "Inga sparade källor ännu."
+      },
+      "add": {
+        "label": "Lägg till en källa"
+      },
+      "tips": "Sparade källor kan bläddras i och sökas från läget Källa på installationssidan.",
+      "delete_confirm": "Ta bort {{name}} från de sparade källorna? Appar som följer den påverkas inte.",
+      "button": {
+        "add": "Lägg till",
+        "delete": "Ta bort",
+        "cancel": "Avbryt",
+        "confirm": "Bekräfta"
+      },
+      "toast": {
+        "added": "{{name}} har sparats",
+        "deleted": "{{name}} har tagits bort"
       }
     },
     "network": {

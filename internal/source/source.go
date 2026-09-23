@@ -43,6 +43,8 @@ type Build struct {
 	PageURL     string    `json:"page_url"`     // GitHub: release page
 	IconURL     string    `json:"icon_url"`     // AltStore: app icon
 	BundleID    string    `json:"bundle_id"`    // AltStore: bundle identifier
+	Developer   string    `json:"developer"`    // AltStore: developer name
+	Subtitle    string    `json:"subtitle"`     // AltStore: app subtitle
 	Prerelease  bool      `json:"prerelease"`   // GitHub: release is a pre-release
 	Platform    Platform  `json:"platform"`     // name-based hint
 	Filter      string    `json:"filter"`       // filter that keeps tracking this build in later releases

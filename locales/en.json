@@ -209,7 +209,19 @@
                 },
                 "auto_update": "Install updates automatically",
                 "auto_update_tips": "New versions are installed during the Auto Refresh running time period and signed with the same account.",
-                "select_build": "Fetch the source and select an IPA to install."
+                "select_build": "Fetch the source and select an IPA to install.",
+                "choose_saved_app_tips": "Your saved sources list several apps. Choose the one to install.",
+                "saved": {
+                    "label": "Saved sources",
+                    "all": "All saved sources"
+                },
+                "search_placeholder": "Search apps…",
+                "more_results": "{{num}} more — refine your search",
+                "no_match": "No app matches your search",
+                "save_source": "Save source",
+                "toast": {
+                    "source_saved": "{{name}} added to the saved sources"
+                }
             },
             "choose_ipa": {
                 "label": "Choose IPA:"
@@ -278,7 +290,7 @@
             "notify_success": "Notification Sent Successfully"
         },
         "notification": {
-            "title": "Installation Failure Notification",
+            "title": "Notifications",
             "toggle": {
                 "label": "Enable"
             },
@@ -355,6 +367,28 @@
             "task_disabled": "Auto Refresh App is disabled: new versions are still detected, but automatic updates are not installed.",
             "button": {
                 "submit": "Save"
+            }
+        },
+        "sources": {
+            "title": "AltStore Sources",
+            "list": {
+                "label": "Saved sources",
+                "empty": "No saved sources yet."
+            },
+            "add": {
+                "label": "Add a source"
+            },
+            "tips": "Saved sources can be browsed and searched from the Source mode of the install page.",
+            "delete_confirm": "Remove {{name}} from the saved sources? Apps tracking it are not affected.",
+            "button": {
+                "add": "Add",
+                "delete": "Remove",
+                "cancel": "Cancel",
+                "confirm": "Confirm"
+            },
+            "toast": {
+                "added": "{{name}} saved",
+                "deleted": "{{name}} removed"
             }
         },
         "network": {

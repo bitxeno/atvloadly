@@ -62,6 +62,53 @@ export function platformLabel(platform) {
   return platformLabels[platform] || "";
 }
 
+const devicePlatforms = { AppleTV: "tvos", iPhone: "ios", iPad: "ios" };
+
+// devicePlatform mirrors the server: the platform of a device class, or "".
+export function devicePlatform(deviceClass) {
+  return devicePlatforms[deviceClass] || "";
+}
+
+// catalogBuilds flattens the saved sources of the catalog into one build list
+// where each build records its source_url and source_name. Builds for the
+// platform of deviceClass come first, then builds of unknown platform, then
+// builds for the other platform, each group in catalog order.
+export function catalogBuilds(catalog, deviceClass) {
+  const want = devicePlatform(deviceClass);
+  const rank = (build) => (!want || build.platform === want ? 0 : build.platform ? 2 : 1);
+  return catalog
+    .flatMap((source) =>
+      (source.builds || []).map((build) => ({ ...build, source_url: source.url, source_name: source.name }))
+    )
+    .sort((a, b) => rank(a) - rank(b));
+}
+
+const searchFields = ["name", "bundle_id", "developer", "subtitle", "version", "source_name"];
+
+// searchBuilds returns the builds matching every whitespace-separated term of
+// query, case-insensitively: each term must appear in one of the build name,
+// bundle identifier, developer, subtitle, version or source name. An empty
+// query returns all builds.
+export function searchBuilds(builds, query) {
+  const terms = String(query ?? "").toLowerCase().split(/\s+/).filter(Boolean);
+  if (terms.length === 0) {
+    return builds;
+  }
+  return builds.filter((build) => {
+    const texts = searchFields.map((field) => String(build[field] ?? "").toLowerCase());
+    return terms.every((term) => texts.some((text) => text.includes(term)));
+  });
+}
+
+// listedBuilds returns the first max builds. The build matching pinned is
+// listed first when it comes later, so a build selected beyond the cap is
+// still shown.
+export function listedBuilds(builds, max, pinned) {
+  const shown = builds.slice(0, max);
+  const later = builds.slice(max).find(pinned);
+  return later ? [later, ...shown] : shown;
+}
+
 // filterMatches mirrors the server check that a tracking filter selects a
 // build: a case-insensitive asset name regexp for GitHub, the bundle
 // identifier for AltStore. Filters JavaScript cannot compile do not match.

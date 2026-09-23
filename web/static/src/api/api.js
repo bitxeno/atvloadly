@@ -218,6 +218,38 @@ export default {
     });
   },
 
+  getSavedSources: () => {
+    return request({
+      url: "/api/sources/saved",
+      method: "get",
+    });
+  },
+
+  addSavedSource: (data) => {
+    return request({
+      url: "/api/sources/saved",
+      method: "post",
+      timeout: 60000,
+      data,
+    });
+  },
+
+  deleteSavedSource: (id) => {
+    return request({
+      url: `/api/sources/saved/${id}/delete`,
+      method: "post",
+    });
+  },
+
+  getSourceCatalog: (params) => {
+    return request({
+      url: "/api/sources/catalog",
+      method: "get",
+      timeout: 120000,
+      params,
+    });
+  },
+
   linkAppSource: (id, data) => {
     return request({
       url: `/api/apps/${id}/source`,

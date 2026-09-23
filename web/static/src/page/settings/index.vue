@@ -307,6 +307,80 @@
     </section>
 
     <section class="section bg-base-100">
+      <h2 class="atv-section-heading">{{ $t("settings.sources.title") }}</h2>
+      <form>
+        <div class="form-item">
+          <label class="form-item-label">
+            <span class="label-text">{{ $t("settings.sources.list.label") }}</span>
+          </label>
+          <div class="flex flex-col gap-y-2 min-w-0">
+            <div class="atv-saved-source" v-for="saved in savedSources" :key="saved.id">
+              <div class="flex flex-col min-w-0">
+                <span class="font-semibold break-words">{{ saved.name }}</span>
+                <span class="text-xs text-base-content/70 break-all">{{ saved.url }}</span>
+              </div>
+              <Popper placement="top" arrow="true">
+                <template #content="{ close }">
+                  <div class="flex flex-col gap-y-2 max-w-xs">
+                    <div class="py-2 text-left break-normal break-words">
+                      {{ $t("settings.sources.delete_confirm", { name: saved.name }) }}
+                    </div>
+                    <div class="flex gap-x-2 justify-end items-center">
+                      <a class="link link-primary link-hover" @click="close">{{
+                        $t("settings.sources.button.cancel")
+                      }}</a>
+                      <button type="button" class="btn btn-primary btn-xs" @click="deleteSavedSource(saved, close)">
+                        {{ $t("settings.sources.button.confirm") }}
+                      </button>
+                    </div>
+                  </div>
+                </template>
+                <button type="button" class="btn atv-action atv-action--danger">
+                  {{ $t("settings.sources.button.delete") }}
+                </button>
+              </Popper>
+            </div>
+            <span class="text-sm text-base-content/70" v-if="!savedSources.length">{{
+              $t("settings.sources.list.empty")
+            }}</span>
+          </div>
+        </div>
+
+        <div class="form-item">
+          <label class="form-item-label">
+            <span class="label-text">{{ $t("settings.sources.add.label") }}</span>
+          </label>
+          <div class="flex flex-col grow min-w-0">
+            <div class="join w-full atv-saved-source-add">
+              <input
+                v-model="newSourceUrl"
+                type="text"
+                class="input input-bordered join-item flex-1 min-w-0"
+                placeholder="https://example.com/apps.json"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+                @keydown.enter.prevent="addSavedSource"
+              />
+              <button
+                type="button"
+                class="btn btn-primary join-item"
+                :disabled="addingSource || !newSourceUrl.trim()"
+                @click="addSavedSource"
+              >
+                <span class="loading loading-spinner loading-sm" v-show="addingSource"></span>
+                {{ $t("settings.sources.button.add") }}
+              </button>
+            </div>
+            <label class="label">
+              <span class="label-text-alt whitespace-normal">{{ $t("settings.sources.tips") }}</span>
+            </label>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <section class="section bg-base-100">
       <h2 class="atv-section-heading">{{ $t("settings.network.title") }}</h2>
       <form>
         <div class="form-item">
@@ -426,11 +500,15 @@ export default {
       advanced: {
         adiLoading: false,
       },
+      savedSources: [],
+      newSourceUrl: "",
+      addingSource: false,
     };
   },
 
   created() {
     this.fetchData();
+    this.fetchSavedSources();
   },
   methods: {
     fetchData() {
@@ -468,6 +546,41 @@ export default {
         if (res.data) {
           toast.success(this.$t("settings.toast.save_success"));
         }
+      });
+    },
+
+    fetchSavedSources() {
+      api.getSavedSources().then((res) => {
+        this.savedSources = res.data || [];
+      });
+    },
+
+    addSavedSource() {
+      const url = this.newSourceUrl.trim();
+      if (!url || this.addingSource) return;
+
+      this.addingSource = true;
+      api
+        .addSavedSource({ url })
+        .then((res) => {
+          toast.success(this.$t("settings.sources.toast.added", { name: res.data.name }));
+          this.newSourceUrl = "";
+          this.fetchSavedSources();
+        })
+        .catch((err) => {
+          // request.js already shows the error.
+          console.error(err);
+        })
+        .finally(() => {
+          this.addingSource = false;
+        });
+    },
+
+    deleteSavedSource(saved, closePopper) {
+      closePopper?.();
+      api.deleteSavedSource(saved.id).then(() => {
+        toast.success(this.$t("settings.sources.toast.deleted", { name: saved.name }));
+        this.fetchSavedSources();
       });
     },
 
@@ -646,6 +759,33 @@ form {
 
 .section :deep(a:hover) {
   color: var(--atv-accent-hover);
+}
+
+.atv-saved-source {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--atv-border);
+  border-radius: 12px;
+}
+
+/* Keep the URL input and the Add button fused like other join rows. */
+.atv-saved-source-add > .join-item {
+  height: auto;
+  min-height: 46px;
+  border-radius: 0;
+}
+
+.atv-saved-source-add > .join-item:first-child {
+  border-start-start-radius: var(--rounded-btn, 0.5rem);
+  border-end-start-radius: var(--rounded-btn, 0.5rem);
+}
+
+.atv-saved-source-add > .join-item:last-child {
+  border-start-end-radius: var(--rounded-btn, 0.5rem);
+  border-end-end-radius: var(--rounded-btn, 0.5rem);
 }
 
 :deep(.popper) {

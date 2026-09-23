@@ -585,6 +585,46 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(preview))
 	})
 
+	api.Get("/sources/saved", func(c *fiber.Ctx) error {
+		sources, err := service.GetSavedSources()
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(sources))
+	})
+
+	api.Post("/sources/saved", func(c *fiber.Ctx) error {
+		var req struct {
+			URL string `json:"url"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument. error: " + err.Error()))
+		}
+
+		saved, err := service.AddSavedSource(req.URL)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(saved))
+	})
+
+	api.Post("/sources/saved/:id/delete", func(c *fiber.Ctx) error {
+		id := utils.MustParseInt(c.Params("id"))
+
+		if err := service.DeleteSavedSource(uint(id)); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
+	api.Get("/sources/catalog", func(c *fiber.Ctx) error {
+		catalog, err := service.GetSourceCatalog(c.Query("device_class"))
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(catalog))
+	})
+
 	api.Post("/sources/check", func(c *fiber.Ctx) error {
 		tracked, err := service.GetTrackedAppList()
 		if err != nil {

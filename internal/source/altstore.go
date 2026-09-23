@@ -137,6 +137,8 @@ func appBuilds(app altStoreApp) []Build {
 			DownloadURL: v.DownloadURL,
 			IconURL:     app.IconURL,
 			BundleID:    app.BundleIdentifier,
+			Developer:   app.DeveloperName,
+			Subtitle:    app.Subtitle,
 			Platform:    PlatformHint(app.Name, app.Subtitle, app.BundleIdentifier, FileName(v.DownloadURL)),
 			Filter:      app.BundleIdentifier,
 		})

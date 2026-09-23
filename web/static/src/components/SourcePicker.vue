@@ -24,6 +24,18 @@
           </button>
         </div>
       </div>
+      <div class="flex items-center gap-x-2 mb-2" v-if="kind === 'altstore' && savedSources?.length">
+        <select
+          class="select select-bordered select-sm flex-1 min-w-0"
+          v-model="savedChoice"
+          :aria-label="$t('install.form.source.saved.label')"
+        >
+          <option value="" disabled>{{ $t("install.form.source.saved.label") }}</option>
+          <option value="all">{{ $t("install.form.source.saved.all") }}</option>
+          <option v-for="saved in savedSources" :key="saved.id" :value="String(saved.id)">{{ saved.name }}</option>
+        </select>
+        <span class="loading loading-spinner loading-sm" v-show="loading && all"></span>
+      </div>
       <div class="join w-full">
         <input
           type="text"
@@ -44,7 +56,7 @@
           :disabled="loading || !url.trim()"
           @click="fetchPreview"
         >
-          <span class="loading loading-spinner loading-sm" v-show="loading"></span>
+          <span class="loading loading-spinner loading-sm" v-show="loading && !all"></span>
           {{ $t("install.form.source.fetch") }}
         </button>
       </div>
@@ -60,42 +72,72 @@
     </div>
 
     <div class="flex flex-col gap-y-2" v-if="preview">
-      <a
-        class="link link-hover text-sm break-all"
-        :href="preview.page_url"
-        target="_blank"
-        rel="noopener noreferrer"
-      >{{ preview.title || preview.url }}</a>
+      <div class="flex flex-wrap items-center gap-x-2 gap-y-1 min-h-6" v-if="!all">
+        <a
+          class="link link-hover text-sm break-all"
+          :href="preview.page_url"
+          target="_blank"
+          rel="noopener noreferrer"
+        >{{ preview.title || preview.url }}</a>
+        <button
+          type="button"
+          class="btn btn-ghost btn-xs gap-x-1"
+          v-if="canSaveSource"
+          :disabled="saving"
+          @click="saveSource"
+        >
+          <span class="w-4 h-4"><BookmarkIcon /></span>{{ $t("install.form.source.save_source") }}
+        </button>
+      </div>
+
+      <div class="alert alert-warning text-xs" v-for="failed in catalogErrors" :key="failed.id">
+        <span class="whitespace-normal break-words">{{ failed.name }}: {{ failed.error }}</span>
+      </div>
 
       <div class="alert alert-info text-sm" v-if="needsChoice">
         <span class="whitespace-normal">{{
           preview.kind === "github"
             ? $t("install.form.source.choose_tips")
-            : $t("install.form.source.choose_app_tips")
+            : all
+              ? $t("install.form.source.choose_saved_app_tips")
+              : $t("install.form.source.choose_app_tips")
         }}</span>
       </div>
 
+      <input
+        type="search"
+        class="input input-bordered input-sm w-full"
+        v-if="searchable"
+        v-model="query"
+        :placeholder="$t('install.form.source.search_placeholder')"
+        :aria-label="$t('install.form.source.search_placeholder')"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        @keydown.enter.prevent
+      />
+
       <label
         class="atv-source-build"
-        :class="{ 'atv-source-build--selected': build.id === selectedId }"
-        v-for="build in preview.builds"
-        :key="build.id"
+        :class="{ 'atv-source-build--selected': buildKey(build) === selectedId }"
+        v-for="build in visibleBuilds"
+        :key="buildKey(build)"
       >
         <input
           type="radio"
           class="radio radio-sm"
           :name="radioName"
-          :value="build.id"
-          :checked="build.id === selectedId"
-          @change="selectBuild(build.id)"
+          :value="buildKey(build)"
+          :checked="buildKey(build) === selectedId"
+          @change="selectBuild(buildKey(build))"
         />
         <img
-          v-if="build.icon_url && !failedIcons[build.id]"
+          v-if="build.icon_url && !failedIcons[build.icon_url]"
           :src="build.icon_url"
           alt=""
           loading="lazy"
           class="w-10 h-10 rounded-lg object-cover shrink-0"
-          @error="failedIcons[build.id] = true"
+          @error="failedIcons[build.icon_url] = true"
         />
         <div class="flex flex-col gap-y-1 min-w-0">
           <div class="flex flex-wrap items-center gap-1">
@@ -109,10 +151,23 @@
             <span class="badge badge-success badge-sm" v-if="build.id === preview.suggested_id">{{
               $t("install.form.source.recommended")
             }}</span>
+            <span class="badge badge-ghost badge-sm max-w-full" v-if="build.source_name">
+              <span class="truncate">{{ build.source_name }}</span>
+            </span>
           </div>
+          <span class="text-xs text-base-content/70 break-words" v-if="build.subtitle || build.developer">{{
+            [build.subtitle, build.developer].filter(Boolean).join(" · ")
+          }}</span>
           <span class="text-xs text-base-content/70 break-all">{{ buildDetails(build) }}</span>
         </div>
       </label>
+
+      <span class="text-xs text-base-content/70" v-if="hiddenCount > 0">{{
+        $t("install.form.source.more_results", { num: hiddenCount })
+      }}</span>
+      <span class="text-sm text-base-content/70" v-if="searchable && !matches.length">{{
+        $t("install.form.source.no_match")
+      }}</span>
 
       <div class="collapse collapse-arrow atv-source-advanced" v-if="selectedBuild">
         <input type="checkbox" :aria-label="$t('install.form.source.advanced')" />
@@ -165,9 +220,21 @@
 <script>
 import dayjs from "dayjs";
 import api from "@/api/api";
-import { filterMatches, formatBytes, guessSourceKind, platformLabel } from "@/utils/source.mjs";
+import { toast } from "vue3-toastify";
+import {
+  catalogBuilds,
+  filterMatches,
+  formatBytes,
+  guessSourceKind,
+  listedBuilds,
+  platformLabel,
+  searchBuilds,
+} from "@/utils/source.mjs";
 
 let pickerCount = 0;
+
+// Most AltStore apps listed at once; the search narrows longer lists.
+const maxListedBuilds = 50;
 
 export default {
   name: "SourcePicker",
@@ -192,20 +259,33 @@ export default {
       url: initial.url || "",
       prerelease: !!initial.prerelease,
       loading: false,
-      // Identifies the latest preview request: older responses are ignored.
+      // Identifies the latest preview or catalog request: older responses are ignored.
       requestSeq: 0,
       preview: null,
+      // Key (buildKey) of the selected build.
       selectedId: "",
       // Builds whose icon could not be loaded, hidden instead of shown broken.
       failedIcons: {},
       filter: initial.filter || "",
       filterCustom: false,
+      // Saved AltStore sources, null until loaded.
+      savedSources: null,
+      saving: false,
+      // True when preview lists the apps of all saved sources.
+      all: false,
+      // Saved sources the catalog could not read.
+      catalogErrors: [],
+      query: "",
+      // Key of the build selected when the list was loaded or searched: it
+      // stays listed beyond the cap. Later clicks do not change it, so rows
+      // do not move under the pointer.
+      pinnedKey: "",
     };
   },
   computed: {
     selectedBuild() {
       if (!this.preview) return null;
-      return this.preview.builds.find((b) => b.id === this.selectedId) || null;
+      return this.preview.builds.find((b) => this.buildKey(b) === this.selectedId) || null;
     },
     needsChoice() {
       return this.preview.builds.length > 1 && !this.preview.suggested_id;
@@ -217,11 +297,54 @@ export default {
       if (!this.selectedBuild) return null;
       return {
         kind: this.preview.kind,
-        url: this.preview.url,
+        // Builds of the catalog are tracked in their own source.
+        url: this.all ? this.selectedBuild.source_url : this.preview.url,
         filter: this.filter.trim(),
         prerelease: this.preview.kind === "github" && this.prerelease,
         build: this.selectedBuild,
       };
+    },
+    // Value of the saved sources select: "all", the id of the saved source
+    // shown, or "" for another source.
+    savedChoice: {
+      get() {
+        if (this.all) return "all";
+        const url = this.url.trim();
+        const saved = (this.savedSources || []).find((s) => s.url === url || s.url === this.preview?.url);
+        return saved ? String(saved.id) : "";
+      },
+      set(value) {
+        if (value === "all") {
+          this.showCatalog();
+          return;
+        }
+        const saved = this.savedSources.find((s) => String(s.id) === value);
+        if (!saved) return;
+        this.clearPreview();
+        this.url = saved.url;
+        // Saved sources are AltStore sources, even on github.com.
+        this.loadPreview();
+      },
+    },
+    canSaveSource() {
+      return (
+        this.preview.kind === "altstore" &&
+        !!this.savedSources &&
+        !this.savedSources.some((s) => s.url === this.preview.url)
+      );
+    },
+    searchable() {
+      return this.preview.kind === "altstore" && this.preview.builds.length > 1;
+    },
+    matches() {
+      return this.searchable ? searchBuilds(this.preview.builds, this.query) : this.preview.builds;
+    },
+    visibleBuilds() {
+      if (!this.searchable) return this.matches;
+      return listedBuilds(this.matches, maxListedBuilds, (b) => this.buildKey(b) === this.pinnedKey);
+    },
+    hiddenCount() {
+      return this.matches.length - this.visibleBuilds.length;
     },
   },
   watch: {
@@ -229,14 +352,25 @@ export default {
       this.$emit("update:selection", value);
     },
     deviceClass() {
-      if (this.preview) this.fetchPreview();
+      if (this.all) this.fetchCatalog();
+      else if (this.preview) this.loadPreview();
+    },
+    query() {
+      this.pinnedKey = this.selectedId;
     },
   },
   mounted() {
-    if (this.url) this.fetchPreview();
+    this.loadSavedSources();
+    // The initial source has a known kind.
+    if (this.url) this.loadPreview();
   },
   methods: {
     platformLabel,
+    // buildKey identifies a build in the list: catalog builds of different
+    // sources may share an id.
+    buildKey(build) {
+      return build.source_url ? `${build.source_url} ${build.id}` : build.id;
+    },
     setKind(kind) {
       if (this.kind === kind) return;
       this.kind = kind;
@@ -249,13 +383,93 @@ export default {
       this.loading = false;
       this.preview = null;
       this.selectedId = "";
+      this.all = false;
+      this.catalogErrors = [];
+      this.query = "";
+      this.pinnedKey = "";
     },
+    loadSavedSources() {
+      return api
+        .getSavedSources()
+        .then((res) => {
+          this.savedSources = res.data || [];
+        })
+        .catch((err) => {
+          // request.js already shows the error.
+          console.error(err);
+        });
+    },
+    saveSource() {
+      this.saving = true;
+      api
+        .addSavedSource({ url: this.preview.url })
+        .then((res) => {
+          toast.success(this.$t("install.form.source.toast.source_saved", { name: res.data.name }));
+          return this.loadSavedSources();
+        })
+        .catch((err) => {
+          console.error(err);
+        })
+        .finally(() => {
+          this.saving = false;
+        });
+    },
+    showCatalog() {
+      this.clearPreview();
+      this.url = "";
+      this.all = true;
+      this.fetchCatalog();
+    },
+    fetchCatalog() {
+      const seq = ++this.requestSeq;
+      this.loading = true;
+      api
+        .getSourceCatalog({ device_class: this.deviceClass })
+        .then((res) => {
+          if (seq === this.requestSeq) this.applyCatalog(res.data || []);
+        })
+        .catch(() => {
+          if (seq === this.requestSeq) this.clearPreview();
+        })
+        .finally(() => {
+          if (seq === this.requestSeq) this.loading = false;
+        });
+    },
+    applyCatalog(catalog) {
+      const key = this.selectedId;
+      this.catalogErrors = catalog.filter((s) => s.error);
+      // The catalog is listed like the preview of one AltStore source whose
+      // builds know their own source.
+      this.preview = {
+        kind: "altstore",
+        url: "",
+        title: "",
+        page_url: "",
+        builds: catalogBuilds(catalog, this.deviceClass),
+        suggested_id: "",
+      };
+
+      // Keep the selected build, else the only build of the tracked app, else
+      // the only build.
+      const builds = this.preview.builds;
+      const tracked = builds.filter((b) => filterMatches("altstore", this.filter, b));
+      const kept =
+        builds.find((b) => this.buildKey(b) === key) ||
+        (tracked.length === 1 ? tracked[0] : null) ||
+        (builds.length === 1 ? builds[0] : null);
+      this.selectBuild(kept ? this.buildKey(kept) : "");
+      this.pinnedKey = this.selectedId;
+    },
+    // fetchPreview previews the typed URL as the kind of source it looks like.
     fetchPreview() {
+      const guessed = guessSourceKind(this.url);
+      if (guessed) this.setKind(guessed);
+      this.loadPreview();
+    },
+    // loadPreview previews the URL as a source of the current kind.
+    loadPreview() {
       const url = this.url.trim();
       if (!url) return;
-
-      const guessed = guessSourceKind(url);
-      if (guessed) this.setKind(guessed);
 
       const seq = ++this.requestSeq;
       this.loading = true;
@@ -284,16 +498,16 @@ export default {
       const tracked = this.filter
         ? this.preview.builds.filter((b) => filterMatches(this.preview.kind, this.filter, b))
         : [];
+      const builds = this.preview.builds;
       if (tracked.length === 1) {
         this.selectedId = tracked[0].id;
-        return;
+      } else {
+        this.selectBuild(this.preview.suggested_id || (builds.length === 1 ? builds[0].id : ""));
       }
-
-      const builds = this.preview.builds;
-      this.selectBuild(this.preview.suggested_id || (builds.length === 1 ? builds[0].id : ""));
+      this.pinnedKey = this.selectedId;
     },
-    selectBuild(id) {
-      this.selectedId = id;
+    selectBuild(key) {
+      this.selectedId = key;
       const build = this.selectedBuild;
       if (build && (this.preview.kind === "altstore" || !this.filterCustom)) {
         this.filter = build.filter;
@@ -318,6 +532,7 @@ export default {
 </script>
 
 <script setup>
+import BookmarkIcon from "@/assets/icons/bookmark.svg";
 import GithubIcon from "@/assets/icons/github.svg";
 import LinkIcon from "@/assets/icons/link.svg";
 </script>
@@ -364,6 +579,15 @@ import LinkIcon from "@/assets/icons/link.svg";
   text-align: start;
 }
 
+.atv-source-picker .alert-warning {
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: var(--atv-warning-bg);
+  border: 1px solid var(--atv-warning-border);
+  color: var(--atv-warning-text);
+  text-align: start;
+}
+
 .atv-source-build {
   display: flex;
   align-items: center;
@@ -394,7 +618,9 @@ import LinkIcon from "@/assets/icons/link.svg";
 }
 
 @media (max-width: 767px) {
-  .atv-source-picker input[type="text"] {
+  .atv-source-picker input[type="text"],
+  .atv-source-picker input[type="search"],
+  .atv-source-picker select {
     font-size: 16px;
   }
 }

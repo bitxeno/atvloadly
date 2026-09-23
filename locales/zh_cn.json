@@ -203,7 +203,19 @@
                 },
                 "auto_update": "自动安装更新",
                 "auto_update_tips": "新版本会在自动刷新的运行时间段内安装，并使用同一帐号签名。",
-                "select_build": "请先获取来源并选择要安装的 IPA。"
+                "select_build": "请先获取来源并选择要安装的 IPA。",
+                "choose_saved_app_tips": "已保存的来源包含多个应用，请选择要安装的应用。",
+                "saved": {
+                    "label": "已保存的来源",
+                    "all": "所有已保存的来源"
+                },
+                "search_placeholder": "搜索应用…",
+                "more_results": "还有 {{num}} 个结果，请细化搜索",
+                "no_match": "没有匹配的应用",
+                "save_source": "保存来源",
+                "toast": {
+                    "source_saved": "已将 {{name}} 添加到已保存的来源"
+                }
             },
             "choose_ipa": {
                 "label": "选择ipa:"
@@ -272,7 +284,7 @@
             "notify_success": "推送成功"
         },
         "notification": {
-            "title": "安装失败通知",
+            "title": "通知",
             "toggle": {
                 "label": "启用"
             },
@@ -349,6 +361,28 @@
             "task_disabled": "自动刷新 App 已关闭：仍会检测新版本，但不会自动安装更新。",
             "button": {
                 "submit": "保 存"
+            }
+        },
+        "sources": {
+            "title": "AltStore 来源",
+            "list": {
+                "label": "已保存的来源",
+                "empty": "还没有保存任何来源。"
+            },
+            "add": {
+                "label": "添加来源"
+            },
+            "tips": "已保存的来源可在安装页面的“来源”模式中浏览和搜索。",
+            "delete_confirm": "确定要移除已保存的来源 {{name}} 吗？跟踪它的应用不受影响。",
+            "button": {
+                "add": "添加",
+                "delete": "移除",
+                "cancel": "取消",
+                "confirm": "确定"
+            },
+            "toast": {
+                "added": "已保存 {{name}}",
+                "deleted": "已移除 {{name}}"
             }
         },
         "network": {
