@@ -76,7 +76,8 @@
             "track": "Track updates",
             "auto": "Auto",
             "available": "{{version}} available",
-            "check_updates": "Check for updates"
+            "check_updates": "Check for updates",
+            "update_failed": "Installing {{version}} failed and is not retried automatically. Use Update to retry."
         },
         "sidebar": {
             "device_status": {

@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	conf "github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/db"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
@@ -241,11 +242,12 @@ func CheckSourceUpdates(apps []model.InstalledApp) SourceCheckResult {
 			res.Updates = append(res.Updates, ApplyBuild(app, b))
 		}
 
-		// Notify each new finding once; fetch errors are only logged.
+		// Notify each new finding once; fetch errors are only logged. Automatic
+		// updates are only installed by the auto refresh task.
 		switch {
 		case isMatchError(err) && (next.CheckError != s.CheckError || next.LatestBuildID != s.LatestBuildID):
 			res.Notices = append(res.Notices, SourceNotice{AppName: app.DisplayName(), Error: next.CheckError})
-		case err == nil && next.UpdateAvailable() && !s.AutoUpdate && next.LatestBuildID != s.LatestBuildID:
+		case err == nil && next.UpdateAvailable() && (!s.AutoUpdate || !conf.Settings.Task.Enabled) && next.LatestBuildID != s.LatestBuildID:
 			res.Notices = append(res.Notices, SourceNotice{AppName: app.DisplayName(), Version: next.LatestVersion})
 		}
 	}

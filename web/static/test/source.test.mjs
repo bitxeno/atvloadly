@@ -5,7 +5,9 @@ import {
   filterMatches,
   formatBytes,
   guessSourceKind,
+  installLinkFilter,
   platformLabel,
+  updateFailed,
 } from "../src/utils/source.mjs";
 
 test("guesses GitHub repositories", () => {
@@ -84,4 +86,30 @@ test("matches AltStore filters by bundle identifier", () => {
 
   assert.equal(filterMatches("altstore", "com.pyksel.nuviotvos", build), true);
   assert.equal(filterMatches("altstore", "com.example.other", build), false);
+});
+
+test("saves a new variant filter of the same source only with the update", () => {
+  const sideload = "(?i)(^|[^a-z0-9])sideload([^a-z0-9]|$)";
+  const sideloadly = "(?i)(^|[^a-z0-9])sideloadly([^a-z0-9]|$)";
+  const source = { kind: "github", url: "prehakanson-art/OrivioTVAppleTV", filter: sideload, prerelease: false, auto_update: false };
+  const selection = { kind: "github", url: "Prehakanson-art/OrivioTVAppleTV", filter: sideloadly, prerelease: false };
+
+  // Only the variant changed: nothing to save before the update.
+  assert.equal(installLinkFilter(source, selection, false), null);
+  // Other settings changed: they are saved with the stored filter.
+  assert.equal(installLinkFilter(source, selection, true), sideload);
+  assert.equal(installLinkFilter(source, { ...selection, prerelease: true }, false), sideload);
+  // A new source (or the first one) is saved with the chosen filter.
+  assert.equal(installLinkFilter(source, { ...selection, url: "bobsupra/NuvioTVOS" }, false), sideloadly);
+  assert.equal(installLinkFilter({ ...source, kind: "altstore" }, selection, false), sideloadly);
+  const untracked = { kind: "", url: "", filter: "", prerelease: false, auto_update: false };
+  assert.equal(installLinkFilter(untracked, selection, false), sideloadly);
+});
+
+test("detects a failed update of the latest build", () => {
+  assert.equal(updateFailed({ failed_build_id: "302", latest_build_id: "302" }), true);
+  assert.equal(updateFailed({ failed_build_id: "302", latest_build_id: "303" }), false);
+  assert.equal(updateFailed({ failed_build_id: "302", latest_build_id: "" }), false);
+  assert.equal(updateFailed({ failed_build_id: "", latest_build_id: "" }), false);
+  assert.equal(updateFailed(undefined), false);
 });

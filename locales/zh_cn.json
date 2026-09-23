@@ -76,7 +76,8 @@
             "track": "跟踪更新",
             "auto": "自动",
             "available": "{{version}} 可用",
-            "check_updates": "检查更新"
+            "check_updates": "检查更新",
+            "update_failed": "安装 {{version}} 失败，不会自动重试。请点击“更新”重试。"
         },
         "sidebar": {
             "device_status": {

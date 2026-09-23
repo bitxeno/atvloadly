@@ -211,7 +211,7 @@
                             $t("home.source.auto")
                           }}</span>
                         </button>
-                        <div class="tooltip" :data-tip="item.source.check_error" v-if="item.source.check_error">
+                        <div class="tooltip" :data-tip="sourceWarning(item)" v-if="sourceWarning(item)">
                           <span class="block w-4 h-4 atv-source-warning"><WarningIcon /></span>
                         </div>
                         <span class="badge badge-info badge-sm" v-if="item.source.latest_build_id">{{
@@ -325,6 +325,7 @@ import api from "@/api/api";
 import { toast } from "vue3-toastify";
 import { truncateIP } from "@/utils/utils";
 import SourceDialog from "@/components/SourceDialog.vue";
+import { updateFailed } from "@/utils/source.mjs";
 
 export default {
   name: "Home",
@@ -508,6 +509,13 @@ export default {
     },
     openSourceDialog(item) {
       this.$refs.sourceDialog.show(item);
+    },
+    // sourceWarning explains why an app needs attention: the last check
+    // failed, or its latest build failed to install and is not retried.
+    sourceWarning(item) {
+      const source = item.source;
+      if (source.check_error) return source.check_error;
+      return updateFailed(source) ? this.$t("home.source.update_failed", { version: source.latest_version }) : "";
     },
     checkUpdates() {
       this.checkingUpdates = true;

@@ -76,7 +76,8 @@
       "track": "Följ nya versioner",
       "auto": "Auto",
       "available": "{{version}} tillgänglig",
-      "check_updates": "Sök efter nya versioner"
+      "check_updates": "Sök efter nya versioner",
+      "update_failed": "Installationen av {{version}} misslyckades och görs inte om automatiskt. Använd Uppgradera för att försöka igen."
     },
     "sidebar": {
       "device_status": {

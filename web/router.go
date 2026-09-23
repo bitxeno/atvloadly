@@ -661,6 +661,10 @@ func route(fi *fiber.App) {
 
 	api.Post("/apps/:id/source", func(c *fiber.Ctx) error {
 		id := utils.MustParseInt(c.Params("id"))
+		// A running update saves the source settings it was queued with.
+		if task.IsInstalling(uint(id)) {
+			return c.Status(http.StatusOK).JSON(apiError("app is installing"))
+		}
 
 		var in service.SourceInput
 		if err := c.BodyParser(&in); err != nil {
@@ -676,6 +680,9 @@ func route(fi *fiber.App) {
 
 	api.Post("/apps/:id/source/delete", func(c *fiber.Ctx) error {
 		id := utils.MustParseInt(c.Params("id"))
+		if task.IsInstalling(uint(id)) {
+			return c.Status(http.StatusOK).JSON(apiError("app is installing"))
+		}
 
 		if err := service.UntrackSource(uint(id)); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))

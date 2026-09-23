@@ -94,6 +94,9 @@ func TestStartInstallAppsQueuedCount(t *testing.T) {
 	if len(tk.InstallAppQueue) != 2 {
 		t.Fatalf("%d queued items, want 2", len(tk.InstallAppQueue))
 	}
+	if !tk.isInstalling(1) || !tk.isInstalling(2) || tk.isInstalling(3) {
+		t.Fatal("unexpected isInstalling result")
+	}
 }
 
 func TestUpdateCheckSpec(t *testing.T) {

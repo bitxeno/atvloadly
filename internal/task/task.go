@@ -582,6 +582,16 @@ func GetCurrentInstallingApps() []model.InstalledApp {
 	return installingApps
 }
 
+// IsInstalling reports whether app id is queued or installing.
+func IsInstalling(id uint) bool {
+	return instance.isInstalling(id)
+}
+
+func (t *Task) isInstalling(id uint) bool {
+	_, ok := t.InstallingApps.Load(id)
+	return ok
+}
+
 func ReloadTask() error {
 	log.Info("Reload task...")
 	return instance.RunSchedule()

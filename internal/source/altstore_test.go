@@ -173,8 +173,48 @@ func TestAltStoreSeveralApps(t *testing.T) {
 	if len(p.Builds) != 2 || p.SuggestedID != p.Builds[1].ID || !p.Builds[1].Date.IsZero() {
 		t.Fatalf("unexpected preview %+v", p)
 	}
+	// The platform of the device picks the app among those using the bundle.
+	for deviceClass, want := range map[string]string{"AppleTV": "App TV", "iPhone": "App iOS"} {
+		if b, err := feed.Latest("com.example.app", false, deviceClass); err != nil || b.Name != want {
+			t.Fatalf("Latest(%s) = %+v, %v; want %s", deviceClass, b, err, want)
+		}
+	}
+	if _, err := feed.Latest("com.example.app", false, ""); !errors.Is(err, ErrAmbiguous) {
+		t.Fatalf("Latest(unknown device) = %v, want ErrAmbiguous", err)
+	}
+
+	// Two channels for the same platform stay ambiguous.
+	u = serveSource(t, `{"name":"Channels","apps":[
+		{"name":"App","bundleIdentifier":"com.example.app","subtitle":"for tvOS","versions":[{"version":"2","downloadURL":"https://example.com/App-tvOS.ipa"}]},
+		{"name":"App Beta","bundleIdentifier":"com.example.app","subtitle":"for tvOS","versions":[{"version":"3b","downloadURL":"https://example.com/App-beta-tvOS.ipa"}]}
+	]}`)
+	if feed, err = Fetch(KindAltStore, u); err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
 	if _, err := feed.Latest("com.example.app", false, "AppleTV"); !errors.Is(err, ErrAmbiguous) {
 		t.Fatalf("Latest = %v, want ErrAmbiguous", err)
+	}
+}
+
+func TestAltStoreSkipsLocalDownloads(t *testing.T) {
+	u := serveSource(t, `{"name":"Local","apps":[{"name":"App","bundleIdentifier":"com.example.app","versions":[
+		{"version":"4","downloadURL":"/data/ipa/1/app.ipa"},
+		{"version":"3","downloadURL":"app.ipa"},
+		{"version":"2","downloadURL":" https://example.com/App-2.ipa"},
+		{"version":"1.5","downloadURL":"file:///data/ipa/1/app.ipa"},
+		{"version":"1","downloadURL":"HTTPS://example.com/App-1.ipa"}
+	]}]}`)
+	feed, err := Fetch(KindAltStore, u)
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	// Only http(s) URLs are downloads; the others would be read on the server.
+	builds := feed.(*altStoreFeed).entries[0].builds
+	if len(builds) != 1 || builds[0].Version != "1" {
+		t.Fatalf("builds = %+v, want only version 1", builds)
+	}
+	if b, err := feed.Latest("com.example.app", false, "AppleTV"); err != nil || b.DownloadURL != "HTTPS://example.com/App-1.ipa" {
+		t.Fatalf("Latest = %+v, %v", b, err)
 	}
 }
 

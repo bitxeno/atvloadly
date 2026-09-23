@@ -90,11 +90,12 @@
           @change="selectBuild(build.id)"
         />
         <img
-          v-if="build.icon_url"
+          v-if="build.icon_url && !failedIcons[build.id]"
           :src="build.icon_url"
           alt=""
           loading="lazy"
           class="w-10 h-10 rounded-lg object-cover shrink-0"
+          @error="failedIcons[build.id] = true"
         />
         <div class="flex flex-col gap-y-1 min-w-0">
           <div class="flex flex-wrap items-center gap-1">
@@ -134,6 +135,7 @@
               autocapitalize="off"
               spellcheck="false"
               @input="filterCustom = true"
+              @keydown.enter.prevent
             />
             <label class="label gap-x-2">
               <span class="label-text-alt whitespace-normal">{{ $t("install.form.source.filter.tips") }}</span>
@@ -190,8 +192,12 @@ export default {
       url: initial.url || "",
       prerelease: !!initial.prerelease,
       loading: false,
+      // Identifies the latest preview request: older responses are ignored.
+      requestSeq: 0,
       preview: null,
       selectedId: "",
+      // Builds whose icon could not be loaded, hidden instead of shown broken.
+      failedIcons: {},
       filter: initial.filter || "",
       filterCustom: false,
     };
@@ -239,16 +245,19 @@ export default {
       this.clearPreview();
     },
     clearPreview() {
+      this.requestSeq++;
+      this.loading = false;
       this.preview = null;
       this.selectedId = "";
     },
     fetchPreview() {
       const url = this.url.trim();
-      if (!url || this.loading) return;
+      if (!url) return;
 
       const guessed = guessSourceKind(url);
       if (guessed) this.setKind(guessed);
 
+      const seq = ++this.requestSeq;
       this.loading = true;
       api
         .previewSource({
@@ -258,14 +267,14 @@ export default {
           prerelease: this.kind === "github" && this.prerelease,
         })
         .then((res) => {
-          this.applyPreview(res.data);
+          if (seq === this.requestSeq) this.applyPreview(res.data);
         })
         .catch(() => {
           // request.js already shows the error.
-          this.clearPreview();
+          if (seq === this.requestSeq) this.clearPreview();
         })
         .finally(() => {
-          this.loading = false;
+          if (seq === this.requestSeq) this.loading = false;
         });
     },
     applyPreview(preview) {

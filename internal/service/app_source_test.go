@@ -20,10 +20,12 @@ import (
 // setupTestDB opens an empty database and data directory for one test.
 func setupTestDB(t *testing.T) {
 	t.Helper()
-	oldConfig := app.Config
+	oldConfig, oldSettings := app.Config, app.Settings
 	app.Config = &app.Configuration{}
 	app.Config.Server.DataDir = t.TempDir()
-	t.Cleanup(func() { app.Config = oldConfig })
+	app.Settings = &app.SettingsConfiguration{}
+	app.Settings.Task.Enabled = true
+	t.Cleanup(func() { app.Config, app.Settings = oldConfig, oldSettings })
 
 	if err := db.Open(db.Config{Path: t.TempDir(), FileName: "test.db"}).AutoMigrate(&model.InstalledApp{}); err != nil {
 		t.Fatalf("AutoMigrate: %v", err)
@@ -308,6 +310,28 @@ func TestCheckSourceUpdates(t *testing.T) {
 	}
 }
 
+func TestCheckSourceUpdatesNotifiesAutoUpdateWhenRefreshDisabled(t *testing.T) {
+	setupTestDB(t)
+	u, _ := serveSource(t, testSource)
+	createApp(t, trackedApp("u1", "com.example.beta", u, model.AppSource{AutoUpdate: true}))
+
+	// The auto refresh task installs automatic updates: without it the user
+	// must be told about them.
+	app.Settings.Task.Enabled = false
+	apps, _ := GetAppList()
+	res := CheckSourceUpdates(apps)
+	want := []SourceNotice{{AppName: "com.example.beta", Version: "5.0"}}
+	if len(res.Updates) != 1 || !sameNotices(res.Notices, want) {
+		t.Fatalf("result = %+v, want notices %+v", res, want)
+	}
+
+	// Once is enough.
+	apps, _ = GetAppList()
+	if res = CheckSourceUpdates(apps); len(res.Notices) != 0 {
+		t.Fatalf("second run notices = %+v", res.Notices)
+	}
+}
+
 func sameNotices(got, want []SourceNotice) bool {
 	if len(got) != len(want) {
 		return false
@@ -522,5 +546,21 @@ func TestPrepareSourceUpdateKeepsFilterUntilInstalled(t *testing.T) {
 	// update succeeds (the variants may be different apps).
 	if got := mustGetApp(t, installed.ID).Source.Filter; got != sideload.Filter {
 		t.Fatalf("stored filter = %q, want %q", got, sideload.Filter)
+	}
+
+	// The source dialog's Install with auto-update turned on: it saves the
+	// settings with the stored filter, then installs the other variant, which
+	// is rejected (another bundle identifier).
+	if _, err := LinkSource(installed.ID, SourceInput{Kind: source.KindGitHub, URL: "prehakanson-art/OrivioTVAppleTV", Filter: sideload.Filter, AutoUpdate: true}); err != nil {
+		t.Fatalf("LinkSource: %v", err)
+	}
+	if _, err := PrepareSourceUpdate(installed.ID, sideloadly.ID, sideloadly.Filter); err != nil {
+		t.Fatalf("PrepareSourceUpdate: %v", err)
+	}
+	if err := MarkSourceUpdateFailed(installed.ID, sideloadly.ID, "bundle identifier changed"); err != nil {
+		t.Fatal(err)
+	}
+	if s := mustGetApp(t, installed.ID).Source; s.Filter != sideload.Filter || !s.AutoUpdate || s.FailedBuildID != sideloadly.ID {
+		t.Fatalf("source after a failed switch = %+v, want the %q filter", s, sideload.Filter)
 	}
 }

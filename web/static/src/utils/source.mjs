@@ -79,3 +79,26 @@ export function filterMatches(kind, filter, build) {
     return false;
   }
 }
+
+// installLinkFilter returns the filter to save before the source dialog
+// installs selection on an app linked to source, or null when the link needs
+// no change. A new filter for the same source is only saved by the update
+// once it installs, so a failed switch to another variant (maybe another app)
+// keeps tracking the installed one.
+export function installLinkFilter(source, selection, autoUpdate) {
+  const sameSource =
+    !!source.kind && selection.kind === source.kind && selection.url.toLowerCase() === source.url.toLowerCase();
+  if (!sameSource) {
+    return selection.filter;
+  }
+  if (selection.prerelease !== source.prerelease || autoUpdate !== source.auto_update) {
+    return source.filter;
+  }
+  return null;
+}
+
+// updateFailed reports whether installing the latest build of source failed.
+// Such a build is not installed automatically again.
+export function updateFailed(source) {
+  return !!source?.failed_build_id && source.failed_build_id === source.latest_build_id;
+}

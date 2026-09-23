@@ -119,7 +119,8 @@ func appBuilds(app altStoreApp) []Build {
 
 	var builds []Build
 	for _, v := range versions {
-		if v.DownloadURL == "" {
+		// Only http(s) downloads: anything else would be read as a server path.
+		if u, err := url.Parse(v.DownloadURL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 			continue
 		}
 		version := v.Version
@@ -176,12 +177,32 @@ func (f *altStoreFeed) Preview(deviceClass string, _ bool) (*Preview, error) {
 	}, nil
 }
 
-// Latest returns the newest version of the app whose bundle identifier is filter.
-func (f *altStoreFeed) Latest(filter string, _ bool, _ string) (Build, error) {
+// Latest returns the newest version of the app whose bundle identifier is
+// filter. When several apps of the source use it (the iOS and tvOS builds of
+// one app), the platform of the device picks one.
+func (f *altStoreFeed) Latest(filter string, _ bool, deviceClass string) (Build, error) {
 	var matches []altStoreEntry
 	for _, e := range f.entries {
 		if e.bundleID == filter {
 			matches = append(matches, e)
+		}
+	}
+	if len(matches) > 1 {
+		want := DevicePlatform(deviceClass)
+		var compatibles, exact []altStoreEntry
+		for _, e := range matches {
+			if len(e.builds) == 0 || !compatible(e.builds[0].Platform, want) {
+				continue
+			}
+			compatibles = append(compatibles, e)
+			if want != PlatformUnknown && e.builds[0].Platform == want {
+				exact = append(exact, e)
+			}
+		}
+		if len(exact) > 0 {
+			matches = exact
+		} else if len(compatibles) > 0 {
+			matches = compatibles
 		}
 	}
 	switch {

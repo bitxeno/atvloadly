@@ -8,6 +8,8 @@ import (
 
 var (
 	regVersionToken = regexp.MustCompile(`^v?\d+$`)
+	// regQuotedVersion matches a dotted number in a regexp.QuoteMeta result.
+	regQuotedVersion = regexp.MustCompile(`[0-9]+(\\\.[0-9]+)*`)
 
 	tvosTokens = map[string]bool{"tvos": true, "appletv": true, "atv": true}
 	iosTokens  = map[string]bool{"ios": true, "iphone": true, "iphoneos": true, "ipad": true, "ipados": true}
@@ -83,7 +85,8 @@ func compatible(p, want Platform) bool {
 // DeriveFilter returns an asset-name filter that keeps selecting the variant
 // picked among the IPA assets of a release (Obtainium's asset filter): the
 // first word of picked that is neither a version number nor shared with the
-// other assets, or the exact name when there is none.
+// other assets, or else the whole name with its version numbers made generic
+// so that it keeps matching in later releases.
 func DeriveFilter(picked string, others []string) string {
 	otherTokens := map[string]bool{}
 	for _, n := range others {
@@ -100,7 +103,7 @@ func DeriveFilter(picked string, others []string) string {
 		}
 		return `(?i)(^|[^a-z0-9])` + regexp.QuoteMeta(tok) + `([^a-z0-9]|$)`
 	}
-	return `(?i)^` + regexp.QuoteMeta(picked) + `$`
+	return `(?i)^` + regQuotedVersion.ReplaceAllLiteralString(regexp.QuoteMeta(picked), `[0-9]+(\.[0-9]+)*`) + `$`
 }
 
 // Suggest returns the ID of the build to preselect for deviceClass, or ""

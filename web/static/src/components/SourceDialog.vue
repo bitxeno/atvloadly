@@ -20,9 +20,9 @@
           </template>
         </dl>
 
-        <div class="alert alert-warning atv-warning text-sm" v-if="app.source.check_error">
+        <div class="alert alert-warning atv-warning text-sm" v-if="warning">
           <span class="w-5 h-5 shrink-0"><WarningIcon /></span>
-          <span class="whitespace-normal break-words">{{ app.source.check_error }}</span>
+          <span class="whitespace-normal break-words">{{ warning }}</span>
         </div>
 
         <SourcePicker
@@ -90,6 +90,7 @@ import dayjs from "dayjs";
 import api from "@/api/api";
 import { toast } from "vue3-toastify";
 import SourcePicker from "@/components/SourcePicker.vue";
+import { installLinkFilter, updateFailed } from "@/utils/source.mjs";
 
 export default {
   name: "SourceDialog",
@@ -126,6 +127,11 @@ export default {
       const checkedAt = this.app.source.checked_at;
       return checkedAt ? dayjs(checkedAt).format("YYYY-MM-DD HH:mm") : this.$t("source_dialog.never");
     },
+    warning() {
+      const source = this.app.source;
+      if (source.check_error) return source.check_error;
+      return updateFailed(source) ? this.$t("home.source.update_failed", { version: source.latest_version }) : "";
+    },
     // True when saving links the app to a new source (or the first one).
     sourceChanged() {
       if (!this.selection) return false;
@@ -133,15 +139,6 @@ export default {
       return (
         this.selection.kind !== source.kind ||
         this.selection.url.toLowerCase() !== source.url.toLowerCase()
-      );
-    },
-    settingsChanged() {
-      const source = this.app.source;
-      return (
-        this.sourceChanged ||
-        this.selection.filter !== source.filter ||
-        this.selection.prerelease !== source.prerelease ||
-        this.autoUpdate !== source.auto_update
       );
     },
   },
@@ -157,12 +154,12 @@ export default {
     close() {
       this.visible = false;
     },
-    async link(markInstalled) {
+    async link(markInstalled, filter = this.selection.filter) {
       const s = this.selection;
       const res = await api.linkAppSource(this.app.ID, {
         kind: s.kind,
         url: s.url,
-        filter: s.filter,
+        filter,
         prerelease: s.prerelease,
         auto_update: this.autoUpdate,
         installed_build_id: markInstalled && this.sourceChanged && this.alreadyInstalled ? s.build.id : "",
@@ -188,8 +185,10 @@ export default {
       this.busy = true;
       try {
         // The update installs the tracked source, so persist the source first.
-        if (!this.tracked || this.settingsChanged) {
-          await this.link(false);
+        // A new filter of the same source is saved only once the update installs.
+        const filter = installLinkFilter(this.app.source, s, this.autoUpdate);
+        if (filter !== null) {
+          await this.link(false, filter);
         }
         const res = await api.updateAppFromSource(this.app.ID, {
           build_id: s.build.id,

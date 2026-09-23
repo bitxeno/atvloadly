@@ -84,12 +84,45 @@ func TestDeriveFilter(t *testing.T) {
 		{"OrivioTV-0.7.15-tvos-unsigned.ipa", []string{"OrivioTV-0.7.15-sideloadly-unsigned.ipa"}, `(?i)(^|[^a-z0-9])tvos([^a-z0-9]|$)`},
 		{"App-tvOS.ipa", []string{"App-iOS.ipa"}, `(?i)(^|[^a-z0-9])tvos([^a-z0-9]|$)`},
 		{"NuvioTV-3.3.7-unsigned-release.ipa", nil, `(?i)(^|[^a-z0-9])nuviotv([^a-z0-9]|$)`},
-		{"v2.ipa", []string{"App.ipa"}, `(?i)^v2\.ipa$`},
+		{"v2.ipa", []string{"App.ipa"}, `(?i)^v[0-9]+(\.[0-9]+)*\.ipa$`},
+		{"App.ipa", []string{"App-tvOS.ipa"}, `(?i)^App\.ipa$`},
 	}
 	for _, c := range cases {
 		if got := DeriveFilter(c.picked, c.others); got != c.want {
 			t.Errorf("DeriveFilter(%q) = %q, want %q", c.picked, got, c.want)
 		}
+	}
+}
+
+// TestDeriveFilterUnmarkedVariant checks that the filter of an unmarked build
+// next to a marked variant keeps matching when the version changes.
+func TestDeriveFilterUnmarkedVariant(t *testing.T) {
+	cases := []struct {
+		picked, other string
+		match, skip   []string
+	}{
+		{"App-1.2.ipa", "App-1.2-iOS.ipa", []string{"App-1.3.ipa", "App-1.2.1.ipa", "app-2.ipa"}, []string{"App-1.3-iOS.ipa", "Other-1.3.ipa"}},
+		{"OrivioTV-V9.ipa", "OrivioTV-V9.Sideloadly.ipa", []string{"OrivioTV-V10.ipa"}, []string{"OrivioTV-V10.Sideloadly.ipa"}},
+	}
+	for _, c := range cases {
+		re := regexp.MustCompile(DeriveFilter(c.picked, []string{c.picked, c.other}))
+		for _, name := range append([]string{c.picked}, c.match...) {
+			if !re.MatchString(name) {
+				t.Errorf("filter of %q does not match %q", c.picked, name)
+			}
+		}
+		for _, name := range append([]string{c.other}, c.skip...) {
+			if re.MatchString(name) {
+				t.Errorf("filter of %q matches %q", c.picked, name)
+			}
+		}
+	}
+
+	// In release v1.3 the filter still selects the unmarked build on an Apple TV.
+	f := &githubFeed{repo: "owner/app", releases: []githubRelease{release("v1.3", false, asset(1, "App-1.3.ipa"), asset(2, "App-1.3-iOS.ipa"))}}
+	b, err := f.Latest(DeriveFilter("App-1.2.ipa", []string{"App-1.2.ipa", "App-1.2-iOS.ipa"}), false, "AppleTV")
+	if err != nil || b.Name != "App-1.3.ipa" {
+		t.Fatalf("Latest = %+v, %v; want App-1.3.ipa", b, err)
 	}
 }
 

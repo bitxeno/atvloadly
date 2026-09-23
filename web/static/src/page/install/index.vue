@@ -480,6 +480,8 @@ export default {
       this.$router.push("/");
     },
     setInstallMode(mode) {
+      // The inputs of the current mode keep what they show: keep their state too.
+      if (this.installMode === mode) return;
       this.installMode = mode;
       this.files = [];
       this.ipaUrl = "";
