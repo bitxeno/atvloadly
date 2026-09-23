@@ -150,6 +150,25 @@
     border-radius: 6px;
   }
 
+  .app-container .main-container .table:has(.atv-app-icon) .atv-app-icon--ios {
+    width: 76px;
+    flex-basis: 76px;
+    padding-inline: 14px;
+    border-radius: 0;
+  }
+
+  .app-container .main-container .table:has(.atv-app-icon) .atv-app-icon--ios img,
+  .app-container .main-container .table:has(.atv-app-icon) .atv-app-icon--ios .atv-app-icon-img,
+  .app-container .main-container .table:has(.atv-app-icon) .atv-app-icon--ios .atv-app-icon-mask {
+    border-radius: 10.8px;
+  }
+
+  .app-container .main-container .table:has(.atv-app-icon) .atv-app-icon--ios .atv-app-icon-mask {
+    left: 14px;
+    right: 14px;
+    width: auto;
+  }
+
   .app-container .main-container .table:has(.atv-app-icon) tbody td:nth-child(2),
   .app-container .main-container .table:has(.atv-app-icon) tbody td:nth-child(3) {
     grid-column: 1 / -1;

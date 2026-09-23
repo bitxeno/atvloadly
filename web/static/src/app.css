@@ -671,12 +671,42 @@ html[data-theme="dark"] {
   overflow: hidden;
 }
 
-.app-container .atv-app-icon img {
+.app-container .atv-app-icon img,
+.app-container .atv-app-icon .atv-app-icon-img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   border-radius: inherit;
+}
+
+/* iOS icons are square artwork: keep aspect ratio, center, and use an iOS-like squircle radius.
+   The outer box keeps the tvOS width with side padding so the text column stays aligned. */
+.app-container .atv-app-icon--ios {
+  width: 104px;
+  flex-basis: 104px;
+  padding-inline: 21px;
+  box-sizing: border-box;
+  border-radius: 0;
+  background: transparent;
+}
+
+.app-container .atv-app-icon--ios img,
+.app-container .atv-app-icon--ios .atv-app-icon-img {
+  object-fit: contain;
+  border-radius: 14px;
+  background: var(--atv-surface-alt);
+}
+
+.app-container .atv-app-icon--ios .atv-app-initial {
+  border-radius: 14px;
+}
+
+.app-container .atv-app-icon--ios .atv-app-icon-mask {
+  left: 21px;
+  right: 21px;
+  width: auto;
+  border-radius: 14px;
 }
 
 .app-container .atv-app-initial {
@@ -730,6 +760,24 @@ html[data-theme="dark"] {
     width: 86px;
     height: 52px;
     flex-basis: 86px;
+  }
+
+  .app-container .atv-app-icon--ios {
+    width: 86px;
+    flex-basis: 86px;
+    padding-inline: 17px;
+  }
+
+  .app-container .atv-app-icon--ios img,
+  .app-container .atv-app-icon--ios .atv-app-icon-img,
+  .app-container .atv-app-icon--ios .atv-app-initial,
+  .app-container .atv-app-icon--ios .atv-app-icon-mask {
+    border-radius: 11.7px;
+  }
+
+  .app-container .atv-app-icon--ios .atv-app-icon-mask {
+    left: 17px;
+    right: 17px;
   }
 }
 
