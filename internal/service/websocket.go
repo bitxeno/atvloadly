@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/ipa"
@@ -72,8 +71,21 @@ func HandleInstallMessage(c *websocket.Conn) {
 }
 
 func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.InstallManager, v model.InstalledApp, dev *model.Device) {
+	if v.Source.Tracked() {
+		mgr.WriteMessage("Resolving build from source...\n")
+		if err := ResolveSourceInstall(&v); err != nil {
+			mgr.WriteMessage(fmt.Sprintf("ERROR: %s", err.Error()))
+			mgr.WriteMessage("\n")
+			mgr.WriteMessage("Installation Failed!")
+			return
+		}
+	} else {
+		// Only the server writes source data.
+		v.Source = model.AppSource{}
+	}
+
 	ipaPath := v.IpaPath
-	if strings.HasPrefix(ipaPath, "http:") || strings.HasPrefix(ipaPath, "https:") {
+	if ipa.IsRemoteURL(ipaPath) {
 		mgr.WriteMessage("Downloading IPA from URL...\n")
 		lastPct := int64(-1)
 		result, err := ipa.DownloadAndParse(ipaPath, func(downloaded, total int64) {
@@ -99,6 +111,13 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 			defer func() { _ = os.Remove(result.IconPath) }()
 		}
 		mgr.WriteMessage("Download complete!\n")
+
+		if err := ipa.CheckPlatform(result.Platforms, dev.DeviceClass); err != nil {
+			mgr.WriteMessage(fmt.Sprintf("ERROR: %s", err.Error()))
+			mgr.WriteMessage("\n")
+			mgr.WriteMessage("Installation Failed!")
+			return
+		}
 
 		v.IpaPath = result.LocalPath
 		v.IpaName = result.Name

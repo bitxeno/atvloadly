@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -26,6 +27,9 @@ func TestParseFile(t *testing.T) {
 	}
 	if parsed.Version() != "1.2.3" {
 		t.Fatalf("Version() = %q, want %q", parsed.Version(), "1.2.3")
+	}
+	if got := parsed.Platforms(); !reflect.DeepEqual(got, []string{"AppleTVOS"}) {
+		t.Fatalf("Platforms() = %v, want [AppleTVOS]", got)
 	}
 
 	icon := parsed.Icon()
@@ -84,4 +88,5 @@ const fixtureInfoPlist = `<?xml version="1.0" encoding="UTF-8"?>
   <key>CFBundleIdentifier</key><string>com.example.fixture</string>
   <key>CFBundleShortVersionString</key><string>1.2.3</string>
   <key>CFBundleVersion</key><string>123</string>
+  <key>CFBundleSupportedPlatforms</key><array><string>AppleTVOS</string></array>
 </dict></plist>`

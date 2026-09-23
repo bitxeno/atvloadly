@@ -330,7 +330,6 @@
 
   /* Mobile keeps the daisyUI fused join rows (input + attached button),
      only tightening sizes so the pair fits narrow screens. */
-  .app-container .main-container .atv-install-ipa-picker,
   .app-container .main-container .atv-install-account-picker {
     display: flex;
     flex-direction: row;
@@ -340,7 +339,6 @@
     min-width: 0;
   }
 
-  .app-container .main-container .atv-install-ipa-picker > input,
   .app-container .main-container .atv-install-account-picker > select {
     flex: 1 1 auto;
     width: auto;
@@ -350,18 +348,16 @@
     border-radius: 0 !important;
   }
 
-  .app-container .main-container .atv-install-ipa-picker > input:first-child,
   .app-container .main-container .atv-install-account-picker > select:first-child {
     border-start-start-radius: 12px !important;
     border-end-start-radius: 12px !important;
   }
 
-  .app-container .main-container .atv-install-ipa-picker > input::file-selector-button {
+  .app-container .main-container .atv-install-page .file-input::file-selector-button {
     font-size: .75rem;
     padding-inline: 10px;
   }
 
-  .app-container .main-container .atv-install-ipa-picker > button,
   .app-container .main-container .atv-install-account-picker > button {
     flex: 0 0 auto;
     width: 52px;
@@ -375,8 +371,10 @@
     border-end-end-radius: 12px !important;
   }
 
-  .app-container .main-container .atv-install-mode-label.hidden {
-    display: none;
+  /* The install mode buttons show only their icons on phones. */
+  .app-container .main-container .atv-install-mode > .btn {
+    min-width: 0;
+    padding-inline: 0;
   }
 
   .app-container .main-container .atv-install-page input[type="text"],

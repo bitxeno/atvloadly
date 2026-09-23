@@ -201,6 +201,48 @@ export default {
     });
   },
 
+  previewSource: (params) => {
+    return request({
+      url: "/api/sources/preview",
+      method: "get",
+      timeout: 60000,
+      params,
+    });
+  },
+
+  checkSourceUpdates: () => {
+    return request({
+      url: "/api/sources/check",
+      method: "post",
+      timeout: 120000,
+    });
+  },
+
+  linkAppSource: (id, data) => {
+    return request({
+      url: `/api/apps/${id}/source`,
+      method: "post",
+      timeout: 60000,
+      data,
+    });
+  },
+
+  unlinkAppSource: (id) => {
+    return request({
+      url: `/api/apps/${id}/source/delete`,
+      method: "post",
+    });
+  },
+
+  updateAppFromSource: (id, data) => {
+    return request({
+      url: `/api/apps/${id}/source/update`,
+      method: "post",
+      timeout: 60000,
+      data,
+    });
+  },
+
   clean: (data) => {
     return request({
       url: "/api/clean",
@@ -236,6 +278,14 @@ export default {
   saveNetworkSettings: function (data) {
     return request({
       url: "/api/settings/network",
+      method: "post",
+      data,
+    });
+  },
+
+  saveUpdateSettings: function (data) {
+    return request({
+      url: "/api/settings/update",
       method: "post",
       data,
     });

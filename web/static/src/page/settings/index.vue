@@ -263,6 +263,50 @@
     </section>
 
     <section class="section bg-base-100">
+      <h2 class="atv-section-heading">{{ $t("settings.update.title") }}</h2>
+      <form>
+        <div class="form-item">
+          <label class="form-item-label">
+            <span class="label-text">{{
+              $t("settings.update.interval.label")
+            }}</span>
+          </label>
+          <div class="flex flex-col grow">
+            <select
+              v-model="settings.update.check_interval"
+              class="select select-bordered w-full"
+            >
+              <option v-for="h in updateIntervals" :key="h" :value="h">
+                {{ formatUpdateInterval(h) }}
+              </option>
+            </select>
+            <label class="label">
+              <span class="label-text-alt whitespace-normal">{{
+                $t("settings.update.tips")
+              }}</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-item" v-if="!settings.task.enabled">
+          <label class="form-item-label"></label>
+          <div class="alert alert-warning atv-warning text-sm">
+            <span class="whitespace-normal">{{ $t("settings.update.task_disabled") }}</span>
+          </div>
+        </div>
+
+        <div class="form-item">
+          <label class="form-item-label"></label>
+          <div class="flex-1 flex justify-between">
+            <button class="btn btn-primary w-32" @click.prevent="saveUpdate">
+              {{ $t("settings.update.button.submit") }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <section class="section bg-base-100">
       <h2 class="atv-section-heading">{{ $t("settings.network.title") }}</h2>
       <form>
         <div class="form-item">
@@ -360,8 +404,12 @@ export default {
     return {
       startHour: 0,
       endHour: 23,
+      updateIntervals: [0, 1, 3, 6, 12, 24],
       settings: {
         task: {},
+        update: {
+          check_interval: 6,
+        },
         notification: {
           type: "bark",
           telegram: {},
@@ -411,6 +459,26 @@ export default {
           toast.success(this.$t("settings.toast.save_success"));
         }
       });
+    },
+
+    saveUpdate() {
+      let _this = this;
+
+      api.saveUpdateSettings(_this.settings).then((res) => {
+        if (res.data) {
+          toast.success(this.$t("settings.toast.save_success"));
+        }
+      });
+    },
+
+    formatUpdateInterval(hours) {
+      if (hours === 0) {
+        return this.$t("settings.update.interval.off");
+      }
+      if (hours === 1) {
+        return this.$t("settings.update.interval.every_hour");
+      }
+      return this.$t("settings.update.interval.every_hours", { num: hours });
     },
 
     testNotification() {

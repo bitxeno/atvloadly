@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
@@ -26,6 +27,8 @@ type DownloadResult struct {
 	Version string
 	// IconPath is the path to the extracted icon PNG file, or empty if extraction failed.
 	IconPath string
+	// Platforms is the CFBundleSupportedPlatforms from Info.plist.
+	Platforms []string
 }
 
 // DownloadProgressFn is called during download with bytes downloaded and total size.
@@ -75,6 +78,12 @@ func ParseLocalIPA(localPath string) (*DownloadResult, error) {
 	return result, nil
 }
 
+// IsRemoteURL reports whether p is an http(s) URL rather than a local path.
+func IsRemoteURL(p string) bool {
+	p = strings.ToLower(p)
+	return strings.HasPrefix(p, "http:") || strings.HasPrefix(p, "https:")
+}
+
 // downloadIPA downloads an IPA from rawURL to a temp file in saveDir.
 func downloadIPA(rawURL string, saveDir string, progressFn DownloadProgressFn) (string, error) {
 	tmpFile, err := os.CreateTemp(saveDir, "install_url_*.ipa")
@@ -91,7 +100,7 @@ func downloadIPA(rawURL string, saveDir string, progressFn DownloadProgressFn) (
 	}
 	req.Header.Set(atvhttp.HEADER_USER_AGENT, atvhttp.HTTP_USER_AGENT)
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: 60 * time.Minute}
 	resp, err := client.Do(req)
 	if err != nil {
 		_ = tmpFile.Close()
@@ -132,6 +141,7 @@ func parseIPAMetadata(ipaPath string, saveDir string) (*DownloadResult, error) {
 		Name:             info.Name(),
 		BundleIdentifier: info.Identifier(),
 		Version:          info.Version(),
+		Platforms:        info.Platforms(),
 	}
 
 	icon := info.Icon()

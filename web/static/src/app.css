@@ -568,6 +568,19 @@ html[data-theme="dark"] {
   border-color: var(--atv-danger);
 }
 
+.app-container .atv-action--update {
+  color: var(--atv-success-text);
+  background: var(--atv-success-soft);
+  border-color: var(--atv-success-border);
+}
+
+.app-container .atv-action--update:hover,
+.app-container .atv-action--update:focus-visible {
+  color: var(--atv-success-text);
+  background: var(--atv-surface-hover);
+  border-color: var(--atv-success-text);
+}
+
 .app-container .main-container .input,
 .app-container .main-container .select,
 .app-container .main-container .textarea {

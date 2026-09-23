@@ -10,7 +10,12 @@
         "title": "[{{.name}}]刷新任务执行失败",
         "content": "帐号：{{.account}}\n错误日志：{{.error}}",
         "batch_title": "atvloadly 刷新任务执行失败",
-        "batch_content": "{{.name}}: {{.error}}\n\n"
+        "batch_content": "{{.name}}: {{.error}}\n\n",
+        "update_title": "atvloadly：应用更新",
+        "update_available": "{{.name}}：新版本 {{.version}} 可用\n",
+        "update_attention": "{{.name}}：更新需要处理：{{.error}}\n",
+        "update_installed_title": "atvloadly：应用已更新",
+        "update_installed": "{{.name}} 已更新到 {{.version}}\n"
     },
     "nav": {
         "settings": "设置",
@@ -61,7 +66,17 @@
         },
         "toast": {
             "refresh_app_started": "已启动刷新 {{name}}",
-            "installing_app": "{{name}} 安装中..."
+            "installing_app": "{{name}} 安装中...",
+            "update_started": "已开始将 {{name}} 更新到 {{version}}",
+            "updates_available": "可用更新：{{count}}",
+            "check_errors": "无法检查的来源：{{count}}",
+            "check_done": "所有跟踪的应用均为最新版本"
+        },
+        "source": {
+            "track": "跟踪更新",
+            "auto": "自动",
+            "available": "{{version}} 可用",
+            "check_updates": "检查更新"
         },
         "sidebar": {
             "device_status": {
@@ -97,13 +112,14 @@
             },
             "button": {
                 "refresh": "刷新",
-                "delete": "删除"
+                "delete": "删除",
+                "update": "更新"
             },
             "tips": {
                 "view_log": "点击查看安装日志",
                 "account_invalid": "帐号存在问题，请查看日志并修正",
                 "no_data": "没有数据",
-                "footer": "默认当app过期时间小于1天时，会在凌晨3～6点钟自动进行刷新操作"
+                "footer": "默认当app过期时间小于1天时，会在凌晨3～6点钟自动进行刷新操作。关联了 GitHub 或 AltStore 来源的应用会在后台检查新版本，自动更新会在同一时间段内安装。"
             }
         }
     },
@@ -155,6 +171,39 @@
             "login_success": "登录成功"
         },
         "form": {
+            "mode": {
+                "file": "IPA 文件",
+                "link": "IPA 链接",
+                "source": "来源"
+            },
+            "source": {
+                "label": "来源：",
+                "url_placeholder": {
+                    "github": "owner/repo 或 https://github.com/owner/repo",
+                    "altstore": "https://example.com/apps.json"
+                },
+                "fetch": "获取",
+                "prerelease": "包含预发布版本",
+                "prerelease_badge": "预发布",
+                "recommended": "推荐",
+                "choose_tips": "此版本包含多个 IPA 文件，请选择适用于你设备的文件（Apple TV 选 tvOS，iPhone 和 iPad 选 iOS）。Sideload、Sideloadly 等变体通常是同一个应用的不同打包方式。",
+                "choose_app_tips": "此来源包含多个应用，请选择要安装的应用。",
+                "advanced": "高级",
+                "filter": {
+                    "label": "文件名过滤",
+                    "tips": "用于在后续版本中找到同一个 IPA 的正则表达式，根据所选文件自动生成。",
+                    "custom": "自定义",
+                    "reset": "重置",
+                    "mismatch": "过滤规则与所选文件不匹配。"
+                },
+                "bundle_id": {
+                    "label": "Bundle Identifier",
+                    "tips": "AltStore 应用按 Bundle Identifier 跟踪。"
+                },
+                "auto_update": "自动安装更新",
+                "auto_update_tips": "新版本会在自动刷新的运行时间段内安装，并使用同一帐号签名。",
+                "select_build": "请先获取来源并选择要安装的 IPA。"
+            },
             "choose_ipa": {
                 "label": "选择ipa:"
             },
@@ -287,6 +336,20 @@
                 "submit": "保 存"
             }
         },
+        "update": {
+            "title": "应用更新",
+            "interval": {
+                "label": "检查更新",
+                "off": "关闭",
+                "every_hour": "每小时",
+                "every_hours": "每 {{num}} 小时"
+            },
+            "tips": "从 GitHub 仓库或 AltStore 来源安装的应用会在后台检查新版本，启用通知后有新版本时会通知你。自动更新会在自动刷新的运行时间段内安装。GitHub 未认证请求每小时限 60 次。",
+            "task_disabled": "自动刷新 App 已关闭：仍会检测新版本，但不会自动安装更新。",
+            "button": {
+                "submit": "保 存"
+            }
+        },
         "network": {
             "title": "网络设置",
             "proxy_toggle": {
@@ -346,6 +409,27 @@
             "delete_failed": "删除帐号失败",
             "logout_success": "帐号登出成功",
             "logout_failed": "登出帐号失败"
+        }
+    },
+    "source_dialog": {
+        "title_track": "跟踪 {{name}} 的更新",
+        "title": "{{name}} 的更新",
+        "installed_version": "已安装版本",
+        "installed_build": "已安装构建",
+        "checked_at": "上次检查",
+        "never": "从未",
+        "already_installed": "已安装的版本就是 {{version}}",
+        "untrack_confirm": "确定停止跟踪 {{name}} 的更新吗？",
+        "button": {
+            "untrack": "停止跟踪",
+            "save": "保存",
+            "install": "安装",
+            "cancel": "取消",
+            "confirm": "确定"
+        },
+        "toast": {
+            "saved": "来源已保存",
+            "untracked": "已停止跟踪 {{name}}"
         }
     },
     "certificate": {
