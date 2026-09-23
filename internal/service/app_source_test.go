@@ -464,3 +464,63 @@ func TestLinkUpdateAndUntrackSource(t *testing.T) {
 		t.Fatal("updating an untracked app should fail")
 	}
 }
+
+// variantFeed is a GitHub release with two variants of the same app.
+type variantFeed struct{ builds []source.Build }
+
+func (f variantFeed) Preview(string, bool) (*source.Preview, error) { return nil, nil }
+
+func (f variantFeed) Latest(filter string, _ bool, _ string) (source.Build, error) {
+	for _, b := range f.builds {
+		if source.FilterMatches(source.KindGitHub, filter, b) {
+			return b, nil
+		}
+	}
+	return source.Build{}, source.ErrNoMatch
+}
+
+func (f variantFeed) Find(id string) (source.Build, error) {
+	for _, b := range f.builds {
+		if b.ID == id {
+			return b, nil
+		}
+	}
+	return source.Build{}, source.ErrNoMatch
+}
+
+func TestPrepareSourceUpdateKeepsFilterUntilInstalled(t *testing.T) {
+	setupTestDB(t)
+	names := []string{"OrivioTV-V9.Sideload.ipa", "OrivioTV-V9.Sideloadly.ipa"}
+	feed := variantFeed{}
+	for i, n := range names {
+		feed.builds = append(feed.builds, source.Build{
+			ID:          fmt.Sprint(1001 + i),
+			Name:        n,
+			Version:     "v0.10",
+			DownloadURL: "https://github.com/prehakanson-art/OrivioTVAppleTV/releases/download/v0.10/" + n,
+			Filter:      source.DeriveFilter(n, names),
+		})
+	}
+	oldFetch := fetchSource
+	fetchSource = func(string, string) (source.Feed, error) { return feed, nil }
+	t.Cleanup(func() { fetchSource = oldFetch })
+
+	sideload, sideloadly := feed.builds[0], feed.builds[1]
+	v := model.InstalledApp{IpaName: "Orivio TV", UDID: "u1", Account: "a@b.c", BundleIdentifier: "com.orivio.tv.appletv.dev", DeviceClass: "AppleTV"}
+	v.Source = model.AppSource{Kind: source.KindGitHub, URL: "prehakanson-art/OrivioTVAppleTV", Filter: sideload.Filter}
+	installed := createApp(t, v)
+
+	// Switching to the other variant: the new filter travels with the update...
+	target, err := PrepareSourceUpdate(installed.ID, sideloadly.ID, sideloadly.Filter)
+	if err != nil {
+		t.Fatalf("PrepareSourceUpdate: %v", err)
+	}
+	if target.Source.Filter != sideloadly.Filter || target.IpaPath != sideloadly.DownloadURL {
+		t.Fatalf("update target source = %+v", target.Source)
+	}
+	// ...but the stored filter keeps tracking the installed variant until the
+	// update succeeds (the variants may be different apps).
+	if got := mustGetApp(t, installed.ID).Source.Filter; got != sideload.Filter {
+		t.Fatalf("stored filter = %q, want %q", got, sideload.Filter)
+	}
+}

@@ -206,7 +206,7 @@
                             <GithubIcon v-if="item.source.kind === 'github'" />
                             <LinkIcon v-else />
                           </span>
-                          <span class="break-all">{{ item.source.version || "—" }}</span>
+                          <span>{{ item.source.version || "—" }}</span>
                           <span class="badge badge-ghost badge-xs" v-if="item.source.auto_update">{{
                             $t("home.source.auto")
                           }}</span>
@@ -786,6 +786,7 @@ import WarningIcon from "@/assets/icons/warning.svg";
   color: var(--atv-muted);
   font-size: 0.75rem;
   font-weight: 650;
+  white-space: nowrap;
   transition: border-color 150ms ease, color 150ms ease;
 }
 
@@ -800,6 +801,7 @@ import WarningIcon from "@/assets/icons/warning.svg";
 }
 
 .atv-source-line .badge-info {
+  white-space: nowrap;
   color: var(--atv-success-text);
   background: var(--atv-success-soft);
   border-color: var(--atv-success-border);

@@ -148,9 +148,12 @@ func TestAltStoreLegacyApp(t *testing.T) {
 	if p.Title != "Legacy" {
 		t.Fatalf("Title = %q, want %q", p.Title, "Legacy")
 	}
-	// A single downloadable app is suggested even when it looks like iOS.
-	if len(p.Builds) != 1 || p.SuggestedID != b.ID {
+	// A single app that looks built for iOS is listed but not suggested for an Apple TV.
+	if len(p.Builds) != 1 || p.SuggestedID != "" {
 		t.Fatalf("unexpected preview %+v", p)
+	}
+	if p, err = feed.Preview("iPhone", false); err != nil || p.SuggestedID != b.ID {
+		t.Fatalf("Preview(iPhone) = %+v, %v; want %q suggested", p, err, b.ID)
 	}
 }
 

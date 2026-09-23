@@ -73,7 +73,9 @@ func (t *Task) RunSchedule() error {
 		return err
 	}
 
-	t.c = cron.New()
+	// Recover keeps a panicking job (a refresh or an update check) from
+	// taking the whole service down.
+	t.c = cron.New(cron.WithChain(cron.Recover(cron.DefaultLogger)))
 	if app.Settings.Task.Enabled {
 		if _, err := t.c.AddFunc(app.Settings.Task.CrodTime, t.Run); err != nil {
 			t.c = nil

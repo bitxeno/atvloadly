@@ -166,17 +166,13 @@ func (f *altStoreFeed) Preview(deviceClass string, _ bool) (*Preview, error) {
 		return nil, fmt.Errorf("%w: the source has no downloadable app", ErrNoMatch)
 	}
 
-	suggested := Suggest(builds, deviceClass)
-	if len(builds) == 1 {
-		suggested = builds[0].ID
-	}
 	return &Preview{
 		Kind:        KindAltStore,
 		URL:         f.url,
 		Title:       f.name,
 		PageURL:     f.url,
 		Builds:      builds,
-		SuggestedID: suggested,
+		SuggestedID: Suggest(builds, deviceClass),
 	}, nil
 }
 

@@ -186,7 +186,7 @@
                 "prerelease": "包含预发布版本",
                 "prerelease_badge": "预发布",
                 "recommended": "推荐",
-                "choose_tips": "此版本包含多个 IPA 文件，请选择适用于你设备的文件（Apple TV 选 tvOS，iPhone 和 iPad 选 iOS）。Sideload、Sideloadly 等变体通常是同一个应用的不同打包方式。",
+                "choose_tips": "此版本包含多个 IPA 文件，请选择适用于你设备的文件（Apple TV 选 tvOS，iPhone 和 iPad 选 iOS）。Sideload、Sideloadly 等变体可能是不同的应用，更新时请保持选择同一个。",
                 "choose_app_tips": "此来源包含多个应用，请选择要安装的应用。",
                 "advanced": "高级",
                 "filter": {

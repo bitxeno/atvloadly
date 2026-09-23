@@ -312,7 +312,8 @@ func UntrackSource(id uint) error {
 
 // PrepareSourceUpdate returns app id as it should be after installing the
 // build buildID of its source, or the latest build when buildID is empty. A
-// non-empty filter replaces the stored one.
+// non-empty filter replaces the stored one once the update is installed, so a
+// failed switch to another variant keeps tracking the installed one.
 func PrepareSourceUpdate(id uint, buildID, filter string) (model.InstalledApp, error) {
 	app, err := GetApp(id)
 	if err != nil {
@@ -350,12 +351,7 @@ func PrepareSourceUpdate(id uint, buildID, filter string) (model.InstalledApp, e
 		return model.InstalledApp{}, fmt.Errorf("the filter does not match %s", b.Name)
 	}
 
-	if filter != s.Filter {
-		if result := db.Store().Model(app).Update("source_filter", filter); result.Error != nil {
-			return model.InstalledApp{}, result.Error
-		}
-		app.Source.Filter = filter
-	}
+	app.Source.Filter = filter
 	return ApplyBuild(*app, b), nil
 }
 

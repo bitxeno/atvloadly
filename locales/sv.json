@@ -191,7 +191,7 @@
         "prerelease": "Inkludera förhandsversioner",
         "prerelease_badge": "Förhandsversion",
         "recommended": "Rekommenderad",
-        "choose_tips": "Den här versionen innehåller flera IPA-filer. Välj den som är byggd för din enhet (tvOS för Apple TV, iOS för iPhone och iPad). Varianter som Sideload och Sideloadly är oftast samma app, paketerad på olika sätt.",
+        "choose_tips": "Den här versionen innehåller flera IPA-filer. Välj den som är byggd för din enhet (tvOS för Apple TV, iOS för iPhone och iPad). Varianter som Sideload och Sideloadly kan vara olika appar, så behåll samma för uppdateringar.",
         "choose_app_tips": "Den här källan innehåller flera appar. Välj den som ska installeras.",
         "advanced": "Avancerat",
         "filter": {

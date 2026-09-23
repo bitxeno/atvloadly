@@ -238,6 +238,16 @@ import WarningIcon from "@/assets/icons/warning.svg";
   overflow-y: auto;
 }
 
+/* Keep the actions visible while the dialog content scrolls. */
+.atv-source-dialog .modal-action {
+  position: sticky;
+  bottom: -1.5rem;
+  z-index: 1;
+  margin-bottom: -1.5rem;
+  padding: 12px 0 1.5rem;
+  background: inherit;
+}
+
 .atv-source-facts {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -268,6 +278,12 @@ import WarningIcon from "@/assets/icons/warning.svg";
 @media (max-width: 767px) {
   .modal .modal-box.atv-source-dialog {
     padding: 16px;
+  }
+
+  .atv-source-dialog .modal-action {
+    bottom: -16px;
+    margin-bottom: -16px;
+    padding-bottom: 16px;
   }
 }
 </style>

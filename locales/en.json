@@ -192,7 +192,7 @@
                 "prerelease": "Include pre-releases",
                 "prerelease_badge": "Pre-release",
                 "recommended": "Recommended",
-                "choose_tips": "This release contains several IPA files. Choose the one built for your device (tvOS for Apple TV, iOS for iPhone and iPad). Variants such as Sideload and Sideloadly are usually the same app packaged differently.",
+                "choose_tips": "This release contains several IPA files. Choose the one built for your device (tvOS for Apple TV, iOS for iPhone and iPad). Variants such as Sideload and Sideloadly can be different apps, so keep the same one for updates.",
                 "choose_app_tips": "This source lists several apps. Choose the one to install.",
                 "advanced": "Advanced",
                 "filter": {
