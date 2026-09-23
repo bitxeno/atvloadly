@@ -27,6 +27,10 @@
     "donate": "Donera",
     "about": "Om"
   },
+  "about": {
+    "version": "Version",
+    "build_date": "Byggdatum"
+  },
   "donate": {
     "title": "Stöd projektet",
     "desc": "Om du har nytta av projektet får du gärna stödja utvecklingen. Ditt bidrag hjälper projektet att leva vidare!",
