@@ -58,6 +58,14 @@
                 </router-link>
               </li>
               <li>
+                <button @click="showDonateModal = true">
+                  <span class="w-5">
+                    <DonateThumbIcon />
+                  </span>
+                  {{ $t("nav.donate") }}
+                </button>
+              </li>
+              <li>
                 <button @click="showAboutModal = true">
                   <span class="inline-flex h-5 w-5 items-center justify-center">
                     <HelpIcon class="h-5 w-5" />
@@ -76,7 +84,7 @@
               :aria-expanded="isMobile ? openMobileMenu === 'language' : undefined"
               :aria-label="$t('nav.language')">
               <span class="w-5">
-                <LanguageIcon />
+                <WorldIcon />
               </span>
               <span class="hidden sm:inline">{{ $t("nav.language") }}</span></label
             >
@@ -116,13 +124,6 @@
                 </button>
               </li>
             </ul>
-          </div>
-
-          <div>
-            <label tabindex="0" class="btn btn-ghost rounded-btn px-2 md:px-4" @click="showDonateModal = true">
-                <DonateThumbIcon class="w-5 h-5" />
-              <span class="hidden sm:inline">{{ $t("nav.donate") }}</span>
-            </label>
           </div>
 
           <div>
@@ -326,7 +327,7 @@ export default {
 <script setup>
 import AppIcon from "@/assets/icons/app.svg";
 import SettingsIcon from "@/assets/icons/settings.svg";
-import LanguageIcon from "@/assets/icons/language.svg";
+import WorldIcon from "@/assets/icons/world.svg";
 import GithubIcon from "@/assets/icons/github.svg";
 import AccountIcon from "@/assets/icons/person.svg";
 import OptionIcon from "@/assets/icons/slider.svg";

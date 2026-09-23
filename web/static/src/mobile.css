@@ -7,32 +7,42 @@
   }
 
   .app-container > .navbar {
-    flex-wrap: wrap;
-    padding: 8px 12px 10px;
-    gap: 0;
+    flex-wrap: nowrap;
+    align-items: center;
+    padding: 8px 12px;
+    gap: 8px;
   }
 
-  .app-container > .navbar > .flex-1,
-  .app-container > .navbar > .flex-none {
-    flex: 0 0 100%;
+  .app-container > .navbar > .flex-1 {
+    flex: 1 1 auto;
     min-width: 0;
   }
 
   .app-container > .navbar > .flex-1 > .btn {
     min-width: 0;
     padding-inline: 4px;
-    gap: 10px;
+    gap: 8px;
+  }
+
+  .app-container > .navbar > .flex-1 > .btn .normal-case {
+    font-size: 1.05rem;
+    white-space: nowrap;
+  }
+
+  .app-container > .navbar > .flex-none {
+    flex: 0 0 auto;
+    min-width: 0;
   }
 
   .app-container > .navbar > .flex-none > nav.navbar {
     display: flex;
-    width: 100%;
+    width: auto;
     min-height: 44px;
     padding: 0;
-    gap: 4px;
+    gap: 2px;
     flex-wrap: nowrap;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
   }
 
   .app-container > .navbar > .flex-none > nav.navbar > * {
@@ -42,11 +52,11 @@
 
   .app-container > .navbar > .flex-none > nav.navbar .btn {
     display: flex;
-    width: 44px;
+    width: 40px;
     min-width: 40px;
     height: 40px;
     min-height: 40px;
-    padding: 0 9px;
+    padding: 0 8px;
     align-items: center;
     justify-content: center;
   }
@@ -150,6 +160,25 @@
     border-radius: 6px;
   }
 
+  .app-container .main-container .table:has(.atv-app-icon) .atv-app-icon--ios {
+    width: 76px;
+    flex-basis: 76px;
+    padding-inline: 14px;
+    border-radius: 0;
+  }
+
+  .app-container .main-container .table:has(.atv-app-icon) .atv-app-icon--ios img,
+  .app-container .main-container .table:has(.atv-app-icon) .atv-app-icon--ios .atv-app-icon-img,
+  .app-container .main-container .table:has(.atv-app-icon) .atv-app-icon--ios .atv-app-icon-mask {
+    border-radius: 10.8px;
+  }
+
+  .app-container .main-container .table:has(.atv-app-icon) .atv-app-icon--ios .atv-app-icon-mask {
+    left: 14px;
+    right: 14px;
+    width: auto;
+  }
+
   .app-container .main-container .table:has(.atv-app-icon) tbody td:nth-child(2),
   .app-container .main-container .table:has(.atv-app-icon) tbody td:nth-child(3) {
     grid-column: 1 / -1;
@@ -189,21 +218,20 @@
     padding-inline: 9px;
   }
 
-  /* mobile-menu-local-test-v1: anchor every menu to the full nav row */
-  .app-container > .navbar > .flex-none > nav.navbar {
-    position: relative;
-  }
-
+  /* mobile single-row navbar: anchor every menu to the full header width.
+     The header stays sticky (positioned), so static inner wrappers let the
+     menu drop from the header below the single row. */
+  .app-container > .navbar > .flex-none > nav.navbar,
   .app-container > .navbar > .flex-none > nav.navbar > .dropdown {
     position: static;
   }
 
-  .app-container > .navbar > .flex-none > nav.navbar > .dropdown > .dropdown-content {
+  .app-container > .navbar .dropdown > .dropdown-content {
     position: absolute;
     top: calc(100% + 6px);
-    left: 0 !important;
-    right: 0 !important;
-    width: 100%;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto;
     min-width: 0;
     max-width: none;
     max-height: min(60dvh, 420px);
@@ -212,13 +240,13 @@
     z-index: 9999;
   }
 
-  .app-container > .navbar > .flex-none > nav.navbar > .dropdown:not(.dropdown-open) > .dropdown-content {
+  .app-container > .navbar .dropdown:not(.dropdown-open) > .dropdown-content {
     visibility: hidden !important;
     opacity: 0 !important;
     pointer-events: none !important;
   }
 
-  .app-container > .navbar > .flex-none > nav.navbar > .dropdown.dropdown-open > .dropdown-content {
+  .app-container > .navbar .dropdown.dropdown-open > .dropdown-content {
     visibility: visible !important;
     opacity: 1 !important;
     pointer-events: auto !important;
@@ -269,10 +297,19 @@
     font-size: .94rem;
   }
 
-  .app-container .main-container .atv-install-device > .btn {
-    grid-column: 1 / -1;
-    width: 100%;
-    min-height: 44px;
+  .app-container .main-container .atv-install-device .atv-install-screenshot-btn {
+    width: 24px;
+    min-width: 24px;
+    height: 24px;
+    min-height: 24px;
+    padding: 0;
+    right: -4px;
+    bottom: -4px;
+  }
+
+  .app-container .main-container .atv-install-device .atv-install-screenshot-btn > span {
+    width: 12px;
+    height: 12px;
   }
 
   .app-container .main-container .atv-install-page .divider-horizontal {
@@ -291,19 +328,32 @@
     min-width: 0;
   }
 
-  .app-container .main-container .atv-install-ipa-picker {
+  /* Mobile keeps the daisyUI fused join rows (input + attached button),
+     only tightening sizes so the pair fits narrow screens. */
+  .app-container .main-container .atv-install-ipa-picker,
+  .app-container .main-container .atv-install-account-picker {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0;
     min-width: 0;
   }
 
-  .app-container .main-container .atv-install-ipa-picker > input {
-    width: 100%;
-    max-width: 100%;
+  .app-container .main-container .atv-install-ipa-picker > input,
+  .app-container .main-container .atv-install-account-picker > select {
+    flex: 1 1 auto;
+    width: auto;
+    max-width: none;
     min-width: 0;
     font-size: .8125rem;
-    border-radius: 12px !important;
+    border-radius: 0 !important;
+  }
+
+  .app-container .main-container .atv-install-ipa-picker > input:first-child,
+  .app-container .main-container .atv-install-account-picker > select:first-child {
+    border-start-start-radius: 12px !important;
+    border-end-start-radius: 12px !important;
   }
 
   .app-container .main-container .atv-install-ipa-picker > input::file-selector-button {
@@ -311,40 +361,22 @@
     padding-inline: 10px;
   }
 
-  .app-container .main-container .atv-install-ipa-picker > button {
-    display: flex;
-    width: 100%;
+  .app-container .main-container .atv-install-ipa-picker > button,
+  .app-container .main-container .atv-install-account-picker > button {
+    flex: 0 0 auto;
+    width: 52px;
+    min-width: 52px;
+    height: auto;
     min-height: 44px;
-    height: 44px;
+    padding-inline: 0;
     gap: 8px;
-    border-radius: 12px !important;
+    border-radius: 0 !important;
+    border-start-end-radius: 12px !important;
+    border-end-end-radius: 12px !important;
   }
 
   .app-container .main-container .atv-install-mode-label.hidden {
-    display: inline;
-  }
-
-  .app-container .main-container .atv-install-account-picker {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 52px;
-    gap: 8px;
-    min-width: 0;
-  }
-
-  .app-container .main-container .atv-install-account-picker > select {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    border-radius: 12px !important;
-  }
-
-  .app-container .main-container .atv-install-account-picker > button {
-    width: 52px;
-    min-width: 52px;
-    padding-inline: 0;
-    border-radius: 12px !important;
+    display: none;
   }
 
   .app-container .main-container .atv-install-page input[type="text"],
@@ -409,7 +441,7 @@
     border-top: 1px solid rgba(148, 163, 184, 0.22) !important;
     line-height: 1.55 !important;
     font-size: 0.98rem !important;
-    color: rgba(226, 232, 240, 0.84) !important;
+    color: var(--atv-muted) !important;
   }
 }
 

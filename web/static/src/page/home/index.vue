@@ -143,14 +143,17 @@
                       >!</span
                     >
                     <div class="inline-flex">
-                      <div class="atv-app-icon relative flex items-center justify-center">
+                      <div
+                        class="atv-app-icon relative flex items-center justify-center"
+                        :class="{ 'atv-app-icon--ios': isIOSApp(item) }"
+                      >
                         <img
                           v-if="!failedIcons[item.ID]"
                           :src="iconUrl(item)"
                           :alt="appName(item)"
                           loading="lazy"
                           @error="markIconFailed(item.ID)"
-                          class="max-w-full max-h-full rounded-md object-contain shadow-sm"
+                          class="atv-app-icon-img shadow-sm"
                         />
                         <span
                           v-else
@@ -158,7 +161,7 @@
                           :aria-label="appName(item)"
                         >{{ (appName(item) || "?").charAt(0).toUpperCase() }}</span>
                         <div
-                          class="absolute w-full h-full top-0 flex items-center justify-center bg-[#00000066] rounded"
+                          class="absolute w-full h-full top-0 flex items-center justify-center bg-[#00000066] atv-app-icon-mask"
                           v-show="isInstalling(item)"
                         >
                           <span
@@ -507,6 +510,11 @@ export default {
         return item.device_class.toLowerCase() == "iphone" || item.device_class.toLowerCase() == "ipad";
       }
       return item.name && (item.name.toLowerCase().includes("iphone") || item.name.toLowerCase().includes("ipad"));
+    },
+    isIOSApp(item) {
+      if (!item || !item.device_class) return false;
+      const deviceClass = item.device_class.toLowerCase();
+      return deviceClass === "iphone" || deviceClass === "ipad";
     },
     formatRefreshDate(item) {
       let _this = this;
