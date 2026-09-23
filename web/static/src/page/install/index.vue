@@ -10,23 +10,24 @@
     <div class="card atv-install-card">
       <div class="lg:flex lg:flex-row">
         <div class="flex flex-col justify-center place-items-center gap-y-4 atv-install-device">
-          <div class="w-32 rounded">
+          <div class="relative w-32 rounded atv-install-device-icon">
             <IPhoneIcon v-if="isIPhone(device)" />
             <AppleTVIcon v-else />
+            <button
+              v-if="canShowScreenshotAction(device)"
+              class="btn btn-circle btn-sm atv-install-screenshot-btn"
+              @click="openScreenshotDialog"
+              :disabled="screenshot.loading || !device.id"
+              :title="$t('install.screenshot.action')"
+              :aria-label="$t('install.screenshot.action')"
+            >
+              <span class="w-4 h-4"><CameraIcon /></span>
+            </button>
           </div>
           <div class="flex flex-col gap-y-2 items-center justify-center">
             <span>{{ device.name }}</span>
             <span>({{ truncateIP(device.ip) }})</span>
           </div>
-          <button
-            v-if="canShowScreenshotAction(device)"
-            class="btn btn-sm gap-x-2 px-3"
-            @click="openScreenshotDialog"
-            :disabled="screenshot.loading || !device.id"
-          >
-            <span class="w-4 h-4"><CameraIcon /></span>
-            <span>{{ $t("install.screenshot.action") }}</span>
-          </button>
         </div>
 
         <div class="divider divider-horizontal"></div>
@@ -40,7 +41,7 @@
                   <template v-else>{{ $t("install.form.ipa_url.label") }}</template>
                 </span>
               </label>
-              <div class="join flex w-full atv-install-ipa-picker">
+              <div class="join w-full atv-install-ipa-picker">
                 <input
                   v-if="installMode === 'file'"
                   type="file"
@@ -57,7 +58,7 @@
                   placeholder="https://example.com/app.ipa"
                   :required="installMode === 'link'"
                 />
-                <button class="btn join-item w-16"
+                <button class="btn join-item"
                   @click.prevent="toggleInstallMode"
                   :aria-label="installMode === 'file'
                     ? $t('install.form.ipa_url.label')
@@ -79,9 +80,9 @@
                   $t("install.form.account.label")
                 }}</span>
               </label>
-              <div class="join flex w-full atv-install-account-picker">
+              <div class="join w-full atv-install-account-picker">
                 <select
-                  class="select select-bordered join-item flex-1 w-full"
+                  class="select select-bordered join-item flex-1 min-w-0"
                   v-model="form.account"
                   required
                 >
@@ -101,7 +102,7 @@
                     }}
                   </option>
                 </select>
-                <button class="btn join-item w-16" @click.prevent="showLoginDialog">
+                <button class="btn join-item" @click.prevent="showLoginDialog">
                   <div class="w-6 h-6">
                     <PersonIcon />
                   </div>
@@ -172,7 +173,7 @@
     <div v-show="log.show">
       <textarea
         id="log"
-        class="textarea textarea-bordered w-full h-48 bg-neutral text-base-100 leading-5"
+        class="textarea textarea-bordered w-full h-48 atv-install-log leading-5"
         wrap="off"
         v-model="log.output"
       ></textarea>
@@ -675,5 +676,62 @@ import LinkIcon from "@/assets/icons/link.svg";
   <style scoped>
 .line {
   text-align: center;
+}
+
+/* Install log follows the daisyUI mockup-code terminal look:
+   background and text come from the active theme (--n / --nc).
+   Placed on the page wrapper (higher specificity than the themed
+   .textarea override in app.css) so it wins over the light field style. */
+.atv-install-page .atv-install-log {
+  background-color: hsl(var(--n) / var(--tw-bg-opacity, 1));
+  border-color: hsl(var(--n) / var(--tw-bg-opacity, 1));
+  color: hsl(var(--nc) / var(--tw-text-opacity, 1));
+}
+
+.atv-install-page .atv-install-log:focus {
+  outline: 2px solid transparent;
+  border-color: hsl(var(--nc) / 0.45);
+  box-shadow: none;
+}
+
+/* Keep daisyUI join groups fused: the theme layer sets input/select/btn
+   heights and radii that would otherwise split the joined edges apart. */
+.atv-install-page .join {
+  align-items: stretch;
+}
+
+.atv-install-page .join > .join-item:is(.input, .select, .file-input, .btn) {
+  height: auto;
+  min-height: 3rem;
+  border-radius: 0;
+}
+
+.atv-install-page .join > .join-item:is(.input, .select, .file-input):first-child {
+  border-start-start-radius: var(--rounded-btn, 0.5rem);
+  border-end-start-radius: var(--rounded-btn, 0.5rem);
+}
+
+.atv-install-page .join > .join-item.btn:last-child {
+  border-start-end-radius: var(--rounded-btn, 0.5rem);
+  border-end-end-radius: var(--rounded-btn, 0.5rem);
+}
+
+/* Screenshot action sits on the device icon's bottom-right corner,
+   like a profile-avatar edit badge. */
+.atv-install-device-icon {
+  position: relative;
+}
+
+.atv-install-device-icon .atv-install-screenshot-btn {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 9999px;
+  box-shadow: var(--atv-menu-shadow);
 }
 </style>

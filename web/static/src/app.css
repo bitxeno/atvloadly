@@ -407,7 +407,6 @@ html[data-theme="dark"] {
 
 .app-container .main-container .card,
 .app-container .main-container .table,
-.app-container .main-container .mockup-code,
 .app-container .section,
 .app-container .modal-box {
   background: var(--atv-surface);
@@ -646,17 +645,11 @@ html[data-theme="dark"] {
 }
 
 
-.app-container .main-container .mockup-code {
-  border-radius: 22px;
-}
-
+/* Scanner log keeps the daisyUI native mockup-code look: background and
+   text follow the active daisyUI theme (--n / --nc), matching the official
+   light/dark appearance. Only row spacing is adjusted. */
 .app-container .main-container .mockup-code pre {
-  color: var(--atv-ink);
   line-height: 1.7;
-}
-
-.app-container .main-container .mockup-code pre:hover {
-  background: var(--atv-surface-hover);
 }
 
 .app-container .atv-app-icon {
