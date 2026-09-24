@@ -208,7 +208,7 @@
                     "tips": "AltStore apps are tracked by their bundle identifier."
                 },
                 "auto_update": "Install updates automatically",
-                "auto_update_tips": "New versions are installed during the Auto Refresh running time period and signed with the same account.",
+                "auto_update_tips": "New versions are installed during the Auto Refresh running time period, even if the app does not need a refresh yet. They are signed with the same account.",
                 "select_build": "Fetch the source and select an IPA to install.",
                 "choose_saved_app_tips": "Your saved sources list several apps. Choose the one to install.",
                 "saved": {
@@ -363,7 +363,7 @@
                 "every_hour": "Every hour",
                 "every_hours": "Every {{num}} hours"
             },
-            "tips": "Apps installed from a GitHub repository or an AltStore source are checked in the background, and you are notified of new versions when notifications are enabled. Automatic updates are installed during the Auto Refresh running time period. GitHub allows 60 unauthenticated requests per hour.",
+            "tips": "Apps installed from a GitHub repository or an AltStore source are checked in the background, and you are notified of new versions when notifications are enabled. Automatic updates are installed during the Auto Refresh running time period, even if the app does not need a refresh yet. GitHub allows 60 unauthenticated requests per hour.",
             "task_disabled": "Auto Refresh App is disabled: new versions are still detected, but automatic updates are not installed.",
             "button": {
                 "submit": "Save"

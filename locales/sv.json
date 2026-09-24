@@ -207,7 +207,7 @@
           "tips": "AltStore-appar följs via sin paketidentifierare."
         },
         "auto_update": "Installera nya versioner automatiskt",
-        "auto_update_tips": "Nya versioner installeras under tidsintervallet för automatisk appuppdatering och signeras med samma konto.",
+        "auto_update_tips": "Nya versioner installeras under tidsintervallet för automatisk appuppdatering, även om appen inte behöver uppdateras än. De signeras med samma konto.",
         "select_build": "Hämta källan och välj en IPA att installera.",
         "choose_saved_app_tips": "Dina sparade källor innehåller flera appar. Välj den som ska installeras.",
         "saved": {
@@ -361,7 +361,7 @@
         "every_hour": "Varje timme",
         "every_hours": "Var {{num}}:e timme"
       },
-      "tips": "Appar som installerats från ett GitHub-repo eller en AltStore-källa kontrolleras i bakgrunden, och du aviseras om nya versioner när aviseringar är aktiverade. Automatiska uppgraderingar installeras under tidsintervallet för automatisk appuppdatering. GitHub tillåter 60 oautentiserade förfrågningar per timme.",
+      "tips": "Appar som installerats från ett GitHub-repo eller en AltStore-källa kontrolleras i bakgrunden, och du aviseras om nya versioner när aviseringar är aktiverade. Automatiska uppgraderingar installeras under tidsintervallet för automatisk appuppdatering, även om appen inte behöver uppdateras än. GitHub tillåter 60 oautentiserade förfrågningar per timme.",
       "task_disabled": "Automatisk appuppdatering är avstängd: nya versioner upptäcks fortfarande, men uppgraderingar installeras inte automatiskt.",
       "button": {
         "submit": "Spara"
