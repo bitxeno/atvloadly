@@ -183,17 +183,11 @@ func (t *Task) StartInstallApps(apps []model.InstalledApp, notify bool) int {
 		return 0
 	}
 
-	// Create a batch for aggregated notification
+	// Create a batch for aggregated notification. batchMu is held while
+	// queueing so that no queued app finishes before its batch is current.
 	batchID := fmt.Sprintf("batch-%d", time.Now().UnixNano())
 	t.batchMu.Lock()
-	t.currentBatch = &BatchInfo{
-		ID:           batchID,
-		TotalCount:   len(apps),
-		SuccessCount: 0,
-		FailedApps:   make([]FailedAppInfo, 0),
-		Notify:       notify,
-	}
-	t.batchMu.Unlock()
+	defer t.batchMu.Unlock()
 
 	queued := 0
 	for _, v := range apps {
@@ -202,13 +196,18 @@ func (t *Task) StartInstallApps(apps []model.InstalledApp, notify bool) int {
 		}
 	}
 
-	// The batch only waits for the queued apps.
-	t.batchMu.Lock()
-	if t.currentBatch != nil && t.currentBatch.ID == batchID {
-		t.currentBatch.TotalCount = queued
-		t.completeBatchIfDone()
+	// The batch only waits for the queued apps. When none was queued (they
+	// are already installing), the batch in flight stays current so that its
+	// notification is still sent.
+	if queued > 0 {
+		t.currentBatch = &BatchInfo{
+			ID:           batchID,
+			TotalCount:   queued,
+			SuccessCount: 0,
+			FailedApps:   make([]FailedAppInfo, 0),
+			Notify:       notify,
+		}
 	}
-	t.batchMu.Unlock()
 
 	return queued
 }

@@ -732,6 +732,9 @@ func route(fi *fiber.App) {
 
 	api.Post("/apps/:id/source/update", func(c *fiber.Ctx) error {
 		id := utils.MustParseInt(c.Params("id"))
+		if task.IsInstalling(uint(id)) {
+			return c.Status(http.StatusOK).JSON(apiError("app is installing"))
+		}
 
 		var req struct {
 			BuildID string `json:"build_id"`

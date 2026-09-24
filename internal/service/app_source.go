@@ -104,6 +104,21 @@ func PreviewSource(kind, location, deviceClass string, prerelease bool) (*source
 	return feed.Preview(deviceClass, prerelease)
 }
 
+// notNewer reports whether b, another build than the installed one of s, is
+// not newer than it by date, so it is not an update (never downgrade).
+func notNewer(s model.AppSource, b source.Build) bool {
+	if s.BuildDate == nil || b.Date.IsZero() {
+		return false
+	}
+	if s.Kind != source.KindAltStore {
+		return !b.Date.After(*s.BuildDate)
+	}
+	// AltStore dates are often date-only: a build of the installed day is only
+	// the installed one again when it has the same version (a moved download).
+	day, installed := b.Date.UTC().Truncate(24*time.Hour), s.BuildDate.UTC().Truncate(24*time.Hour)
+	return day.Before(installed) || (day.Equal(installed) && b.Version == s.Version)
+}
+
 // EvaluateSource returns s with the check fields updated from a Latest() result.
 func EvaluateSource(s model.AppSource, b source.Build, err error, now time.Time) model.AppSource {
 	s.CheckedAt = &now
@@ -112,9 +127,12 @@ func EvaluateSource(s model.AppSource, b source.Build, err error, now time.Time)
 		s.CheckError = err.Error()
 		s.LatestBuildID, s.LatestVersion = "", ""
 	case err != nil:
-		// The source could not be read: keep what the last check found.
-		s.CheckError = err.Error()
-	case b.ID == s.BuildID || (s.BuildDate != nil && !b.Date.IsZero() && !b.Date.After(*s.BuildDate)):
+		// The source could not be read: keep what the last check found, so a
+		// network blip does not make an earlier finding look new.
+		if s.CheckError == "" {
+			s.CheckError = err.Error()
+		}
+	case b.ID == s.BuildID || notNewer(s, b):
 		// Installed, or older than the installed build (never downgrade).
 		s.CheckError, s.LatestBuildID, s.LatestVersion = "", "", ""
 	default:
@@ -218,18 +236,15 @@ func CheckSourceUpdates(apps []model.InstalledApp) SourceCheckResult {
 			}
 			feeds[key] = f
 		}
-		var limited *source.RateLimitError
-		if errors.As(f.err, &limited) {
-			// Nothing is known about this source: keep the last check.
-			continue
-		}
 
 		var b source.Build
 		err := f.err
 		if err == nil {
 			b, err = f.feed.Latest(s.Filter, s.Prerelease, app.DeviceClass)
 		}
-		if err != nil && !isMatchError(err) {
+		// The rate limit is logged once per run when it is hit.
+		var limited *source.RateLimitError
+		if err != nil && !isMatchError(err) && !errors.As(err, &limited) {
 			log.Err(err).Msgf("Check updates of %s from %s failed", app.DisplayName(), s.URL)
 		}
 
@@ -268,12 +283,17 @@ func LinkSource(id uint, in SourceInput) (*model.InstalledApp, error) {
 	if err := source.ValidateFilter(in.Kind, in.Filter); err != nil {
 		return nil, err
 	}
-	if err := checkBundle(in.Kind, in.Filter, app); err != nil {
-		return nil, err
-	}
 
 	s := app.Source
-	if s.Kind != in.Kind || !strings.EqualFold(s.URL, location) {
+	sameSource := s.Kind == in.Kind && strings.EqualFold(s.URL, location)
+	// A first install from an AltStore source stores the bundle identifier the
+	// source lists, which may differ from the IPA's: only check a new selection.
+	if !sameSource || s.Filter != in.Filter {
+		if err := checkBundle(in.Kind, in.Filter, app); err != nil {
+			return nil, err
+		}
+	}
+	if !sameSource {
 		// What was recorded about another source does not apply.
 		s = model.AppSource{}
 	}
@@ -327,7 +347,9 @@ func PrepareSourceUpdate(id uint, buildID, filter string) (model.InstalledApp, e
 	}
 	if filter == "" {
 		filter = s.Filter
-	} else {
+	} else if filter != s.Filter {
+		// Only a new filter: the stored one may name the source app rather
+		// than the installed bundle (see LinkSource).
 		if err := source.ValidateFilter(s.Kind, filter); err != nil {
 			return model.InstalledApp{}, err
 		}

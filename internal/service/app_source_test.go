@@ -102,7 +102,17 @@ func TestEvaluateSource(t *testing.T) {
 	}
 	withLatest := installed
 	withLatest.LatestBuildID, withLatest.LatestVersion, withLatest.CheckError = "200", "v2", "old error"
+	latestOnly := withLatest
+	latestOnly.CheckError = ""
 	notLinked := model.AppSource{Kind: source.KindGitHub, URL: "owner/repo", Filter: "tvos"}
+	// AltStore dates are often date-only (midnight UTC).
+	altStore := model.AppSource{
+		Kind: source.KindAltStore, URL: "https://example.com/apps.json", Filter: "com.example.app",
+		BuildID: "a120", Version: "1.2.0", BuildDate: &installedDate,
+	}
+	altStoreStamped := altStore
+	altStoreStamped.Version, altStoreStamped.BuildDate = "1.0.0 (135)", timePtr(time.Date(2026, 9, 24, 3, 20, 31, 0, time.UTC))
+	sameDay := time.Date(2026, 9, 24, 0, 0, 0, 0, time.UTC)
 
 	cases := []struct {
 		name                            string
@@ -111,8 +121,9 @@ func TestEvaluateSource(t *testing.T) {
 		err                             error
 		wantLatest, wantVersion, wantEr string
 	}{
-		{"network error keeps the last result", withLatest, source.Build{}, errors.New("timeout"), "200", "v2", "timeout"},
-		{"rate limit keeps the last result", withLatest, source.Build{}, &source.RateLimitError{Reset: now}, "200", "v2", (&source.RateLimitError{Reset: now}).Error()},
+		{"network error keeps the last result", latestOnly, source.Build{}, errors.New("timeout"), "200", "v2", "timeout"},
+		{"network error keeps an earlier error", withLatest, source.Build{}, errors.New("timeout"), "200", "v2", "old error"},
+		{"rate limit keeps the last result", latestOnly, source.Build{}, &source.RateLimitError{Reset: now}, "200", "v2", (&source.RateLimitError{Reset: now}).Error()},
 		{"no match clears", withLatest, source.Build{}, fmt.Errorf("%w: renamed", source.ErrNoMatch), "", "", "no matching build: renamed"},
 		{"ambiguous clears", withLatest, source.Build{}, fmt.Errorf("%w: choose", source.ErrAmbiguous), "", "", "several builds match: choose"},
 		{"installed build", withLatest, source.Build{ID: "100", Version: "v1", Date: installedDate}, nil, "", "", ""},
@@ -122,6 +133,10 @@ func TestEvaluateSource(t *testing.T) {
 		{"same date is no update", installed, source.Build{ID: "99", Version: "v1", Date: installedDate}, nil, "", "", ""},
 		{"unknown date", installed, source.Build{ID: "200", Version: "v2"}, nil, "200", "v2", ""},
 		{"unknown installed build", notLinked, source.Build{ID: "100", Version: "v1", Date: installedDate}, nil, "100", "v1", ""},
+		{"same-day AltStore update", altStore, source.Build{ID: "a121", Version: "1.2.1", Date: installedDate}, nil, "a121", "1.2.1", ""},
+		{"date-only AltStore update after a timestamped build", altStoreStamped, source.Build{ID: "a101", Version: "1.0.1", Date: sameDay}, nil, "a101", "1.0.1", ""},
+		{"moved AltStore download is no update", altStore, source.Build{ID: "a120b", Version: "1.2.0", Date: installedDate}, nil, "", "", ""},
+		{"older AltStore build is no downgrade", altStoreStamped, source.Build{ID: "a099", Version: "0.9.9", Date: sameDay.Add(-time.Second)}, nil, "", "", ""},
 	}
 	for _, c := range cases {
 		got := EvaluateSource(c.s, c.b, c.err, now)
@@ -356,23 +371,24 @@ func TestCheckSourceUpdatesRateLimit(t *testing.T) {
 	u, _ := serveSource(t, testSource)
 
 	var githubRequests int
+	limit := &source.RateLimitError{Reset: time.Now().Add(time.Hour)}
 	oldFetch := fetchSource
 	fetchSource = func(kind, location string) (source.Feed, error) {
 		if kind == source.KindGitHub {
 			githubRequests++
-			return nil, &source.RateLimitError{Reset: time.Now().Add(time.Hour)}
+			return nil, limit
 		}
 		return source.Fetch(kind, location)
 	}
 	t.Cleanup(func() { fetchSource = oldFetch })
 
-	github := func(udid, repo string) model.InstalledApp {
+	github := func(udid, repo, checkError string) model.InstalledApp {
 		v := model.InstalledApp{IpaName: repo, UDID: udid, Account: "a@b.c", BundleIdentifier: "com.example." + udid, DeviceClass: "AppleTV"}
-		v.Source = model.AppSource{Kind: source.KindGitHub, URL: repo, Filter: "tvos", LatestBuildID: "9", LatestVersion: "v9", CheckError: "earlier"}
+		v.Source = model.AppSource{Kind: source.KindGitHub, URL: repo, Filter: "tvos", LatestBuildID: "9", LatestVersion: "v9", CheckError: checkError}
 		return createApp(t, v)
 	}
-	first := github("g1", "owner/one")
-	second := github("g2", "owner/two")
+	first := github("g1", "owner/one", "earlier")
+	second := github("g2", "owner/two", "")
 	alt := createApp(t, trackedApp("a1", "com.example.beta", u, model.AppSource{}))
 
 	apps, _ := GetAppList()
@@ -380,10 +396,12 @@ func TestCheckSourceUpdatesRateLimit(t *testing.T) {
 	if githubRequests != 1 {
 		t.Fatalf("%d GitHub requests, want 1 (the quota is exhausted)", githubRequests)
 	}
-	for _, id := range []uint{first.ID, second.ID} {
+	// Not checked is not up to date: the rate limit is the check error unless
+	// an earlier one is kept, and what the last check found is kept.
+	for id, wantErr := range map[uint]string{first.ID: "earlier", second.ID: limit.Error()} {
 		s := mustGetApp(t, id).Source
-		if s.CheckedAt != nil || s.LatestBuildID != "9" || s.CheckError != "earlier" {
-			t.Fatalf("rate-limited app %d was written: %+v", id, s)
+		if s.CheckedAt == nil || s.LatestBuildID != "9" || s.CheckError != wantErr {
+			t.Fatalf("rate-limited app %d source = %+v, want check error %q", id, s, wantErr)
 		}
 	}
 	if s := mustGetApp(t, alt.ID).Source; s.CheckedAt == nil || s.LatestBuildID == "" {
@@ -391,6 +409,36 @@ func TestCheckSourceUpdatesRateLimit(t *testing.T) {
 	}
 	if len(res.Updates) != 1 || res.Updates[0].ID != alt.ID || len(res.Notices) != 1 {
 		t.Fatalf("unexpected result %+v", res)
+	}
+}
+
+func TestCheckSourceUpdatesNotifiesMatchErrorOnceAcrossFetchErrors(t *testing.T) {
+	setupTestDB(t)
+	u, _ := serveSource(t, testSource)
+	var offline bool
+	oldFetch := fetchSource
+	fetchSource = func(kind, location string) (source.Feed, error) {
+		if offline {
+			return nil, errors.New("timeout")
+		}
+		return source.Fetch(kind, location)
+	}
+	t.Cleanup(func() { fetchSource = oldFetch })
+	gone := createApp(t, trackedApp("u1", "com.example.gone", u, model.AppSource{}))
+
+	// A network blip between two checks finding the same problem is no news.
+	var notices []SourceNotice
+	for _, down := range []bool{false, true, false} {
+		offline = down
+		apps, _ := GetAppList()
+		notices = append(notices, CheckSourceUpdates(apps).Notices...)
+	}
+	matchErr := "no matching build: app com.example.gone not found in the source"
+	if want := []SourceNotice{{AppName: "com.example.gone", Error: matchErr}}; !sameNotices(notices, want) {
+		t.Fatalf("notices = %+v, want %+v", notices, want)
+	}
+	if s := mustGetApp(t, gone.ID).Source; s.CheckError != matchErr {
+		t.Fatalf("check error = %q, want %q", s.CheckError, matchErr)
 	}
 }
 
@@ -486,6 +534,42 @@ func TestLinkUpdateAndUntrackSource(t *testing.T) {
 	assertSource(t, mustGetApp(t, installed.ID).Source, model.AppSource{})
 	if _, err := PrepareSourceUpdate(installed.ID, "", ""); err == nil {
 		t.Fatal("updating an untracked app should fail")
+	}
+}
+
+func TestSourceKeepsFilterOfAnotherBundle(t *testing.T) {
+	setupTestDB(t)
+	u, _ := serveSource(t, testSource)
+	alpha := latestBuild(t, u, "com.example.alpha")
+	// Installed from the source, which lists another bundle identifier than
+	// the IPA has.
+	v := trackedApp("u1", "com.example.alpha", u, model.AppSource{})
+	v.BundleIdentifier = "com.example.alpha.tvos"
+	installed := createApp(t, v)
+
+	// Saving the settings or updating with the stored filter keeps working...
+	linked, err := LinkSource(installed.ID, SourceInput{Kind: source.KindAltStore, URL: u, Filter: "com.example.alpha", AutoUpdate: true})
+	if err != nil {
+		t.Fatalf("LinkSource: %v", err)
+	}
+	if s := linked.Source; !s.AutoUpdate || s.Filter != "com.example.alpha" || s.LatestBuildID != alpha.ID {
+		t.Fatalf("linked source = %+v", s)
+	}
+	target, err := PrepareSourceUpdate(installed.ID, "", "com.example.alpha")
+	if err != nil {
+		t.Fatalf("PrepareSourceUpdate: %v", err)
+	}
+	if target.IpaPath != alpha.DownloadURL || target.Source.Filter != "com.example.alpha" {
+		t.Fatalf("update target = %+v", target)
+	}
+
+	// ...while selecting another app is still rejected.
+	wantErr := "the source app com.example.beta does not match the installed bundle com.example.alpha.tvos"
+	if _, err := LinkSource(installed.ID, SourceInput{Kind: source.KindAltStore, URL: u, Filter: "com.example.beta"}); err == nil || err.Error() != wantErr {
+		t.Fatalf("LinkSource with another app: %v", err)
+	}
+	if _, err := PrepareSourceUpdate(installed.ID, "", "com.example.beta"); err == nil || err.Error() != wantErr {
+		t.Fatalf("PrepareSourceUpdate with another app: %v", err)
 	}
 }
 

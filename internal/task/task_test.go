@@ -84,18 +84,48 @@ func TestStartInstallAppsQueuedCount(t *testing.T) {
 		t.Fatalf("batch = %+v, want 2 queued apps", tk.currentBatch)
 	}
 
-	// Apps already installing are not queued again and the empty batch is cleared.
+	// Apps already installing are not queued again and the batch in flight
+	// stays current.
+	batch := tk.currentBatch
 	if n := tk.StartInstallApps([]model.InstalledApp{app(1), app(2)}, false); n != 0 {
 		t.Fatalf("queued %d apps, want 0", n)
 	}
-	if tk.currentBatch != nil {
-		t.Fatalf("empty batch kept: %+v", tk.currentBatch)
+	if tk.currentBatch != batch || batch.TotalCount != 2 {
+		t.Fatalf("batch = %+v, want the batch in flight %+v", tk.currentBatch, batch)
 	}
 	if len(tk.InstallAppQueue) != 2 {
 		t.Fatalf("%d queued items, want 2", len(tk.InstallAppQueue))
 	}
 	if !tk.isInstalling(1) || !tk.isInstalling(2) || tk.isInstalling(3) {
 		t.Fatal("unexpected isInstalling result")
+	}
+}
+
+func TestStartInstallAppsKeepsBatchInFlight(t *testing.T) {
+	tk := new()
+	app := func(id uint) model.InstalledApp {
+		v := model.InstalledApp{IpaName: "app"}
+		v.ID = id
+		return v
+	}
+
+	if n := tk.StartInstallApps([]model.InstalledApp{app(1), app(2)}, false); n != 2 {
+		t.Fatalf("queued %d apps, want 2", n)
+	}
+	// An update or a scheduled run while the batch installs queues nothing.
+	if n := tk.StartInstallApps([]model.InstalledApp{app(2)}, false); n != 0 {
+		t.Fatalf("queued %d apps, want 0", n)
+	}
+
+	// The batch in flight still completes once both queued apps are done.
+	first, second := <-tk.InstallAppQueue, <-tk.InstallAppQueue
+	tk.trackBatchProgress(first, true, nil)
+	if tk.currentBatch == nil || tk.currentBatch.ID != first.BatchID || tk.currentBatch.SuccessCount != 1 {
+		t.Fatalf("batch after one app = %+v, want batch %s with one success", tk.currentBatch, first.BatchID)
+	}
+	tk.trackBatchProgress(second, false, errors.New("boom"))
+	if tk.currentBatch != nil {
+		t.Fatalf("completed batch kept: %+v", tk.currentBatch)
 	}
 }
 
