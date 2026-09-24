@@ -108,6 +108,9 @@ export default {
       method: "post",
     });
   },
+  screenshotDownloadUrl: () => {
+    return "/api/devices/screenshot/download";
+  },
   checkAfcService: (id) => {
     return new Promise((resolve, reject) => {
       request({

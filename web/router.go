@@ -320,6 +320,25 @@ func route(fi *fiber.App) {
 		}))
 	})
 
+	// Download support for in-app WebViews (notably on iOS). Those WebViews
+	// hand blob:/data: URLs to the host app, which only offers to "open an
+	// external app", so the client posts the preview it is already showing and
+	// this same request answers with that image as a file attachment. Nothing
+	// is stored: the response is the download.
+	api.Post("/devices/screenshot/download", func(c *fiber.Ctx) error {
+		data, err := service.DecodeScreenshotDownload(c.FormValue("data"))
+		if err != nil {
+			return c.Status(http.StatusBadRequest).SendString(err.Error())
+		}
+
+		filename := manager.ScreenshotFilename(time.Now())
+		c.Set("Content-Type", "image/jpeg")
+		c.Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+		c.Set("Content-Length", fmt.Sprintf("%d", len(data)))
+		c.Set("Cache-Control", "no-store")
+		return c.Status(http.StatusOK).Send(data)
+	})
+
 	api.Post("/devices/:id/check/afc", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 

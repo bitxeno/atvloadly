@@ -203,7 +203,9 @@
             "toast": {
                 "device_not_ready": "设备信息未就绪，请稍后再试",
                 "mount_failed": "无法为设备截屏做好准备",
-                "failed": "截屏失败"
+                "failed": "截屏失败",
+                "opened_new_tab": "浏览器阻止了自动下载，已在新标签页打开截屏，请手动保存",
+                "download_failed": "截屏下载失败，浏览器阻止了下载"
             },
             "button": {
                 "close": "关闭",

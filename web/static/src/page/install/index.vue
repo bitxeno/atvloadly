@@ -251,6 +251,13 @@ import { toast } from "vue3-toastify";
 import { parseBundleIdFromPlist } from "@/utils/utils";
 import { installFailureMessage as formatInstallFailureMessage } from "@/utils/install-error-feedback.mjs";
 import { accountStatusLabel as formatAccountStatus } from "@/utils/install-feedback.mjs";
+import {
+  buildScreenshotFilename,
+  downloadDataUrl,
+  downloadViaFormPost,
+  needsServerDownload,
+  splitDataUrl,
+} from "@/utils/download.mjs";
 import JSZip from "jszip";
 import Login from "@/components/Login.vue";
 
@@ -637,23 +644,41 @@ export default {
       if (!this.screenshot.image) {
         return;
       }
-      const now = new Date();
-      const pad = (n) => String(n).padStart(2, "0");
-      const stamp =
-        now.getFullYear() +
-        pad(now.getMonth() + 1) +
-        pad(now.getDate()) +
-        "-" +
-        pad(now.getHours()) +
-        pad(now.getMinutes()) +
-        pad(now.getSeconds());
-      const filename = `screenshot-${stamp}.jpg`;
-      const a = document.createElement("a");
-      a.href = this.screenshot.image;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+
+      // Client-side download works in regular browsers and saves the exact
+      // preview bytes. Embedded WebViews (iOS in particular) cannot save a
+      // blob:/data: download and only offer to "open an external app", so the
+      // preview is posted and the response itself is the attachment.
+      if (!needsServerDownload(navigator)) {
+        const outcome = this.downloadPreviewLocally();
+        if (outcome === "opened") {
+          toast.info(this.$t("install.screenshot.toast.opened_new_tab"));
+        } else if (outcome === "blocked" || outcome === "unsupported") {
+          toast.error(this.$t("install.screenshot.toast.download_failed"));
+        }
+        return;
+      }
+
+      const parsed = splitDataUrl(this.screenshot.image);
+      if (!parsed) {
+        toast.error(this.$t("install.screenshot.toast.download_failed"));
+        return;
+      }
+
+      const outcome = downloadViaFormPost(api.screenshotDownloadUrl(), {
+        data: parsed.base64,
+      });
+      if (outcome === "blocked" || outcome === "unsupported") {
+        toast.error(this.$t("install.screenshot.toast.download_failed"));
+      }
+    },
+    downloadPreviewLocally() {
+      try {
+        return downloadDataUrl(this.screenshot.image, buildScreenshotFilename());
+      } catch (error) {
+        console.error("screenshot download failed", error);
+        return "blocked";
+      }
     },
   },
 };

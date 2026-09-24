@@ -207,7 +207,9 @@
       "toast": {
         "device_not_ready": "Enhetsinformationen är inte klar. Försök igen senare.",
         "mount_failed": "Kunde inte förbereda enheten för skärmbild",
-        "failed": "Kunde inte ta skärmbild"
+        "failed": "Kunde inte ta skärmbild",
+        "opened_new_tab": "Webbläsaren blockerade den automatiska nedladdningen. Skärmbilden öppnades i en ny flik för manuell sparning",
+        "download_failed": "Nedladdningen av skärmbilden misslyckades. Webbläsaren blockerade nedladdningen"
       },
       "button": {
         "close": "Stäng",
