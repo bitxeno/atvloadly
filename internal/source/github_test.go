@@ -106,7 +106,7 @@ func serveGitHub(t *testing.T, handler http.HandlerFunc) {
 func TestFetchGitHubDecode(t *testing.T) {
 	data, _ := json.Marshal(orivioReleases())
 	serveGitHub(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/repos/prehakanson-art/OrivioTVAppleTV/releases" || r.URL.Query().Get("per_page") != "30" {
+		if r.URL.Path != "/repos/prehakanson-art/OrivioTVAppleTV/releases" || r.URL.Query().Get("per_page") != "100" {
 			t.Errorf("unexpected request %s", r.URL)
 		}
 		if r.Header.Get("Accept") != "application/vnd.github+json" || r.Header.Get("X-GitHub-Api-Version") != "2022-11-28" {

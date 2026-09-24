@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -237,5 +238,42 @@ func TestAltStoreErrors(t *testing.T) {
 	bad := serveSource(t, `<html>not json</html>`)
 	if _, err := Fetch(KindAltStore, bad); err == nil {
 		t.Fatal("Fetch(html) should fail")
+	}
+}
+
+// TestAltStoreSizeLimit checks that a source larger than the cap, such as an
+// IPA pasted as a source URL, is rejected instead of being read into memory.
+func TestAltStoreSizeLimit(t *testing.T) {
+	defer func(n int64) { maxAltStoreSize = n }(maxAltStoreSize)
+	maxAltStoreSize = 1 << 20
+
+	src := `{"name":"Big","apps":[]}` + strings.Repeat(" ", int(maxAltStoreSize)-len(`{"name":"Big","apps":[]}`))
+	if _, err := Fetch(KindAltStore, serveSource(t, src)); err != nil {
+		t.Fatalf("Fetch(at the cap) = %v", err)
+	}
+	if _, err := Fetch(KindAltStore, serveSource(t, src+" ")); err == nil || !strings.Contains(err.Error(), "larger than") {
+		t.Fatalf("Fetch(over the cap) = %v, want a size error", err)
+	}
+}
+
+func TestParseAltStoreDate(t *testing.T) {
+	est := time.FixedZone("", -5*3600)
+	cases := []struct {
+		in   string
+		want time.Time
+	}{
+		{"2023-2-17", time.Date(2023, 2, 17, 0, 0, 0, 0, time.UTC)},
+		{"2023-2-02T03:00:00-05:00", time.Date(2023, 2, 2, 3, 0, 0, 0, est)},
+		{"2026-09-21T21:12:00Z", time.Date(2026, 9, 21, 21, 12, 0, 0, time.UTC)},
+		{"2026-09-21T21:12:00.250-05:00", time.Date(2026, 9, 21, 21, 12, 0, 250e6, est)},
+		{"2026-09-10", time.Date(2026, 9, 10, 0, 0, 0, 0, time.UTC)},
+		{"2026-09-10T08:30:00", time.Date(2026, 9, 10, 8, 30, 0, 0, time.UTC)},
+		{"yesterday", time.Time{}},
+		{"", time.Time{}},
+	}
+	for _, c := range cases {
+		if got := parseAltStoreDate(c.in); !got.Equal(c.want) {
+			t.Errorf("parseAltStoreDate(%q) = %v, want %v", c.in, got, c.want)
+		}
 	}
 }

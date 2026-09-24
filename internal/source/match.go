@@ -86,7 +86,9 @@ func compatible(p, want Platform) bool {
 // picked among the IPA assets of a release (Obtainium's asset filter): the
 // first word of picked that is neither a version number nor shared with the
 // other assets, or else the whole name with its version numbers made generic
-// so that it keeps matching in later releases.
+// so that it keeps matching in later releases. When the variants differ only
+// in numbers (App_tvOS_15.ipa, App_tvOS_17.ipa), the generic name would match
+// them all, so the filter is the exact name of picked.
 func DeriveFilter(picked string, others []string) string {
 	otherTokens := map[string]bool{}
 	for _, n := range others {
@@ -103,7 +105,14 @@ func DeriveFilter(picked string, others []string) string {
 		}
 		return `(?i)(^|[^a-z0-9])` + regexp.QuoteMeta(tok) + `([^a-z0-9]|$)`
 	}
-	return `(?i)^` + regQuotedVersion.ReplaceAllLiteralString(regexp.QuoteMeta(picked), `[0-9]+(\.[0-9]+)*`) + `$`
+	generic := `(?i)^` + regQuotedVersion.ReplaceAllLiteralString(regexp.QuoteMeta(picked), `[0-9]+(\.[0-9]+)*`) + `$`
+	re := regexp.MustCompile(generic)
+	for _, n := range others {
+		if n != picked && re.MatchString(n) {
+			return `(?i)^` + regexp.QuoteMeta(picked) + `$`
+		}
+	}
+	return generic
 }
 
 // Suggest returns the ID of the build to preselect for deviceClass, or ""

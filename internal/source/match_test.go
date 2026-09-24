@@ -126,6 +126,30 @@ func TestDeriveFilterUnmarkedVariant(t *testing.T) {
 	}
 }
 
+// TestDeriveFilterNumberedVariants checks that variants differing only in
+// numbers get filters that tell them apart in the release they come from.
+func TestDeriveFilterNumberedVariants(t *testing.T) {
+	for _, pair := range [][2]string{
+		{"App_tvOS_15.ipa", "App_tvOS_17.ipa"},
+		{"Kodi-21.1-tvOS.ipa", "Kodi-20.5-tvOS.ipa"},
+	} {
+		for i, picked := range pair {
+			other := pair[1-i]
+			re := regexp.MustCompile(DeriveFilter(picked, pair[:]))
+			if !re.MatchString(picked) || re.MatchString(other) {
+				t.Errorf("filter %q of %q: match own = %v, match %q = %v", re, picked, re.MatchString(picked), other, re.MatchString(other))
+			}
+		}
+	}
+
+	// Latest finds the picked variant instead of reporting several matches.
+	f := &githubFeed{repo: "owner/kodi", releases: []githubRelease{release("v21.1", false, asset(1, "Kodi-21.1-tvOS.ipa"), asset(2, "Kodi-20.5-tvOS.ipa"))}}
+	b, err := f.Latest(DeriveFilter("Kodi-20.5-tvOS.ipa", []string{"Kodi-21.1-tvOS.ipa", "Kodi-20.5-tvOS.ipa"}), false, "AppleTV")
+	if err != nil || b.Name != "Kodi-20.5-tvOS.ipa" {
+		t.Fatalf("Latest = %+v, %v; want Kodi-20.5-tvOS.ipa", b, err)
+	}
+}
+
 // TestDeriveFilterOrivioHistory checks that filters derived from the newest
 // OrivioTVAppleTV release keep selecting the same variant in older releases.
 func TestDeriveFilterOrivioHistory(t *testing.T) {

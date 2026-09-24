@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -13,8 +14,13 @@ import (
 	"time"
 )
 
-// altStoreDateLayouts are the date formats found in AltStore sources.
-var altStoreDateLayouts = []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02"}
+// altStoreDateLayouts are the date formats found in AltStore sources. Month
+// and day may lack zero padding (2023-2-17); the layouts accept both forms.
+var altStoreDateLayouts = []string{"2006-1-2T15:04:05Z07:00", "2006-1-2T15:04:05", "2006-1-2"}
+
+// maxAltStoreSize bounds the source JSON read into memory, so that a URL
+// serving an IPA or another large file cannot exhaust the RAM of small hosts.
+var maxAltStoreSize int64 = 32 << 20
 
 // altStoreSource is an AltStore / SideStore / Feather source JSON.
 type altStoreSource struct {
@@ -80,10 +86,16 @@ func normalizeAltStoreURL(location string) (string, error) {
 
 // fetchAltStore downloads and decodes the source JSON at u.
 func fetchAltStore(u string) (Feed, error) {
-	resp, err := newClient().R().SetHeader("Accept", "application/json").Get(u)
+	resp, err := newClient().R().
+		SetHeader("Accept", "application/json").
+		SetDoNotParseResponse(true).
+		Get(u)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch source: %w", err)
 	}
+	body := resp.RawBody()
+	defer func() { _ = body.Close() }()
+
 	switch resp.StatusCode() {
 	case http.StatusOK:
 	case http.StatusNotFound:
@@ -92,8 +104,16 @@ func fetchAltStore(u string) (Feed, error) {
 		return nil, fmt.Errorf("source returned %d", resp.StatusCode())
 	}
 
+	data, err := io.ReadAll(io.LimitReader(body, maxAltStoreSize+1))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch source: %w", err)
+	}
+	if int64(len(data)) > maxAltStoreSize {
+		return nil, fmt.Errorf("invalid AltStore source: larger than %d MiB", maxAltStoreSize>>20)
+	}
+
 	var src altStoreSource
-	if err := json.Unmarshal(bytes.TrimPrefix(resp.Body(), []byte("\xef\xbb\xbf")), &src); err != nil {
+	if err := json.Unmarshal(bytes.TrimPrefix(data, []byte("\xef\xbb\xbf")), &src); err != nil {
 		return nil, fmt.Errorf("invalid AltStore source: %w", err)
 	}
 

@@ -80,12 +80,14 @@ func ParseRepo(input string) (string, error) {
 	return owner + "/" + repo, nil
 }
 
-// fetchGitHub lists the latest releases of repo ("owner/repo").
+// fetchGitHub lists the latest releases of repo ("owner/repo"). It asks for
+// the largest page GitHub serves so that a stable build published before many
+// pre-releases is still seen, in a single request.
 func fetchGitHub(repo string) (Feed, error) {
 	resp, err := newClient().R().
 		SetHeader("Accept", "application/vnd.github+json").
 		SetHeader("X-GitHub-Api-Version", "2022-11-28").
-		Get(fmt.Sprintf("%s/repos/%s/releases?per_page=30", apiBaseURL, repo))
+		Get(fmt.Sprintf("%s/repos/%s/releases?per_page=100", apiBaseURL, repo))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch GitHub releases: %w", err)
 	}
