@@ -27,6 +27,10 @@
         "donate": "Donate",
         "about": "About"
     },
+    "about": {
+        "version": "Version",
+        "build_date": "Build date"
+    },
     "donate": {
         "title": "Donate",
         "desc": "If you find this project helpful, please consider supporting its development. Your support keeps the project alive!",

@@ -438,7 +438,7 @@
     display: block !important;
     margin-top: 1rem !important;
     padding-top: 0.9rem !important;
-    border-top: 1px solid rgba(148, 163, 184, 0.22) !important;
+    border-top: 1px solid var(--atv-border) !important;
     line-height: 1.55 !important;
     font-size: 0.98rem !important;
     color: var(--atv-muted) !important;
