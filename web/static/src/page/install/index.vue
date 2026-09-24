@@ -33,7 +33,7 @@
         <div class="divider divider-horizontal"></div>
 
         <div class="p-6 flex flex-col gap-y-4 w-full max-w-lg atv-install-form-wrap">
-          <form id="form" class="flex flex-col gap-y-4">
+          <form id="form" class="flex flex-col gap-y-4" @submit.prevent>
             <div class="join w-full atv-install-mode">
               <button
                 type="button"
@@ -134,7 +134,7 @@
                     }}
                   </option>
                 </select>
-                <button class="btn join-item" @click.prevent="showLoginDialog">
+                <button type="button" class="btn join-item" @click.prevent="showLoginDialog">
                   <div class="w-6 h-6">
                     <PersonIcon />
                   </div>

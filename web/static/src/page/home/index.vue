@@ -148,7 +148,7 @@
             <!-- row 1 -->
             <tr class="hover" v-for="item in sortedList" v-bind:key="item.ID">
               <td>
-                <div class="flex items-center gap-x-2">
+                <div class="flex items-center gap-x-2 atv-app-cell">
                   <div class="indicator">
                     <span
                       class="indicator-item badge badge-warning"
@@ -185,7 +185,7 @@
                     </div>
                   </div>
 
-                  <div class="flex flex-col justify-start prose">
+                  <div class="flex flex-col justify-start prose atv-app-text">
                     <div>{{ appName(item) }}</div>
                     <div class="stat-title text-sm">{{ item.version }}</div>
                     <div class="flex flex-wrap items-center gap-1 atv-source-line">
@@ -198,7 +198,7 @@
                       <template v-else>
                         <button
                           type="button"
-                          class="atv-source-chip"
+                          class="atv-source-chip max-w-full"
                           :title="item.source.url"
                           @click="openSourceDialog(item)"
                         >
@@ -206,17 +206,19 @@
                             <GithubIcon v-if="item.source.kind === 'github'" />
                             <LinkIcon v-else />
                           </span>
-                          <span>{{ item.source.version || "—" }}</span>
-                          <span class="badge badge-ghost badge-xs" v-if="item.source.auto_update">{{
+                          <span class="truncate">{{ item.source.version || "—" }}</span>
+                          <span class="badge badge-ghost badge-xs shrink-0" v-if="item.source.auto_update">{{
                             $t("home.source.auto")
                           }}</span>
                         </button>
                         <div class="tooltip" :data-tip="sourceWarning(item)" v-if="sourceWarning(item)">
                           <span class="block w-4 h-4 atv-source-warning"><WarningIcon /></span>
                         </div>
-                        <span class="badge badge-info badge-sm" v-if="item.source.latest_build_id">{{
-                          $t("home.source.available", { version: item.source.latest_version })
-                        }}</span>
+                        <span class="badge badge-info badge-sm max-w-full" v-if="item.source.latest_build_id">
+                          <span class="truncate">{{
+                            $t("home.source.available", { version: item.source.latest_version })
+                          }}</span>
+                        </span>
                       </template>
                     </div>
                     <div class="stat-title text-sm">
@@ -248,7 +250,7 @@
                 </div>
               </td>
               <td>
-                <div class="flex gap-x-2">
+                <div class="flex gap-x-2 atv-app-actions">
                   <button
                     type="button"
                     class="btn atv-action atv-action--update"
@@ -358,6 +360,9 @@ export default {
       sortOrder: "asc",
       failedIcons: {},
       checkingUpdates: false,
+      // IDs of apps whose update request is pending. The installing list
+      // polled from the server does not include them yet.
+      pendingUpdates: {},
     };
   },
   computed: {
@@ -493,9 +498,21 @@ export default {
       });
     },
     updateApp(item) {
-      api.updateAppFromSource(item.ID, {}).then((res) => {
-        this.onUpdateStarted(item, res.data);
-      });
+      // The request fetches the source before it queues the update: the app
+      // shows as installing meanwhile, so another click cannot queue it twice.
+      this.pendingUpdates[item.ID] = true;
+      api
+        .updateAppFromSource(item.ID, {})
+        .then((res) => {
+          this.onUpdateStarted(item, res.data);
+        })
+        .catch((err) => {
+          // request.js already shows the error.
+          console.error(err);
+        })
+        .finally(() => {
+          delete this.pendingUpdates[item.ID];
+        });
     },
     onUpdateStarted(item, data) {
       this.installingApps.push(item);
@@ -716,6 +733,7 @@ export default {
       return this.$t("home.sidebar.device_status.unpaired");
     },
     isInstalling(item) {
+      if (this.pendingUpdates[item.ID]) return true;
       if (!this.installingApps || this.installingApps.length == 0) return false;
 
       for (let i = 0; i < this.installingApps.length; i++) {

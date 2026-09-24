@@ -375,10 +375,20 @@ export default {
       if (this.kind === kind) return;
       this.kind = kind;
       this.filter = "";
-      this.filterCustom = false;
       this.clearPreview();
     },
+    // clearPreview forgets the previewed source, with the custom filter
+    // written for it.
     clearPreview() {
+      this.dropPreview();
+      if (this.filterCustom) {
+        this.filterCustom = false;
+        this.filter = "";
+      }
+    },
+    // dropPreview hides the preview but keeps the filter: the source is the
+    // same, only its preview failed.
+    dropPreview() {
       this.requestSeq++;
       this.loading = false;
       this.preview = null;
@@ -429,7 +439,7 @@ export default {
           if (seq === this.requestSeq) this.applyCatalog(res.data || []);
         })
         .catch(() => {
-          if (seq === this.requestSeq) this.clearPreview();
+          if (seq === this.requestSeq) this.dropPreview();
         })
         .finally(() => {
           if (seq === this.requestSeq) this.loading = false;
@@ -485,7 +495,7 @@ export default {
         })
         .catch(() => {
           // request.js already shows the error.
-          if (seq === this.requestSeq) this.clearPreview();
+          if (seq === this.requestSeq) this.dropPreview();
         })
         .finally(() => {
           if (seq === this.requestSeq) this.loading = false;
