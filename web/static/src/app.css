@@ -586,6 +586,28 @@ html[data-theme="dark"] {
   box-shadow: 0 0 0 3px rgba(80, 132, 191, 0.16);
 }
 
+/* Keep daisyUI join groups fused: the theme layer sets input/select/btn
+   heights and radii that would otherwise split the joined edges apart. */
+.app-container .main-container .atv-join {
+  align-items: stretch;
+}
+
+.app-container .main-container .atv-join > .join-item:is(.input, .select, .file-input, .btn) {
+  height: auto;
+  min-height: 3rem;
+  border-radius: 0;
+}
+
+.app-container .main-container .atv-join > .join-item:is(.input, .select, .file-input):first-child {
+  border-start-start-radius: var(--rounded-btn, 0.5rem);
+  border-end-start-radius: var(--rounded-btn, 0.5rem);
+}
+
+.app-container .main-container .atv-join > .join-item.btn:last-child {
+  border-start-end-radius: var(--rounded-btn, 0.5rem);
+  border-end-end-radius: var(--rounded-btn, 0.5rem);
+}
+
 .app-container .main-container .toggle,
 .app-container .main-container .radio,
 .app-container .main-container .checkbox {

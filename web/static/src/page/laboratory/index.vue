@@ -34,9 +34,9 @@
             <label class="label">
               <span class="label-text">{{ $t("laboratory.form.device_label") }}</span>
             </label>
-            <div class="join flex w-full">
+            <div class="join w-full atv-join">
               <select
-                class="select select-bordered join-item flex-1 w-full"
+                class="select select-bordered join-item flex-1 min-w-0"
                 v-model="selectedDevice"
                 required
               >
@@ -45,8 +45,8 @@
                   {{ device.name }} ({{ truncateIP(device.ip) }})
                 </option>
               </select>
-              <button 
-                class="btn join-item w-16" 
+              <button
+                class="btn join-item"
                 @click.prevent="loadDevices"
                 :disabled="loading"
                 :title="$t('laboratory.form.refresh_devices')"

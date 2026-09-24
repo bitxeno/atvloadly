@@ -41,7 +41,7 @@
                   <template v-else>{{ $t("install.form.ipa_url.label") }}</template>
                 </span>
               </label>
-              <div class="join w-full atv-install-ipa-picker">
+              <div class="join w-full atv-join atv-install-ipa-picker">
                 <input
                   v-if="installMode === 'file'"
                   type="file"
@@ -80,7 +80,7 @@
                   $t("install.form.account.label")
                 }}</span>
               </label>
-              <div class="join w-full atv-install-account-picker">
+              <div class="join w-full atv-join atv-install-account-picker">
                 <select
                   class="select select-bordered join-item flex-1 min-w-0"
                   v-model="form.account"
@@ -692,28 +692,6 @@ import LinkIcon from "@/assets/icons/link.svg";
   outline: 2px solid transparent;
   border-color: hsl(var(--nc) / 0.45);
   box-shadow: none;
-}
-
-/* Keep daisyUI join groups fused: the theme layer sets input/select/btn
-   heights and radii that would otherwise split the joined edges apart. */
-.atv-install-page .join {
-  align-items: stretch;
-}
-
-.atv-install-page .join > .join-item:is(.input, .select, .file-input, .btn) {
-  height: auto;
-  min-height: 3rem;
-  border-radius: 0;
-}
-
-.atv-install-page .join > .join-item:is(.input, .select, .file-input):first-child {
-  border-start-start-radius: var(--rounded-btn, 0.5rem);
-  border-end-start-radius: var(--rounded-btn, 0.5rem);
-}
-
-.atv-install-page .join > .join-item.btn:last-child {
-  border-start-end-radius: var(--rounded-btn, 0.5rem);
-  border-end-end-radius: var(--rounded-btn, 0.5rem);
 }
 
 /* Screenshot action sits on the device icon's bottom-right corner,
