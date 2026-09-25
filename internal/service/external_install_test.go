@@ -361,8 +361,8 @@ func TestCleanExternalUploadRemovesOnlyItsUploadFiles(t *testing.T) {
 }
 
 // Apple ID requests keep their IPA path as given; external certificate
-// requests are confined to the upload and installed apps directories, only
-// they accept a custom bundle identifier, and they cannot track a source.
+// requests are confined to the upload and installed apps directories and only
+// they accept a custom bundle identifier.
 func TestValidateInstallRequest(t *testing.T) {
 	dataDir := setTestDataDir(t)
 	uploaded := writeTestFile(t, filepath.Join(dataDir, "tmp", "app_1.ipa"))
@@ -379,7 +379,6 @@ func TestValidateInstallRequest(t *testing.T) {
 		{name: "apple id custom identifier", request: model.InstalledApp{UDID: "DEVICE", Account: "user@example.com", IpaPath: uploaded, CustomIdentifier: "app.custom"}, wantErr: true},
 		{name: "external path outside the data directories", request: model.InstalledApp{UDID: "DEVICE", IpaPath: outside, SigningMode: model.SigningModeExternalCertificate, SigningIdentityID: 1}, wantErr: true},
 		{name: "external custom identifier trimmed", request: model.InstalledApp{UDID: "DEVICE", IpaPath: uploaded, SigningMode: model.SigningModeExternalCertificate, SigningIdentityID: 1, CustomIdentifier: " app.custom "}, wantPath: uploaded, wantID: "app.custom"},
-		{name: "external tracked source", request: model.InstalledApp{UDID: "DEVICE", IpaPath: uploaded, SigningMode: model.SigningModeExternalCertificate, SigningIdentityID: 1, Source: model.AppSource{Kind: "github", URL: "owner/repo", BuildID: "1"}}, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

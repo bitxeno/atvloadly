@@ -164,9 +164,13 @@ installation is refused when:
 - **Nested apps**: an app nested inside another app (for example a Watch app)
   cannot be signed with the profile (`nested_bundles_not_signed`).
 - **Entitlements**: entitlements requested by the app but not granted by the
-  profile, or granted with other values, block the installation unless you
-  explicitly allow missing entitlements. The app may then lose features or
-  crash at launch.
+  profile, or granted with other values, block the installation unless missing
+  entitlements are allowed. The install page allows them by default: its
+  **Allow missing entitlements** option, shown when the plan reports such
+  entitlements, can be turned off to refuse the installation. The check API,
+  `/api/install` and the WebSocket message only allow them with
+  `allow_missing_entitlements: true`. The app may then lose features or crash
+  at launch. The choice is stored with the app, so its updates keep it.
 
 A profile App ID that differs from the bundle identifiers is not a reason to
 refuse: it only produces the `application_identifier_from_profile` warning
@@ -212,11 +216,25 @@ Reinstalling one re-signs it with the same certificate and profile: it does
 **not** extend its validity. To extend it, replace the profile with a newer one
 (or import a new certificate and profile) and then reinstall the app.
 
-External certificate installations read an IPA file uploaded on the install
-page: the IPA URL and source modes are Apple ID only. For the same reason,
-these apps cannot track a source (GitHub releases or AltStore): their updates
-would otherwise be signed and installed unattended with the certificate.
-Install a new build manually instead.
+## Sources and updates
+
+External certificate installations accept an IPA file uploaded on the install
+page or a build of a source (GitHub releases or AltStore). For a source build,
+atvloadly first downloads the selected build to the server, so the
+compatibility plan is shown before installing, like for an uploaded file. The
+IPA URL mode remains Apple ID only.
+
+Apps installed from a source, or linked to one from the home page (**Track
+updates**), are checked for new builds like Apple ID apps. Their updates,
+manual (**Update**) or automatic (**Install updates automatically**), are
+signed with the identity of the app and keep its custom bundle identifier and
+its missing entitlements choice. Like a reinstall, an update re-signs the app
+with the current certificate and profile of the identity, so the app then gets
+their expiry: an update installed after the profile was replaced extends the
+validity of the app. An update blocked by the plan (for example a new
+extension or entitlement that the profile does not cover) fails like any
+installation, and the failed build is not installed again automatically
+(**Update** retries it).
 
 ## Deployment key
 
@@ -289,6 +307,11 @@ All endpoints answer HTTP 200 with `{code, msg, data}`. Failures have
 | `POST /api/signing/identities/:id/delete` | JSON `{"force": false}` | `true` |
 | `POST /api/signing/identities/:id/check` | JSON `{"ipa_path", "udid", "remove_extensions", "allow_missing_entitlements", "custom_identifier"}` | `{plan, blocking}` |
 | `POST /api/install` | existing form + `signing_mode=external_certificate`, `signing_identity_id`, `allow_missing_entitlements`, `custom_identifier` | as before |
+| `POST /api/sources/download` | JSON `{"kind", "url", "build_id"}` of a source build | IPA file `{name, path, icon, bundle_identifier, version}` |
+
+`POST /api/sources/download` downloads the build of the source into the upload
+directory; its `path` is passed as `ipa_path` to the check and to the install
+message. Its failures have `data: null`.
 
 `custom_identifier` is optional (empty keeps the bundle identifiers of the IPA)
 and only accepted with `signing_mode=external_certificate`. The same fields are
@@ -296,7 +319,11 @@ accepted in the install message of the `/ws/install` WebSocket (`signing_mode`,
 `signing_identity_id`, `remove_extensions`, `allow_missing_entitlements`,
 `custom_identifier`) and, except `allow_missing_entitlements`, by the MCP
 `install_app` tool (`signing_identity_id`, `remove_extensions`,
-`custom_identifier`).
+`custom_identifier`). With an external certificate, the install message also
+accepts `source` (`kind`, `url`, `filter`, `prerelease`, `auto_update`,
+`build_id`): with a local `ipa_path` returned by `/api/sources/download`, the
+server records the build and signs that file; with a remote one, it downloads
+the build from the source.
 
 In the plan, `bundles[].expected_application_identifier` is the application
 identifier the engine will sign each bundle with, `signed_main_bundle_id` the

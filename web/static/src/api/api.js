@@ -304,6 +304,16 @@ export default {
     });
   },
 
+  downloadSourceBuild: (data) => {
+    return request({
+      url: "/api/sources/download",
+      method: "post",
+      timeout: 600000,
+      silent: true,
+      data,
+    });
+  },
+
   linkAppSource: (id, data) => {
     return request({
       url: `/api/apps/${id}/source`,

@@ -215,7 +215,7 @@
                     "tips": "AltStore 应用按 Bundle Identifier 跟踪。"
                 },
                 "auto_update": "自动安装更新",
-                "auto_update_tips": "新版本会在自动刷新的运行时间段内安装，即使应用还不需要刷新，并使用同一帐号签名。",
+                "auto_update_tips": "新版本会在自动刷新的运行时间段内安装，即使应用还不需要刷新，并使用同一帐号或签名身份签名。",
                 "select_build": "请先获取来源并选择要安装的 IPA。",
                 "choose_saved_app_tips": "已保存的来源包含多个应用，请选择要安装的应用。",
                 "saved": {
@@ -235,7 +235,7 @@
             },
             "ipa_url": {
                 "label": "IPA链接:",
-                "external_unavailable": "外部证书签名需要上传 IPA 文件"
+                "external_unavailable": "外部证书签名需要上传 IPA 文件或使用来源"
             },
             "account": {
                 "label": "Apple帐号:",
@@ -706,9 +706,10 @@
             "title": "兼容性检查",
             "run_check": "重新检查",
             "uploading": "正在上传 IPA 以进行兼容性检查…",
+            "downloading": "正在从来源下载 IPA 以进行兼容性检查…",
             "checking": "正在检查 IPA、签名身份和设备…",
             "check_failed": "兼容性检查失败",
-            "pending": "选择 IPA 文件和签名身份后，将检查它们与此设备的兼容性。",
+            "pending": "选择 IPA 文件或来源中的版本以及签名身份后，将检查它们与此设备的兼容性。",
             "rerun_needed": "运行兼容性检查后才能安装此 IPA。",
             "blocking": "无法安装：请先解决以下错误",
             "ready": "可以签名",

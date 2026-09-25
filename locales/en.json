@@ -221,7 +221,7 @@
                     "tips": "AltStore apps are tracked by their bundle identifier."
                 },
                 "auto_update": "Install updates automatically",
-                "auto_update_tips": "New versions are installed during the Auto Refresh running time period, even if the app does not need a refresh yet. They are signed with the same account.",
+                "auto_update_tips": "New versions are installed during the Auto Refresh running time period, even if the app does not need a refresh yet. They are signed with the same account or signing identity.",
                 "select_build": "Fetch the source and select an IPA to install.",
                 "choose_saved_app_tips": "Your saved sources list several apps. Choose the one to install.",
                 "saved": {
@@ -241,7 +241,7 @@
             },
             "ipa_url": {
                 "label": "IPA URL:",
-                "external_unavailable": "External certificate signing needs an uploaded IPA file"
+                "external_unavailable": "External certificate signing needs an uploaded IPA file or a source"
             },
             "account": {
                 "label": "Apple Account:",
@@ -715,9 +715,10 @@
             "title": "Compatibility check",
             "run_check": "Check again",
             "uploading": "Uploading the IPA for the compatibility check…",
+            "downloading": "Downloading the IPA from the source for the compatibility check…",
             "checking": "Checking the IPA, the identity and the device…",
             "check_failed": "The compatibility check failed",
-            "pending": "Choose an IPA file and a signing identity to check their compatibility with this device.",
+            "pending": "Choose an IPA file or a source build and a signing identity to check their compatibility with this device.",
             "rerun_needed": "Run the compatibility check to install this IPA.",
             "blocking": "Installation blocked: fix the errors below",
             "ready": "Ready to sign",

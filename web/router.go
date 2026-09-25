@@ -629,6 +629,23 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(preview))
 	})
 
+	api.Post("/sources/download", func(c *fiber.Ctx) error {
+		var req struct {
+			Kind    string `json:"kind"`
+			URL     string `json:"url"`
+			BuildID string `json:"build_id"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument. error: " + err.Error()))
+		}
+
+		ipaFile, err := service.DownloadSourceBuild(req.Kind, req.URL, req.BuildID)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(ipaFile))
+	})
+
 	api.Get("/sources/saved", func(c *fiber.Ctx) error {
 		sources, err := service.GetSavedSources()
 		if err != nil {

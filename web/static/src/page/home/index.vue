@@ -188,8 +188,7 @@
                   <div class="flex flex-col justify-start prose atv-app-text">
                     <div>{{ appName(item) }}</div>
                     <div class="stat-title text-sm">{{ item.version }}</div>
-                    <!-- Only Apple ID signed apps can track a source. -->
-                    <div class="flex flex-wrap items-center gap-1 atv-source-line" v-if="!isExternalApp(item)">
+                    <div class="flex flex-wrap items-center gap-1 atv-source-line">
                       <button
                         type="button"
                         class="atv-source-track"

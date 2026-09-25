@@ -84,10 +84,11 @@ func writeInstallRejected(mgr *manager.WebsocketManager, reason string) {
 
 // validateInstallRequest checks an install request of the install page. Apple
 // ID installs need an account and take the IPA path as given. External
-// certificate installs need a signing identity and no account, and their
-// local IPA path is confined to the upload and installed apps directories.
-// Only external certificate installs accept a custom bundle identifier; the
-// plan reports an invalid one.
+// certificate installs need a signing identity and no account; they may carry
+// a source like Apple ID installs. Their local IPA path is confined to the
+// upload and installed apps directories, a remote URL passes as given. Only
+// external certificate installs accept a custom bundle identifier; the plan
+// reports an invalid one.
 func validateInstallRequest(v *model.InstalledApp) error {
 	if v.SigningMode != "" && !v.SigningMode.IsValid() {
 		return fmt.Errorf("invalid signing mode: %q", v.SigningMode)
@@ -113,10 +114,6 @@ func validateInstallRequest(v *model.InstalledApp) error {
 		}
 		if v.SigningIdentityID == 0 {
 			return fmt.Errorf("no signing identity selected")
-		}
-		// Tracked sources install Apple ID signed builds only.
-		if v.Source.Tracked() {
-			return fmt.Errorf("a tracked source cannot be installed with an external signing certificate")
 		}
 		if !ipa.IsRemoteURL(v.IpaPath) {
 			resolved, err := ResolveClientIPAPath(v.IpaPath)

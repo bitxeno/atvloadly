@@ -9,6 +9,7 @@ import (
 
 	conf "github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/db"
+	"github.com/bitxeno/atvloadly/internal/ipa"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/source"
@@ -104,6 +105,36 @@ func PreviewSource(kind, location, deviceClass string, prerelease bool) (*source
 	return feed.Preview(deviceClass, prerelease)
 }
 
+// DownloadSourceBuild downloads the build buildID of a source into the upload
+// directory (<DataDir>/tmp) like an upload, so that the external certificate
+// check and install accept its path. The download URL always comes from the
+// source, never from the client.
+func DownloadSourceBuild(kind, location, buildID string) (*model.IpaFile, error) {
+	location, err := source.Normalize(kind, location)
+	if err != nil {
+		return nil, err
+	}
+	feed, err := fetchSource(kind, location)
+	if err != nil {
+		return nil, err
+	}
+	b, err := feed.Find(buildID)
+	if err != nil {
+		return nil, err
+	}
+	result, err := ipa.DownloadAndParse(b.DownloadURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &model.IpaFile{
+		Name:             result.Name,
+		Path:             result.LocalPath,
+		Icon:             result.IconPath,
+		BundleIdentifier: result.BundleIdentifier,
+		Version:          result.Version,
+	}, nil
+}
+
 // notNewer reports whether b, another build than the installed one of s, is
 // not newer than it by date, so it is not an update (never downgrade).
 func notNewer(s model.AppSource, b source.Build) bool {
@@ -169,7 +200,11 @@ func ApplyBuild(app model.InstalledApp, b source.Build) model.InstalledApp {
 
 // ResolveSourceInstall resolves the build the user picked for a first install
 // from a source: v.Source holds the link settings and the picked BuildID. The
-// download URL always comes from the source, never from the client.
+// download URL always comes from the source, never from the client. An
+// external certificate install with a local IPA path signs that file: the
+// install page downloaded the build through DownloadSourceBuild and checked
+// it, and validateInstallRequest confined the path to the upload and
+// installed apps directories. It only records the build as installed.
 func ResolveSourceInstall(v *model.InstalledApp) error {
 	in := v.Source
 	location, err := source.Normalize(in.Kind, in.URL)
@@ -191,13 +226,18 @@ func ResolveSourceInstall(v *model.InstalledApp) error {
 		return fmt.Errorf("the filter does not match %s", b.Name)
 	}
 
-	v.Source = model.AppSource{
+	settings := model.AppSource{
 		Kind:       in.Kind,
 		URL:        location,
 		Filter:     in.Filter,
 		Prerelease: in.Prerelease,
 		AutoUpdate: in.AutoUpdate,
 	}
+	if v.IsExternalSigning() && !ipa.IsRemoteURL(v.IpaPath) {
+		v.Source = installedBuild(settings, b)
+		return nil
+	}
+	v.Source = settings
 	*v = ApplyBuild(*v, b)
 	return nil
 }
@@ -270,14 +310,11 @@ func CheckSourceUpdates(apps []model.InstalledApp) SourceCheckResult {
 }
 
 // LinkSource links app id to a source (or changes its settings), then checks
-// it for updates. Only Apple ID signed apps can track a source.
+// it for updates.
 func LinkSource(id uint, in SourceInput) (*model.InstalledApp, error) {
 	app, err := GetApp(id)
 	if err != nil {
 		return nil, err
-	}
-	if app.IsExternalSigning() {
-		return nil, errors.New("an app signed with an external certificate cannot track a source")
 	}
 	location, err := source.Normalize(in.Kind, in.URL)
 	if err != nil {

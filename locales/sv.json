@@ -220,7 +220,7 @@
           "tips": "AltStore-appar följs via sin paketidentifierare."
         },
         "auto_update": "Installera nya versioner automatiskt",
-        "auto_update_tips": "Nya versioner installeras under tidsintervallet för automatisk appuppdatering, även om appen inte behöver uppdateras än. De signeras med samma konto.",
+        "auto_update_tips": "Nya versioner installeras under tidsintervallet för automatisk appuppdatering, även om appen inte behöver uppdateras än. De signeras med samma konto eller signeringsidentitet.",
         "select_build": "Hämta källan och välj en IPA att installera.",
         "choose_saved_app_tips": "Dina sparade källor innehåller flera appar. Välj den som ska installeras.",
         "saved": {
@@ -240,7 +240,7 @@
       },
       "ipa_url": {
         "label": "IPA-URL:",
-        "external_unavailable": "Signering med externt certifikat kräver en uppladdad IPA-fil"
+        "external_unavailable": "Signering med externt certifikat kräver en uppladdad IPA-fil eller en källa"
       },
       "account": {
         "label": "Apple-konto:",
@@ -711,9 +711,10 @@
       "title": "Kompatibilitetskontroll",
       "run_check": "Kontrollera igen",
       "uploading": "Laddar upp IPA-filen för kompatibilitetskontrollen…",
+      "downloading": "Laddar ner IPA-filen från källan för kompatibilitetskontrollen…",
       "checking": "Kontrollerar IPA-filen, identiteten och enheten…",
       "check_failed": "Kompatibilitetskontrollen misslyckades",
-      "pending": "Välj en IPA-fil och en signeringsidentitet för att kontrollera kompatibiliteten med den här enheten.",
+      "pending": "Välj en IPA-fil eller en version från en källa och en signeringsidentitet för att kontrollera kompatibiliteten med den här enheten.",
       "rerun_needed": "Kör kompatibilitetskontrollen för att kunna installera den här IPA-filen.",
       "blocking": "Installationen är blockerad: åtgärda felen nedan",
       "ready": "Redo att signera",

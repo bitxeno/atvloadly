@@ -78,7 +78,7 @@
                 <span class="w-6 h-6"><FolderOpenIcon /></span>
                 <span class="hidden md:inline">{{ $t("install.form.mode.file") }}</span>
               </button>
-              <!-- External signing checks an uploaded IPA before installing: file mode only. -->
+              <!-- External signing checks an IPA stored on the server before installing: no IPA URL mode. -->
               <button
                 type="button"
                 class="btn join-item flex-1 gap-x-2"
@@ -98,8 +98,7 @@
                 :class="{ 'btn-primary': installMode === 'source' }"
                 :aria-pressed="installMode === 'source'"
                 :aria-label="$t('install.form.mode.source')"
-                :title="isExternal ? $t('install.form.ipa_url.external_unavailable') : $t('install.form.mode.source')"
-                :disabled="isExternal"
+                :title="$t('install.form.mode.source')"
                 @click="setInstallMode('source')"
               >
                 <span class="w-6 h-6"><GithubIcon /></span>
@@ -338,7 +337,7 @@
             </div>
             <div v-if="signing.uploading" class="atv-install-plan-progress">
               <span class="loading loading-spinner loading-sm"></span>
-              {{ $t("signing.plan.uploading") }}
+              {{ $t(installMode === "source" ? "signing.plan.downloading" : "signing.plan.uploading") }}
             </div>
             <div v-else-if="signing.checking" class="atv-install-plan-progress">
               <span class="loading loading-spinner loading-sm"></span>
@@ -498,6 +497,12 @@ import SourcePicker from "@/components/SourcePicker.vue";
 const appleIDMode = "apple_id";
 const externalMode = "external_certificate";
 
+// sourceBuildKey identifies the source build an external IPA is downloaded
+// from; empty without a selection.
+function sourceBuildKey(selection) {
+  return selection ? JSON.stringify([selection.kind, selection.url, selection.build.id]) : "";
+}
+
 export default {
   components: { Login, SigningIssueList, SigningPlan, SourcePicker },
   data() {
@@ -523,8 +528,11 @@ export default {
         modeChosen: false,
         identities: [],
         identityId: "",
-        allowMissingEntitlements: false,
-        // IPA uploaded ahead of time so the compatibility check can read it.
+        // On by default; turning it off refuses to install an IPA whose
+        // entitlements the provisioning profile does not grant.
+        allowMissingEntitlements: true,
+        // IPA uploaded, or downloaded from a source by the server, ahead of
+        // time so the compatibility check can read it.
         uploaded: null,
         uploading: false,
         checking: false,
@@ -579,11 +587,10 @@ export default {
         this.signing.check?.plan?.main_bundle_id ||
         this.$t("install.form.custom_identifier.placeholder");
     },
+    // The waivable issues stay in the plan, downgraded to warnings, while
+    // the option is on: the toggle stays visible whenever it matters.
     showAllowMissingEntitlements() {
-      return this.isExternal && (
-        this.signing.allowMissingEntitlements ||
-        hasWaivableEntitlementIssues(this.signing.check?.plan?.issues)
-      );
+      return this.isExternal && hasWaivableEntitlementIssues(this.signing.check?.plan?.issues);
     },
     canInstall() {
       if (!this.isExternal) {
@@ -599,13 +606,21 @@ export default {
         !signing.checking
       );
     },
+    // hasIpaInput reports whether the current install mode has an IPA to
+    // prepare: a chosen file, or a selected source build.
+    hasIpaInput() {
+      if (this.installMode === "source") {
+        return !!this.sourceSelection;
+      }
+      return this.installMode === "file" && this.files.length > 0;
+    },
     canRerunCheck() {
       const signing = this.signing;
       return this.isExternal && !this.loading && !signing.uploading && !signing.checking &&
-        this.files.length > 0 && !!signing.identityId;
+        this.hasIpaInput && !!signing.identityId;
     },
     planHintKey() {
-      if (this.files.length > 0 && this.signing.identityId && !this.signing.uploaded) {
+      if (this.hasIpaInput && this.signing.identityId && !this.signing.uploaded) {
         return "signing.plan.rerun_needed";
       }
       return "signing.plan.pending";
@@ -632,6 +647,9 @@ export default {
     this.id = this.$route.params.id;
     this.uploadSeq = 0;
     this.checkSeq = 0;
+    // Source build of the external IPA prepared or being prepared; empty for
+    // an uploaded file.
+    this.externalIpaKey = "";
     this.reportStream = createSigningReportStream();
 
     this.fetchData();
@@ -642,10 +660,9 @@ export default {
   unmounted() {
     this.closeWebSocket();
     this.stopUpdateLog();
-    // A running installation owns the uploaded IPA; otherwise drop it.
-    if (!this.loading) {
-      this.discardUploadedIpa();
-    }
+    // Drops the external IPA, including one still being uploaded or
+    // downloaded, unless a running installation owns it.
+    this.cancelExternalIpa();
   },
   methods: {
     fetchData() {
@@ -694,13 +711,14 @@ export default {
       this.recommendedAccount = "";
       this.recommendedIdentityId = 0;
       if (mode === externalMode) {
-        // External signing only reads IPAs uploaded to this server.
-        this.setInstallMode("file");
+        // External signing only reads IPAs stored on this server: an uploaded
+        // file or a source build downloaded by the server, never an IPA URL.
+        if (this.installMode === "link") {
+          this.setInstallMode("file");
+        }
         this.prepareExternalIpa();
       } else {
-        this.uploadSeq++;
-        this.signing.uploading = false;
-        this.discardUploadedIpa();
+        this.cancelExternalIpa();
       }
     },
     manageIdentities() {
@@ -718,26 +736,42 @@ export default {
       const text = this.$t(key);
       return text !== key ? text : signingClass;
     },
-    // prepareExternalIpa uploads the selected IPA, then checks it.
+    // prepareExternalIpa uploads the chosen IPA file, or has the server
+    // download the selected source build, then checks it.
     async prepareExternalIpa() {
-      if (!this.isExternal || this.installMode !== "file" || this.files.length === 0) {
+      if (!this.isExternal || this.loading) {
         return;
       }
-      const file = this.files[0];
+      let pending;
+      let key = "";
+      if (this.installMode === "file" && this.files.length > 0) {
+        const formData = new FormData();
+        formData.append("files", this.files[0]);
+        pending = api.upload(formData).then((data) => data[0]);
+      } else if (this.installMode === "source" && this.sourceSelection) {
+        const selection = this.sourceSelection;
+        key = sourceBuildKey(selection);
+        pending = api.downloadSourceBuild({
+          kind: selection.kind,
+          url: selection.url,
+          build_id: selection.build.id,
+        }).then((res) => res.data);
+      } else {
+        return;
+      }
       const seq = ++this.uploadSeq;
       this.discardUploadedIpa();
+      this.externalIpaKey = key;
       this.signing.checkError = null;
       this.signing.uploading = true;
       try {
-        const formData = new FormData();
-        formData.append("files", file);
-        const data = await api.upload(formData);
+        const ipa = await pending;
         if (seq !== this.uploadSeq) {
-          // Superseded by another file or by a mode change.
-          api.clean(data[0]).catch(() => {});
+          // Superseded by another file or build, or by a mode change.
+          api.clean(ipa).catch(() => {});
           return;
         }
-        this.signing.uploaded = data[0];
+        this.signing.uploaded = ipa;
       } catch (err) {
         if (seq === this.uploadSeq) {
           this.signing.checkError = requestErrorOf(err);
@@ -750,10 +784,25 @@ export default {
       }
       await this.runCheck();
     },
+    // cancelExternalIpa abandons the pending upload, download or check and
+    // drops the prepared IPA. A running installation owns that IPA:
+    // onInstallFinished releases it.
+    cancelExternalIpa() {
+      if (this.loading) {
+        return;
+      }
+      this.uploadSeq++;
+      this.checkSeq++;
+      this.signing.uploading = false;
+      this.signing.checking = false;
+      this.signing.checkError = null;
+      this.discardUploadedIpa();
+    },
     discardUploadedIpa() {
       const uploaded = this.signing.uploaded;
       this.signing.uploaded = null;
       this.signing.check = null;
+      this.externalIpaKey = "";
       if (uploaded) {
         api.clean(uploaded).catch(() => {});
       }
@@ -851,6 +900,11 @@ export default {
         toast.error(this.$t("install.form.source.select_build"));
         return;
       }
+      // An external install signs the IPA checked for the selected build.
+      if (external && _this.installMode === "source" &&
+        sourceBuildKey(_this.sourceSelection) !== _this.externalIpaKey) {
+        return;
+      }
 
       _this.loading = true;
       _this.submittedMode = _this.signing.mode;
@@ -875,9 +929,25 @@ export default {
 
         let ipa;
         let source;
+        if (_this.installMode === "source") {
+          const selection = _this.sourceSelection;
+          const build = selection.build;
+          _this.log.output += `Source: ${selection.url} ${build.version} ${build.name}\n`;
+          source = {
+            kind: selection.kind,
+            url: selection.url,
+            filter: selection.filter,
+            prerelease: selection.prerelease,
+            auto_update: _this.form.auto_update,
+            build_id: build.id,
+          };
+        }
         if (external) {
+          // Uploaded file or source build downloaded by the server, already checked.
           ipa = _this.signing.uploaded;
-          _this.log.output += `IPA: ${ipa.name}\n`;
+          if (!source) {
+            _this.log.output += `IPA: ${ipa.name}\n`;
+          }
         } else if (_this.installMode === "file") {
           let formData = new FormData();
           for (let i = 0; i < _this.files.length; i++) {
@@ -897,9 +967,7 @@ export default {
             version: '',
           };
         } else {
-          const selection = _this.sourceSelection;
-          const build = selection.build;
-          _this.log.output += `Source: ${selection.url} ${build.version} ${build.name}\n`;
+          const build = _this.sourceSelection.build;
           // The server resolves the download URL from the source; path and name are for display.
           ipa = {
             name: build.name,
@@ -907,14 +975,6 @@ export default {
             icon: '',
             bundle_identifier: build.bundle_id,
             version: build.version,
-          };
-          source = {
-            kind: selection.kind,
-            url: selection.url,
-            filter: selection.filter,
-            prerelease: selection.prerelease,
-            auto_update: _this.form.auto_update,
-            build_id: build.id,
           };
         }
         _this.ipa = ipa;
@@ -961,6 +1021,8 @@ export default {
       this.ipaUrl = "";
       this.sourceInitial = null;
       this.sourceSelection = null;
+      // The external IPA belonged to the inputs of the previous mode.
+      this.cancelExternalIpa();
     },
     onIpaUrlInput(e) {
       if (e.inputType === "insertFromPaste") {
@@ -980,17 +1042,34 @@ export default {
       this.sourceSelection = selection;
       this.recommendedAccount = "";
       if (!selection) {
+        if (this.isExternal) {
+          this.cancelExternalIpa();
+        }
         return;
       }
 
-      // Reuse the account of the app already installed from this source on
-      // this device. Source installs sign with an Apple ID: external
-      // certificate apps have no account to reuse.
+      // Reuse the account or signing identity of the app already installed
+      // from this source on this device, else of an app with the same bundle
+      // identifier, signed in the current signing mode.
       const url = selection.url.toLowerCase();
       const bundleId = selection.build.bundle_id;
+      const isSameSource = (a) => a.udid === this.device.udid && a.source.url.toLowerCase() === url;
+      if (this.isExternal) {
+        const externalApps = this.installedApps.filter((a) => a.signing_mode === externalMode);
+        const candidates = externalApps.filter(isSameSource).concat(
+          bundleId ? externalApps.filter((a) => a.bundle_identifier === bundleId) : [],
+        );
+        this.recommendedIdentityId = 0;
+        candidates.some((app) => this.recommendIdentity(app));
+        // A filter edit or a prerelease toggle keeps the build: keep its IPA.
+        if (sourceBuildKey(selection) !== this.externalIpaKey) {
+          this.prepareExternalIpa();
+        }
+        return;
+      }
       const appleIDApps = this.installedApps.filter((a) => a.signing_mode !== externalMode);
       const app =
-        appleIDApps.find((a) => a.udid === this.device.udid && a.source.url.toLowerCase() === url) ||
+        appleIDApps.find(isSameSource) ||
         (bundleId && appleIDApps.find((a) => a.bundle_identifier === bundleId));
       if (app) {
         this.recommendedAccount = app.account;
