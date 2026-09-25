@@ -2,3 +2,18 @@ node_modules
 .next
 .vscode
 .git
+
+# Real signing material must never reach the Docker build context. Synthetic
+# test fixtures under testdata/ stay available.
+**/*.p12
+**/*.pfx
+**/*.mobileprovision
+**/*.pem
+**/*.key
+**/keys
+**/signing-work
+!**/testdata/**/*.p12
+!**/testdata/**/*.pfx
+!**/testdata/**/*.mobileprovision
+!**/testdata/**/*.pem
+!**/testdata/**/*.key

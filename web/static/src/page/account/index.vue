@@ -1,6 +1,7 @@
 <template>
   <div class="atv-account-page max-w-screen-lg mx-auto">
     <div class="flex justify-between items-center mb-4 px-1">
+      <h4 class="m-0">{{ $t("account.heading.apple_accounts") }}</h4>
       <button type="button" class="btn btn-primary btn-sm atv-toolbar-btn" @click="showLoginDialog">
         <PersonIcon class="w-4 h-4 mr-1" />
         {{ $t("install.login_modal.button.add_account") }}
@@ -71,6 +72,8 @@
         </tbody>
       </table>
     </div>
+
+    <SigningIdentities />
 
     <!-- Certificate Modal -->
     <dialog
@@ -354,10 +357,11 @@ import PersonIcon from "@/assets/icons/person.badge.plus.svg";
 import api from "@/api/api";
 import { toast } from "vue3-toastify";
 import Login from "@/components/Login.vue";
+import SigningIdentities from "@/page/account/SigningIdentities.vue";
 
 export default {
   name: "Account",
-  components: { Login },
+  components: { Login, SigningIdentities },
   data() {
     return {
       accounts: {},

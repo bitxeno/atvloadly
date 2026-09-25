@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/notify"
 	"github.com/bitxeno/atvloadly/internal/service"
+	"github.com/bitxeno/atvloadly/internal/signing/appcheck"
 	"github.com/bitxeno/atvloadly/internal/task"
 	"github.com/bitxeno/atvloadly/internal/tty"
 	"github.com/bitxeno/atvloadly/internal/utils"
@@ -92,11 +94,12 @@ func route(fi *fiber.App) {
 			return c.Status(http.StatusNotFound).SendString(err.Error())
 		}
 
-		if t.Icon != "" {
-			return c.Status(http.StatusOK).SendFile(t.Icon, false)
-		} else {
+		// Only an icon stored with an installed app is served.
+		icon, err := service.ResolveAppIconPath(t.Icon)
+		if err != nil {
 			return c.Status(http.StatusNotFound).SendString("")
 		}
+		return c.Status(http.StatusOK).SendFile(icon, false)
 	})
 	fi.Get("/apps/:id/log", func(c *fiber.Ctx) error {
 		id := utils.MustParseInt(c.Params("id"))
@@ -110,6 +113,7 @@ func route(fi *fiber.App) {
 
 	// API route
 	api := fi.Group("/api")
+	registerSigningRoutes(api)
 	api.Get("/hello", func(c *fiber.Ctx) error {
 		return c.SendString("hello world.")
 	})
@@ -472,14 +476,47 @@ func route(fi *fiber.App) {
 		ipaURL := strings.TrimSpace(c.FormValue("url"))
 		deviceID := strings.TrimSpace(c.FormValue("device_id"))
 		customName := strings.TrimSpace(c.FormValue("custom_name"))
+		customIdentifier := strings.TrimSpace(c.FormValue("custom_identifier"))
 		removeExt := c.FormValue("remove_extensions") == "true"
 
 		if err := service.ValidateCustomName(customName); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 
-		if account == "" {
-			return c.Status(http.StatusOK).JSON(apiError("account is required"))
+		signingMode := model.SigningMode(strings.TrimSpace(c.FormValue("signing_mode")))
+		if signingMode != "" && !signingMode.IsValid() {
+			return c.Status(http.StatusOK).JSON(apiError(fmt.Sprintf("invalid signing_mode: %s", signingMode)))
+		}
+		signingMode = signingMode.OrDefault()
+		var signingIdentityID uint
+		allowMissingEntitlements := false
+		switch signingMode {
+		case model.SigningModeAppleID:
+			if account == "" {
+				return c.Status(http.StatusOK).JSON(apiError("account is required"))
+			}
+			if customIdentifier != "" {
+				return c.Status(http.StatusOK).JSON(apiError("custom_identifier requires an external signing certificate"))
+			}
+		case model.SigningModeExternalCertificate:
+			if account != "" {
+				return c.Status(http.StatusOK).JSON(apiError("account must be empty with an external signing certificate"))
+			}
+			id, err := strconv.ParseUint(strings.TrimSpace(c.FormValue("signing_identity_id")), 10, 64)
+			if err != nil || id == 0 {
+				return c.Status(http.StatusOK).JSON(apiError("signing_identity_id is required"))
+			}
+			if _, err := service.GetSigningIdentity(uint(id)); err != nil {
+				return c.Status(http.StatusOK).JSON(apiSigningError(err))
+			}
+			// The installation is queued: an invalid identifier is refused now.
+			if customIdentifier != "" {
+				if err := appcheck.ValidateBundleIdentifier(customIdentifier); err != nil {
+					return c.Status(http.StatusOK).JSON(apiSigningError(err))
+				}
+			}
+			signingIdentityID = uint(id)
+			allowMissingEntitlements = c.FormValue("allow_missing_entitlements") == "true"
 		}
 
 		var ipaPath string
@@ -546,25 +583,32 @@ func route(fi *fiber.App) {
 		}
 
 		appModel := model.InstalledApp{
-			IpaName:          ipaName,
-			IpaPath:          ipaPath,
-			Device:           selectedDevice.Name,
-			DeviceClass:      selectedDevice.DeviceClass,
-			UDID:             selectedDevice.UDID,
-			Account:          account,
-			Enabled:          true,
-			CustomName:       customName,
-			RemoveExtensions: removeExt,
+			IpaName:                  ipaName,
+			IpaPath:                  ipaPath,
+			Device:                   selectedDevice.Name,
+			DeviceClass:              selectedDevice.DeviceClass,
+			UDID:                     selectedDevice.UDID,
+			Account:                  account,
+			Enabled:                  true,
+			CustomName:               customName,
+			RemoveExtensions:         removeExt,
+			SigningMode:              signingMode,
+			SigningIdentityID:        signingIdentityID,
+			AllowMissingEntitlements: allowMissingEntitlements,
+			CustomIdentifier:         customIdentifier,
 		}
 
 		task.StartInstallApps([]model.InstalledApp{appModel}, true)
 
 		return c.Status(http.StatusOK).JSON(apiSuccess(map[string]interface{}{
-			"status":  "installing",
-			"message": "Install task queued",
-			"device":  selectedDevice.Name,
-			"udid":    selectedDevice.UDID,
-			"account": account,
+			"status":              "installing",
+			"message":             "Install task queued",
+			"device":              selectedDevice.Name,
+			"udid":                selectedDevice.UDID,
+			"account":             account,
+			"signing_mode":        signingMode,
+			"signing_identity_id": signingIdentityID,
+			"custom_identifier":   customIdentifier,
 		}))
 	})
 
@@ -583,6 +627,23 @@ func route(fi *fiber.App) {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 		return c.Status(http.StatusOK).JSON(apiSuccess(preview))
+	})
+
+	api.Post("/sources/download", func(c *fiber.Ctx) error {
+		var req struct {
+			Kind    string `json:"kind"`
+			URL     string `json:"url"`
+			BuildID string `json:"build_id"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument. error: " + err.Error()))
+		}
+
+		ipaFile, err := service.DownloadSourceBuild(req.Kind, req.URL, req.BuildID)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(ipaFile))
 	})
 
 	api.Get("/sources/saved", func(c *fiber.Ctx) error {

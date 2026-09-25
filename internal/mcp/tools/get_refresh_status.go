@@ -24,6 +24,10 @@ type getRefreshStatusItem struct {
 	LastSuccess       bool                 `json:"last_success"`
 	LastErrorCode     model.RefreshedError `json:"last_error_code"`
 	IsExpired         bool                 `json:"is_expired"`
+	SigningMode       model.SigningMode    `json:"signing_mode"`
+	// AutoRefresh is false for apps signed with an external certificate: they
+	// are never refreshed automatically and expire with their signing identity.
+	AutoRefresh bool `json:"auto_refresh"`
 }
 
 type getRefreshStatusOutput struct {
@@ -41,6 +45,8 @@ func registerGetRefreshStatus(server *sdkmcp.Server) {
 		Name: "get_refresh_status",
 		Description: "Get real-time app refresh status. " +
 			"refresh_state is one of: in_progress, completed_success, completed_failed, unknown. " +
+			"last_error_code: 0 none, 1 invalid Apple account, 2 signing identity (certificate or profile) invalid or incompatible, 3 signing failed, 4 device unreachable or installation failed, 99 other. " +
+			"Apps with auto_refresh=false (signing_mode external_certificate) are not refreshed automatically. " +
 			"Use this tool after refresh_app to let AI know current progress and final result.",
 	}, handleGetRefreshStatus)
 }
@@ -69,6 +75,8 @@ func handleGetRefreshStatus(_ context.Context, _ *sdkmcp.CallToolRequest, input 
 			LastSuccess:       app.RefreshedResult,
 			LastErrorCode:     app.RefreshedError,
 			IsExpired:         app.IsExpired(),
+			SigningMode:       app.EffectiveSigningMode(),
+			AutoRefresh:       !app.IsExternalSigning(),
 		}
 
 		switch state {

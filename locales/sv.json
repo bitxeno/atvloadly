@@ -67,6 +67,7 @@
     "toast": {
       "refresh_app_started": "Uppdatering av {{name}} har startat",
       "installing_app": "Installerar {{name}}…",
+      "reinstall_app_started": "Ominstallation av {{name}} har startat",
       "update_started": "Uppgradering av {{name}} till {{version}} har startat",
       "updates_available": "Nya versioner tillgängliga: {{count}}",
       "check_errors": "Källor som inte kunde kontrolleras: {{count}}",
@@ -120,13 +121,24 @@
       "button": {
         "refresh": "Uppdatera",
         "delete": "Ta bort",
+        "reinstall": "Installera om",
         "update": "Uppgradera"
       },
       "tips": {
         "view_log": "Klicka för att visa installationsloggen",
         "account_invalid": "Det finns ett problem med kontot. Kontrollera loggarna och åtgärda felet.",
         "no_data": "Inga uppgifter",
-        "footer": "Som standard uppdateras appar automatiskt mellan kl. 03 och 06 när mindre än ett dygn återstår till utgångsdatumet. Appar som är kopplade till en GitHub- eller AltStore-källa kontrolleras i bakgrunden efter nya versioner; automatiska uppgraderingar installeras under samma tidsperiod."
+        "footer": "Som standard uppdateras appar automatiskt mellan kl. 03 och 06 när mindre än ett dygn återstår till utgångsdatumet. Appar som är kopplade till en GitHub- eller AltStore-källa kontrolleras i bakgrunden efter nya versioner; automatiska uppgraderingar installeras under samma tidsperiod.",
+        "footer_external": "Appar som signerats med ett externt certifikat uppdateras aldrig automatiskt: de slutar fungera när certifikatet eller provisioneringsprofilen går ut. En ominstallation med samma certifikat och profil förlänger inte det datumet: byt profil (eller importera en ny signeringsidentitet om certifikatet går ut först) och installera sedan om appen.",
+        "reinstall_external": "En ominstallation med samma certifikat och provisioneringsprofil förlänger inte giltighetstiden. Byt profil (eller använd en ny signeringsidentitet) och installera sedan om appen för att förlänga den.",
+        "signing_identity_error": "Signeringsidentiteten (certifikat, privat nyckel eller provisioneringsprofil) är ogiltig eller inte kompatibel. Kontrollera loggen och identiteten under Konton.",
+        "signing_error": "Signeringen misslyckades eller den signerade appen klarade inte verifieringen. Se loggen för mer information.",
+        "transport_error": "Det gick inte att nå enheten, eller så avvisade den installationen. Se loggen för mer information."
+      },
+      "signing": {
+        "external_badge": "Externt certifikat",
+        "identity_missing": "Borttagen identitet",
+        "valid_until": "Giltig till {{date}}"
       }
     }
   },
@@ -157,7 +169,8 @@
   },
   "install": {
     "tips": {
-      "warning": "Enheten kommer att efterlikna en MacBook. Ha en iPhone eller annan betrodd enhet till hands när du loggar in med installationskontot, så att du kan ta emot verifieringskoder för tvåfaktorsautentisering."
+      "warning": "Enheten kommer att efterlikna en MacBook. Ha en iPhone eller annan betrodd enhet till hands när du loggar in med installationskontot, så att du kan ta emot verifieringskoder för tvåfaktorsautentisering.",
+      "external": "Läget med externt certifikat signerar med ditt importerade certifikat och din provisioneringsprofil, utan något Apple-ID. Appen är giltig tills certifikatet eller profilen går ut, om inte Apple återkallar certifikatet tidigare; atvloadly kontrollerar inte återkallelse."
     },
     "dialog": {
       "input_pin": {
@@ -207,7 +220,7 @@
           "tips": "AltStore-appar följs via sin paketidentifierare."
         },
         "auto_update": "Installera nya versioner automatiskt",
-        "auto_update_tips": "Nya versioner installeras under tidsintervallet för automatisk appuppdatering, även om appen inte behöver uppdateras än. De signeras med samma konto.",
+        "auto_update_tips": "Nya versioner installeras under tidsintervallet för automatisk appuppdatering, även om appen inte behöver uppdateras än. De signeras med samma konto eller signeringsidentitet.",
         "select_build": "Hämta källan och välj en IPA att installera.",
         "choose_saved_app_tips": "Dina sparade källor innehåller flera appar. Välj den som ska installeras.",
         "saved": {
@@ -226,7 +239,8 @@
         "label": "Välj IPA-fil:"
       },
       "ipa_url": {
-        "label": "IPA-URL:"
+        "label": "IPA-URL:",
+        "external_unavailable": "Signering med externt certifikat kräver en uppladdad IPA-fil eller en källa"
       },
       "account": {
         "label": "Apple-konto:",
@@ -250,7 +264,28 @@
       },
       "extensions": {
         "remove_extensions": "Ta bort tillägg (insticksprogram)",
-        "tips": "Användbart när det inte finns tillräckligt många lediga app-ID:n för registrering"
+        "tips": "Användbart när det inte finns tillräckligt många lediga app-ID:n för registrering",
+        "tips_external": "Tar bort alla apptillägg (widgetar, plugin-program). Som standard behålls tilläggen och signeras med provisioneringsprofilen. Borttagna tillägg visas i kompatibilitetskontrollen."
+      },
+      "signing_mode": {
+        "label": "Signering:"
+      },
+      "identity": {
+        "label": "Signeringsidentitet:",
+        "placeholder": "Välj en signeringsidentitet",
+        "expires": "går ut {{date}}",
+        "manage": "Hantera signeringsidentiteter",
+        "alt": "Appen signeras med det här certifikatet och den här provisioneringsprofilen; inget Apple-ID används.",
+        "empty": "Ingen signeringsidentitet ännu. Importera ett P12-certifikat och en provisioneringsprofil under Konton."
+      },
+      "custom_identifier": {
+        "label": "Anpassat paket-ID:",
+        "placeholder": "IPA-filens paket-ID",
+        "alt": "Lämna tomt för att behålla IPA-filens paket-ID:n. Apptilläggens paket-ID:n följer det anpassade paket-ID:t."
+      },
+      "allow_missing_entitlements": {
+        "label": "Tillåt saknade entitlements",
+        "tips": "Signera även om provisioneringsprofilen inte beviljar vissa entitlements som appen begär. Funktioner som är beroende av dem kanske inte fungerar."
       }
     },
     "login_modal": {
@@ -447,6 +482,9 @@
       "delete_failed": "Kunde inte ta bort kontot",
       "logout_success": "Kontot har loggats ut",
       "logout_failed": "Kunde inte logga ut från kontot"
+    },
+    "heading": {
+      "apple_accounts": "Apple-konton"
     }
   },
   "source_dialog": {
@@ -572,6 +610,187 @@
         "cancel": "Avbryt",
         "confirm": "Skriv över"
       }
+    }
+  },
+  "identity": {
+    "title": "Signeringsidentiteter (externt certifikat)",
+    "subtitle": "P12-certifikat och provisioneringsprofiler som används för att signera appar utan Apple-ID.",
+    "notice": "Signering med ett importerat certifikat kräver inget Apple-ID i atvloadly. Appar kan installeras tills certifikatet eller provisioneringsprofilen går ut; Apple kan ändå återkalla certifikatet tidigare, och atvloadly kontrollerar inte återkallelse.",
+    "button": {
+      "import": "Importera P12",
+      "replace_profile": "Byt profil",
+      "copy": "Kopiera",
+      "copy_fingerprint": "Kopiera SHA-1-fingeravtrycket",
+      "done": "Klar"
+    },
+    "table": {
+      "header": {
+        "identity": "Identitet",
+        "certificate": "Certifikat",
+        "profile": "Provisioneringsprofil",
+        "validity": "Giltighet",
+        "status": "Status"
+      },
+      "empty": "Ingen signeringsidentitet har importerats"
+    },
+    "fields": {
+      "team": "Team",
+      "expires": "Går ut {{date}}",
+      "certificate_validity": "Certifikat: {{from}} → {{to}}",
+      "profile_validity": "Profil: {{from}} → {{to}}",
+      "devices_one": "{{count}} enhet",
+      "devices": "{{count}} enheter",
+      "all_devices": "Alla enheter (enterprise)"
+    },
+    "status": {
+      "in_use": "Används av en pågående installation",
+      "used_by_one": "Används av {{count}} app",
+      "used_by": "Används av {{count}} appar",
+      "unused": "Används inte av någon app"
+    },
+    "import_modal": {
+      "title": "Importera en signeringsidentitet",
+      "name_label": "Namn (valfritt)",
+      "name_placeholder": "Certifikatets namn används som standard",
+      "p12_label": "Certifikat (.p12)",
+      "password_label": "P12-lösenord",
+      "password_placeholder": "Lämna tomt om P12-filen saknar lösenord",
+      "password_tips": "Lösenordet används bara för att dekryptera P12-filen vid importen och sparas aldrig.",
+      "profile_label": "Provisioneringsprofil (.mobileprovision)",
+      "submit": "Importera",
+      "files_required": "Välj en P12-fil och en provisioneringsprofil.",
+      "issues_title": "Identiteten importerades med följande anmärkningar:"
+    },
+    "replace_modal": {
+      "title": "Byt profil för {{name}}",
+      "current": "Nuvarande profil: {{name}}",
+      "tips": "Den nya provisioneringsprofilen måste innehålla identitetens certifikat. Installerade appar behåller sin nuvarande signatur tills de installeras om.",
+      "submit": "Byt"
+    },
+    "dialog": {
+      "delete_confirm": {
+        "title": "Ta bort signeringsidentiteten {{name}}?"
+      },
+      "referenced": {
+        "title": "Identiteten används av installerade appar",
+        "content_one": "{{count}} installerad app använder {{name}}. Efter borttagningen kan den inte längre installeras om med den här identiteten. Ta bort ändå?",
+        "content": "{{count}} installerade appar använder {{name}}. Efter borttagningen kan de inte längre installeras om med den här identiteten. Ta bort ändå?",
+        "confirm": "Ta bort ändå"
+      }
+    },
+    "toast": {
+      "import_success": "Signeringsidentiteten har importerats",
+      "replace_success": "Provisioneringsprofilen har bytts",
+      "delete_success": "Signeringsidentiteten har tagits bort",
+      "copied": "Fingeravtrycket har kopierats",
+      "copy_failed": "Det gick inte att kopiera fingeravtrycket"
+    }
+  },
+  "signing": {
+    "mode": {
+      "apple_id": "Apple-ID",
+      "external_certificate": "Externt certifikat"
+    },
+    "severity": {
+      "error": "Blockerande",
+      "warning": "Varningar",
+      "info": "Information"
+    },
+    "classes": {
+      "identity": "Signeringsidentitet",
+      "signing": "Signering",
+      "transport": "Enhetsanslutning"
+    },
+    "profile_kinds": {
+      "development": "Utveckling",
+      "ad_hoc": "Ad hoc",
+      "enterprise": "Enterprise",
+      "app_store": "App Store"
+    },
+    "plan": {
+      "title": "Kompatibilitetskontroll",
+      "run_check": "Kontrollera igen",
+      "uploading": "Laddar upp IPA-filen för kompatibilitetskontrollen…",
+      "downloading": "Laddar ner IPA-filen från källan för kompatibilitetskontrollen…",
+      "checking": "Kontrollerar IPA-filen, identiteten och enheten…",
+      "check_failed": "Kompatibilitetskontrollen misslyckades",
+      "pending": "Välj en IPA-fil eller en version från en källa och en signeringsidentitet för att kontrollera kompatibiliteten med den här enheten.",
+      "rerun_needed": "Kör kompatibilitetskontrollen för att kunna installera den här IPA-filen.",
+      "blocking": "Installationen är blockerad: åtgärda felen nedan",
+      "ready": "Redo att signera",
+      "bundle_id": "Paket-ID",
+      "application_identifier": "Applikationsidentifierare vid signering",
+      "unchanged": "oförändrat",
+      "removed_extensions": "Borttagna tillägg",
+      "none": "Inga",
+      "device": "Enhet och plattform",
+      "device_ok": "Täcks av profilen",
+      "device_warning": "Täcks, med varningar",
+      "device_problem": "Täcks inte av profilen"
+    },
+    "report": {
+      "title": "Signeringsrapport",
+      "plan": "Använd signeringsplan",
+      "verified": "Den signerade appen har verifierats"
+    },
+    "codes": {
+      "upload_too_large": "Filen är för stor.",
+      "p12_invalid": "Filen är inte en läsbar PKCS#12-fil (.p12).",
+      "p12_wrong_password": "Fel lösenord för P12-filen.",
+      "p12_password_unsupported": "P12-lösenordet innehåller tecken som PKCS#12-filer inte kan använda, till exempel emojier. Exportera P12-filen igen med ett annat lösenord.",
+      "p12_no_private_key": "P12-filen innehåller ingen privat nyckel.",
+      "p12_no_certificate": "P12-filen innehåller inget certifikat som matchar dess privata nyckel.",
+      "p12_key_mismatch": "Den privata nyckeln matchar inte certifikatet.",
+      "p12_ambiguous": "P12-filen innehåller flera identiteter. Exportera ett enda certifikat med dess privata nyckel.",
+      "p12_unsupported": "P12-filen använder ett format, en kryptering eller en nyckeltyp som inte stöds.",
+      "certificate_not_code_signing": "Certifikatet är inte giltigt för kodsignering.",
+      "certificate_expired": "Certifikatet har gått ut.",
+      "certificate_not_yet_valid": "Certifikatet är inte giltigt ännu.",
+      "certificate_no_team": "Certifikatet saknar identifierare för Apple-utvecklarteam.",
+      "revocation_not_checked": "Återkallelse inte kontrollerad",
+      "profile_invalid": "Provisioneringsprofilen är ogiltig eller kan inte läsas.",
+      "profile_signature_invalid": "Provisioneringsprofilen är inte signerad av Apple eller har en ogiltig signatur.",
+      "profile_expired": "Provisioneringsprofilen har gått ut.",
+      "profile_not_installable": "App Store-profiler kan inte användas för att installera appar på enheter.",
+      "profile_certificate_mismatch": "Provisioneringsprofilen innehåller inte det här certifikatet.",
+      "profile_team_mismatch": "Provisioneringsprofilen tillhör ett annat team än certifikatet.",
+      "identity_expiring_soon": "Går snart ut",
+      "identity_duplicate": "Det finns redan en identitet med samma certifikat och provisioneringsprofil.",
+      "identity_not_found": "Signeringsidentiteten finns inte längre.",
+      "identity_in_use": "Signeringsidentiteten används av en pågående installation. Försök igen när den är klar.",
+      "identity_referenced": "Installerade appar använder fortfarande den här signeringsidentiteten.",
+      "key_unavailable": "Den här installationens signeringsnyckel är inte tillgänglig, så den privata nyckeln kan inte låsas upp.",
+      "key_mismatch": "Den privata nyckeln förseglades med en annan signeringsnyckel. Återställ den ursprungliga nyckelfilen eller importera identiteten igen.",
+      "sealed_key_corrupt": "Den sparade privata nyckeln är skadad. Importera identiteten igen.",
+      "workspace_failed": "Den tillfälliga signeringskatalogen kunde inte förberedas.",
+      "device_platform_unknown": "Enhetens plattform är okänd.",
+      "device_unreachable": "Det gick inte att nå enheten.",
+      "profile_platform_mismatch": "Provisioneringsprofilen stöder inte enhetens plattform.",
+      "ipa_platform_mismatch": "Appen är inte byggd för enhetens plattform.",
+      "ipa_platform_unknown": "Det gick inte att avgöra vilken plattform appen är byggd för.",
+      "device_not_provisioned": "Enheten finns inte med i provisioneringsprofilen.",
+      "ipa_invalid": "IPA-filen är ogiltig eller kan inte läsas.",
+      "ipa_path_rejected": "IPA-filen är inte en uppladdad eller installerad IPA. Ladda upp den igen.",
+      "nested_bundles_not_signed": "En app som ligger inuti en annan app kan inte signeras med provisioneringsprofilen.",
+      "bundle_identifier_rewritten": "Paket-ID:t ändras till det anpassade paket-ID:t; apptilläggens paket-ID:n följer med.",
+      "extension_removed": "Ett tillägg tas bort från appen.",
+      "application_identifier_mismatch": "Applikationsidentifieraren skulle inte matcha provisioneringsprofilen.",
+      "wildcard_requires_binary_entitlements": "Den körbara filen innehåller inga entitlements, så jokerteckenprofilen kan inte ge den den förväntade applikationsidentifieraren.",
+      "entitlements_missing": "Provisioneringsprofilen beviljar inte vissa entitlements som appen begär.",
+      "entitlement_value_changed": "Vissa entitlements skulle signeras med andra värden än appen begär.",
+      "application_identifier_from_profile": "Det här paketet signeras med provisioneringsprofilens applikationsidentifierare, inte sin egen. Appgrupper, delning av nyckelring, pushnotiser och iCloud kanske inte fungerar.",
+      "custom_identifier_invalid": "Det anpassade paket-ID:t är ogiltigt: använd bara bokstäver, siffror, bindestreck och punkter.",
+      "incompatible": "IPA-filen, provisioneringsprofilen och enheten är inte kompatibla.",
+      "engine_failed": "Signeringsmotorn misslyckades.",
+      "signed_output_missing": "Signeringsmotorn skapade ingen signerad IPA-fil.",
+      "signed_bundles_mismatch": "Den signerade IPA-filen innehåller inte de förväntade apparna och tilläggen.",
+      "signed_bundle_identifier_mismatch": "Ett signerat paket har ett oväntat paket-ID.",
+      "signed_profile_mismatch": "Ett signerat paket innehåller inte identitetens provisioneringsprofil.",
+      "signed_certificate_mismatch": "Ett signerat paket är inte signerat med identitetens certifikat.",
+      "signed_entitlements_invalid": "Ett signerat paket har oväntade entitlements.",
+      "transport_failed": "Det gick inte att nå enheten, eller så avvisade den installationen.",
+      "pairing_record_invalid": "Enhetens parkopplingspost saknas eller kan inte läsas. Parkoppla enheten igen.",
+      "certificate_invalid": "Det sparade certifikatet kan inte läsas. Importera identiteten igen."
     }
   }
 }

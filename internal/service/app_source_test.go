@@ -1,10 +1,13 @@
 package service
 
 import (
+	"archive/zip"
+	"bytes"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"sync/atomic"
@@ -471,6 +474,101 @@ func TestResolveSourceInstall(t *testing.T) {
 	bad.Source = model.AppSource{Kind: "gitlab", URL: u, Filter: "x", BuildID: alpha.ID}
 	if err := ResolveSourceInstall(&bad); err == nil {
 		t.Fatal("unknown kind should fail")
+	}
+}
+
+// An external certificate install from a source signs the IPA the install
+// page downloaded and checked, recording the picked build; a remote IPA path
+// is still replaced by the download URL of the source.
+func TestResolveSourceInstallExternalCertificate(t *testing.T) {
+	dataDir := setTestDataDir(t)
+	u, _ := serveSource(t, testSource)
+	alpha := latestBuild(t, u, "com.example.alpha")
+	downloaded := writeTestFile(t, filepath.Join(dataDir, "tmp", "install_url_1.ipa"))
+	link := model.AppSource{Kind: source.KindAltStore, URL: u, Filter: "com.example.alpha", AutoUpdate: true, BuildID: alpha.ID, FailedBuildID: "client"}
+	want := model.AppSource{
+		Kind: source.KindAltStore, URL: u, Filter: "com.example.alpha", AutoUpdate: true,
+		BuildID: alpha.ID, Version: "2.0", BuildName: "Alpha-2.0.ipa", BuildDate: &alpha.Date,
+	}
+
+	local := model.InstalledApp{IpaPath: downloaded, SigningMode: model.SigningModeExternalCertificate, SigningIdentityID: 1, Source: link}
+	if err := ResolveSourceInstall(&local); err != nil {
+		t.Fatalf("ResolveSourceInstall: %v", err)
+	}
+	if local.IpaPath != downloaded {
+		t.Fatalf("IpaPath = %q, want the downloaded %q", local.IpaPath, downloaded)
+	}
+	assertSource(t, local.Source, want)
+
+	remote := model.InstalledApp{IpaPath: "https://attacker.example/evil.ipa", SigningMode: model.SigningModeExternalCertificate, SigningIdentityID: 1, Source: link}
+	if err := ResolveSourceInstall(&remote); err != nil {
+		t.Fatalf("ResolveSourceInstall: %v", err)
+	}
+	if remote.IpaPath != alpha.DownloadURL {
+		t.Fatalf("IpaPath = %q, want %q", remote.IpaPath, alpha.DownloadURL)
+	}
+	assertSource(t, remote.Source, want)
+}
+
+// A source build downloaded for an external certificate install lands in the
+// upload directory, where the check and the install accept it, and describes
+// the IPA rather than the source listing. An unknown build downloads nothing.
+func TestDownloadSourceBuild(t *testing.T) {
+	dataDir := setTestDataDir(t)
+
+	var buf bytes.Buffer
+	archive := zip.NewWriter(&buf)
+	plist, err := archive.Create("Payload/Fixture.app/Info.plist")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := plist.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict>
+  <key>CFBundleDisplayName</key><string>Fixture TV</string>
+  <key>CFBundleIdentifier</key><string>com.example.fixture</string>
+  <key>CFBundleShortVersionString</key><string>1.2.3</string>
+  <key>CFBundleSupportedPlatforms</key><array><string>AppleTVOS</string></array>
+</dict></plist>`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := archive.Close(); err != nil {
+		t.Fatal(err)
+	}
+	var ipaRequests int32
+	ipaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&ipaRequests, 1)
+		_, _ = w.Write(buf.Bytes())
+	}))
+	t.Cleanup(ipaServer.Close)
+
+	u, _ := serveSource(t, fmt.Sprintf(`{"name":"Test source","apps":[
+	{"name":"Listed","bundleIdentifier":"com.example.listed","versions":[
+		{"version":"9.9","date":"2026-09-20T10:00:00Z","downloadURL":%q,"size":100}
+	]}
+]}`, ipaServer.URL+"/dl/Fixture.ipa"))
+	build := latestBuild(t, u, "com.example.listed")
+
+	got, err := DownloadSourceBuild(source.KindAltStore, " "+u+" ", build.ID)
+	if err != nil {
+		t.Fatalf("DownloadSourceBuild: %v", err)
+	}
+	if filepath.Dir(got.Path) != filepath.Join(dataDir, "tmp") {
+		t.Fatalf("path %q is not in the upload directory", got.Path)
+	}
+	if _, err := ResolveClientIPAPath(got.Path); err != nil {
+		t.Fatalf("ResolveClientIPAPath(%q): %v", got.Path, err)
+	}
+	if got.Name != "Fixture TV" || got.BundleIdentifier != "com.example.fixture" || got.Version != "1.2.3" {
+		t.Fatalf("ipa file = %+v", got)
+	}
+
+	for _, id := range []string{"unknown", ""} {
+		if _, err := DownloadSourceBuild(source.KindAltStore, u, id); err == nil {
+			t.Fatalf("build %q should not be found", id)
+		}
+	}
+	if n := atomic.LoadInt32(&ipaRequests); n != 1 {
+		t.Fatalf("the IPA was requested %d times, want 1", n)
 	}
 }
 
