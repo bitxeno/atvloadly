@@ -15,21 +15,56 @@ func TestShouldUseRefreshMode(t *testing.T) {
 		t.Fatal("new app install should neither use refresh mode nor be an update")
 	}
 
-	newURLApp := model.InstalledApp{IpaPath: "https://example.com/app.ipa"}
+	newURLApp := model.InstalledApp{
+		IpaPath:     "https://example.com/app.ipa",
+		DeviceClass: string(model.DeviceClassiPhone),
+	}
 	if shouldUseRefreshMode(newURLApp) || isSourceUpdate(newURLApp) {
 		t.Fatal("new app install from a URL should neither use refresh mode nor be an update")
 	}
 
-	existingApp := model.InstalledApp{IpaPath: "/data/ipa/1/app.ipa"}
-	existingApp.ID = 1
-	if !shouldUseRefreshMode(existingApp) || isSourceUpdate(existingApp) {
-		t.Fatal("existing app refresh should use refresh mode")
+	iPhoneApp := model.InstalledApp{
+		IpaPath:     "/data/ipa/1/app.ipa",
+		DeviceClass: string(model.DeviceClassiPhone),
+	}
+	iPhoneApp.ID = 1
+	if !shouldUseRefreshMode(iPhoneApp) || isSourceUpdate(iPhoneApp) {
+		t.Fatal("existing iPhone app should use profile-only refresh mode")
 	}
 
-	updatedApp := model.InstalledApp{IpaPath: "https://github.com/owner/repo/releases/download/v2/App.ipa"}
-	updatedApp.ID = 1
+	iPadApp := model.InstalledApp{
+		IpaPath:     "/data/ipa/2/app.ipa",
+		DeviceClass: string(model.DeviceClassiPad),
+	}
+	iPadApp.ID = 2
+	if !shouldUseRefreshMode(iPadApp) || isSourceUpdate(iPadApp) {
+		t.Fatal("existing iPad app should use profile-only refresh mode")
+	}
+
+	appleTVApp := model.InstalledApp{
+		IpaPath:     "/data/ipa/3/app.ipa",
+		DeviceClass: string(model.DeviceClassAppleTV),
+	}
+	appleTVApp.ID = 3
+	if shouldUseRefreshMode(appleTVApp) || isSourceUpdate(appleTVApp) {
+		t.Fatal("existing Apple TV app should use the full signing/install path")
+	}
+
+	updatedApp := model.InstalledApp{
+		IpaPath:     "https://github.com/owner/repo/releases/download/v2/App.ipa",
+		DeviceClass: string(model.DeviceClassAppleTV),
+	}
+	updatedApp.ID = 4
 	if shouldUseRefreshMode(updatedApp) || !isSourceUpdate(updatedApp) {
 		t.Fatal("installing a new build of an existing app should sign it again")
+	}
+
+	unknownDevice := model.InstalledApp{
+		IpaPath: "/data/ipa/5/app.ipa",
+	}
+	unknownDevice.ID = 5
+	if shouldUseRefreshMode(unknownDevice) {
+		t.Fatal("unknown device class should use the safer full signing/install path")
 	}
 }
 
