@@ -72,10 +72,6 @@ func newIdentity(req ImportRequest, sealer *Sealer, now time.Time, roots *x509.C
 	if name == "" {
 		name = sanitizeIdentityName(cert.Subject.CommonName)
 	}
-	teamName := profile.TeamName
-	if teamName == "" && len(cert.Subject.Organization) > 0 {
-		teamName = cert.Subject.Organization[0]
-	}
 	identity := &model.SigningIdentity{
 		Name:                    name,
 		CertificateSHA1:         hex.EncodeToString(sha1Sum[:]),
@@ -85,17 +81,17 @@ func newIdentity(req ImportRequest, sealer *Sealer, now time.Time, roots *x509.C
 		CertificateNotBefore:    cert.NotBefore,
 		CertificateNotAfter:     cert.NotAfter,
 		TeamID:                  certificateTeamID(cert),
-		TeamName:                teamName,
 		Revision:                1,
 		CertificateDER:          cert.Raw,
 		SealedPrivateKey:        sealed,
 	}
-	setProfile(identity, profile, req.Profile)
+	setProfile(identity, cert, profile, req.Profile)
 	return identity, issues, nil
 }
 
 // ReplaceProfile validates profileData against the identity certificate and
-// returns a copy with every profile field replaced and Revision incremented.
+// returns a copy with every profile field, including the team name, replaced
+// and Revision incremented.
 func ReplaceProfile(identity model.SigningIdentity, profileData []byte, now time.Time) (*model.SigningIdentity, []Issue, error) {
 	roots, err := appleRootPool()
 	if err != nil {
@@ -118,7 +114,7 @@ func replaceProfile(identity model.SigningIdentity, profileData []byte, now time
 		return nil, nil, err
 	}
 	updated := identity
-	setProfile(&updated, profile, profileData)
+	setProfile(&updated, cert, profile, profileData)
 	updated.Revision = identity.Revision + 1
 	return &updated, issues, nil
 }
@@ -148,8 +144,13 @@ func IdentityStatus(identity model.SigningIdentity, now time.Time) []Issue {
 	return ValidateIdentity(cert, profile, now)
 }
 
-// setProfile copies the metadata and raw bytes of a verified profile into identity.
-func setProfile(identity *model.SigningIdentity, profile *model.MobileProvisioningProfile, data []byte) {
+// setProfile copies the metadata and raw bytes of a verified profile into
+// identity, with the team name it derives from the profile and cert.
+func setProfile(identity *model.SigningIdentity, cert *x509.Certificate, profile *model.MobileProvisioningProfile, data []byte) {
+	identity.TeamName = profile.TeamName
+	if identity.TeamName == "" && len(cert.Subject.Organization) > 0 {
+		identity.TeamName = cert.Subject.Organization[0]
+	}
 	identity.ProfileUUID = profile.UUID
 	identity.ProfileName = profile.Name
 	identity.ProfileAppIDName = profile.AppIDName

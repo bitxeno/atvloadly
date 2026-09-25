@@ -308,7 +308,10 @@ export default {
     return request({
       url: "/api/sources/download",
       method: "post",
-      timeout: 600000,
+      // Longer than the server's 60-minute download limit (http.Client
+      // Timeout in internal/ipa/download.go), so the page shows the server's
+      // result or error instead of a client timeout that orphans the download.
+      timeout: 65 * 60 * 1000,
       silent: true,
       data,
     });

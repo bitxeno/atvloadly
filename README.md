@@ -101,7 +101,7 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
 
 ### External certificate (P12) signing
 
-If you already own a code signing certificate, you can import its `.p12` (with its password, which may be empty) and a matching `.mobileprovision` profile (a **tvOS** profile listing the Apple TV UDID for an Apple TV), then choose **External certificate** on the install page. No Apple ID is asked for or used. Apps signed this way are not refreshed automatically and a reinstall does not extend their validity: the expiry is the earlier of the certificate and profile expiries. They can be installed from and track a source (GitHub releases or AltStore), their updates being signed with the same identity.
+If you already own a code signing certificate, you can import its `.p12` (with its password, which may be empty) and a matching `.mobileprovision` profile (a **tvOS** profile listing the Apple TV UDID for an Apple TV), then choose **External certificate** on the install page. No Apple ID is asked for or used. Apps signed this way are not refreshed automatically: they expire at the earlier of the certificate and profile expiries, and reinstalling with the same certificate and profile does not extend that date. After replacing the profile (or with a new identity), reinstall or update the app to apply the new expiry. They can be installed from and track a source (GitHub releases or AltStore), their updates being signed with the same identity.
 
 The private keys are stored encrypted with a deployment key file (`signing.key_file`, default `/data/keys/signing-identity.key`): back it up together with the database. atvloadly has no authentication, so keep it on a trusted network.
 

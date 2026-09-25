@@ -161,7 +161,7 @@
               <input
                 id="atv-identity-name"
                 type="text"
-                maxlength="128"
+                maxlength="100"
                 class="input input-bordered w-full"
                 :placeholder="$t('identity.import_modal.name_placeholder')"
                 v-model="importModal.name"
@@ -187,7 +187,7 @@
               <input
                 id="atv-identity-password"
                 type="password"
-                autocomplete="off"
+                autocomplete="new-password"
                 class="input input-bordered w-full"
                 :placeholder="$t('identity.import_modal.password_placeholder')"
                 v-model="importModal.password"
@@ -509,7 +509,9 @@ export default {
         modal.result = res.data || {};
         toast.success(this.$t("identity.toast.import_success"));
         this.fetchIdentities();
-        if ((modal.result.status || []).length === 0) {
+        // Informational notes alone, such as the unchecked revocation that
+        // the page notice already shows, need no findings screen.
+        if (!(modal.result.status || []).some((issue) => normalizeSeverity(issue?.severity) !== "info")) {
           this.closeImportModal();
         }
       } catch (err) {
@@ -546,7 +548,7 @@ export default {
         modal.result = res.data || {};
         toast.success(this.$t("identity.toast.replace_success"));
         this.fetchIdentities();
-        if ((modal.result.status || []).length === 0) {
+        if (!(modal.result.status || []).some((issue) => normalizeSeverity(issue?.severity) !== "info")) {
           this.closeReplaceModal();
         }
       } catch (err) {

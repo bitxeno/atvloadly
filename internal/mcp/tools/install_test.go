@@ -14,15 +14,18 @@ func TestInstallAppRefusesUnusableCustomIdentifier(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    installAppInput
+		wantErr  string
 		wantCode string
 	}{
 		{
-			name:  "apple id",
-			input: installAppInput{IpaURL: "https://example.com/App.ipa", AccountID: "account", CustomIdentifier: "com.example.custom"},
+			name:    "apple id",
+			input:   installAppInput{IpaURL: "https://example.com/App.ipa", AccountID: "account", CustomIdentifier: "com.example.custom"},
+			wantErr: "custom_identifier requires signing_identity_id",
 		},
 		{
-			name:  "no signing choice",
-			input: installAppInput{IpaURL: "https://example.com/App.ipa", CustomIdentifier: "com.example.custom"},
+			name:    "no signing choice",
+			input:   installAppInput{IpaURL: "https://example.com/App.ipa", CustomIdentifier: "com.example.custom"},
+			wantErr: "custom_identifier requires signing_identity_id",
 		},
 		{
 			name:     "invalid identifier",
@@ -38,6 +41,9 @@ func TestInstallAppRefusesUnusableCustomIdentifier(t *testing.T) {
 			}
 			if signing.CodeOf(err) != tt.wantCode {
 				t.Fatalf("signing code = %q, want %q (%v)", signing.CodeOf(err), tt.wantCode, err)
+			}
+			if !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("tool error %q does not contain %q", err, tt.wantErr)
 			}
 			if tt.wantCode != "" && !strings.HasPrefix(err.Error(), tt.wantCode+": ") {
 				t.Fatalf("tool error %q does not start with its code", err)

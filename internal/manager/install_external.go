@@ -24,7 +24,7 @@ type ExternalSigning struct {
 	ProfilePath     string
 	// OutputPath receives the signed IPA; the engine writes it after installing.
 	OutputPath string
-	// CustomIdentifier is passed as --custom-identifier when not empty.
+	// CustomIdentifier is passed as --custom-identifier=<id> when not empty.
 	CustomIdentifier string
 	// PairingFile is the remote pairing record of an RSD device. Empty selects
 	// the device record of the atvloadly data directory.
@@ -143,14 +143,17 @@ func buildExternalInstallArgs(opts InstallOptions) []string {
 	} else {
 		args = []string{"sign", "--package", opts.IpaPath, "--pem", ext.CertificatePath, ext.PrivateKeyPath, "--provision", ext.ProfilePath, "--register-and-install", "--udid", opts.UDID, "--output", ext.OutputPath}
 	}
+	// User values are attached to their flag: clap reads a separate value
+	// starting with '-' as a flag (plumesign v2.2.3-patch.5 rejects
+	// "--custom-identifier -.-" with "error: unexpected argument", exit 2).
 	if ext.CustomIdentifier != "" {
-		args = append(args, "--custom-identifier", ext.CustomIdentifier)
+		args = append(args, "--custom-identifier="+ext.CustomIdentifier)
 	}
 	if opts.RemoveExtensions {
 		args = append(args, "--remove-extensions")
 	}
 	if opts.CustomName != "" {
-		args = append(args, "--custom-name", opts.CustomName)
+		args = append(args, "--custom-name="+opts.CustomName)
 	}
 	return args
 }

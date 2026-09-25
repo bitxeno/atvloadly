@@ -58,6 +58,9 @@ const (
 	CodeP12KeyMismatch   = "p12_key_mismatch"
 	CodeP12Ambiguous     = "p12_ambiguous"
 	CodeP12Unsupported   = "p12_unsupported"
+	// CodeP12PasswordUnsupported: the password contains characters that a
+	// PKCS#12 password cannot encode (outside the Unicode BMP, such as emoji).
+	CodeP12PasswordUnsupported = "p12_password_unsupported"
 
 	CodeCertificateNotCodeSigning = "certificate_not_code_signing"
 	CodeCertificateExpired        = "certificate_expired"

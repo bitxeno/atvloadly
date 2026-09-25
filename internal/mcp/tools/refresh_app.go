@@ -3,9 +3,12 @@ package tools
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/bitxeno/atvloadly/internal/log"
+	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/service"
+	"github.com/bitxeno/atvloadly/internal/signing"
 	"github.com/bitxeno/atvloadly/internal/task"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -21,18 +24,22 @@ type refreshAppOutput struct {
 	Message      string `json:"message"`
 }
 
+// expiryLayout formats the dates reported to the agent.
+const expiryLayout = "2006-01-02 15:04:05 MST"
+
 // externalRefreshNote explains what refreshing an app signed with an external
-// certificate does.
-const externalRefreshNote = "Apps signed with an external certificate are reinstalled with the same signing identity: " +
-	"this does not extend their validity, which ends with the certificate or provisioning profile. " +
-	"Replace the provisioning profile or import a new signing identity to extend it."
+// certificate does to its validity.
+const externalRefreshNote = "Refreshing an app signed with an external certificate reinstalls it with the current certificate and provisioning profile of its signing identity: " +
+	"the app then stays valid until the identity expires (the earlier of the certificate and profile expiry). " +
+	"With an unchanged certificate and profile, a reinstall does not extend its validity. " +
+	"To extend it, replace the provisioning profile of the identity and refresh the app, or import a new signing identity and install the app with it."
 
 func registerRefreshApp(server *sdkmcp.Server) {
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name: "refresh_app",
 		Description: "Queue app refresh tasks. " +
 			"If app_id is provided, refresh that app. " +
-			"If app_id is omitted, refresh all expired enabled apps signed with an Apple account. " +
+			"If app_id is omitted, refresh all expired enabled apps signed with an Apple account; expired apps signed with an external certificate are skipped. " +
 			externalRefreshNote + " " +
 			"Call get_refresh_status to check in_progress/completed results.",
 	}, handleRefreshApp)
@@ -45,15 +52,15 @@ func handleRefreshApp(_ context.Context, _ *sdkmcp.CallToolRequest, input refres
 			return nil, refreshAppOutput{}, err
 		}
 
-		task.RefreshApp(*app)
-		log.Infof("MCP refresh_app queued app id=%d name=%s", app.ID, app.IpaName)
 		message := "App refresh task queued."
 		if app.IsExternalSigning() {
-			message = "App reinstall task queued. " + externalRefreshNote
-			if app.ExpirationDate != nil {
-				message += fmt.Sprintf(" The app stays valid until %s.", app.ExpirationDate.Format("2006-01-02 15:04:05 MST"))
+			message, err = externalReinstallMessage(*app, time.Now())
+			if err != nil {
+				return nil, refreshAppOutput{}, err
 			}
 		}
+		task.RefreshApp(*app)
+		log.Infof("MCP refresh_app queued app id=%d name=%s", app.ID, app.IpaName)
 		return nil, refreshAppOutput{
 			Mode:         "single",
 			QueuedCount:  1,
@@ -88,7 +95,10 @@ func handleRefreshApp(_ context.Context, _ *sdkmcp.CallToolRequest, input refres
 	log.Infof("MCP refresh_app queued=%d skipped=%d", queued, skipped)
 	message := "Expired app refresh tasks queued."
 	if skippedExternal > 0 {
-		message += fmt.Sprintf(" %d expired app(s) signed with an external certificate were skipped. %s Refresh them with app_id to reinstall them.", skippedExternal, externalRefreshNote)
+		message += fmt.Sprintf(" %d expired app(s) signed with an external certificate were skipped: they expire with their signing identity, "+
+			"so reinstalling one succeeds only once that identity is valid again. "+
+			"Replace the provisioning profile of the identity and then refresh the app with app_id, "+
+			"or import a new signing identity and install the app with it.", skippedExternal)
 	}
 	return nil, refreshAppOutput{
 		Mode:         "expired_all",
@@ -96,4 +106,38 @@ func handleRefreshApp(_ context.Context, _ *sdkmcp.CallToolRequest, input refres
 		SkippedCount: skipped,
 		Message:      message,
 	}, nil
+}
+
+// externalReinstallMessage describes the queued reinstall of an app signed
+// with an external certificate. The reinstall signs with the current
+// certificate and profile of the identity, so the app gets the current expiry
+// of the identity; it fails when the identity is missing or expired at now.
+func externalReinstallMessage(app model.InstalledApp, now time.Time) (string, error) {
+	identity, err := service.GetSigningIdentity(app.SigningIdentityID)
+	if signing.CodeOf(err) == signing.CodeIdentityNotFound {
+		return fmt.Sprintf("App reinstall task queued, but it will fail: signing identity %d of the app no longer exists. "+
+			"Import a new signing identity and install the app with it.", app.SigningIdentityID), nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("load signing identity %d of app %d: %w", app.SigningIdentityID, app.ID, err)
+	}
+
+	if now.After(identity.CertificateNotAfter) {
+		return fmt.Sprintf("App reinstall task queued, but it will fail: the certificate of its signing identity expired on %s. "+
+			"Import a new signing identity and install the app with it.", identity.CertificateNotAfter.Format(expiryLayout)), nil
+	}
+	if now.After(identity.ProfileExpirationDate) {
+		return fmt.Sprintf("App reinstall task queued, but it will fail: the provisioning profile of its signing identity expired on %s. "+
+			"Replace the provisioning profile of the identity and then refresh the app again, "+
+			"or import a new signing identity and install the app with it.", identity.ProfileExpirationDate.Format(expiryLayout)), nil
+	}
+
+	expiry := identity.ExpiresAt()
+	message := fmt.Sprintf("App reinstall task queued. It signs the app with the current certificate and provisioning profile of its signing identity, "+
+		"so the app then stays valid until %s.", expiry.Format(expiryLayout))
+	if app.ExpirationDate != nil && !expiry.After(*app.ExpirationDate) {
+		message += " This does not extend its validity: replace the provisioning profile of the identity, " +
+			"or import a new signing identity and install the app with it, to extend it."
+	}
+	return message, nil
 }

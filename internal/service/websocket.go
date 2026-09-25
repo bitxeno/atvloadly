@@ -236,14 +236,25 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 
 // runExternalInstallMessage signs and installs v with its external signing
 // identity. A failure is recorded on the previous record of the same app, if
-// any; a first installation that fails creates no record. Only the upload
-// files of v are cleaned up.
+// any; a first installation that fails creates no record, and a request
+// cancelled by the install page records nothing. Only the upload files of v
+// are cleaned up.
 func runExternalInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.InstallManager, v model.InstalledApp, dev *model.Device) {
 	defer CleanExternalUpload(v.IpaPath, v.Icon)
+	// RunExternalInstall releases its own lease before the record is saved.
+	// DeleteSigningIdentity refuses a delete without force only while a lease
+	// is held or an installed app uses the identity, so this lease covers the
+	// window up to SaveApp.
+	release := signing.AcquireLease(v.SigningIdentityID)
+	defer release()
 
 	result, err := RunExternalInstall(mgr.Context(), installMgr, v, dev, false)
 	if err != nil {
-		recordExternalInstallFailure(v, err)
+		// Leaving the install page closes its socket, which cancels the
+		// request: that is not a failure of the installed app.
+		if mgr.Context().Err() == nil {
+			recordExternalInstallFailure(v, err)
+		}
 		mgr.WriteMessage(fmt.Sprintf("ERROR: %s", err.Error()))
 		mgr.WriteMessage("\n")
 		mgr.WriteMessage("Installation Failed!")

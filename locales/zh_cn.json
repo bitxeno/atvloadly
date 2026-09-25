@@ -67,7 +67,7 @@
         "toast": {
             "refresh_app_started": "已启动刷新 {{name}}",
             "installing_app": "{{name}} 安装中...",
-            "reinstall_app_started": "已开始重新安装 {{name}}。重新安装不会延长有效期。",
+            "reinstall_app_started": "已开始重新安装 {{name}}",
             "update_started": "已开始将 {{name}} 更新到 {{version}}",
             "updates_available": "可用更新：{{count}}",
             "check_errors": "无法检查的来源：{{count}}",
@@ -123,8 +123,8 @@
                 "account_invalid": "帐号存在问题，请查看日志并修正",
                 "no_data": "没有数据",
                 "footer": "默认当app过期时间小于1天时，会在凌晨3～6点钟自动进行刷新操作。关联了 GitHub 或 AltStore 来源的应用会在后台检查新版本，自动更新会在同一时间段内安装。",
-                "footer_external": "使用外部证书签名的应用不会自动刷新：证书或描述文件过期后应用将无法使用。重新安装不会延长该日期，请改为导入新的描述文件或证书。",
-                "reinstall_external": "重新安装不会延长有效期，有效期取决于证书和描述文件。如需延长，请导入新的描述文件或证书。",
+                "footer_external": "使用外部证书签名的应用不会自动刷新：证书或描述文件过期后应用将无法使用。使用相同的证书和描述文件重新安装不会延长该日期：请先替换描述文件（如果证书先过期，则导入新的签名身份），再重新安装应用。",
+                "reinstall_external": "使用相同的证书和描述文件重新安装不会延长有效期。替换描述文件（或使用新的签名身份）后重新安装应用即可延长。",
                 "signing_identity_error": "签名身份（证书、私钥或描述文件）无效或不兼容。请查看日志并在帐号页面检查该身份。",
                 "signing_error": "签名失败，或已签名的应用未通过验证。详情请查看日志。",
                 "transport_error": "无法连接设备，或设备拒绝了安装。详情请查看日志。"
@@ -732,6 +732,7 @@
             "upload_too_large": "文件过大。",
             "p12_invalid": "该文件不是可读取的 PKCS#12（.p12）文件。",
             "p12_wrong_password": "P12 密码错误。",
+            "p12_password_unsupported": "P12 密码包含 PKCS#12 文件无法使用的字符（例如表情符号）。请使用其他密码重新导出 P12。",
             "p12_no_private_key": "P12 文件中没有私钥。",
             "p12_no_certificate": "P12 文件中没有与私钥匹配的证书。",
             "p12_key_mismatch": "私钥与证书不匹配。",

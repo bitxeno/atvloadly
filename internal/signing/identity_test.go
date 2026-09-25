@@ -162,6 +162,7 @@ func TestReplaceProfile(t *testing.T) {
 	next.UUID = "5E0C3A1B-0000-4000-8000-000000000099"
 	next.ProvisionedDevices = []string{"00008110-000000000000003E"}
 	next.ExpirationDate = testProfileExpires.AddDate(0, 1, 0)
+	next.TeamName = "Renamed Team"
 	nextData := f.pki.signProfile(t, next)
 
 	updated, _, err := replaceProfile(*identity, nextData, testNow, f.pki.roots)
@@ -173,6 +174,9 @@ func TestReplaceProfile(t *testing.T) {
 	}
 	if updated.ProfileUUID != next.UUID || updated.ProfileDeviceCount != 1 || !updated.ProfileExpirationDate.Equal(next.ExpirationDate) || !bytes.Equal(updated.ProfileData, nextData) {
 		t.Errorf("profile fields not replaced: %+v", updated)
+	}
+	if updated.TeamName != next.TeamName {
+		t.Errorf("team name = %q, want %q from the replacement profile", updated.TeamName, next.TeamName)
 	}
 	if updated.CertificateSHA256 != identity.CertificateSHA256 || !bytes.Equal(updated.SealedPrivateKey, identity.SealedPrivateKey) {
 		t.Error("certificate or sealed key changed")

@@ -25,6 +25,10 @@ const (
 	sealHeader    = len(sealMagic) + sealKeyIDSize + sealNonceSize
 )
 
+// linkFile publishes a key file; tests replace it to simulate filesystems
+// without hard links.
+var linkFile = os.Link
+
 // Sealer encrypts private keys with AES-256-GCM under the deployment key.
 type Sealer struct {
 	aead  cipher.AEAD
@@ -88,10 +92,11 @@ func readSealKey(path string) ([]byte, error) {
 	return key, nil
 }
 
-// createSealKey writes a new random key file without ever exposing a partial
-// file or replacing a key created concurrently: the key is written to a
-// temporary file of the same directory and hard linked to path, which fails
-// when path already exists.
+// createSealKey writes a new random key file without ever replacing a key
+// created concurrently: the key is written to a temporary file of the same
+// directory and hard linked to path, which fails when path already exists and
+// never exposes a partial file. On filesystems without hard links (vfat,
+// exFAT, some FUSE or SMB mounts) path is created exclusively instead.
 func createSealKey(path string) ([]byte, error) {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -122,7 +127,12 @@ func createSealKey(path string) ([]byte, error) {
 	if err != nil {
 		return nil, Wrap(ClassIdentity, CodeKeyUnavailable, err, "the signing key file cannot be written")
 	}
-	if err := os.Link(tmp.Name(), path); err != nil {
+	err = linkFile(tmp.Name(), path)
+	if errors.Is(err, errors.ErrUnsupported) || errors.Is(err, fs.ErrPermission) {
+		log.Debugf("Hard link of the signing key file failed (%v), creating %s exclusively", err, path)
+		err = writeSealKeyExclusive(path, key)
+	}
+	if err != nil {
 		clear(key)
 		if errors.Is(err, fs.ErrExist) {
 			// Another process published its key first: use that one.
@@ -140,6 +150,31 @@ func createSealKey(path string) ([]byte, error) {
 	}
 	log.Infof("Created signing key file %s", path)
 	return key, nil
+}
+
+// writeSealKeyExclusive creates path holding key and fails with an error
+// matching fs.ErrExist when path already exists. A reader that opens path
+// before the key is fully written rejects it by its size. A partially written
+// file is removed.
+func writeSealKeyExclusive(path string, key []byte) error {
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(key)
+	if err == nil {
+		err = f.Sync()
+	}
+	if closeErr := f.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		if removeErr := os.Remove(path); removeErr != nil && !errors.Is(removeErr, fs.ErrNotExist) {
+			log.Warnf("Could not remove partial signing key file %s: %v", path, removeErr)
+		}
+		return err
+	}
+	return nil
 }
 
 // Seal encrypts plaintext bound to aad.

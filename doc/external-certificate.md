@@ -18,8 +18,9 @@ What this mode is **not**:
   or the profile, the installed apps stop launching. atvloadly does not check
   revocation (see [What is validated](#what-is-validated)).
 - It is not a refresh mechanism. Apps signed with an imported identity are
-  never refreshed automatically and a reinstall does not extend their validity
-  (see [Expiry and reinstall](#expiry-and-reinstall)).
+  never refreshed automatically, and reinstalling them with the same
+  certificate and profile does not extend their validity (see
+  [Expiry and reinstall](#expiry-and-reinstall)).
 
 ## Requirements
 
@@ -78,7 +79,9 @@ At import (and again, at the current time, before every installation):
 
 | Check | Result when it fails |
 |---|---|
-| P12 integrity (MAC) and decryption with the given password. Modern (PBES2/AES) and legacy (RC2/3DES) files are supported; the integrity check is never skipped. | Refused: invalid file, wrong password or unsupported encryption |
+| P12 integrity (MAC) and decryption with the given password. Modern (PBES2/AES) and legacy (RC2/3DES) files are supported. The MAC of a file that has one is always verified; a file without a MAC is accepted only with an empty password, and nothing checks its integrity. | Refused: invalid file, wrong password (any non-empty password for a file without a MAC) or unsupported encryption |
+| Password made only of characters that PKCS#12 can encode (characters of the Unicode Basic Multilingual Plane, which excludes most emoji) | Refused (`p12_password_unsupported`): export the P12 again with another password |
+| Key derivation iteration counts of at most 5,000,000 (MAC and encryption, including the keys stored inside encrypted content), so that a crafted file cannot keep the server busy | Refused as unsupported (`p12_unsupported`) |
 | Exactly one private key and exactly one certificate matching it (CA certificates are ignored) | Refused: missing key, missing certificate, key/certificate mismatch or ambiguous identity |
 | Certificate usable for code signing, inside its validity dates, carrying a team identifier | Refused |
 | Profile CMS signature verified cryptographically; the signer must be Apple's "Apple iPhone OS Provisioning Profile Signing" certificate chaining to the Apple Root CA or Apple Root CA - G3 embedded in atvloadly | Refused |
@@ -203,18 +206,29 @@ Failures are classified:
   device (`pairing_record_invalid`), which is never retried: pair the device
   again.
 
-The install log contains `SIGNING_REPORT: {...}` lines with the plan, the
-failure class and code, and `{"stage":"verified"}` once the audit passed.
+The task log saved with the app (`/apps/<id>/log`) contains
+`SIGNING_REPORT: {...}` lines with the plan, the failure class and code, and
+`{"stage":"verified"}` once the audit passed. The install page does not print
+these lines in its log: it shows the same stages in its **Signing report**
+panel. An installation started from the install page saves its log with the
+app only when it succeeds.
 
 ## Expiry and reinstall
 
-The expiry of an identity, and of every app installed with it, is the earlier
-of the certificate expiry and the profile expiry.
+The expiry of an identity is the earlier of the certificate expiry and the
+profile expiry. Every installation, reinstall or update signs the app with the
+current certificate and profile of its identity, and the expiry of the app
+becomes the expiry of the identity.
 
 Apps installed with an imported identity are **not refreshed automatically**.
-Reinstalling one re-signs it with the same certificate and profile: it does
-**not** extend its validity. To extend it, replace the profile with a newer one
-(or import a new certificate and profile) and then reinstall the app.
+Reinstalling one with the same certificate and profile does **not** extend its
+validity. To extend it:
+
+- replace the profile with a newer one, then reinstall the app. Replacing the
+  profile alone changes nothing on the device: installed apps keep their
+  signature and expiry until they are reinstalled or updated;
+- when the certificate expires first, import a new certificate and profile as
+  a new identity and install the app again with it.
 
 ## Sources and updates
 
@@ -296,8 +310,11 @@ network, or put it behind a reverse proxy that enforces authentication.
 ## REST API
 
 All endpoints answer HTTP 200 with `{code, msg, data}`. Failures have
-`code: -1`, an English `msg` and `data: {code, class, issues, app_count}` where
-`data.code` is a stable code (see `internal/signing/errors.go`).
+`code: -1` and an English `msg`. Signing failures also carry
+`data: {code, class, issues, app_count}`, where `data.code` is a stable code
+(see `internal/signing/errors.go`); `issues` and `app_count` are omitted when
+empty. Request validation errors (malformed JSON, missing form fields or
+files, invalid install parameters) and other failures have `data: null`.
 
 | Endpoint | Input | Result |
 |---|---|---|
@@ -347,9 +364,12 @@ report the steps below separately.
    unless you type a custom bundle identifier), signed application identifier,
    `application_identifier_from_profile` warnings, extensions, entitlements,
    blocking issues.
-5. Install. The log must show the plan report, the engine output
-   (`Signing bundle`, `Installing to device`, `Installation complete!`),
-   `SIGNING_REPORT: {"stage":"verified"}` and `Installation Succeeded!`.
+5. Install. The page log must show the engine output (`Signing bundle`,
+   `Installing to device`, `Installation complete!`) and
+   `Installation Succeeded!`, and the **Signing report** panel must show the
+   signing plan used and "Signed app verified". The raw `SIGNING_REPORT` lines,
+   including `SIGNING_REPORT: {"stage":"verified"}`, only appear in the task
+   log saved with the app (`/apps/<id>/log`).
 6. Launch the app on the Apple TV.
 7. Restart the container and check that the identity is still listed and that
    a reinstall still works (deployment key and database persisted).
@@ -363,9 +383,13 @@ report the steps below separately.
 
 What to report: the atvloadly image tag or commit, the Apple TV model and tvOS
 version, the transport (USB or network), the profile kind and platforms, the
-plan shown before installing, the install log (`/apps/<id>/log`) with its
-`SIGNING_REPORT` lines and whether the app launches. Never send the P12, its
-password, the private key, the deployment key or the provisioning profile; mask
-device UDIDs if you share logs publicly.
+plan shown before installing, the logs described below and whether the app
+launches. For an installation from the install page, copy the page log and
+the **Signing report** panel (a failed attempt saves no log with the app). For
+an installation run as a task (a reinstall from the home page, a manual or
+automatic update), send the task log of the app (`/apps/<id>/log`) with its
+`SIGNING_REPORT` lines. Never send the P12, its password, the private key, the
+deployment key or the provisioning profile; mask device UDIDs if you share logs
+publicly.
 
 The same procedure applies to an iPhone or iPad with an **iOS** profile.

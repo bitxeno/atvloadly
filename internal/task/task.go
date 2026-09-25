@@ -92,6 +92,12 @@ func (t *Task) RunSchedule() error {
 			return err
 		}
 	}
+	// The install page stages uploads and source downloads that only it
+	// releases; an abandoned page leaves them behind.
+	if _, err := t.c.AddFunc("@hourly", removeStaleTempFiles); err != nil {
+		t.c = nil
+		return err
+	}
 
 	t.Start()
 
@@ -123,6 +129,14 @@ func (t *Task) Stop() {
 	t.chExitQueue <- true
 	<-t.c.Stop().Done()
 	t.c = nil
+}
+
+// removeStaleTempFiles removes the staged files abandoned in the upload
+// directory, see service.RemoveStaleTempFiles.
+func removeStaleTempFiles() {
+	if _, err := service.RemoveStaleTempFiles(); err != nil {
+		log.Err(err).Msg("Failed to remove stale staged files")
+	}
 }
 
 func (t *Task) Run() {
@@ -254,6 +268,14 @@ func (t *Task) tryInstallApp(item TaskItem) {
 		return
 	}
 	v := *resolvedApp
+	if v.IsExternalSigning() {
+		// RunExternalInstall releases its own lease before the record is
+		// saved. DeleteSigningIdentity refuses a delete without force only
+		// while a lease is held or an installed app uses the identity, so this
+		// lease covers the window up to the save of the record.
+		release := signing.AcquireLease(v.SigningIdentityID)
+		defer release()
+	}
 	// The downloaded or uploaded files of a new installation or an update,
 	// before SaveApp moves them. A reinstallation uses the files of its record,
 	// which must stay.
@@ -579,7 +601,7 @@ func (t *Task) autoRefreshApps(apps []model.InstalledApp) []model.InstalledApp {
 	refresh, external := selectAutoRefreshApps(apps, app.Settings.Task.AdvanceDays)
 	for _, v := range external {
 		if _, logged := t.ExternalSkipLogged.LoadOrStore(v.ID, true); !logged {
-			log.Warnf("App %s is signed with an external certificate and is not refreshed automatically: reinstalling it does not extend its validity. Replace the provisioning profile or import a new signing identity, then reinstall it.", v.IpaName)
+			log.Warnf("App %s is signed with an external certificate and is not refreshed automatically: reinstalling it with the same certificate and provisioning profile does not extend its validity. Replace the provisioning profile or import a new signing identity, then reinstall it.", v.IpaName)
 		}
 	}
 	return refresh

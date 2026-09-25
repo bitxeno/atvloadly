@@ -37,7 +37,7 @@ require (
 	golang.org/x/text v0.37.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gorm.io/gorm v1.25.7
-	howett.net/plist v1.0.0
+	howett.net/plist v1.0.1
 	software.sslmate.com/src/go-pkcs12 v0.7.3
 )
 
@@ -94,3 +94,10 @@ require (
 )
 
 replace github.com/iineva/bom => github.com/bitxeno/bom v0.0.0-20260823051148-16148bb9e854
+
+// go-pkcs12 v0.7.3 derives keys with whatever iteration count the file asks
+// for, so a tiny P12 can pin a CPU indefinitely. third_party/go-pkcs12 is
+// v0.7.3 plus the patch of SSLMate/go-pkcs12#81, which refuses counts above
+// 5,000,000 in every KDF; drop this replace once a release bounds KDF
+// iterations.
+replace software.sslmate.com/src/go-pkcs12 => ./third_party/go-pkcs12

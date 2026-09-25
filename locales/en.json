@@ -67,7 +67,7 @@
         "toast": {
             "refresh_app_started": "Refresh of {{name}} started",
             "installing_app": "Installing {{name}}…",
-            "reinstall_app_started": "Reinstall of {{name}} started. Reinstalling does not extend the validity date.",
+            "reinstall_app_started": "Reinstall of {{name}} started",
             "update_started": "Update of {{name}} to {{version}} started",
             "updates_available": "Updates available: {{count}}",
             "check_errors": "Sources that could not be checked: {{count}}",
@@ -129,8 +129,8 @@
                 "account_invalid": "There is an issue with the account. Please check logs and fix it.",
                 "no_data": "No data",
                 "footer": "By default, when the app expiration time is less than 1 day, it will automatically refresh between 3-6am. Apps linked to a GitHub or AltStore source are checked for new versions in the background; automatic updates are installed in the same time window.",
-                "footer_external": "Apps signed with an external certificate are never refreshed automatically: they stop working when the certificate or the provisioning profile expires. Reinstalling does not extend this date; import a new profile or certificate instead.",
-                "reinstall_external": "Reinstalling does not extend the validity, which stays bound to the certificate and the provisioning profile. Import a new profile or certificate to extend it.",
+                "footer_external": "Apps signed with an external certificate are never refreshed automatically: they stop working when the certificate or the provisioning profile expires. Reinstalling with the same certificate and profile does not extend this date: replace the profile (or import a new identity when the certificate expires first), then reinstall the app.",
+                "reinstall_external": "Reinstalling with the same certificate and provisioning profile does not extend the validity. After replacing the profile (or with a new identity), reinstall the app to extend it.",
                 "signing_identity_error": "The signing identity (certificate, private key or provisioning profile) is invalid or not compatible. Check the log and the identity in Accounts.",
                 "signing_error": "Signing failed or the signed app did not pass verification. Check the log for details.",
                 "transport_error": "The device could not be reached or rejected the installation. Check the log for details."
@@ -741,6 +741,7 @@
             "upload_too_large": "The file is too large.",
             "p12_invalid": "The file is not a readable PKCS#12 (.p12) file.",
             "p12_wrong_password": "Incorrect P12 password.",
+            "p12_password_unsupported": "The P12 password contains characters that PKCS#12 files cannot use, such as emoji. Export the P12 again with another password.",
             "p12_no_private_key": "The P12 file contains no private key.",
             "p12_no_certificate": "The P12 file contains no certificate matching its private key.",
             "p12_key_mismatch": "The private key does not match the certificate.",

@@ -30,6 +30,8 @@ func testExternalSigning() *ExternalSigning {
 func TestBuildExternalInstallArgs(t *testing.T) {
 	withOptions := testExternalSigning()
 	withOptions.CustomIdentifier = "app.example.signed"
+	withHyphenValues := testExternalSigning()
+	withHyphenValues.CustomIdentifier = "-beta.example.app"
 
 	tests := []struct {
 		name string
@@ -49,7 +51,12 @@ func TestBuildExternalInstallArgs(t *testing.T) {
 		{
 			name: "optional flags",
 			opts: InstallOptions{UDID: "DEVICE", IpaPath: "/data/tmp/app.ipa", CustomName: "My App", RemoveExtensions: true, External: withOptions},
-			want: []string{"sign", "--package", "/data/tmp/app.ipa", "--pem", "/ws/cert.pem", "/ws/key.pem", "--provision", "/ws/profile.mobileprovision", "--register-and-install", "--udid", "DEVICE", "--output", "/ws/signed.ipa", "--custom-identifier", "app.example.signed", "--remove-extensions", "--custom-name", "My App"},
+			want: []string{"sign", "--package", "/data/tmp/app.ipa", "--pem", "/ws/cert.pem", "/ws/key.pem", "--provision", "/ws/profile.mobileprovision", "--register-and-install", "--udid", "DEVICE", "--output", "/ws/signed.ipa", "--custom-identifier=app.example.signed", "--remove-extensions", "--custom-name=My App"},
+		},
+		{
+			name: "values starting with a hyphen",
+			opts: InstallOptions{UDID: "DEVICE", IP: "192.0.2.10", Port: 49152, IpaPath: "/data/tmp/app.ipa", CustomName: "-My App", External: withHyphenValues},
+			want: []string{"sign-rsd", "--package", "/data/tmp/app.ipa", "--pem", "/ws/cert.pem", "/ws/key.pem", "--provision", "/ws/profile.mobileprovision", "--register-and-install", "--ip", "192.0.2.10", "--port", "49152", "--pairing-file", "/pairing/DEVICE.plist", "--udid", "DEVICE", "--output", "/ws/signed.ipa", "--custom-identifier=-beta.example.app", "--custom-name=-My App"},
 		},
 	}
 

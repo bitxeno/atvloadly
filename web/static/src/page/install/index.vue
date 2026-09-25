@@ -123,6 +123,7 @@
                 v-if="installMode === 'file'"
                 type="file"
                 class="file-input file-input-bordered w-full"
+                :disabled="loading"
                 @change="onFileChange"
                 accept=".ipa,.tipa"
                 required
@@ -650,6 +651,9 @@ export default {
     // Source build of the external IPA prepared or being prepared; empty for
     // an uploaded file.
     this.externalIpaKey = "";
+    // Custom name and bundle identifier prefilled from an earlier
+    // installation of the chosen app; empty when nothing was prefilled.
+    this.prefilled = { custom_name: "", custom_identifier: "" };
     this.reportStream = createSigningReportStream();
 
     this.fetchData();
@@ -1021,7 +1025,9 @@ export default {
       this.ipaUrl = "";
       this.sourceInitial = null;
       this.sourceSelection = null;
-      // The external IPA belonged to the inputs of the previous mode.
+      // The external IPA and the values prefilled for it belonged to the
+      // inputs of the previous mode.
+      this.clearPrefilled();
       this.cancelExternalIpa();
     },
     onIpaUrlInput(e) {
@@ -1041,6 +1047,7 @@ export default {
     onSourceSelection(selection) {
       this.sourceSelection = selection;
       this.recommendedAccount = "";
+      this.clearPrefilled();
       if (!selection) {
         if (this.isExternal) {
           this.cancelExternalIpa();
@@ -1074,16 +1081,15 @@ export default {
       if (app) {
         this.recommendedAccount = app.account;
         this.form.account = app.account;
-        if (app.custom_name) {
-          this.form.custom_name = app.custom_name;
-        }
+        this.prefill("custom_name", app.custom_name);
       }
     },
     async onFileChange(e) {
       this.files = e.target.files;
       this.recommendedAccount = "";
       this.recommendedIdentityId = 0;
-      this.discardUploadedIpa();
+      this.clearPrefilled();
+      this.cancelExternalIpa();
       if (this.files.length > 0) {
         const file = this.files[0];
         try {
@@ -1096,6 +1102,10 @@ export default {
 
           for (const entry of plistEntries) {
             const plistData = await zip.files[entry].async("arraybuffer");
+            if (this.files[0] !== file) {
+              // Another file was chosen meanwhile: its own change recommends.
+              return;
+            }
             const bundleId = parseBundleIdFromPlist(plistData);
 
             if (bundleId) {
@@ -1114,9 +1124,7 @@ export default {
                 }
                 this.recommendedAccount = app.account;
                 this.form.account = app.account;
-                if (app.custom_name) {
-                  this.form.custom_name = app.custom_name;
-                }
+                this.prefill("custom_name", app.custom_name);
                 break;
               }
               if (this.recommendedAccount || this.recommendedIdentityId) break;
@@ -1140,13 +1148,28 @@ export default {
       }
       this.recommendedIdentityId = identity.id;
       this.signing.identityId = identity.id;
-      if (app.custom_name) {
-        this.form.custom_name = app.custom_name;
-      }
-      if (app.custom_identifier) {
-        this.form.custom_identifier = app.custom_identifier;
-      }
+      this.prefill("custom_name", app.custom_name);
+      this.prefill("custom_identifier", app.custom_identifier);
       return true;
+    },
+    // prefill sets a form field to the value of an earlier installation of
+    // the same app and remembers it, so that choosing another IPA or build
+    // clears it again.
+    prefill(field, value) {
+      if (value) {
+        this.form[field] = value;
+        this.prefilled[field] = value;
+      }
+    },
+    // clearPrefilled empties the fields that still hold the value prefilled
+    // for the previous IPA or build; a value the user typed stays.
+    clearPrefilled() {
+      for (const field of Object.keys(this.prefilled)) {
+        if (this.prefilled[field] && this.form[field] === this.prefilled[field]) {
+          this.form[field] = "";
+        }
+        this.prefilled[field] = "";
+      }
     },
     validateForm(id) {
       let form = document.querySelector(id);

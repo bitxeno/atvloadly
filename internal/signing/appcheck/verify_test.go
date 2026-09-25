@@ -114,8 +114,15 @@ func TestVerifySignedIPA(t *testing.T) {
 			wantCode: signing.CodeSignedBundleIdentifierMismatch, wantBundle: widgetPath,
 		},
 		{
-			name:     "extra entitlement",
+			name:     "changed entitlement value",
 			mutate:   func(b map[string]*fixtureBundle) { b[mainPath].sig.entitlements["get-task-allow"] = true },
+			wantCode: signing.CodeSignedEntitlementsInvalid, wantBundle: mainPath,
+		},
+		{
+			name: "entitlement missing from the plan",
+			mutate: func(b map[string]*fixtureBundle) {
+				b[mainPath].sig.entitlements["com.apple.developer.icloud-services"] = []any{"CloudKit"}
+			},
 			wantCode: signing.CodeSignedEntitlementsInvalid, wantBundle: mainPath,
 		},
 		{

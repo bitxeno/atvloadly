@@ -6,6 +6,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
+	"encoding/asn1"
 	"strings"
 	"testing"
 
@@ -47,6 +48,15 @@ func TestDecodeP12(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// keyBagPBES2 builds a file whose shrouded key bag is encrypted with
+	// PBES2 using prf and the CBC cipher scheme. go-pkcs12 flattens the
+	// errors of a key bag into plain text.
+	keyBagPBES2 := func(prf, scheme asn1.ObjectIdentifier, iv []byte) []byte {
+		t.Helper()
+		algorithm := testPBES2(t, testPBKDF2(t, prf, testKDFIterations), scheme, iv)
+		return passwordlessPFX(t, testCertBagOf(t, ecLeaf.cert), testShroudedKeyBag(t, algorithm, make([]byte, 32)))
+	}
+
 	tests := []struct {
 		name     string
 		data     []byte
@@ -75,6 +85,10 @@ func TestDecodeP12(t *testing.T) {
 		{"two key bags", passwordlessPFX(t, testCertBagOf(t, ecLeaf.cert), testKeyBag(t, ecKey), testKeyBag(t, otherKey)), "", CodeP12Ambiguous, nil},
 		{"ECDSA P-384 key", encode(pkcs12.Modern2023, p384Key, p384Leaf.cert, nil, password), password, CodeP12Unsupported, nil},
 		{"Ed25519 key", encode(pkcs12.Modern2023, edKey, edLeaf.cert, nil, password), password, CodeP12Unsupported, nil},
+		{"key bag encrypted with PBES2 3DES", keyBagPBES2(oidTestHMACWithSHA256, oidTestDESEDE3CBC, make([]byte, 8)), "", CodeP12Unsupported, nil},
+		{"key bag PBES2 with HMAC-SHA384 PRF", keyBagPBES2(oidTestHMACWithSHA384, oidTestAES256CBC, make([]byte, 16)), "", CodeP12Unsupported, nil},
+		{"undecryptable key bag", keyBagPBES2(oidTestHMACWithSHA256, oidTestAES256CBC, make([]byte, 16)), "", CodeP12Invalid, nil},
+		{"password with emoji", encode(pkcs12.Modern2023, ecKey, ecLeaf.cert, nil, password), password + " 🔑", CodeP12PasswordUnsupported, nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

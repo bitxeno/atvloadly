@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"testing"
 )
 
@@ -171,6 +172,101 @@ func TestLoadOrCreateSealerConcurrentCreation(t *testing.T) {
 	}
 	if len(entries) != 1 {
 		t.Fatalf("key directory holds %d entries, want only the key file", len(entries))
+	}
+}
+
+// withLinkFile replaces the hard link call of createSealKey for one test.
+func withLinkFile(t *testing.T, link func(oldname, newname string) error) {
+	t.Helper()
+	saved := linkFile
+	linkFile = link
+	t.Cleanup(func() { linkFile = saved })
+}
+
+// Filesystems without hard links (vfat, exFAT, some FUSE or SMB mounts) fail
+// link(2) with EPERM or EOPNOTSUPP: the key file is created directly instead.
+func TestLoadOrCreateSealerWithoutHardLinks(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+	}{
+		{"EPERM", syscall.EPERM},
+		{"EOPNOTSUPP", syscall.EOPNOTSUPP},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withLinkFile(t, func(oldname, newname string) error {
+				return &os.LinkError{Op: "link", Old: oldname, New: newname, Err: tt.err}
+			})
+			keyFile := filepath.Join(t.TempDir(), "keys", "signing-identity.key")
+			sealer, err := LoadOrCreateSealer(keyFile)
+			if err != nil {
+				t.Fatal(err)
+			}
+			info, err := os.Stat(keyFile)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := info.Mode().Perm(); got != 0o600 {
+				t.Errorf("key file mode = %04o, want 0600", got)
+			}
+			if info.Size() != sealKeySize {
+				t.Errorf("key file size = %d, want %d", info.Size(), sealKeySize)
+			}
+			entries, err := os.ReadDir(filepath.Dir(keyFile))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(entries) != 1 {
+				t.Errorf("key directory holds %d entries, want only the key file", len(entries))
+			}
+
+			aad := IdentityAAD("abc123")
+			blob, err := sealer.Seal([]byte("private key"), aad)
+			if err != nil {
+				t.Fatal(err)
+			}
+			reloaded, err := LoadOrCreateSealer(keyFile)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := reloaded.Open(blob, aad); err != nil {
+				t.Fatalf("reloaded sealer cannot open a blob of the creating sealer: %v", err)
+			}
+		})
+	}
+}
+
+// Without hard links, a key file another creator published first is kept and
+// used.
+func TestLoadOrCreateSealerWithoutHardLinksKeepsConcurrentKey(t *testing.T) {
+	other := bytes.Repeat([]byte{7}, sealKeySize)
+	withLinkFile(t, func(oldname, newname string) error {
+		// The other creator wins between the link attempt and the fallback.
+		if err := os.WriteFile(newname, other, 0o600); err != nil {
+			return err
+		}
+		return &os.LinkError{Op: "link", Old: oldname, New: newname, Err: syscall.EPERM}
+	})
+	keyFile := filepath.Join(t.TempDir(), "signing-identity.key")
+	sealer, err := LoadOrCreateSealer(keyFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, err := os.ReadFile(keyFile); err != nil || !bytes.Equal(got, other) {
+		t.Fatalf("key file = %x (%v), want the concurrently created key", got, err)
+	}
+	otherSealer, err := newSealer(other)
+	if err != nil {
+		t.Fatal(err)
+	}
+	aad := IdentityAAD("abc123")
+	blob, err := sealer.Seal([]byte("private key"), aad)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := otherSealer.Open(blob, aad); err != nil {
+		t.Fatalf("sealer does not use the concurrently created key: %v", err)
 	}
 }
 

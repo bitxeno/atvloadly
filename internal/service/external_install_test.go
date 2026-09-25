@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	conf "github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/db"
 	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/signing"
@@ -66,6 +67,8 @@ func TestResolveClientIPAPath(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Traversal inputs are concatenated: filepath.Join would clean the ".."
+	// away before ResolveClientIPAPath sees it.
 	tests := []struct {
 		name string
 		path string
@@ -74,12 +77,12 @@ func TestResolveClientIPAPath(t *testing.T) {
 		{name: "uploaded file", path: uploaded, want: uploaded},
 		{name: "installed app file", path: installed, want: installed},
 		{name: "symlink to an installed app", path: symlinkInside, want: installed},
-		{name: "relative traversal is cleaned inside", path: filepath.Join(dataDir, "ipa", "3", "..", "3", "app.ipa"), want: installed},
+		{name: "traversal that stays inside ipa", path: dataDir + "/ipa/3/../3/app.ipa", want: installed},
 		{name: "empty path", path: ""},
 		{name: "outside the data directory", path: secret},
 		{name: "data directory file outside tmp and ipa", path: dataFile},
-		{name: "traversal out of tmp", path: filepath.Join(dataDir, "tmp", "..", "atvloadly.db")},
-		{name: "traversal out of the data directory", path: filepath.Join(dataDir, "ipa", "..", "..", filepath.Base(outside), "secret.ipa")},
+		{name: "traversal out of tmp", path: dataDir + "/tmp/../atvloadly.db"},
+		{name: "traversal out of the data directory", path: dataDir + "/ipa/../../" + filepath.Base(outside) + "/secret.ipa"},
 		{name: "symlinked file escaping tmp", path: symlinkEscape},
 		{name: "symlinked directory escaping ipa", path: filepath.Join(dirEscape, "secret.ipa")},
 		{name: "allowed directory itself", path: filepath.Join(dataDir, "tmp")},
@@ -192,16 +195,20 @@ func TestSaveAppKeepsSigningModesApart(t *testing.T) {
 		return app
 	}
 
+	// historical stores the existing record with a NULL signing mode, as
+	// AutoMigrate leaves the rows created before the column existed.
 	tests := []struct {
-		name      string
-		existing  model.InstalledApp
-		saved     model.InstalledApp
-		wantMerge bool
+		name       string
+		existing   model.InstalledApp
+		historical bool
+		saved      model.InstalledApp
+		wantMerge  bool
 	}{
 		{name: "apple id reinstall", existing: appleID(model.SigningModeAppleID), saved: appleID(model.SigningModeAppleID), wantMerge: true},
-		{name: "apple id reinstall of a historical row", existing: appleID(""), saved: appleID(""), wantMerge: true},
+		{name: "apple id reinstall of a historical row", existing: appleID(""), historical: true, saved: appleID(""), wantMerge: true},
 		{name: "external reinstall with the same identity", existing: external(1), saved: external(1), wantMerge: true},
 		{name: "external install over an apple id row", existing: appleID(""), saved: external(1)},
+		{name: "external install over a historical row", existing: appleID(""), historical: true, saved: external(1)},
 		{name: "apple id install over an external row", existing: external(1), saved: appleID(model.SigningModeAppleID)},
 		{name: "external install with another identity", existing: external(1), saved: external(2)},
 		{name: "external reinstall under the same custom identifier", existing: customized(external(1), bundleID, "app.custom"), saved: customized(external(1), bundleID, "app.custom"), wantMerge: true},
@@ -215,6 +222,11 @@ func TestSaveAppKeepsSigningModesApart(t *testing.T) {
 			existing, err := SaveApp(tt.existing)
 			if err != nil {
 				t.Fatalf("save existing: %v", err)
+			}
+			if tt.historical {
+				if err := db.Store().Exec("UPDATE installed_apps SET signing_mode = NULL WHERE id = ?", existing.ID).Error; err != nil {
+					t.Fatalf("clear signing mode: %v", err)
+				}
 			}
 			saved, err := SaveApp(tt.saved)
 			if err != nil {

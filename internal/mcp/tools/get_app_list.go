@@ -44,7 +44,8 @@ func registerGetAppList(server *sdkmcp.Server) {
 		Description: "Get all apps. " +
 			"Set only_expired=true to return only expired apps. " +
 			"Expired means ExpirationDate is before now. " +
-			"signing_mode is apple_id or external_certificate; auto_refresh=false apps (external_certificate) are not refreshed automatically and a refresh reinstalls them without extending their validity. " +
+			"signing_mode is apple_id or external_certificate; auto_refresh=false apps (external_certificate) are not refreshed automatically and expire with their signing identity. " +
+			externalRefreshNote + " " +
 			"Call refresh_app with app_id to refresh an app or Call refresh_app without app_id to refresh all apps.",
 	}, handleGetAppList)
 }

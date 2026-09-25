@@ -67,7 +67,7 @@
     "toast": {
       "refresh_app_started": "Uppdatering av {{name}} har startat",
       "installing_app": "Installerar {{name}}…",
-      "reinstall_app_started": "Ominstallation av {{name}} har startat. En ominstallation förlänger inte giltighetstiden.",
+      "reinstall_app_started": "Ominstallation av {{name}} har startat",
       "update_started": "Uppgradering av {{name}} till {{version}} har startat",
       "updates_available": "Nya versioner tillgängliga: {{count}}",
       "check_errors": "Källor som inte kunde kontrolleras: {{count}}",
@@ -129,8 +129,8 @@
         "account_invalid": "Det finns ett problem med kontot. Kontrollera loggarna och åtgärda felet.",
         "no_data": "Inga uppgifter",
         "footer": "Som standard uppdateras appar automatiskt mellan kl. 03 och 06 när mindre än ett dygn återstår till utgångsdatumet. Appar som är kopplade till en GitHub- eller AltStore-källa kontrolleras i bakgrunden efter nya versioner; automatiska uppgraderingar installeras under samma tidsperiod.",
-        "footer_external": "Appar som signerats med ett externt certifikat uppdateras aldrig automatiskt: de slutar fungera när certifikatet eller provisioneringsprofilen går ut. En ominstallation förlänger inte det datumet; importera i stället en ny profil eller ett nytt certifikat.",
-        "reinstall_external": "En ominstallation förlänger inte giltighetstiden, som styrs av certifikatet och provisioneringsprofilen. Importera en ny profil eller ett nytt certifikat för att förlänga den.",
+        "footer_external": "Appar som signerats med ett externt certifikat uppdateras aldrig automatiskt: de slutar fungera när certifikatet eller provisioneringsprofilen går ut. En ominstallation med samma certifikat och profil förlänger inte det datumet: byt profil (eller importera en ny signeringsidentitet om certifikatet går ut först) och installera sedan om appen.",
+        "reinstall_external": "En ominstallation med samma certifikat och provisioneringsprofil förlänger inte giltighetstiden. Byt profil (eller använd en ny signeringsidentitet) och installera sedan om appen för att förlänga den.",
         "signing_identity_error": "Signeringsidentiteten (certifikat, privat nyckel eller provisioneringsprofil) är ogiltig eller inte kompatibel. Kontrollera loggen och identiteten under Konton.",
         "signing_error": "Signeringen misslyckades eller den signerade appen klarade inte verifieringen. Se loggen för mer information.",
         "transport_error": "Det gick inte att nå enheten, eller så avvisade den installationen. Se loggen för mer information."
@@ -737,6 +737,7 @@
       "upload_too_large": "Filen är för stor.",
       "p12_invalid": "Filen är inte en läsbar PKCS#12-fil (.p12).",
       "p12_wrong_password": "Fel lösenord för P12-filen.",
+      "p12_password_unsupported": "P12-lösenordet innehåller tecken som PKCS#12-filer inte kan använda, till exempel emojier. Exportera P12-filen igen med ett annat lösenord.",
       "p12_no_private_key": "P12-filen innehåller ingen privat nyckel.",
       "p12_no_certificate": "P12-filen innehåller inget certifikat som matchar dess privata nyckel.",
       "p12_key_mismatch": "Den privata nyckeln matchar inte certifikatet.",

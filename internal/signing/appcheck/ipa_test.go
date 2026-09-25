@@ -113,6 +113,9 @@ func TestAnalyzeIPARejectsInvalidArchives(t *testing.T) {
 		return bundleFiles(t, fixtureBundle{dir: "Payload/Example.app", id: "com.example.app", sig: signature{none: true}})
 	}
 	infoPlist := mustInfoPlist(t, "com.example.app", "Example")
+	// howett.net/plist v1.0.0 panicked (index out of range) on this text
+	// property list; AnalyzeIPA runs in goroutines without recover.
+	malformedTextPlist := []byte(`(plist versionGetValue<*B"">`)
 	tests := []struct {
 		name string
 		path func(t *testing.T) string
@@ -202,6 +205,20 @@ func TestAnalyzeIPARejectsInvalidArchives(t *testing.T) {
 			at := bytes.Index(exe, []byte{0xfa, 0xde, 0x71, 0x71})
 			exe[at+3] = 0x72
 			files["Payload/Example.app/Example"] = exe
+			return writeIPA(t, files)
+		}},
+		{"malformed text Info.plist of the main app", func(t *testing.T) string {
+			files := valid(t)
+			files["Payload/Example.app/Info.plist"] = malformedTextPlist
+			return writeIPA(t, files)
+		}},
+		{"malformed text Info.plist of an app extension", func(t *testing.T) string {
+			widget := "Payload/Example.app/PlugIns/Widget.appex"
+			files := valid(t)
+			for name, data := range bundleFiles(t, fixtureBundle{dir: widget, id: "com.example.app.widget", sig: signature{none: true}}) {
+				files[name] = data
+			}
+			files[widget+"/Info.plist"] = malformedTextPlist
 			return writeIPA(t, files)
 		}},
 	}

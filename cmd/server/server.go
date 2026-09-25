@@ -6,6 +6,7 @@ import (
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/manager"
+	"github.com/bitxeno/atvloadly/internal/service"
 	"github.com/bitxeno/atvloadly/internal/signing"
 	"github.com/bitxeno/atvloadly/internal/task"
 	"github.com/bitxeno/atvloadly/web"
@@ -83,6 +84,11 @@ func action(c *cli.Context) error {
 		return err
 	}
 	initSigning(conf)
+	// Staged uploads and downloads abandoned by the install page; the task
+	// scheduler repeats this every hour.
+	if _, err := service.RemoveStaleTempFiles(); err != nil {
+		log.Err(err).Msg("Failed to remove stale staged files")
+	}
 
 	// start jobs
 	_ = task.ScheduleRefreshApps()
