@@ -481,10 +481,17 @@ func (t *Task) runInternal(v model.InstalledApp, refresh bool, installMgr *manag
 	}
 }
 
-// shouldUseRefreshMode reports whether v is a refresh of an installed app,
-// which re-uses its stored IPA and only renews the provisioning profiles.
+// shouldUseRefreshMode reports whether an installed app can use
+// PlumeSign's profile-only refresh path.
+//
+// PlumeSign --refresh installs renewed provisioning profiles without
+// re-signing the app. Keep that path for iPhone and iPad. Apple TV refreshes
+// instead use the normal signing/install path so the installed application is
+// renewed together with its provisioning profile.
 func shouldUseRefreshMode(v model.InstalledApp) bool {
-	return v.ID != 0 && !ipa.IsRemoteURL(v.IpaPath)
+	return v.ID != 0 &&
+		!ipa.IsRemoteURL(v.IpaPath) &&
+		v.IsIPhoneApp()
 }
 
 // isSourceUpdate reports whether v installs a new build of an installed app
