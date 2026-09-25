@@ -10,7 +10,12 @@
     "title": "[{{.name}}] Automatisk uppdatering misslyckades",
     "content": "Konto: {{.account}}\nFel: {{.error}}",
     "batch_title": "atvloadly: automatisk uppdatering misslyckades",
-    "batch_content": "{{.name}}: {{.error}}\n\n"
+    "batch_content": "{{.name}}: {{.error}}\n\n",
+    "update_title": "atvloadly: nya appversioner",
+    "update_available": "{{.name}}: {{.version}} finns tillgänglig\n",
+    "update_attention": "{{.name}}: uppgraderingen kräver åtgärd: {{.error}}\n",
+    "update_installed_title": "atvloadly: appar uppgraderade",
+    "update_installed": "{{.name}} har uppgraderats till {{.version}}\n"
   },
   "nav": {
     "settings": "Inställningar",
@@ -61,7 +66,18 @@
     },
     "toast": {
       "refresh_app_started": "Uppdatering av {{name}} har startat",
-      "installing_app": "Installerar {{name}}…"
+      "installing_app": "Installerar {{name}}…",
+      "update_started": "Uppgradering av {{name}} till {{version}} har startat",
+      "updates_available": "Nya versioner tillgängliga: {{count}}",
+      "check_errors": "Källor som inte kunde kontrolleras: {{count}}",
+      "check_done": "Alla följda appar har den senaste versionen"
+    },
+    "source": {
+      "track": "Följ nya versioner",
+      "auto": "Auto",
+      "available": "{{version}} tillgänglig",
+      "check_updates": "Sök efter nya versioner",
+      "update_failed": "Installationen av {{version}} misslyckades och görs inte om automatiskt. Använd Uppgradera för att försöka igen."
     },
     "sidebar": {
       "device_status": {
@@ -103,13 +119,14 @@
       },
       "button": {
         "refresh": "Uppdatera",
-        "delete": "Ta bort"
+        "delete": "Ta bort",
+        "update": "Uppgradera"
       },
       "tips": {
         "view_log": "Klicka för att visa installationsloggen",
         "account_invalid": "Det finns ett problem med kontot. Kontrollera loggarna och åtgärda felet.",
         "no_data": "Inga uppgifter",
-        "footer": "Som standard uppdateras appar automatiskt mellan kl. 03 och 06 när mindre än ett dygn återstår till utgångsdatumet."
+        "footer": "Som standard uppdateras appar automatiskt mellan kl. 03 och 06 när mindre än ett dygn återstår till utgångsdatumet. Appar som är kopplade till en GitHub- eller AltStore-källa kontrolleras i bakgrunden efter nya versioner; automatiska uppgraderingar installeras under samma tidsperiod."
       }
     }
   },
@@ -160,6 +177,51 @@
       "login_success": "Inloggningen lyckades"
     },
     "form": {
+      "mode": {
+        "file": "IPA-fil",
+        "link": "IPA-URL",
+        "source": "Källa"
+      },
+      "source": {
+        "label": "Källa:",
+        "url_placeholder": {
+          "github": "ägare/repo eller https://github.com/ägare/repo",
+          "altstore": "https://example.com/apps.json"
+        },
+        "fetch": "Hämta",
+        "prerelease": "Inkludera förhandsversioner",
+        "prerelease_badge": "Förhandsversion",
+        "recommended": "Rekommenderad",
+        "choose_tips": "Den här versionen innehåller flera IPA-filer. Välj den som är byggd för din enhet (tvOS för Apple TV, iOS för iPhone och iPad). Varianter som Sideload och Sideloadly kan vara olika appar, så behåll samma för uppdateringar.",
+        "choose_app_tips": "Den här källan innehåller flera appar. Välj den som ska installeras.",
+        "advanced": "Avancerat",
+        "filter": {
+          "label": "Filnamnsfilter",
+          "tips": "Reguljärt uttryck som hittar samma IPA i kommande versioner. Det härleds från den valda filen.",
+          "custom": "Anpassat",
+          "reset": "Återställ",
+          "mismatch": "Filtret matchar inte den valda filen."
+        },
+        "bundle_id": {
+          "label": "Paketidentifierare",
+          "tips": "AltStore-appar följs via sin paketidentifierare."
+        },
+        "auto_update": "Installera nya versioner automatiskt",
+        "auto_update_tips": "Nya versioner installeras under tidsintervallet för automatisk appuppdatering, även om appen inte behöver uppdateras än. De signeras med samma konto.",
+        "select_build": "Hämta källan och välj en IPA att installera.",
+        "choose_saved_app_tips": "Dina sparade källor innehåller flera appar. Välj den som ska installeras.",
+        "saved": {
+          "label": "Sparade källor",
+          "all": "Alla sparade källor"
+        },
+        "search_placeholder": "Sök appar…",
+        "more_results": "{{num}} till – förfina sökningen",
+        "no_match": "Ingen app matchar sökningen",
+        "save_source": "Spara källan",
+        "toast": {
+          "source_saved": "{{name}} har lagts till i de sparade källorna"
+        }
+      },
       "choose_ipa": {
         "label": "Välj IPA-fil:"
       },
@@ -226,7 +288,7 @@
       "notify_success": "Aviseringen har skickats"
     },
     "notification": {
-      "title": "Avisering vid misslyckad installation",
+      "title": "Aviseringar",
       "toggle": {
         "label": "Aktivera"
       },
@@ -291,6 +353,42 @@
         "submit": "Spara"
       }
     },
+    "update": {
+      "title": "Nya appversioner",
+      "interval": {
+        "label": "Sök efter nya versioner",
+        "off": "Av",
+        "every_hour": "Varje timme",
+        "every_hours": "Var {{num}}:e timme"
+      },
+      "tips": "Appar som installerats från ett GitHub-repo eller en AltStore-källa kontrolleras i bakgrunden, och du aviseras om nya versioner när aviseringar är aktiverade. Automatiska uppgraderingar installeras under tidsintervallet för automatisk appuppdatering, även om appen inte behöver uppdateras än. GitHub tillåter 60 oautentiserade förfrågningar per timme.",
+      "task_disabled": "Automatisk appuppdatering är avstängd: nya versioner upptäcks fortfarande, men uppgraderingar installeras inte automatiskt.",
+      "button": {
+        "submit": "Spara"
+      }
+    },
+    "sources": {
+      "title": "AltStore-källor",
+      "list": {
+        "label": "Sparade källor",
+        "empty": "Inga sparade källor ännu."
+      },
+      "add": {
+        "label": "Lägg till en källa"
+      },
+      "tips": "Sparade källor kan bläddras i och sökas från läget Källa på installationssidan.",
+      "delete_confirm": "Ta bort {{name}} från de sparade källorna? Appar som följer den påverkas inte.",
+      "button": {
+        "add": "Lägg till",
+        "delete": "Ta bort",
+        "cancel": "Avbryt",
+        "confirm": "Bekräfta"
+      },
+      "toast": {
+        "added": "{{name}} har sparats",
+        "deleted": "{{name}} har tagits bort"
+      }
+    },
     "network": {
       "title": "Nätverksinställningar",
       "proxy_toggle": {
@@ -349,6 +447,27 @@
       "delete_failed": "Kunde inte ta bort kontot",
       "logout_success": "Kontot har loggats ut",
       "logout_failed": "Kunde inte logga ut från kontot"
+    }
+  },
+  "source_dialog": {
+    "title_track": "Följ nya versioner av {{name}}",
+    "title": "Nya versioner av {{name}}",
+    "installed_version": "Installerad version",
+    "installed_build": "Installerat bygge",
+    "checked_at": "Senast kontrollerad",
+    "never": "Aldrig",
+    "already_installed": "Den installerade versionen är redan {{version}}",
+    "untrack_confirm": "Sluta följa nya versioner av {{name}}?",
+    "button": {
+      "untrack": "Sluta följa",
+      "save": "Spara",
+      "install": "Installera",
+      "cancel": "Avbryt",
+      "confirm": "Bekräfta"
+    },
+    "toast": {
+      "saved": "Källan har sparats",
+      "untracked": "Följer inte längre {{name}}"
     }
   },
   "certificate": {

@@ -568,6 +568,19 @@ html[data-theme="dark"] {
   border-color: var(--atv-danger);
 }
 
+.app-container .atv-action--update {
+  color: var(--atv-success-text);
+  background: var(--atv-success-soft);
+  border-color: var(--atv-success-border);
+}
+
+.app-container .atv-action--update:hover,
+.app-container .atv-action--update:focus-visible {
+  color: var(--atv-success-text);
+  background: var(--atv-surface-hover);
+  border-color: var(--atv-success-text);
+}
+
 .app-container .main-container .input,
 .app-container .main-container .select,
 .app-container .main-container .textarea {
@@ -722,6 +735,47 @@ html[data-theme="dark"] {
 
 .app-container .main-container .table td .flex.items-center {
   gap: 12px;
+}
+
+/* Table layout of the installed apps (mobile.css turns them into cards): the
+   source line spans the app cell under the icon without widening it, and
+   Update sits above Refresh and Delete. Tracking a source then keeps the
+   column widths, so the Device and Account cells are not squeezed. */
+@media (min-width: 768px) {
+  .app-container .main-container .table td .flex.atv-app-cell {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    row-gap: 0;
+  }
+
+  .app-container .main-container .table td .atv-app-cell > .indicator {
+    grid-row: 1 / 4;
+  }
+
+  .app-container .main-container .table td .atv-app-text {
+    display: contents;
+  }
+
+  .app-container .main-container .table td .atv-app-text > * {
+    grid-column: 2;
+  }
+
+  .app-container .main-container .table td .atv-app-text > .atv-source-line {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    margin-top: 10px;
+    contain: inline-size;
+  }
+
+  .app-container .main-container .table td .atv-app-actions {
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
+    gap: 8px;
+  }
+
+  .app-container .main-container .table td .atv-app-actions > .atv-action--update {
+    grid-column: 1 / -1;
+  }
 }
 
 .app-container :focus-visible {

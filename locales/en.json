@@ -10,7 +10,12 @@
         "title": "[{{.name}}] Refresh task execution failed.",
         "content": "Account: {{.account}}\nError: {{.error}}",
         "batch_title": "atvloadly refresh task execution failed",
-        "batch_content": "{{.name}}: {{.error}}\n\n"
+        "batch_content": "{{.name}}: {{.error}}\n\n",
+        "update_title": "atvloadly: app updates",
+        "update_available": "{{.name}}: {{.version}} is available\n",
+        "update_attention": "{{.name}}: update needs attention: {{.error}}\n",
+        "update_installed_title": "atvloadly: apps updated",
+        "update_installed": "{{.name}} updated to {{.version}}\n"
     },
     "nav": {
         "settings": "Settings",
@@ -61,7 +66,18 @@
         },
         "toast": {
             "refresh_app_started": "Refresh of {{name}} started",
-            "installing_app": "Installing {{name}}…"
+            "installing_app": "Installing {{name}}…",
+            "update_started": "Update of {{name}} to {{version}} started",
+            "updates_available": "Updates available: {{count}}",
+            "check_errors": "Sources that could not be checked: {{count}}",
+            "check_done": "All tracked apps are up to date"
+        },
+        "source": {
+            "track": "Track updates",
+            "auto": "Auto",
+            "available": "{{version}} available",
+            "check_updates": "Check for updates",
+            "update_failed": "Installing {{version}} failed and is not retried automatically. Use Update to retry."
         },
         "sidebar": {
             "device_status": {
@@ -103,13 +119,14 @@
             },
             "button": {
                 "refresh": "Refresh",
-                "delete": "Delete"
+                "delete": "Delete",
+                "update": "Update"
             },
             "tips": {
                 "view_log": "Click to view installation log",
                 "account_invalid": "There is an issue with the account. Please check logs and fix it.",
                 "no_data": "No data",
-                "footer": "By default, when the app expiration time is less than 1 day, it will automatically refresh between 3-6am."
+                "footer": "By default, when the app expiration time is less than 1 day, it will automatically refresh between 3-6am. Apps linked to a GitHub or AltStore source are checked for new versions in the background; automatic updates are installed in the same time window."
             }
         }
     },
@@ -161,6 +178,51 @@
             "login_success": "Login Success"
         },
         "form": {
+            "mode": {
+                "file": "IPA file",
+                "link": "IPA URL",
+                "source": "Source"
+            },
+            "source": {
+                "label": "Source:",
+                "url_placeholder": {
+                    "github": "owner/repo or https://github.com/owner/repo",
+                    "altstore": "https://example.com/apps.json"
+                },
+                "fetch": "Fetch",
+                "prerelease": "Include pre-releases",
+                "prerelease_badge": "Pre-release",
+                "recommended": "Recommended",
+                "choose_tips": "This release contains several IPA files. Choose the one built for your device (tvOS for Apple TV, iOS for iPhone and iPad). Variants such as Sideload and Sideloadly can be different apps, so keep the same one for updates.",
+                "choose_app_tips": "This source lists several apps. Choose the one to install.",
+                "advanced": "Advanced",
+                "filter": {
+                    "label": "File name filter",
+                    "tips": "Regular expression that finds the same IPA in future releases. It is derived from the selected file.",
+                    "custom": "Custom",
+                    "reset": "Reset",
+                    "mismatch": "The filter does not match the selected file."
+                },
+                "bundle_id": {
+                    "label": "Bundle identifier",
+                    "tips": "AltStore apps are tracked by their bundle identifier."
+                },
+                "auto_update": "Install updates automatically",
+                "auto_update_tips": "New versions are installed during the Auto Refresh running time period, even if the app does not need a refresh yet. They are signed with the same account.",
+                "select_build": "Fetch the source and select an IPA to install.",
+                "choose_saved_app_tips": "Your saved sources list several apps. Choose the one to install.",
+                "saved": {
+                    "label": "Saved sources",
+                    "all": "All saved sources"
+                },
+                "search_placeholder": "Search apps…",
+                "more_results": "{{num}} more — refine your search",
+                "no_match": "No app matches your search",
+                "save_source": "Save source",
+                "toast": {
+                    "source_saved": "{{name}} added to the saved sources"
+                }
+            },
             "choose_ipa": {
                 "label": "Choose IPA:"
             },
@@ -228,7 +290,7 @@
             "notify_success": "Notification Sent Successfully"
         },
         "notification": {
-            "title": "Installation Failure Notification",
+            "title": "Notifications",
             "toggle": {
                 "label": "Enable"
             },
@@ -293,6 +355,42 @@
                 "submit": "Save"
             }
         },
+        "update": {
+            "title": "App Updates",
+            "interval": {
+                "label": "Check for updates",
+                "off": "Off",
+                "every_hour": "Every hour",
+                "every_hours": "Every {{num}} hours"
+            },
+            "tips": "Apps installed from a GitHub repository or an AltStore source are checked in the background, and you are notified of new versions when notifications are enabled. Automatic updates are installed during the Auto Refresh running time period, even if the app does not need a refresh yet. GitHub allows 60 unauthenticated requests per hour.",
+            "task_disabled": "Auto Refresh App is disabled: new versions are still detected, but automatic updates are not installed.",
+            "button": {
+                "submit": "Save"
+            }
+        },
+        "sources": {
+            "title": "AltStore Sources",
+            "list": {
+                "label": "Saved sources",
+                "empty": "No saved sources yet."
+            },
+            "add": {
+                "label": "Add a source"
+            },
+            "tips": "Saved sources can be browsed and searched from the Source mode of the install page.",
+            "delete_confirm": "Remove {{name}} from the saved sources? Apps tracking it are not affected.",
+            "button": {
+                "add": "Add",
+                "delete": "Remove",
+                "cancel": "Cancel",
+                "confirm": "Confirm"
+            },
+            "toast": {
+                "added": "{{name}} saved",
+                "deleted": "{{name}} removed"
+            }
+        },
         "network": {
             "title": "Network Settings",
             "proxy_toggle": {
@@ -352,6 +450,27 @@
             "delete_failed": "Failed to delete account",
             "logout_success": "Account logged out successfully",
             "logout_failed": "Failed to logout account"
+        }
+    },
+    "source_dialog": {
+        "title_track": "Track updates for {{name}}",
+        "title": "Updates for {{name}}",
+        "installed_version": "Installed version",
+        "installed_build": "Installed build",
+        "checked_at": "Last checked",
+        "never": "Never",
+        "already_installed": "The installed version is already {{version}}",
+        "untrack_confirm": "Stop tracking updates for {{name}}?",
+        "button": {
+            "untrack": "Stop tracking",
+            "save": "Save",
+            "install": "Install",
+            "cancel": "Cancel",
+            "confirm": "Confirm"
+        },
+        "toast": {
+            "saved": "Source saved",
+            "untracked": "Stopped tracking {{name}}"
         }
     },
     "certificate": {

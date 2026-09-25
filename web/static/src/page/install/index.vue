@@ -33,45 +33,77 @@
         <div class="divider divider-horizontal"></div>
 
         <div class="p-6 flex flex-col gap-y-4 w-full max-w-lg atv-install-form-wrap">
-          <form id="form" class="flex flex-col gap-y-4">
-            <div class="form-control w-full">
+          <form id="form" class="flex flex-col gap-y-4" @submit.prevent>
+            <div class="join w-full atv-install-mode">
+              <button
+                type="button"
+                class="btn join-item flex-1 gap-x-2"
+                :class="{ 'btn-primary': installMode === 'file' }"
+                :aria-pressed="installMode === 'file'"
+                :aria-label="$t('install.form.mode.file')"
+                :title="$t('install.form.mode.file')"
+                @click="setInstallMode('file')"
+              >
+                <span class="w-6 h-6"><FolderOpenIcon /></span>
+                <span class="hidden md:inline">{{ $t("install.form.mode.file") }}</span>
+              </button>
+              <button
+                type="button"
+                class="btn join-item flex-1 gap-x-2"
+                :class="{ 'btn-primary': installMode === 'link' }"
+                :aria-pressed="installMode === 'link'"
+                :aria-label="$t('install.form.mode.link')"
+                :title="$t('install.form.mode.link')"
+                @click="setInstallMode('link')"
+              >
+                <span class="w-6 h-6"><LinkIcon /></span>
+                <span class="hidden md:inline">{{ $t("install.form.mode.link") }}</span>
+              </button>
+              <button
+                type="button"
+                class="btn join-item flex-1 gap-x-2"
+                :class="{ 'btn-primary': installMode === 'source' }"
+                :aria-pressed="installMode === 'source'"
+                :aria-label="$t('install.form.mode.source')"
+                :title="$t('install.form.mode.source')"
+                @click="setInstallMode('source')"
+              >
+                <span class="w-6 h-6"><GithubIcon /></span>
+                <span class="hidden md:inline">{{ $t("install.form.mode.source") }}</span>
+              </button>
+            </div>
+
+            <SourcePicker
+              v-if="installMode === 'source'"
+              :device-class="device.device_class"
+              :initial="sourceInitial"
+              @update:selection="onSourceSelection"
+            />
+            <div class="form-control w-full" v-else>
               <label class="label">
                 <span class="label-text">
                   <template v-if="installMode === 'file'">{{ $t("install.form.choose_ipa.label") }}</template>
                   <template v-else>{{ $t("install.form.ipa_url.label") }}</template>
                 </span>
               </label>
-              <div class="join w-full atv-install-ipa-picker">
-                <input
-                  v-if="installMode === 'file'"
-                  type="file"
-                  class="file-input file-input-bordered join-item flex-1 min-w-0"
-                  @change="onFileChange"
-                  accept=".ipa,.tipa"
-                  :required="installMode === 'file'"
-                />
-                <input
-                  v-else
-                  type="url"
-                  class="input input-bordered join-item flex-1 min-w-0"
-                  v-model="ipaUrl"
-                  placeholder="https://example.com/app.ipa"
-                  :required="installMode === 'link'"
-                />
-                <button class="btn join-item"
-                  @click.prevent="toggleInstallMode"
-                  :aria-label="installMode === 'file'
-                    ? $t('install.form.ipa_url.label')
-                    : $t('install.form.choose_ipa.label')">
-                  <span class="w-6 h-6" v-if="installMode === 'file'"><LinkIcon /></span>
-                  <span class="w-6 h-6" v-else><FolderOpenIcon /></span>
-                  <span class="atv-install-mode-label hidden">
-                    {{ installMode === 'file'
-                      ? $t('install.form.ipa_url.label')
-                      : $t('install.form.choose_ipa.label') }}
-                  </span>
-                </button>
-              </div>
+              <input
+                v-if="installMode === 'file'"
+                type="file"
+                class="file-input file-input-bordered w-full"
+                @change="onFileChange"
+                accept=".ipa,.tipa"
+                required
+              />
+              <input
+                v-else
+                type="url"
+                class="input input-bordered w-full"
+                v-model="ipaUrl"
+                placeholder="https://example.com/app.ipa"
+                required
+                @input="onIpaUrlInput"
+                @change="switchToSourceIfRepo"
+              />
             </div>
 
             <div class="form-control w-full">
@@ -102,7 +134,7 @@
                     }}
                   </option>
                 </select>
-                <button class="btn join-item" @click.prevent="showLoginDialog">
+                <button type="button" class="btn join-item" @click.prevent="showLoginDialog">
                   <div class="w-6 h-6">
                     <PersonIcon />
                   </div>
@@ -145,6 +177,24 @@
                   type="checkbox"
                   class="toggle toggle-success"
                   v-model="form.remove_extensions"
+                />
+              </label>
+            </div>
+
+            <div class="form-control" v-if="installMode === 'source'">
+              <label class="label cursor-pointer justify-between items-center gap-x-4">
+                <div class="flex items-center">
+                  <span class="label-text">{{
+                    $t("install.form.source.auto_update")
+                  }}</span>
+                  <div class="tooltip" :data-tip="$t('install.form.source.auto_update_tips')">
+                    <div class="w-4 h-4 text-secondary-content"><HelpIcon /></div>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  class="toggle toggle-success"
+                  v-model="form.auto_update"
                 />
               </label>
             </div>
@@ -251,17 +301,22 @@ import { toast } from "vue3-toastify";
 import { parseBundleIdFromPlist } from "@/utils/utils";
 import { installFailureMessage as formatInstallFailureMessage } from "@/utils/install-error-feedback.mjs";
 import { accountStatusLabel as formatAccountStatus } from "@/utils/install-feedback.mjs";
+import { guessSourceKind } from "@/utils/source.mjs";
 import JSZip from "jszip";
 import Login from "@/components/Login.vue";
+import SourcePicker from "@/components/SourcePicker.vue";
 
 export default {
-  components: { Login },
+  components: { Login, SourcePicker },
   data() {
     return {
       id: "",
       installMode: "file",
       ipaUrl: "",
       files: [],
+      // Source to prefill when a repository URL switched the page to source mode.
+      sourceInitial: null,
+      sourceSelection: null,
       ipa: {},
       device: {},
       loading: false,
@@ -273,6 +328,7 @@ export default {
         password: "",
         custom_name: "",
         remove_extensions: false,
+        auto_update: false,
       },
       log: {
         newcontent : "",
@@ -326,8 +382,11 @@ export default {
       if (!_this.validateForm("#form")) {
         return;
       }
+      if (_this.installMode === "source" && !_this.sourceSelection) {
+        toast.error(this.$t("install.form.source.select_build"));
+        return;
+      }
 
-     
       _this.loading = true;
       _this.log.output = "";
       _this.log.newcontent = "";
@@ -348,6 +407,7 @@ export default {
         }
 
         let ipa;
+        let source;
         if (_this.installMode === "file") {
           let formData = new FormData();
           for (let i = 0; i < _this.files.length; i++) {
@@ -357,7 +417,7 @@ export default {
           _this.log.output += "IPA uploading...\n";
           let data = await api.upload(formData)
           ipa = data[0];
-        } else {
+        } else if (_this.installMode === "link") {
           _this.log.output += "IPA URL: " + _this.ipaUrl + "\n";
           ipa = {
             name: _this.ipaUrl.split('/').pop() || 'remote.ipa',
@@ -365,6 +425,26 @@ export default {
             icon: '',
             bundle_identifier: '',
             version: '',
+          };
+        } else {
+          const selection = _this.sourceSelection;
+          const build = selection.build;
+          _this.log.output += `Source: ${selection.url} ${build.version} ${build.name}\n`;
+          // The server resolves the download URL from the source; path and name are for display.
+          ipa = {
+            name: build.name,
+            path: build.download_url,
+            icon: '',
+            bundle_identifier: build.bundle_id,
+            version: build.version,
+          };
+          source = {
+            kind: selection.kind,
+            url: selection.url,
+            filter: selection.filter,
+            prerelease: selection.prerelease,
+            auto_update: _this.form.auto_update,
+            build_id: build.id,
           };
         }
         _this.ipa = ipa;
@@ -383,6 +463,7 @@ export default {
             version: _this.ipa.version,
             custom_name: _this.form.custom_name.trim(),
             remove_extensions: _this.form.remove_extensions,
+            source,
         });
       } catch (error) {
         console.log(error);
@@ -398,10 +479,49 @@ export default {
     goBack() {
       this.$router.push("/");
     },
-    toggleInstallMode() {
-      this.installMode = this.installMode === "file" ? "link" : "file";
+    setInstallMode(mode) {
+      // The inputs of the current mode keep what they show: keep their state too.
+      if (this.installMode === mode) return;
+      this.installMode = mode;
       this.files = [];
       this.ipaUrl = "";
+      this.sourceInitial = null;
+      this.sourceSelection = null;
+    },
+    onIpaUrlInput(e) {
+      if (e.inputType === "insertFromPaste") {
+        this.switchToSourceIfRepo();
+      }
+    },
+    // A GitHub repository is not an IPA link: open it as a tracked source instead.
+    switchToSourceIfRepo() {
+      const url = this.ipaUrl.trim();
+      if (this.installMode !== "link" || guessSourceKind(url) !== "github") {
+        return;
+      }
+      this.setInstallMode("source");
+      this.sourceInitial = { kind: "github", url };
+    },
+    onSourceSelection(selection) {
+      this.sourceSelection = selection;
+      this.recommendedAccount = "";
+      if (!selection) {
+        return;
+      }
+
+      // Reuse the account of the app already installed from this source on this device.
+      const url = selection.url.toLowerCase();
+      const bundleId = selection.build.bundle_id;
+      const app =
+        this.installedApps.find((a) => a.udid === this.device.udid && a.source.url.toLowerCase() === url) ||
+        (bundleId && this.installedApps.find((a) => a.bundle_identifier === bundleId));
+      if (app) {
+        this.recommendedAccount = app.account;
+        this.form.account = app.account;
+        if (app.custom_name) {
+          this.form.custom_name = app.custom_name;
+        }
+      }
     },
     async onFileChange(e) {
       this.files = e.target.files;
@@ -671,6 +791,7 @@ import RefreshIcon from "@/assets/icons/refresh.svg";
 import DownloadIcon from "@/assets/icons/download.svg";
 import FolderOpenIcon from "@/assets/icons/folder-open.svg";
 import LinkIcon from "@/assets/icons/link.svg";
+import GithubIcon from "@/assets/icons/github.svg";
 </script>
   
   <style scoped>
@@ -706,7 +827,7 @@ import LinkIcon from "@/assets/icons/link.svg";
   border-radius: 0;
 }
 
-.atv-install-page .join > .join-item:is(.input, .select, .file-input):first-child {
+.atv-install-page .join > .join-item:is(.input, .select, .file-input, .btn):first-child {
   border-start-start-radius: var(--rounded-btn, 0.5rem);
   border-end-start-radius: var(--rounded-btn, 0.5rem);
 }

@@ -271,6 +271,16 @@ func route(fi *fiber.App) {
 				errMsg := fmt.Sprintf("invalid time format: %s", err.Error())
 				return c.Status(http.StatusOK).JSON(apiError(errMsg))
 			}
+		case "update":
+			switch settings.Update.CheckInterval {
+			case 0, 1, 3, 6, 12, 24:
+			default:
+				return c.Status(http.StatusOK).JSON(apiError("invalid check interval"))
+			}
+			app.Settings.Update = settings.Update
+			if err := task.ReloadTask(); err != nil {
+				return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+			}
 		}
 
 		app.SaveSettings()
@@ -567,6 +577,68 @@ func route(fi *fiber.App) {
 		}
 	})
 
+	api.Get("/sources/preview", func(c *fiber.Ctx) error {
+		preview, err := service.PreviewSource(c.Query("kind"), c.Query("url"), c.Query("device_class"), c.Query("prerelease") == "true")
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(preview))
+	})
+
+	api.Get("/sources/saved", func(c *fiber.Ctx) error {
+		sources, err := service.GetSavedSources()
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(sources))
+	})
+
+	api.Post("/sources/saved", func(c *fiber.Ctx) error {
+		var req struct {
+			URL string `json:"url"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument. error: " + err.Error()))
+		}
+
+		saved, err := service.AddSavedSource(req.URL)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(saved))
+	})
+
+	api.Post("/sources/saved/:id/delete", func(c *fiber.Ctx) error {
+		id := utils.MustParseInt(c.Params("id"))
+
+		if err := service.DeleteSavedSource(uint(id)); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
+	api.Get("/sources/catalog", func(c *fiber.Ctx) error {
+		catalog, err := service.GetSourceCatalog(c.Query("device_class"))
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(catalog))
+	})
+
+	api.Post("/sources/check", func(c *fiber.Ctx) error {
+		tracked, err := service.GetTrackedAppList()
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		service.CheckSourceUpdates(tracked)
+
+		apps, err := service.GetAppList()
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(apps))
+	})
+
 	api.Get("/apps/installing", func(c *fiber.Ctx) error {
 		return c.Status(http.StatusOK).JSON(apiSuccess(task.GetCurrentInstallingApps()))
 	})
@@ -625,6 +697,67 @@ func route(fi *fiber.App) {
 
 		task.RefreshApp(*t)
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
+	api.Post("/apps/:id/source", func(c *fiber.Ctx) error {
+		id := utils.MustParseInt(c.Params("id"))
+		// A running update saves the source settings it was queued with.
+		if task.IsInstalling(uint(id)) {
+			return c.Status(http.StatusOK).JSON(apiError("app is installing"))
+		}
+
+		var in service.SourceInput
+		if err := c.BodyParser(&in); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument. error: " + err.Error()))
+		}
+
+		t, err := service.LinkSource(uint(id), in)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(t))
+	})
+
+	api.Post("/apps/:id/source/delete", func(c *fiber.Ctx) error {
+		id := utils.MustParseInt(c.Params("id"))
+		if task.IsInstalling(uint(id)) {
+			return c.Status(http.StatusOK).JSON(apiError("app is installing"))
+		}
+
+		if err := service.UntrackSource(uint(id)); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
+	api.Post("/apps/:id/source/update", func(c *fiber.Ctx) error {
+		id := utils.MustParseInt(c.Params("id"))
+		if task.IsInstalling(uint(id)) {
+			return c.Status(http.StatusOK).JSON(apiError("app is installing"))
+		}
+
+		var req struct {
+			BuildID string `json:"build_id"`
+			Filter  string `json:"filter"`
+		}
+		if len(c.Body()) > 0 {
+			if err := c.BodyParser(&req); err != nil {
+				return c.Status(http.StatusOK).JSON(apiError("Invalid argument. error: " + err.Error()))
+			}
+		}
+
+		target, err := service.PrepareSourceUpdate(uint(id), req.BuildID, req.Filter)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		if !task.UpdateApp(target) {
+			return c.Status(http.StatusOK).JSON(apiError("app is already installing"))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(map[string]string{
+			"status":     "installing",
+			"version":    target.Source.Version,
+			"build_name": target.Source.BuildName,
+		}))
 	})
 
 	api.Get("/service/status", func(c *fiber.Ctx) error {
