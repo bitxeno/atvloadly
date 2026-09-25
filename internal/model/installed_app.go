@@ -31,6 +31,24 @@ type InstalledApp struct {
 	CustomName       string         `json:"custom_name,omitempty"`
 	Enabled          bool           `json:"enabled,omitempty"`
 	Source           AppSource      `gorm:"embedded;embeddedPrefix:source_" json:"source"`
+
+	// SigningMode is empty for records created before signing modes existed;
+	// use EffectiveSigningMode to read it.
+	SigningMode SigningMode `gorm:"size:32;index" json:"signing_mode"`
+	// SigningIdentityID references the SigningIdentity used in SigningModeExternalCertificate.
+	SigningIdentityID uint `gorm:"index" json:"signing_identity_id,omitempty"`
+	// SignedBundleIdentifier is the main bundle identifier actually installed
+	// on the device in SigningModeExternalCertificate: CustomIdentifier when
+	// set, else the bundle identifier of the IPA.
+	SignedBundleIdentifier string `json:"signed_bundle_identifier,omitempty"`
+	// CustomIdentifier is the main bundle identifier requested by the user in
+	// SigningModeExternalCertificate (passed to the engine as
+	// --custom-identifier); empty keeps the bundle identifiers of the IPA.
+	// Reinstallations reuse it.
+	CustomIdentifier string `gorm:"column:custom_identifier" json:"custom_identifier,omitempty"`
+	// AllowMissingEntitlements records the explicit user choice to sign even when
+	// the provisioning profile does not grant every entitlement requested by the app.
+	AllowMissingEntitlements bool `json:"allow_missing_entitlements"`
 }
 
 type RefreshedError int
@@ -38,18 +56,37 @@ type RefreshedError int
 const (
 	RefreshedErrorNone           RefreshedError = 0
 	RefreshedErrorInvalidAccount RefreshedError = 1
-	RefreshedErrorInvalidOther   RefreshedError = 99
+	// RefreshedErrorSigningIdentity: external certificate, key or profile is invalid or incompatible.
+	RefreshedErrorSigningIdentity RefreshedError = 2
+	// RefreshedErrorSigning: signing failed or the signed output did not pass verification.
+	RefreshedErrorSigning RefreshedError = 3
+	// RefreshedErrorTransport: the device could not be reached or the installation failed on it.
+	RefreshedErrorTransport    RefreshedError = 4
+	RefreshedErrorInvalidOther RefreshedError = 99
 )
 
+// EffectiveSigningMode returns the signing mode, treating historical records as Apple ID.
+func (t InstalledApp) EffectiveSigningMode() SigningMode {
+	return t.SigningMode.OrDefault()
+}
+
+// IsExternalSigning reports whether the app is signed with an imported signing identity.
+func (t InstalledApp) IsExternalSigning() bool {
+	return t.EffectiveSigningMode() == SigningModeExternalCertificate
+}
+
 // 输出json时，清空密码字段，提高安全性
+// The effective signing mode is emitted so historical records read as apple_id.
 func (t InstalledApp) MarshalJSON() ([]byte, error) {
 	type Alias InstalledApp
 	return json.Marshal(&struct {
 		*Alias
-		Password string `json:"password"`
+		Password    string      `json:"password"`
+		SigningMode SigningMode `json:"signing_mode"`
 	}{
-		Alias:    (*Alias)(&t),
-		Password: "",
+		Alias:       (*Alias)(&t),
+		Password:    "",
+		SigningMode: t.EffectiveSigningMode(),
 	})
 }
 

@@ -67,6 +67,7 @@
         "toast": {
             "refresh_app_started": "Refresh of {{name}} started",
             "installing_app": "Installing {{name}}…",
+            "reinstall_app_started": "Reinstall of {{name}} started. Reinstalling does not extend the validity date.",
             "update_started": "Update of {{name}} to {{version}} started",
             "updates_available": "Updates available: {{count}}",
             "check_errors": "Sources that could not be checked: {{count}}",
@@ -120,13 +121,24 @@
             "button": {
                 "refresh": "Refresh",
                 "delete": "Delete",
+                "reinstall": "Reinstall",
                 "update": "Update"
             },
             "tips": {
                 "view_log": "Click to view installation log",
                 "account_invalid": "There is an issue with the account. Please check logs and fix it.",
                 "no_data": "No data",
-                "footer": "By default, when the app expiration time is less than 1 day, it will automatically refresh between 3-6am. Apps linked to a GitHub or AltStore source are checked for new versions in the background; automatic updates are installed in the same time window."
+                "footer": "By default, when the app expiration time is less than 1 day, it will automatically refresh between 3-6am. Apps linked to a GitHub or AltStore source are checked for new versions in the background; automatic updates are installed in the same time window.",
+                "footer_external": "Apps signed with an external certificate are never refreshed automatically: they stop working when the certificate or the provisioning profile expires. Reinstalling does not extend this date; import a new profile or certificate instead.",
+                "reinstall_external": "Reinstalling does not extend the validity, which stays bound to the certificate and the provisioning profile. Import a new profile or certificate to extend it.",
+                "signing_identity_error": "The signing identity (certificate, private key or provisioning profile) is invalid or not compatible. Check the log and the identity in Accounts.",
+                "signing_error": "Signing failed or the signed app did not pass verification. Check the log for details.",
+                "transport_error": "The device could not be reached or rejected the installation. Check the log for details."
+            },
+            "signing": {
+                "external_badge": "External certificate",
+                "identity_missing": "Deleted identity",
+                "valid_until": "Valid until {{date}}"
             }
         }
     },
@@ -157,7 +169,8 @@
     },
     "install": {
         "tips": {
-            "warning": "This device will emulate a MacBook. When signing in with the installation account, please ensure you have an iPhone or an authorized device nearby to receive 2FA verification codes."
+            "warning": "This device will emulate a MacBook. When signing in with the installation account, please ensure you have an iPhone or an authorized device nearby to receive 2FA verification codes.",
+            "external": "External certificate mode signs with your imported certificate and provisioning profile, without any Apple ID. The app stays valid until the certificate or the profile expires, unless Apple revokes the certificate earlier; atvloadly does not verify revocation."
         },
         "dialog": {
             "input_pin": {
@@ -227,7 +240,8 @@
                 "label": "Choose IPA:"
             },
             "ipa_url": {
-                "label": "IPA URL:"
+                "label": "IPA URL:",
+                "external_unavailable": "External certificate signing needs an uploaded IPA file"
             },
             "account": {
                 "label": "Apple Account:",
@@ -251,7 +265,28 @@
             },
             "extensions": {
                 "remove_extensions": "Remove extensions (Plug-ins)",
-                "tips": "Useful when there are not enough App IDs available for registration"
+                "tips": "Useful when there are not enough App IDs available for registration",
+                "tips_external": "Removes every app extension (widgets, plug-ins). By default extensions are kept and signed with the provisioning profile. Removed extensions are listed in the compatibility check."
+            },
+            "signing_mode": {
+                "label": "Signing:"
+            },
+            "identity": {
+                "label": "Signing identity:",
+                "placeholder": "Select a signing identity",
+                "expires": "expires {{date}}",
+                "manage": "Manage signing identities",
+                "alt": "The app is signed with this certificate and provisioning profile; no Apple ID is used.",
+                "empty": "No signing identity yet. Import a P12 certificate and a provisioning profile in Accounts."
+            },
+            "custom_identifier": {
+                "label": "Custom bundle identifier:",
+                "placeholder": "Bundle identifier of the IPA",
+                "alt": "Leave empty to keep the identifiers of the IPA. The identifiers of the app extensions follow the custom identifier."
+            },
+            "allow_missing_entitlements": {
+                "label": "Allow missing entitlements",
+                "tips": "Sign even though the provisioning profile does not grant some entitlements the app requests. Features relying on them may not work."
             }
         }
         ,
@@ -450,7 +485,10 @@
             "delete_failed": "Failed to delete account",
             "logout_success": "Account logged out successfully",
             "logout_failed": "Failed to logout account"
-        }
+        },
+      "heading": {
+          "apple_accounts": "Apple Accounts"
+      }
     },
     "source_dialog": {
         "title_track": "Track updates for {{name}}",
@@ -576,6 +614,185 @@
                 "cancel": "Cancel",
                 "confirm": "Overwrite"
             }
+        }
+    },
+    "identity": {
+        "title": "Signing identities (external certificate)",
+        "subtitle": "P12 certificates and provisioning profiles used to sign apps without an Apple ID.",
+        "notice": "Signing with an imported certificate needs no Apple ID in atvloadly. Apps can be installed until the certificate or the provisioning profile expires; Apple may still revoke the certificate earlier, and atvloadly does not verify revocation.",
+        "button": {
+            "import": "Import P12",
+            "replace_profile": "Replace profile",
+            "copy": "Copy",
+            "copy_fingerprint": "Copy the SHA-1 fingerprint",
+            "done": "Done"
+        },
+        "table": {
+            "header": {
+                "identity": "Identity",
+                "certificate": "Certificate",
+                "profile": "Provisioning profile",
+                "validity": "Validity",
+                "status": "Status"
+            },
+            "empty": "No signing identity imported"
+        },
+        "fields": {
+            "team": "Team",
+            "expires": "Expires {{date}}",
+            "certificate_validity": "Certificate: {{from}} → {{to}}",
+            "profile_validity": "Profile: {{from}} → {{to}}",
+            "devices_one": "{{count}} device",
+            "devices": "{{count}} devices",
+            "all_devices": "All devices (enterprise)"
+        },
+        "status": {
+            "in_use": "In use by a running installation",
+            "used_by_one": "Used by {{count}} app",
+            "used_by": "Used by {{count}} apps",
+            "unused": "Not used by any app"
+        },
+        "import_modal": {
+            "title": "Import a signing identity",
+            "name_label": "Name (optional)",
+            "name_placeholder": "Defaults to the certificate name",
+            "p12_label": "Certificate (.p12)",
+            "password_label": "P12 password",
+            "password_placeholder": "Leave empty if the P12 has no password",
+            "password_tips": "The password is only used to decrypt the P12 during the import and is never stored.",
+            "profile_label": "Provisioning profile (.mobileprovision)",
+            "submit": "Import",
+            "files_required": "Choose a P12 file and a provisioning profile.",
+            "issues_title": "The identity was imported with the following findings:"
+        },
+        "replace_modal": {
+            "title": "Replace the profile of {{name}}",
+            "current": "Current profile: {{name}}",
+            "tips": "The new provisioning profile must include the certificate of this identity. Installed apps keep their current signature until they are reinstalled.",
+            "submit": "Replace"
+        },
+        "dialog": {
+            "delete_confirm": {
+                "title": "Delete the signing identity {{name}}?"
+            },
+            "referenced": {
+                "title": "Identity used by installed apps",
+                "content_one": "{{count}} installed app uses {{name}}. After the deletion it can no longer be reinstalled with this identity. Delete anyway?",
+                "content": "{{count}} installed apps use {{name}}. After the deletion they can no longer be reinstalled with this identity. Delete anyway?",
+                "confirm": "Delete anyway"
+            }
+        },
+        "toast": {
+            "import_success": "Signing identity imported",
+            "replace_success": "Provisioning profile replaced",
+            "delete_success": "Signing identity deleted",
+            "copied": "Fingerprint copied",
+            "copy_failed": "Could not copy the fingerprint"
+        }
+    },
+    "signing": {
+        "mode": {
+            "apple_id": "Apple ID",
+            "external_certificate": "External certificate"
+        },
+        "severity": {
+            "error": "Blocking",
+            "warning": "Warnings",
+            "info": "Information"
+        },
+        "classes": {
+            "identity": "Signing identity",
+            "signing": "Signing",
+            "transport": "Device connection"
+        },
+        "profile_kinds": {
+            "development": "Development",
+            "ad_hoc": "Ad Hoc",
+            "enterprise": "Enterprise",
+            "app_store": "App Store"
+        },
+        "plan": {
+            "title": "Compatibility check",
+            "run_check": "Check again",
+            "uploading": "Uploading the IPA for the compatibility check…",
+            "checking": "Checking the IPA, the identity and the device…",
+            "check_failed": "The compatibility check failed",
+            "pending": "Choose an IPA file and a signing identity to check their compatibility with this device.",
+            "rerun_needed": "Run the compatibility check to install this IPA.",
+            "blocking": "Installation blocked: fix the errors below",
+            "ready": "Ready to sign",
+            "bundle_id": "Bundle identifier",
+            "application_identifier": "Signed application identifier",
+            "unchanged": "unchanged",
+            "removed_extensions": "Removed extensions",
+            "none": "None",
+            "device": "Device and platform",
+            "device_ok": "Covered by the profile",
+            "device_warning": "Covered, with warnings",
+            "device_problem": "Not covered by the profile"
+        },
+        "report": {
+            "title": "Signing report",
+            "plan": "Signing plan used",
+            "verified": "Signed app verified"
+        },
+        "codes": {
+            "upload_too_large": "The file is too large.",
+            "p12_invalid": "The file is not a readable PKCS#12 (.p12) file.",
+            "p12_wrong_password": "Incorrect P12 password.",
+            "p12_no_private_key": "The P12 file contains no private key.",
+            "p12_no_certificate": "The P12 file contains no certificate matching its private key.",
+            "p12_key_mismatch": "The private key does not match the certificate.",
+            "p12_ambiguous": "The P12 file contains several identities. Export a single certificate with its private key.",
+            "p12_unsupported": "The P12 file uses an unsupported format, encryption or key type.",
+            "certificate_not_code_signing": "The certificate is not valid for code signing.",
+            "certificate_expired": "The certificate has expired.",
+            "certificate_not_yet_valid": "The certificate is not valid yet.",
+            "certificate_no_team": "The certificate has no Apple developer team identifier.",
+            "revocation_not_checked": "Revocation not verified",
+            "profile_invalid": "The provisioning profile is invalid or cannot be read.",
+            "profile_signature_invalid": "The provisioning profile is not signed by Apple or its signature is invalid.",
+            "profile_expired": "The provisioning profile has expired.",
+            "profile_not_installable": "App Store provisioning profiles cannot install apps on devices.",
+            "profile_certificate_mismatch": "The provisioning profile does not include this certificate.",
+            "profile_team_mismatch": "The provisioning profile belongs to another team than the certificate.",
+            "identity_expiring_soon": "Expires soon",
+            "identity_duplicate": "An identity with the same certificate and provisioning profile already exists.",
+            "identity_not_found": "The signing identity no longer exists.",
+            "identity_in_use": "The signing identity is used by a running installation. Try again once it has finished.",
+            "identity_referenced": "Installed apps still use this signing identity.",
+            "key_unavailable": "The signing key of this installation is unavailable, so the private key cannot be unlocked.",
+            "key_mismatch": "The private key was sealed with another signing key. Restore the original key file or import the identity again.",
+            "sealed_key_corrupt": "The stored private key is damaged. Import the identity again.",
+            "workspace_failed": "The temporary signing workspace could not be prepared.",
+            "device_platform_unknown": "The device platform is unknown.",
+            "device_unreachable": "The device could not be reached.",
+            "profile_platform_mismatch": "The provisioning profile does not support the platform of this device.",
+            "ipa_platform_mismatch": "The app is not built for the platform of this device.",
+            "ipa_platform_unknown": "The platform the app is built for could not be determined.",
+            "device_not_provisioned": "This device is not included in the provisioning profile.",
+            "ipa_invalid": "The IPA file is invalid or cannot be read.",
+            "ipa_path_rejected": "The IPA file is not an uploaded or installed IPA. Upload it again.",
+            "nested_bundles_not_signed": "An app nested inside another app cannot be signed with the provisioning profile.",
+            "bundle_identifier_rewritten": "The bundle identifier will be changed to the custom identifier; the identifiers of the app extensions follow it.",
+            "extension_removed": "An extension will be removed from the app.",
+            "application_identifier_mismatch": "The application identifier would not match the provisioning profile.",
+            "wildcard_requires_binary_entitlements": "The executable embeds no entitlements, so the wildcard profile cannot give it the expected application identifier.",
+            "entitlements_missing": "The provisioning profile does not grant some entitlements requested by the app.",
+            "entitlement_value_changed": "Some entitlements would be signed with other values than the app requests.",
+            "application_identifier_from_profile": "This bundle is signed with the application identifier of the provisioning profile, not its own. App Groups, keychain sharing, push notifications and iCloud may not work.",
+            "custom_identifier_invalid": "The custom bundle identifier is invalid: use only letters, digits, hyphens and dots.",
+            "incompatible": "The IPA, the provisioning profile and the device are not compatible.",
+            "engine_failed": "The signing engine failed.",
+            "signed_output_missing": "The signing engine did not produce the signed IPA.",
+            "signed_bundles_mismatch": "The signed IPA does not contain the expected apps and extensions.",
+            "signed_bundle_identifier_mismatch": "A signed bundle has an unexpected bundle identifier.",
+            "signed_profile_mismatch": "A signed bundle does not embed the provisioning profile of the identity.",
+            "signed_certificate_mismatch": "A signed bundle is not signed with the certificate of the identity.",
+            "signed_entitlements_invalid": "A signed bundle has unexpected entitlements.",
+            "transport_failed": "The device could not be reached or rejected the installation.",
+            "pairing_record_invalid": "The pairing record of the device is missing or unreadable. Pair the device again.",
+            "certificate_invalid": "The stored certificate cannot be read. Import the identity again."
         }
     }
 }

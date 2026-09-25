@@ -17,6 +17,7 @@ import (
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/notify"
 	"github.com/bitxeno/atvloadly/internal/service"
+	"github.com/bitxeno/atvloadly/internal/signing"
 	"github.com/robfig/cron/v3"
 )
 
@@ -30,6 +31,9 @@ type Task struct {
 	InvalidAccounts map[string]bool
 	// RefreshingDevices prevents concurrent refresh operations for the same device UDID
 	RefreshingDevices sync.Map
+	// ExternalSkipLogged records the external certificate apps whose skipped
+	// automatic refresh was already logged, to log it once per app.
+	ExternalSkipLogged sync.Map
 	// Batch tracking for aggregated notifications
 	batchMu      sync.Mutex
 	currentBatch *BatchInfo
@@ -136,24 +140,17 @@ func (t *Task) Run() {
 	}
 
 	appsNeedRefresh := make([]model.InstalledApp, 0)
-	updateCount := 0
+	// An update re-signs the app, so it replaces the refresh.
+	notUpdated := make([]model.InstalledApp, 0, len(installedApps))
 	for _, v := range installedApps {
-		// An update re-signs the app, so it replaces the refresh.
 		if target, ok := updates[v.ID]; ok && v.Source.AutoUpdate && target.Source.BuildID != v.Source.FailedBuildID && canInstallUpdate(v) {
 			appsNeedRefresh = append(appsNeedRefresh, target)
-			updateCount++
 			continue
 		}
-
-		if !v.NeedRefresh(app.Settings.Task.AdvanceDays) {
-			continue
-		}
-
-		if v.IsAccountInvalid() {
-			log.Warnf("The install account (%s) is invalid, skip refresh app: %s.", v.MaskAccount(), v.IpaName)
-			continue
-		}
-
+		notUpdated = append(notUpdated, v)
+	}
+	updateCount := len(appsNeedRefresh)
+	for _, v := range t.autoRefreshApps(notUpdated) {
 		// iPhone cannot refresh on a schedule and relies on whether the phone is unlocked
 		// Need to check Afc service status before refreshing
 		if v.IsIPhoneApp() {
@@ -257,28 +254,38 @@ func (t *Task) tryInstallApp(item TaskItem) {
 		return
 	}
 	v := *resolvedApp
+	// The downloaded or uploaded files of a new installation or an update,
+	// before SaveApp moves them. A reinstallation uses the files of its record,
+	// which must stay.
+	var uploadedIPA, uploadedIcon string
+	if v.ID == 0 || update {
+		uploadedIPA, uploadedIcon = v.IpaPath, v.Icon
+	}
 
 	log.Infof("Start installing ipa: %s", v.IpaName)
 	installMgr := manager.NewInstallManager()
 	defer func() {
 		installMgr.SaveLog(v.ID)
-		installMgr.CleanTempFiles(v.IpaPath)
+		if v.IsExternalSigning() {
+			// Never the global temporary files: other installations may use them.
+			service.CleanExternalUpload(uploadedIPA, uploadedIcon)
+		} else {
+			installMgr.CleanTempFiles(v.IpaPath)
+		}
 		installMgr.Close()
 	}()
-	provisioningProfile, err := t.runInternal(v, refresh, installMgr)
+	result, err := t.runInternal(v, refresh, installMgr)
 
 	success := err == nil
 	if success {
 		now := time.Now()
-		expirationDate := now.AddDate(0, 0, 7)
-		if provisioningProfile != nil {
-			expirationDate = provisioningProfile.ExpirationDate.Local()
-		}
+		expirationDate := result.ExpirationDate
 
 		v.RefreshedDate = &now
 		v.ExpirationDate = &expirationDate
 		v.RefreshedResult = true
 		v.RefreshedError = model.RefreshedErrorNone
+		v.SignedBundleIdentifier = result.SignedBundleIdentifier
 
 		if v.ID == 0 || update {
 			savedApp, saveErr := service.SaveApp(v)
@@ -307,11 +314,7 @@ func (t *Task) tryInstallApp(item TaskItem) {
 func (t *Task) handleInstallFailure(item TaskItem, v model.InstalledApp, err error) {
 	log.Err(err).Msgf("Installing ipa failed: %s", v.IpaName)
 	v.RefreshedResult = false
-	if errors.Is(err, manager.ErrAccountInvalid) {
-		v.RefreshedError = model.RefreshedErrorInvalidAccount
-	} else {
-		v.RefreshedError = model.RefreshedErrorInvalidOther
-	}
+	v.RefreshedError = service.RefreshedErrorOf(err)
 	if isSourceUpdate(item.App) {
 		// The installed app is unchanged: only remember the failed build, and
 		// an invalid account so that refreshes skip it.
@@ -400,7 +403,7 @@ func (t *Task) trackBatchProgress(item TaskItem, success bool, err error) {
 		t.currentBatch.FailedApps = append(t.currentBatch.FailedApps, FailedAppInfo{
 			AppName: item.App.IpaName,
 			Account: item.App.Account,
-			Error:   err.Error(),
+			Error:   failureDescription(err),
 		})
 	}
 
@@ -438,7 +441,17 @@ func (t *Task) sendBatchNotification(batch *BatchInfo) {
 	}
 }
 
-func (t *Task) runInternal(v model.InstalledApp, refresh bool, installMgr *manager.InstallManager) (*model.MobileProvisioningProfile, error) {
+// installResult is what a successful installation records on the app.
+type installResult struct {
+	ExpirationDate time.Time
+	// SignedBundleIdentifier is set by external certificate installations.
+	SignedBundleIdentifier string
+}
+
+func (t *Task) runInternal(v model.InstalledApp, refresh bool, installMgr *manager.InstallManager) (*installResult, error) {
+	if v.IsExternalSigning() {
+		return t.runExternal(v, installMgr)
+	}
 	if v.Account == "" || v.UDID == "" {
 		installMgr.WriteLog("account or UDID is empty")
 		return nil, fmt.Errorf("%s", "account or UDID is empty")
@@ -475,10 +488,39 @@ func (t *Task) runInternal(v model.InstalledApp, refresh bool, installMgr *manag
 	}
 
 	if installMgr.IsSuccess() {
-		return installMgr.ProvisioningProfile, nil
+		expirationDate := time.Now().AddDate(0, 0, 7)
+		if installMgr.ProvisioningProfile != nil {
+			expirationDate = installMgr.ProvisioningProfile.ExpirationDate.Local()
+		}
+		return &installResult{ExpirationDate: expirationDate}, nil
 	} else {
 		return nil, fmt.Errorf("install failed with unknown error. %s", installMgr.ErrorLog())
 	}
+}
+
+// runExternal installs v with its external signing identity. A refresh of an
+// installed app is a full reinstallation with the same identity: the engine
+// refresh mode belongs to Apple ID sessions, and the app keeps the deadline of
+// the identity. The invalid account bookkeeping does not apply.
+func (t *Task) runExternal(v model.InstalledApp, installMgr *manager.InstallManager) (*installResult, error) {
+	if v.UDID == "" {
+		installMgr.WriteLog("UDID is empty")
+		return nil, fmt.Errorf("%s", "UDID is empty")
+	}
+
+	dev, found := manager.GetDeviceByUDID(v.UDID)
+	if !found || dev == nil {
+		return nil, signing.Errorf(signing.ClassTransport, signing.CodeDeviceUnreachable, "device not found for UDID: %s", v.UDID)
+	}
+
+	result, err := service.RunExternalInstall(context.Background(), installMgr, v, dev, true)
+	if err != nil {
+		return nil, err
+	}
+	return &installResult{
+		ExpirationDate:         result.ExpiresAt.Local(),
+		SignedBundleIdentifier: result.SignedBundleIdentifier,
+	}, nil
 }
 
 // shouldUseRefreshMode reports whether v is a refresh of an installed app,
@@ -491,6 +533,56 @@ func shouldUseRefreshMode(v model.InstalledApp) bool {
 // (see service.ApplyBuild), which must be signed again.
 func isSourceUpdate(v model.InstalledApp) bool {
 	return v.ID != 0 && ipa.IsRemoteURL(v.IpaPath)
+}
+
+// failureDescription is the notification text of an installation failure.
+// External certificate failures name what the user has to fix.
+func failureDescription(err error) string {
+	switch signing.ClassOf(err) {
+	case signing.ClassIdentity:
+		return "signing identity error: " + err.Error()
+	case signing.ClassSigning:
+		return "signing error: " + err.Error()
+	case signing.ClassTransport:
+		return "device error: " + err.Error()
+	default:
+		return err.Error()
+	}
+}
+
+// selectAutoRefreshApps splits the apps an automatic refresh looks at: refresh
+// holds the Apple ID apps due for a refresh whose account is valid; external
+// holds the external certificate apps due for a refresh, which cannot be
+// refreshed automatically (the identity deadline does not move).
+func selectAutoRefreshApps(apps []model.InstalledApp, advanceDays int) (refresh, external []model.InstalledApp) {
+	refresh = make([]model.InstalledApp, 0)
+	for _, v := range apps {
+		if !v.NeedRefresh(advanceDays) {
+			continue
+		}
+		if v.IsExternalSigning() {
+			external = append(external, v)
+			continue
+		}
+		if v.IsAccountInvalid() {
+			log.Warnf("The install account (%s) is invalid, skip refresh app: %s.", v.MaskAccount(), v.IpaName)
+			continue
+		}
+		refresh = append(refresh, v)
+	}
+	return refresh, external
+}
+
+// autoRefreshApps returns the apps an automatic refresh renews and logs, once
+// per app, the external certificate apps it skips.
+func (t *Task) autoRefreshApps(apps []model.InstalledApp) []model.InstalledApp {
+	refresh, external := selectAutoRefreshApps(apps, app.Settings.Task.AdvanceDays)
+	for _, v := range external {
+		if _, logged := t.ExternalSkipLogged.LoadOrStore(v.ID, true); !logged {
+			log.Warnf("App %s is signed with an external certificate and is not refreshed automatically: reinstalling it does not extend its validity. Replace the provisioning profile or import a new signing identity, then reinstall it.", v.IpaName)
+		}
+	}
+	return refresh
 }
 
 func (t *Task) autoRefreshDeviceApps(device model.Device) error {
@@ -510,19 +602,7 @@ func (t *Task) refreshDeviceApps(device model.Device) error {
 		return err
 	}
 
-	appsNeedRefresh := make([]model.InstalledApp, 0)
-	for _, v := range deviceApps {
-		if !v.NeedRefresh(app.Settings.Task.AdvanceDays) {
-			continue
-		}
-
-		if v.IsAccountInvalid() {
-			log.Warnf("The install account (%s) is invalid, skip refresh app: %s.", v.MaskAccount(), v.IpaName)
-			continue
-		}
-
-		appsNeedRefresh = append(appsNeedRefresh, v)
-	}
+	appsNeedRefresh := t.autoRefreshApps(deviceApps)
 
 	if len(appsNeedRefresh) == 0 {
 		return nil

@@ -537,6 +537,25 @@ func TestLinkUpdateAndUntrackSource(t *testing.T) {
 	}
 }
 
+// An app signed with an external certificate never tracks a source: its
+// updates would be installed unattended with the certificate.
+func TestLinkSourceRefusesExternalCertificateApp(t *testing.T) {
+	setupTestDB(t)
+	u, requests := serveSource(t, testSource)
+	installed := createApp(t, model.InstalledApp{
+		IpaName: "Alpha", UDID: "u1", BundleIdentifier: "com.example.alpha", DeviceClass: "AppleTV",
+		SigningMode: model.SigningModeExternalCertificate, SigningIdentityID: 1,
+	})
+
+	if _, err := LinkSource(installed.ID, SourceInput{Kind: source.KindAltStore, URL: u, Filter: "com.example.alpha", AutoUpdate: true}); err == nil {
+		t.Fatal("LinkSource of an external certificate app should fail")
+	}
+	assertSource(t, mustGetApp(t, installed.ID).Source, model.AppSource{})
+	if n := atomic.LoadInt32(requests); n != 0 {
+		t.Fatalf("the source was fetched %d times", n)
+	}
+}
+
 func TestSourceKeepsFilterOfAnotherBundle(t *testing.T) {
 	setupTestDB(t)
 	u, _ := serveSource(t, testSource)

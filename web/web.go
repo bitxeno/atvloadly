@@ -8,12 +8,16 @@ import (
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 func Run(addr string, port int) error {
 	server := fiber.New(fiber.Config{
 		BodyLimit: math.MaxInt,
 	})
+
+	// A panicking handler answers 500 instead of stopping the server.
+	server.Use(recover.New())
 
 	// set fiber web server access log
 	server.Use(logger.New())

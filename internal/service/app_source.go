@@ -270,11 +270,14 @@ func CheckSourceUpdates(apps []model.InstalledApp) SourceCheckResult {
 }
 
 // LinkSource links app id to a source (or changes its settings), then checks
-// it for updates.
+// it for updates. Only Apple ID signed apps can track a source.
 func LinkSource(id uint, in SourceInput) (*model.InstalledApp, error) {
 	app, err := GetApp(id)
 	if err != nil {
 		return nil, err
+	}
+	if app.IsExternalSigning() {
+		return nil, errors.New("an app signed with an external certificate cannot track a source")
 	}
 	location, err := source.Normalize(in.Kind, in.URL)
 	if err != nil {

@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/ipa"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/model"
+	"github.com/bitxeno/atvloadly/internal/signing"
 	"github.com/gofiber/contrib/websocket"
 )
 
@@ -38,24 +40,26 @@ func HandleInstallMessage(c *websocket.Conn) {
 			var v model.InstalledApp
 			err := json.Unmarshal([]byte(msg.Data), &v)
 			if err != nil {
-				msg := fmt.Sprintf("ERROR: %s", err.Error())
-				_ = c.WriteMessage(websocket.TextMessage, []byte(msg))
+				writeInstallRejected(websocketMgr, err.Error())
 				continue
 			}
 
-			if v.Account == "" || v.UDID == "" {
-				_ = c.WriteMessage(websocket.TextMessage, []byte("account or UDID is empty"))
+			if err := validateInstallRequest(&v); err != nil {
+				if v.IsExternalSigning() && signing.ClassOf(err) != "" {
+					websocketMgr.WriteMessage(failureReportLine(err))
+				}
+				writeInstallRejected(websocketMgr, err.Error())
 				continue
 			}
 
 			if err := ValidateCustomName(v.CustomName); err != nil {
-				_ = c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("ERROR: %s", err.Error())))
+				writeInstallRejected(websocketMgr, err.Error())
 				continue
 			}
 
 			dev, found := manager.GetDeviceByUDID(v.UDID)
 			if !found || dev == nil {
-				_ = c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("ERROR: device not found for UDID: %s", v.UDID)))
+				writeInstallRejected(websocketMgr, fmt.Sprintf("device not found for UDID: %s", v.UDID))
 				continue
 			}
 
@@ -68,6 +72,62 @@ func HandleInstallMessage(c *websocket.Conn) {
 			continue
 		}
 	}
+}
+
+// writeInstallRejected reports an install request refused before it started,
+// ending it with the failure marker the install page waits for.
+func writeInstallRejected(mgr *manager.WebsocketManager, reason string) {
+	mgr.WriteMessage(fmt.Sprintf("ERROR: %s", reason))
+	mgr.WriteMessage("\n")
+	mgr.WriteMessage("Installation Failed!")
+}
+
+// validateInstallRequest checks an install request of the install page. Apple
+// ID installs need an account and take the IPA path as given. External
+// certificate installs need a signing identity and no account, and their
+// local IPA path is confined to the upload and installed apps directories.
+// Only external certificate installs accept a custom bundle identifier; the
+// plan reports an invalid one.
+func validateInstallRequest(v *model.InstalledApp) error {
+	if v.SigningMode != "" && !v.SigningMode.IsValid() {
+		return fmt.Errorf("invalid signing mode: %q", v.SigningMode)
+	}
+	v.SigningMode = v.EffectiveSigningMode()
+	v.CustomIdentifier = strings.TrimSpace(v.CustomIdentifier)
+	switch v.SigningMode {
+	case model.SigningModeAppleID:
+		if v.Account == "" || v.UDID == "" {
+			return fmt.Errorf("account or UDID is empty")
+		}
+		if v.CustomIdentifier != "" {
+			return fmt.Errorf("a custom bundle identifier requires an external signing certificate")
+		}
+		v.SigningIdentityID = 0
+		v.AllowMissingEntitlements = false
+	case model.SigningModeExternalCertificate:
+		if v.UDID == "" {
+			return fmt.Errorf("UDID is empty")
+		}
+		if v.Account != "" {
+			return fmt.Errorf("an account cannot be used with an external signing certificate")
+		}
+		if v.SigningIdentityID == 0 {
+			return fmt.Errorf("no signing identity selected")
+		}
+		// Tracked sources install Apple ID signed builds only.
+		if v.Source.Tracked() {
+			return fmt.Errorf("a tracked source cannot be installed with an external signing certificate")
+		}
+		if !ipa.IsRemoteURL(v.IpaPath) {
+			resolved, err := ResolveClientIPAPath(v.IpaPath)
+			if err != nil {
+				return err
+			}
+			v.IpaPath = resolved
+		}
+	}
+	v.SignedBundleIdentifier = ""
+	return nil
 }
 
 func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.InstallManager, v model.InstalledApp, dev *model.Device) {
@@ -126,6 +186,11 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		v.Icon = result.IconPath
 	}
 
+	if v.IsExternalSigning() {
+		runExternalInstallMessage(mgr, installMgr, v, dev)
+		return
+	}
+
 	err := installMgr.Start(mgr.Context(), manager.InstallOptions{
 		UDID:             v.UDID,
 		Account:          v.Account,
@@ -170,6 +235,59 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 	}
 
 	installMgr.CleanTempFiles(v.IpaPath)
+}
+
+// runExternalInstallMessage signs and installs v with its external signing
+// identity. A failure is recorded on the previous record of the same app, if
+// any; a first installation that fails creates no record. Only the upload
+// files of v are cleaned up.
+func runExternalInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.InstallManager, v model.InstalledApp, dev *model.Device) {
+	defer CleanExternalUpload(v.IpaPath, v.Icon)
+
+	result, err := RunExternalInstall(mgr.Context(), installMgr, v, dev, false)
+	if err != nil {
+		recordExternalInstallFailure(v, err)
+		mgr.WriteMessage(fmt.Sprintf("ERROR: %s", err.Error()))
+		mgr.WriteMessage("\n")
+		mgr.WriteMessage("Installation Failed!")
+		return
+	}
+
+	now := time.Now()
+	expirationDate := result.ExpiresAt.Local()
+	v.RefreshedDate = &now
+	v.ExpirationDate = &expirationDate
+	v.RefreshedResult = true
+	v.RefreshedError = model.RefreshedErrorNone
+	v.SignedBundleIdentifier = result.SignedBundleIdentifier
+
+	app, err := SaveApp(v)
+	if err != nil {
+		mgr.WriteMessage(fmt.Sprintf("ERROR: save app to db failed. %s", err.Error()))
+		mgr.WriteMessage("\n")
+		mgr.WriteMessage("Installation Failed!")
+		return
+	}
+	installMgr.SaveLog(app.ID)
+	mgr.WriteMessage("Installation Succeeded!")
+}
+
+// recordExternalInstallFailure marks the previous record of the external
+// certificate installation v as failed with the class of err.
+func recordExternalInstallFailure(v model.InstalledApp, err error) {
+	cur, found, findErr := findInstalledApp(v)
+	if findErr != nil {
+		log.Err(findErr).Msgf("Cannot find the installed app record of %s", v.IpaName)
+		return
+	}
+	if !found {
+		return
+	}
+	cur.RefreshedResult = false
+	cur.RefreshedError = RefreshedErrorOf(err)
+	if updateErr := UpdateAppRefreshResult(cur); updateErr != nil {
+		log.Err(updateErr).Msgf("Cannot record the installation failure of %s", v.IpaName)
+	}
 }
 
 func HandleLoginMessage(c *websocket.Conn) {

@@ -28,6 +28,7 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
 * Supports automatic app refresh
 * Supports tracking GitHub releases / AltStore sources, with manual or automatic app updates
 * Supports use of multiple Apple ID accounts
+* Supports signing with your own certificate (P12 + provisioning profile), without an Apple ID
 * I18n support
 
 ## Screenshots
@@ -97,6 +98,14 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
 3. Click on the `AppleTV` device to enter the pairing page and complete the pairing operation.
 4. After successful pairing, return to the home page, where the connected `AppleTV` will be displayed.
 5. Click on the connected `AppleTV` to enter the sideload installation page, select the IPA file that needs to be sideloaded, and click `Install`.
+
+### External certificate (P12) signing
+
+If you already own a code signing certificate, you can import its `.p12` (with its password, which may be empty) and a matching `.mobileprovision` profile (a **tvOS** profile listing the Apple TV UDID for an Apple TV), then choose **External certificate** on the install page. No Apple ID is asked for or used. Apps signed this way are not refreshed automatically and a reinstall does not extend their validity: the expiry is the earlier of the certificate and profile expiries.
+
+The private keys are stored encrypted with a deployment key file (`signing.key_file`, default `/data/keys/signing-identity.key`): back it up together with the database. atvloadly has no authentication, so keep it on a trusted network.
+
+[>> External certificate guide](./doc/external-certificate.md)
 
 ## FAQ
 

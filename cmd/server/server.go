@@ -1,8 +1,12 @@
 package server
 
 import (
+	"path/filepath"
+
 	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/manager"
+	"github.com/bitxeno/atvloadly/internal/signing"
 	"github.com/bitxeno/atvloadly/internal/task"
 	"github.com/bitxeno/atvloadly/web"
 	"github.com/fatih/color"
@@ -78,6 +82,7 @@ func action(c *cli.Context) error {
 	if err := app.InitDb(conf); err != nil {
 		return err
 	}
+	initSigning(conf)
 
 	// start jobs
 	_ = task.ScheduleRefreshApps()
@@ -89,6 +94,21 @@ func action(c *cli.Context) error {
 		port = c.Int("port")
 	}
 	return web.Run(conf.Server.ListenAddr, port)
+}
+
+// initSigning configures the external certificate signing mode and removes
+// the signing workspaces left behind by a previous crash. Failures are logged
+// and do not prevent the server from starting.
+func initSigning(conf *app.Configuration) {
+	signing.Configure(conf.Signing.KeyFile, filepath.Join(conf.Server.DataDir, "signing-work"))
+	removed, err := signing.RecoverWorkspaces()
+	if err != nil {
+		log.Err(err).Msg("Failed to recover signing workspaces")
+		return
+	}
+	if removed > 0 {
+		log.Infof("Removed %d stale signing workspace(s)", removed)
+	}
 }
 
 func printVersion() {

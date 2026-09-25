@@ -67,6 +67,7 @@
         "toast": {
             "refresh_app_started": "已启动刷新 {{name}}",
             "installing_app": "{{name}} 安装中...",
+            "reinstall_app_started": "已开始重新安装 {{name}}。重新安装不会延长有效期。",
             "update_started": "已开始将 {{name}} 更新到 {{version}}",
             "updates_available": "可用更新：{{count}}",
             "check_errors": "无法检查的来源：{{count}}",
@@ -114,13 +115,24 @@
             "button": {
                 "refresh": "刷新",
                 "delete": "删除",
+                "reinstall": "重新安装",
                 "update": "更新"
             },
             "tips": {
                 "view_log": "点击查看安装日志",
                 "account_invalid": "帐号存在问题，请查看日志并修正",
                 "no_data": "没有数据",
-                "footer": "默认当app过期时间小于1天时，会在凌晨3～6点钟自动进行刷新操作。关联了 GitHub 或 AltStore 来源的应用会在后台检查新版本，自动更新会在同一时间段内安装。"
+                "footer": "默认当app过期时间小于1天时，会在凌晨3～6点钟自动进行刷新操作。关联了 GitHub 或 AltStore 来源的应用会在后台检查新版本，自动更新会在同一时间段内安装。",
+                "footer_external": "使用外部证书签名的应用不会自动刷新：证书或描述文件过期后应用将无法使用。重新安装不会延长该日期，请改为导入新的描述文件或证书。",
+                "reinstall_external": "重新安装不会延长有效期，有效期取决于证书和描述文件。如需延长，请导入新的描述文件或证书。",
+                "signing_identity_error": "签名身份（证书、私钥或描述文件）无效或不兼容。请查看日志并在帐号页面检查该身份。",
+                "signing_error": "签名失败，或已签名的应用未通过验证。详情请查看日志。",
+                "transport_error": "无法连接设备，或设备拒绝了安装。详情请查看日志。"
+            },
+            "signing": {
+                "external_badge": "外部证书",
+                "identity_missing": "身份已删除",
+                "valid_until": "有效期至 {{date}}"
             }
         }
     },
@@ -151,7 +163,8 @@
     },
     "install": {
         "tips": {
-            "warning": "本设备会模拟为一台 MacBook，登陆安装帐号时，请确保身边有 iPhone 手机或已授权设备能正常接收 2FA 验证码，并及时授权验证。"
+            "warning": "本设备会模拟为一台 MacBook，登陆安装帐号时，请确保身边有 iPhone 手机或已授权设备能正常接收 2FA 验证码，并及时授权验证。",
+            "external": "外部证书模式使用你导入的证书和描述文件签名，不使用任何 Apple ID。应用在证书或描述文件过期前有效，但 Apple 仍可能提前吊销证书；atvloadly 不检查吊销状态。"
         },
         "dialog": {
             "input_pin": {
@@ -221,7 +234,8 @@
                 "label": "选择ipa:"
             },
             "ipa_url": {
-                "label": "IPA链接:"
+                "label": "IPA链接:",
+                "external_unavailable": "外部证书签名需要上传 IPA 文件"
             },
             "account": {
                 "label": "Apple帐号:",
@@ -245,7 +259,28 @@
             },
             "extensions": {
                 "remove_extensions": "移除扩展插件",
-                "tips": "没有足够的 App ID 可以注册时很有用"
+                "tips": "没有足够的 App ID 可以注册时很有用",
+                "tips_external": "移除应用的所有扩展（小组件、插件）。默认会保留扩展并使用描述文件签名。被移除的扩展会列在兼容性检查中。"
+            },
+            "signing_mode": {
+                "label": "签名方式："
+            },
+            "identity": {
+                "label": "签名身份：",
+                "placeholder": "请选择签名身份",
+                "expires": "{{date}} 过期",
+                "manage": "管理签名身份",
+                "alt": "应用将使用此证书和描述文件签名，不使用 Apple ID。",
+                "empty": "尚无签名身份，请在帐号页面导入 P12 证书和描述文件。"
+            },
+            "custom_identifier": {
+                "label": "自定义 Bundle ID：",
+                "placeholder": "IPA 的 Bundle ID",
+                "alt": "留空则保留 IPA 中的 Bundle ID。应用扩展的 Bundle ID 会随自定义 Bundle ID 一起修改。"
+            },
+            "allow_missing_entitlements": {
+                "label": "允许缺少权限",
+                "tips": "即使描述文件未授予应用请求的部分权限（entitlements）也进行签名，依赖这些权限的功能可能无法使用。"
             }
         }
         ,
@@ -444,7 +479,10 @@
             "delete_failed": "删除帐号失败",
             "logout_success": "帐号登出成功",
             "logout_failed": "登出帐号失败"
-        }
+        },
+      "heading": {
+          "apple_accounts": "Apple 帐号"
+      }
     },
     "source_dialog": {
         "title_track": "跟踪 {{name}} 的更新",
@@ -570,6 +608,182 @@
                 "cancel": "取消",
                 "confirm": "覆盖"
             }
+        }
+    },
+    "identity": {
+        "title": "签名身份（外部证书）",
+        "subtitle": "用于在不使用 Apple ID 的情况下签名应用的 P12 证书和描述文件。",
+        "notice": "使用导入的证书签名时，atvloadly 不需要 Apple ID。应用在证书或描述文件过期前可以安装；但 Apple 仍可能提前吊销证书，且 atvloadly 不检查吊销状态。",
+        "button": {
+            "import": "导入 P12",
+            "replace_profile": "替换描述文件",
+            "copy": "复制",
+            "copy_fingerprint": "复制 SHA-1 指纹",
+            "done": "完成"
+        },
+        "table": {
+            "header": {
+                "identity": "身份",
+                "certificate": "证书",
+                "profile": "描述文件",
+                "validity": "有效期",
+                "status": "状态"
+            },
+            "empty": "尚未导入签名身份"
+        },
+        "fields": {
+            "team": "团队",
+            "expires": "{{date}} 过期",
+            "certificate_validity": "证书：{{from}} → {{to}}",
+            "profile_validity": "描述文件：{{from}} → {{to}}",
+            "devices": "{{count}} 台设备",
+            "all_devices": "所有设备（企业）"
+        },
+        "status": {
+            "in_use": "正在被安装任务使用",
+            "used_by": "被 {{count}} 个应用使用",
+            "unused": "未被任何应用使用"
+        },
+        "import_modal": {
+            "title": "导入签名身份",
+            "name_label": "名称（可选）",
+            "name_placeholder": "默认使用证书名称",
+            "p12_label": "证书（.p12）",
+            "password_label": "P12 密码",
+            "password_placeholder": "如果 P12 没有密码请留空",
+            "password_tips": "密码仅在导入时用于解密 P12，不会被保存。",
+            "profile_label": "描述文件（.mobileprovision）",
+            "submit": "导入",
+            "files_required": "请选择 P12 文件和描述文件。",
+            "issues_title": "身份已导入，但有以下提示："
+        },
+        "replace_modal": {
+            "title": "替换 {{name}} 的描述文件",
+            "current": "当前描述文件：{{name}}",
+            "tips": "新的描述文件必须包含该身份的证书。已安装的应用在重新安装前保持当前签名。",
+            "submit": "替换"
+        },
+        "dialog": {
+            "delete_confirm": {
+                "title": "确定删除签名身份 {{name}} 吗？"
+            },
+            "referenced": {
+                "title": "身份正被已安装的应用使用",
+                "content": "有 {{count}} 个已安装的应用使用 {{name}}。删除后，这些应用将无法再用此身份重新安装。仍要删除吗？",
+                "confirm": "仍然删除"
+            }
+        },
+        "toast": {
+            "import_success": "签名身份已导入",
+            "replace_success": "描述文件已替换",
+            "delete_success": "签名身份已删除",
+            "copied": "指纹已复制",
+            "copy_failed": "无法复制指纹"
+        }
+    },
+    "signing": {
+        "mode": {
+            "apple_id": "Apple ID",
+            "external_certificate": "外部证书"
+        },
+        "severity": {
+            "error": "阻止安装",
+            "warning": "警告",
+            "info": "提示"
+        },
+        "classes": {
+            "identity": "签名身份",
+            "signing": "签名",
+            "transport": "设备连接"
+        },
+        "profile_kinds": {
+            "development": "开发",
+            "ad_hoc": "Ad Hoc",
+            "enterprise": "企业",
+            "app_store": "App Store"
+        },
+        "plan": {
+            "title": "兼容性检查",
+            "run_check": "重新检查",
+            "uploading": "正在上传 IPA 以进行兼容性检查…",
+            "checking": "正在检查 IPA、签名身份和设备…",
+            "check_failed": "兼容性检查失败",
+            "pending": "选择 IPA 文件和签名身份后，将检查它们与此设备的兼容性。",
+            "rerun_needed": "运行兼容性检查后才能安装此 IPA。",
+            "blocking": "无法安装：请先解决以下错误",
+            "ready": "可以签名",
+            "bundle_id": "Bundle ID",
+            "application_identifier": "签名使用的应用标识符",
+            "unchanged": "不变",
+            "removed_extensions": "移除的扩展",
+            "none": "无",
+            "device": "设备和平台",
+            "device_ok": "描述文件已覆盖",
+            "device_warning": "已覆盖，但有警告",
+            "device_problem": "描述文件未覆盖"
+        },
+        "report": {
+            "title": "签名报告",
+            "plan": "使用的签名计划",
+            "verified": "已签名的应用已通过验证"
+        },
+        "codes": {
+            "upload_too_large": "文件过大。",
+            "p12_invalid": "该文件不是可读取的 PKCS#12（.p12）文件。",
+            "p12_wrong_password": "P12 密码错误。",
+            "p12_no_private_key": "P12 文件中没有私钥。",
+            "p12_no_certificate": "P12 文件中没有与私钥匹配的证书。",
+            "p12_key_mismatch": "私钥与证书不匹配。",
+            "p12_ambiguous": "P12 文件包含多个身份，请只导出一个证书及其私钥。",
+            "p12_unsupported": "P12 文件的格式、加密方式或密钥类型不受支持。",
+            "certificate_not_code_signing": "该证书不能用于代码签名。",
+            "certificate_expired": "证书已过期。",
+            "certificate_not_yet_valid": "证书尚未生效。",
+            "certificate_no_team": "证书中没有 Apple 开发者团队标识。",
+            "revocation_not_checked": "未验证吊销状态",
+            "profile_invalid": "描述文件无效或无法读取。",
+            "profile_signature_invalid": "描述文件不是由 Apple 签名，或签名无效。",
+            "profile_expired": "描述文件已过期。",
+            "profile_not_installable": "App Store 描述文件不能用于在设备上安装应用。",
+            "profile_certificate_mismatch": "描述文件不包含此证书。",
+            "profile_team_mismatch": "描述文件与证书属于不同的团队。",
+            "identity_expiring_soon": "即将过期",
+            "identity_duplicate": "已存在使用相同证书和描述文件的身份。",
+            "identity_not_found": "签名身份已不存在。",
+            "identity_in_use": "签名身份正被安装任务使用，请在其完成后重试。",
+            "identity_referenced": "仍有已安装的应用使用此签名身份。",
+            "key_unavailable": "本机的签名密钥不可用，无法解锁私钥。",
+            "key_mismatch": "私钥是用另一个签名密钥封存的。请恢复原密钥文件或重新导入该身份。",
+            "sealed_key_corrupt": "已保存的私钥已损坏，请重新导入该身份。",
+            "workspace_failed": "无法准备临时签名工作目录。",
+            "device_platform_unknown": "设备平台未知。",
+            "device_unreachable": "无法连接设备。",
+            "profile_platform_mismatch": "描述文件不支持此设备的平台。",
+            "ipa_platform_mismatch": "该应用不是为此设备的平台构建的。",
+            "ipa_platform_unknown": "无法确定应用所面向的平台。",
+            "device_not_provisioned": "此设备不在描述文件的设备列表中。",
+            "ipa_invalid": "IPA 文件无效或无法读取。",
+            "ipa_path_rejected": "该 IPA 不是已上传或已安装的 IPA，请重新上传。",
+            "nested_bundles_not_signed": "嵌套在其他应用中的应用无法使用该描述文件签名。",
+            "bundle_identifier_rewritten": "Bundle ID 将被修改为自定义 Bundle ID，应用扩展的 Bundle ID 也会随之修改。",
+            "extension_removed": "将从应用中移除一个扩展。",
+            "application_identifier_mismatch": "应用标识符将与描述文件不匹配。",
+            "wildcard_requires_binary_entitlements": "可执行文件未嵌入权限（entitlements），通配符描述文件无法为其提供预期的应用标识符。",
+            "entitlements_missing": "描述文件未授予应用请求的部分权限（entitlements）。",
+            "entitlement_value_changed": "部分权限（entitlements）的签名值将与应用请求的不同。",
+            "application_identifier_from_profile": "此组件将使用描述文件的应用标识符签名，而不是它自己的应用标识符。App Group、钥匙串共享、推送通知和 iCloud 可能无法使用。",
+            "custom_identifier_invalid": "自定义 Bundle ID 无效：只能包含字母、数字、连字符和点。",
+            "incompatible": "IPA、描述文件和设备互不兼容。",
+            "engine_failed": "签名引擎执行失败。",
+            "signed_output_missing": "签名引擎未生成已签名的 IPA。",
+            "signed_bundles_mismatch": "已签名的 IPA 未包含预期的应用和扩展。",
+            "signed_bundle_identifier_mismatch": "某个已签名组件的 Bundle ID 不符合预期。",
+            "signed_profile_mismatch": "某个已签名组件未嵌入该身份的描述文件。",
+            "signed_certificate_mismatch": "某个已签名组件不是用该身份的证书签名的。",
+            "signed_entitlements_invalid": "某个已签名组件的权限（entitlements）不符合预期。",
+            "transport_failed": "无法连接设备，或设备拒绝了安装。",
+            "pairing_record_invalid": "设备的配对记录缺失或无法读取，请重新配对设备。",
+            "certificate_invalid": "无法读取已保存的证书，请重新导入该身份。"
         }
     }
 }

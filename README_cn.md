@@ -29,6 +29,7 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 * 支持自动刷新 app
 * 支持跟踪 GitHub Releases / AltStore 源，手动或自动更新 app
 * 支持同时使用多个 Apple ID 帐号
+* 支持使用自有证书（P12 + 描述文件）签名，无需 Apple ID
 * i18n 多语言支持
 
 ## 截图
@@ -98,6 +99,14 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 3. 点击 `AppleTV` 设备进入配对页面，并完成配对操作。
 4. 配对成功后返回首页，将显示已连接的 `AppleTV` 
 5. 点击已连接的 `AppleTV` 进入侧载安装页面，选择需要侧载的 IPA 文件并点击`安装`。
+
+### 外部证书（P12）签名
+
+如果你已有代码签名证书，可以导入其 `.p12` 文件（及其密码，密码可以为空）和匹配的 `.mobileprovision` 描述文件（安装到 AppleTV 时需要包含该 AppleTV UDID 的 **tvOS** 描述文件），然后在安装页面选择**外部证书**。此模式不会要求也不会使用任何 Apple ID。以此方式签名的 App 不会自动刷新，重新安装也不会延长有效期：到期时间取证书与描述文件中较早的到期时间。
+
+私钥使用部署密钥文件加密存储（配置项 `signing.key_file`，默认 `/data/keys/signing-identity.key`），请将其与数据库一起备份。atvloadly 没有登录鉴权，请只在可信网络中使用。
+
+[>> 外部证书使用说明（英文）](./doc/external-certificate.md)
 
 ## 常见问题
 

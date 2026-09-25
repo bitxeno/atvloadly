@@ -37,6 +37,12 @@ type Configuration struct {
 	} `koanf:"server" json:"server"`
 
 	Db db.Config `koanf:"db" json:"db"`
+
+	Signing struct {
+		// KeyFile is the deployment key sealing the private keys of the
+		// imported signing identities. Empty means <work_dir>/keys/signing-identity.key.
+		KeyFile string `koanf:"key_file" json:"key_file"`
+	} `koanf:"signing" json:"signing"`
 }
 
 func SideloadDataDir() string {

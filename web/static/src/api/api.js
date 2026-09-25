@@ -86,6 +86,60 @@ export default {
       data,
     });
   },
+  // External signing identities (P12 + provisioning profile). Failures carry
+  // err.result.data = {code, class, issues, app_count}; these calls never toast
+  // on API errors so the caller can show the translated signing code.
+  getSigningIdentities: () => {
+    return request({
+      url: "/api/signing/identities",
+      method: "get",
+      silent: true,
+    });
+  },
+  importSigningIdentity: (data) => {
+    return request({
+      url: "/api/signing/identities/import",
+      method: "post",
+      timeout: 60000,
+      silent: true,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      data,
+    });
+  },
+  replaceSigningIdentityProfile: (id, file) => {
+    const data = new FormData();
+    data.append("profile", file);
+    return request({
+      url: `/api/signing/identities/${id}/profile`,
+      method: "post",
+      timeout: 60000,
+      silent: true,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      data,
+    });
+  },
+  deleteSigningIdentity: (id, force) => {
+    return request({
+      url: `/api/signing/identities/${id}/delete`,
+      method: "post",
+      timeout: 30000,
+      silent: true,
+      data: { force: !!force },
+    });
+  },
+  checkSigningIdentity: (id, data) => {
+    return request({
+      url: `/api/signing/identities/${id}/check`,
+      method: "post",
+      timeout: 120000,
+      silent: true,
+      data,
+    });
+  },
   mountDeviceImageAsync: (id) => {
     return new Promise((resolve, reject) => {
       request({

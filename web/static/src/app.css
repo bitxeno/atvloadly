@@ -897,6 +897,19 @@ html[data-theme="dark"] {
   background: var(--atv-danger-soft);
   border-color: var(--atv-danger);
 }
+.app-container .atv-status--warning {
+  color: var(--atv-warning-text);
+  background: var(--atv-warning-bg);
+  border-color: var(--atv-warning-border);
+}
+.app-container .atv-badge-external {
+  height: auto;
+  min-height: 1.25rem;
+  color: var(--atv-accent);
+  background: var(--atv-accent-soft);
+  border: 1px solid var(--atv-border);
+  font-weight: 650;
+}
 
 /* device-warning-design-v1 */
 .app-container .main-container .atv-device-panel {
