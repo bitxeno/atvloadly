@@ -267,6 +267,11 @@ func (dm *DeviceManager) runDiscovery(ctx context.Context, server *avahi.Server)
 				continue
 			}
 
+			// ItemRemove does not include TXT records, so retain the identifier
+			// while this service is present. The remove path must use the same
+			// identifier as the pairing check and throttle maps.
+			dm.rememberRemotePairingService(service.Name, identifier)
+
 			// The iPhone re-announces/withdraws the remote pairing service
 			// every few seconds. The throttle skips duplicate events so the
 			// slow find-pairing subprocess cannot stall the avahi event
@@ -289,12 +294,10 @@ func (dm *DeviceManager) runDiscovery(ctx context.Context, server *avahi.Server)
 				return errAvahiBrowserFreed
 			}
 			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[-]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
-			// Clear the pairing throttle for this device: when an iPhone
-			// disconnects and reconnects within the throttle window, the
-			// Add event would otherwise be skipped and the device would
-			// never reappear on the home page.
-			dm.cancelPairingCheck(service.Name)
-			dm.clearPairingThrottle(service.Name)
+			// ItemRemove has no TXT records. Use the identifier captured from
+			// ItemNew rather than the service name: checks and throttle entries
+			// are keyed by identifier, not service name.
+			dm.removeRemotePairingService(service.Name)
 			// serviceName will change every mdns event, so we can't use serviceName to ignore duplicate
 			dm.DeleteDeviceByServiceName(service.Name, model.DeviceConnectionRemote)
 		case service, ok := <-sbRemoteManualPairing.AddChannel:
