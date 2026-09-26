@@ -39,6 +39,27 @@ type TaskItem struct {
 	App     model.InstalledApp
 	Notify  bool
 	BatchID string
+	Key     installOperationKey
+}
+
+// installOperationKey identifies one queued installation. Installed apps have
+// a database ID, while new apps have ID zero until the installation succeeds.
+// New installs are therefore identified by the request fields that affect the
+// signed app and target instead of sharing the zero database ID.
+type installOperationKey struct {
+	AppID            uint
+	UDID             string
+	IpaPath          string
+	Account          string
+	BundleIdentifier string
+	CustomName       string
+	RemoveExtensions bool
+	SourceKind       string
+	SourceURL        string
+	SourceFilter     string
+	SourceBuildID    string
+	SourcePrerelease bool
+	SourceAutoUpdate bool
 }
 
 type BatchInfo struct {
@@ -213,16 +234,38 @@ func (t *Task) StartInstallApps(apps []model.InstalledApp, notify bool) int {
 }
 
 func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool, batchID string) bool {
-	if _, loaded := t.InstallingApps.LoadOrStore(v.ID, v); loaded {
+	key := installKey(v)
+	if _, loaded := t.InstallingApps.LoadOrStore(key, v); loaded {
 		return false
 	}
 	select {
-	case t.InstallAppQueue <- TaskItem{App: v, Notify: notify, BatchID: batchID}:
+	case t.InstallAppQueue <- TaskItem{App: v, Notify: notify, BatchID: batchID, Key: key}:
 		return true
 	default:
-		t.InstallingApps.Delete(v.ID)
+		t.InstallingApps.Delete(key)
 		log.Warnf("The install queue is full, skip task: %s", v.IpaName)
 		return false
+	}
+}
+
+func installKey(v model.InstalledApp) installOperationKey {
+	if v.ID != 0 {
+		return installOperationKey{AppID: v.ID}
+	}
+
+	return installOperationKey{
+		UDID:             v.UDID,
+		IpaPath:          v.IpaPath,
+		Account:          v.Account,
+		BundleIdentifier: v.BundleIdentifier,
+		CustomName:       v.CustomName,
+		RemoveExtensions: v.RemoveExtensions,
+		SourceKind:       v.Source.Kind,
+		SourceURL:        v.Source.URL,
+		SourceFilter:     v.Source.Filter,
+		SourceBuildID:    v.Source.BuildID,
+		SourcePrerelease: v.Source.Prerelease,
+		SourceAutoUpdate: v.Source.AutoUpdate,
 	}
 }
 
@@ -234,7 +277,7 @@ func (t *Task) runQueue() {
 		select {
 		case v := <-t.InstallAppQueue:
 			t.tryInstallApp(v)
-			t.InstallingApps.Delete(v.App.ID)
+			t.InstallingApps.Delete(v.Key)
 
 			// Next execution delayed by 10 seconds.
 			time.Sleep(10 * time.Second)
@@ -587,7 +630,7 @@ func IsInstalling(id uint) bool {
 }
 
 func (t *Task) isInstalling(id uint) bool {
-	_, ok := t.InstallingApps.Load(id)
+	_, ok := t.InstallingApps.Load(installOperationKey{AppID: id})
 	return ok
 }
 
