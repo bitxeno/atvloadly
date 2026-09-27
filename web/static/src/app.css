@@ -367,6 +367,7 @@ html[data-theme="dark"] {
   min-height: 42px;
   border-radius: 12px;
   font-weight: 650;
+  display: flex;
 }
 
 .app-container > .navbar .dropdown-content li > *:hover {
