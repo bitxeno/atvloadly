@@ -100,10 +100,10 @@
             },
             "expired_time_format": {
                 "expired_tips": "Expired",
-                "days_one": "{{num}} DAY",
-                "days": "{{num}} DAYS",
-                "hours_one": "{{num}} HOUR",
-                "hours": "{{num}} HOURS",
+                "days_one": "{{num}} day",
+                "days": "{{num}} days",
+                "hours_one": "{{num}} hour",
+                "hours": "{{num}} hours",
                 "less_than_hour": "Soon"
             },
             "refresh_date_format": {
