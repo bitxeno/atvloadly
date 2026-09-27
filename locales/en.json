@@ -134,7 +134,7 @@
         "toast": {
             "pin_incorrect": "Incorrect PIN code",
             "pair_error": "Pairing error. Please check the console for more information.",
-            "no_device_found": "Device not found. Pleasemake sure the usbmuxd service is running."
+            "no_device_found": "Device not found. Please make sure the usbmuxd service is running."
         },
         "step": {
             "start": {
