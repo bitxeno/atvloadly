@@ -665,12 +665,13 @@ func route(fi *fiber.App) {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 
-		// clean upload temp file
-		if ipa.Path != "" {
-			_ = os.RemoveAll(ipa.Path)
-		}
-		if ipa.Icon != "" {
-			_ = os.RemoveAll(ipa.Icon)
+		// Only remove files that ATVLoadly created in its upload temp directory.
+		// Path and icon come from the client, so they must never be passed
+		// directly to os.Remove/RemoveAll.
+		for _, filePath := range []string{ipa.Path, ipa.Icon} {
+			if err := removeUploadTempFile(app.Config.Server.DataDir, filePath); err != nil {
+				return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+			}
 		}
 
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))
@@ -797,6 +798,45 @@ func route(fi *fiber.App) {
 		}
 	})
 
+}
+
+
+
+func removeUploadTempFile(dataDir, filePath string) error {
+	if strings.TrimSpace(filePath) == "" {
+		return nil
+	}
+
+	tempDir, err := filepath.Abs(filepath.Join(dataDir, "tmp"))
+	if err != nil {
+		return fmt.Errorf("resolve upload temp directory: %w", err)
+	}
+	target, err := filepath.Abs(filePath)
+	if err != nil {
+		return fmt.Errorf("resolve upload temp path: %w", err)
+	}
+
+	// Uploads and extracted icons are created as direct files in <data>/tmp.
+	// Reject the directory itself, nested paths and every path outside it.
+	if target == tempDir || filepath.Dir(target) != tempDir {
+		return fmt.Errorf("refusing to clean path outside upload temp directory")
+	}
+
+	info, err := os.Lstat(target)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("inspect upload temp file: %w", err)
+	}
+	if info.IsDir() {
+		return fmt.Errorf("refusing to clean upload temp directory")
+	}
+
+	if err := os.Remove(target); err != nil {
+		return fmt.Errorf("remove upload temp file: %w", err)
+	}
+	return nil
 }
 
 const documentCacheControl = "no-cache, no-store, must-revalidate"
