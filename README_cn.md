@@ -15,7 +15,7 @@
 
 <div align="center">
 
-[English](./README.md) | 中文
+[English](./README.md) | [Svenska](./README_sv.md) | 中文
 
 </div>
 
