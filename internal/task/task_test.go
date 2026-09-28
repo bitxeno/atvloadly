@@ -101,6 +101,29 @@ func TestStartInstallAppsQueuedCount(t *testing.T) {
 	}
 }
 
+func TestStartInstallAppsQueuesDistinctNewApps(t *testing.T) {
+	tk := new()
+	newApp := func(name, ipaPath, udid string) model.InstalledApp {
+		return model.InstalledApp{
+			IpaName: name,
+			IpaPath: ipaPath,
+			UDID:    udid,
+			Account: "account@example.com",
+		}
+	}
+
+	first := newApp("first.ipa", "https://example.com/first.ipa", "device-1")
+	second := newApp("second.ipa", "https://example.com/second.ipa", "device-1")
+	onAnotherDevice := newApp("first.ipa", "https://example.com/first.ipa", "device-2")
+
+	if n := tk.StartInstallApps([]model.InstalledApp{first, second, onAnotherDevice, first}, false); n != 3 {
+		t.Fatalf("queued %d apps, want three distinct new apps and one deduplicated retry", n)
+	}
+	if len(tk.InstallAppQueue) != 3 {
+		t.Fatalf("queued items = %d, want 3", len(tk.InstallAppQueue))
+	}
+}
+
 func TestStartInstallAppsKeepsBatchInFlight(t *testing.T) {
 	tk := new()
 	app := func(id uint) model.InstalledApp {
