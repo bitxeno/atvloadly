@@ -251,6 +251,10 @@ func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool, batchI
 	}
 	select {
 	case t.InstallAppQueue <- TaskItem{App: v, Notify: notify, BatchID: batchID, Key: key}:
+		// The queued upload waits in the upload temp directory until its
+		// turn; mark it so the stale-file sweep keeps it until the task
+		// is done.
+		manager.ReserveUploadTempFiles(v.IpaPath, v.Icon)
 		return true
 	default:
 		t.InstallingApps.Delete(key)
@@ -312,10 +316,15 @@ func (t *Task) tryInstallApp(item TaskItem) {
 		log.Err(err).Msgf("Prepare ipa path failed: %s", item.App.IpaName)
 		// No install runs, so nothing else will clean a local upload.
 		manager.CleanUploadTempFiles(item.App.IpaPath, item.App.Icon)
+		manager.ReleaseUploadTempFiles(item.App.IpaPath, item.App.Icon)
 		t.handleInstallFailure(item, item.App, err)
 		return
 	}
 	v := *resolvedApp
+	// The resolved IPA and icon may be fresh downloads in the upload temp
+	// directory; keep the stale-file sweep away from them while the
+	// install runs.
+	manager.ReserveUploadTempFiles(v.IpaPath, v.Icon)
 	if v.IsExternalSigning() {
 		// RunExternalInstall releases its own lease before the record is
 		// saved. DeleteSigningIdentity refuses a delete without force only
@@ -345,6 +354,8 @@ func (t *Task) tryInstallApp(item TaskItem) {
 		} else {
 			installMgr.CleanTempFiles(origIpaPath, origIcon, v.IpaPath, v.Icon)
 		}
+		// Drop the ownership marks of the queue-time and the resolved paths.
+		manager.ReleaseUploadTempFiles(item.App.IpaPath, item.App.Icon, origIpaPath, origIcon)
 		installMgr.Close()
 	}()
 	result, err := t.runInternal(v, refresh, installMgr)
@@ -375,9 +386,6 @@ func (t *Task) tryInstallApp(item TaskItem) {
 		}
 
 		log.Infof("Installing ipa success: %s", v.IpaName)
-		// The upload was installed: sweep orphans uploaded earlier but
-		// never installed (e.g. abandoned uploads).
-		installMgr.SweepStaleUploadTempFiles()
 	} else {
 		t.handleInstallFailure(item, v, err)
 		return

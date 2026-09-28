@@ -183,6 +183,12 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		v.Icon = result.IconPath
 	}
 
+	// The IPA and icon of an interactive install wait in the upload temp
+	// directory while it runs; mark them so the stale-file sweep keeps
+	// them until this install finishes.
+	manager.ReserveUploadTempFiles(v.IpaPath, v.Icon)
+	defer manager.ReleaseUploadTempFiles(v.IpaPath, v.Icon)
+
 	if v.IsExternalSigning() {
 		runExternalInstallMessage(mgr, installMgr, v, dev)
 		return
@@ -228,9 +234,6 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		} else {
 			installMgr.SaveLog(app.ID)
 			mgr.WriteMessage("Installation Succeeded!")
-			// The upload was installed: sweep orphans uploaded earlier
-			// but never installed (e.g. abandoned uploads).
-			installMgr.SweepStaleUploadTempFiles()
 		}
 	}
 

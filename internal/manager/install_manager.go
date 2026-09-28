@@ -218,60 +218,103 @@ func (t *InstallManager) GetMobileProvisionPath() string {
 	return path.Join(os.TempDir(), fmt.Sprintf("embedded.mobileprovision.%d", time.Now().UnixNano()))
 }
 
-// Files older than this in the upload temp directory are treated as
-// orphans (uploaded but never installed) and swept after a success.
-const staleUploadTempFileAge = time.Hour
+// reservedUploadTempFiles holds the canonical paths of upload temp files
+// owned by a queued or running installation. Stale-file sweeps keep them
+// until they are released.
+var reservedUploadTempFiles sync.Map
+
+// ReserveUploadTempFiles marks upload temp files as owned by a queued or
+// running installation so that stale-file sweeps keep them. Remote URLs
+// and unresolvable paths are ignored.
+func ReserveUploadTempFiles(paths ...string) {
+	for _, p := range paths {
+		if canonical := canonicalTempPath(p); canonical != "" {
+			reservedUploadTempFiles.Store(canonical, struct{}{})
+		}
+	}
+}
+
+// ReleaseUploadTempFiles drops the ownership marks of ReserveUploadTempFiles,
+// letting stale-file sweeps remove the files again.
+func ReleaseUploadTempFiles(paths ...string) {
+	for _, p := range paths {
+		if canonical := canonicalTempPath(p); canonical != "" {
+			reservedUploadTempFiles.Delete(canonical)
+		}
+	}
+}
+
+// UploadTempFileReserved reports whether the upload temp file at path is
+// owned by a queued or running installation and must be kept by stale-file
+// sweeps.
+func UploadTempFileReserved(path string) bool {
+	canonical := canonicalTempPath(path)
+	if canonical == "" {
+		return false
+	}
+	_, reserved := reservedUploadTempFiles.Load(canonical)
+	return reserved
+}
+
+// canonicalTempPath resolves p to an absolute path with symlinks resolved,
+// or returns "" for remote URLs and unresolvable paths. Reservations and
+// removals compare canonical paths, so callers may hand in either form.
+func canonicalTempPath(p string) string {
+	p = strings.TrimSpace(p)
+	if p == "" || isRemotePath(p) {
+		return ""
+	}
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		return ""
+	}
+	if resolved, err := filepath.EvalSymlinks(abs); err == nil {
+		return resolved
+	}
+	return abs
+}
+
+// uploadTempDir returns the canonical absolute path of the upload temp
+// directory.
+func uploadTempDir() (string, error) {
+	dir := canonicalTempPath(filepath.Join(app.Config.Server.DataDir, "tmp"))
+	if dir == "" {
+		return "", errors.New("resolve upload temp directory")
+	}
+	return dir, nil
+}
 
 func (t *InstallManager) CleanTempFiles(files ...string) {
 	CleanUploadTempFiles(files...)
-}
-
-// CleanUploadTempFiles removes the given upload temp files and plumesign
-// staging leftovers without needing an InstallManager instance. Paths
-// outside the upload temp directory are skipped.
-func CleanUploadTempFiles(files ...string) {
-	dataDir := app.Config.Server.DataDir
-	for _, filePath := range files {
-		if err := removeUploadTempFile(dataDir, filePath); err != nil {
-			log.Warnf("failed to clean upload temp file %s: %v", filePath, err)
-		}
-	}
-
+	// The installation owning this manager has finished, so its plumesign
+	// process is gone and its staging leftovers can be removed. Staging
+	// directories of concurrently running installations stay untouched.
 	cleanPlumeStageFiles()
 }
 
-// SweepStaleUploadTempFiles removes orphaned upload temp files older than
-// staleUploadTempFileAge. It is called after a successful install so that
-// files uploaded but never installed do not accumulate forever.
-func (t *InstallManager) SweepStaleUploadTempFiles() {
-	removed, err := sweepStaleUploadTempDir(app.Config.Server.DataDir, staleUploadTempFileAge)
-	if err != nil {
-		log.Warnf("failed to sweep stale upload temp files: %v", err)
-		return
-	}
-	if removed > 0 {
-		log.Infof("swept %d stale upload temp files", removed)
+// CleanUploadTempFiles removes the given upload temp files without needing an
+// InstallManager instance. Paths outside the upload temp directory are
+// skipped.
+func CleanUploadTempFiles(files ...string) {
+	for _, filePath := range files {
+		if err := removeUploadTempFile(filePath); err != nil {
+			log.Warnf("failed to clean upload temp file %s: %v", filePath, err)
+		}
 	}
 }
 
 // removeUploadTempFile removes a single file created in the upload temp
 // directory. Remote URLs, paths outside the temp directory and directories
 // are skipped. Removing an already gone file is not an error.
-func removeUploadTempFile(dataDir, filePath string) error {
-	if strings.TrimSpace(filePath) == "" {
-		return nil
-	}
-	if isRemotePath(filePath) {
+func removeUploadTempFile(filePath string) error {
+	target := canonicalTempPath(filePath)
+	if target == "" {
 		return nil
 	}
 
-	tempDir, err := filepath.Abs(filepath.Join(dataDir, "tmp"))
+	tempDir, err := uploadTempDir()
 	if err != nil {
-		return fmt.Errorf("resolve upload temp directory: %w", err)
-	}
-	target, err := filepath.Abs(filePath)
-	if err != nil {
-		return fmt.Errorf("resolve upload temp path: %w", err)
+		return err
 	}
 
 	// Uploads and extracted icons are created as direct files in <data>/tmp.
@@ -298,42 +341,6 @@ func removeUploadTempFile(dataDir, filePath string) error {
 		return fmt.Errorf("remove upload temp file: %w", err)
 	}
 	return nil
-}
-
-// sweepStaleUploadTempDir removes direct files of the upload temp directory
-// that are older than maxAge, and returns how many were removed.
-func sweepStaleUploadTempDir(dataDir string, maxAge time.Duration) (int, error) {
-	tempDir, err := filepath.Abs(filepath.Join(dataDir, "tmp"))
-	if err != nil {
-		return 0, fmt.Errorf("resolve upload temp directory: %w", err)
-	}
-
-	entries, err := os.ReadDir(tempDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return 0, nil
-		}
-		return 0, fmt.Errorf("read upload temp directory: %w", err)
-	}
-
-	removed := 0
-	cutoff := time.Now().Add(-maxAge)
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		info, err := entry.Info()
-		if err != nil {
-			continue
-		}
-		if info.ModTime().After(cutoff) {
-			continue
-		}
-		if err := os.Remove(filepath.Join(tempDir, entry.Name())); err == nil {
-			removed++
-		}
-	}
-	return removed, nil
 }
 
 // cleanPlumeStageFiles removes plumesign staging files from the OS temp

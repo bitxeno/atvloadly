@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/bitxeno/atvloadly/internal/manager"
 )
 
 func setModTime(t *testing.T, path string, age time.Duration) {
@@ -67,5 +69,31 @@ func TestRemoveStaleTempFilesMissingDirectory(t *testing.T) {
 	removed, err := RemoveStaleTempFiles()
 	if err != nil || removed != 0 {
 		t.Fatalf("RemoveStaleTempFiles = %d, %v; want 0, nil", removed, err)
+	}
+}
+
+func TestRemoveStaleTempFilesKeepsReservedFiles(t *testing.T) {
+	dataDir := setTestDataDir(t)
+	tmpDir := filepath.Join(dataDir, "tmp")
+
+	queued := writeTestFile(t, filepath.Join(tmpDir, "queued_app.ipa"))
+	setModTime(t, queued, 48*time.Hour)
+
+	// A queued installation still owns its upload even after the abandoned
+	// age: the sweep keeps it until the task releases it.
+	manager.ReserveUploadTempFiles(queued)
+	if removed, err := RemoveStaleTempFiles(); err != nil || removed != 0 {
+		t.Fatalf("RemoveStaleTempFiles = %d, %v; want 0, nil", removed, err)
+	}
+	if _, err := os.Lstat(queued); err != nil {
+		t.Fatalf("reserved file was removed: %v", err)
+	}
+
+	manager.ReleaseUploadTempFiles(queued)
+	if removed, err := RemoveStaleTempFiles(); err != nil || removed != 1 {
+		t.Fatalf("RemoveStaleTempFiles = %d, %v; want 1, nil", removed, err)
+	}
+	if _, err := os.Lstat(queued); !os.IsNotExist(err) {
+		t.Fatalf("released file was kept: %v", err)
 	}
 }

@@ -10,6 +10,7 @@ import (
 
 	conf "github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/log"
+	"github.com/bitxeno/atvloadly/internal/manager"
 )
 
 // staleTempFileAge is the age from which a file staged in the upload directory
@@ -51,6 +52,11 @@ func RemoveStaleTempFiles() (int, error) {
 			continue
 		}
 		if !info.ModTime().Before(cutoff) {
+			continue
+		}
+		// A queued or running installation still owns the file, even when
+		// it had to wait longer than the abandoned-file age.
+		if manager.UploadTempFileReserved(path) {
 			continue
 		}
 		if err := os.Remove(path); err != nil {

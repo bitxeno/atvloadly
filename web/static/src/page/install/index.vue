@@ -795,8 +795,8 @@ export default {
       try {
         const ipa = await pending;
         if (seq !== this.uploadSeq) {
-          // Superseded by another file or build, or by a mode change.
-          api.clean(ipa).catch(() => {});
+          // Superseded by another file or build, or by a mode change. The
+          // server sweep removes the orphaned upload later.
           return;
         }
         this.signing.uploaded = ipa;
@@ -826,14 +826,12 @@ export default {
       this.signing.checkError = null;
       this.discardUploadedIpa();
     },
+    // discardUploadedIpa drops the prepared IPA. The orphaned server upload
+    // is left to the stale-file sweep.
     discardUploadedIpa() {
-      const uploaded = this.signing.uploaded;
       this.signing.uploaded = null;
       this.signing.check = null;
       this.externalIpaKey = "";
-      if (uploaded) {
-        api.clean(uploaded).catch(() => {});
-      }
     },
     rerunCheck() {
       if (this.signing.uploaded) {
