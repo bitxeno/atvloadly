@@ -199,7 +199,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		RefreshMode:      false,
 	})
 	if err != nil {
-		installMgr.CleanTempFiles(v.IpaPath)
+		installMgr.CleanTempFiles(v.IpaPath, v.Icon)
 		msg := fmt.Sprintf("ERROR: %s", err.Error())
 		mgr.WriteMessage(msg)
 		mgr.WriteMessage("\n")
@@ -219,7 +219,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 
 		app, err := SaveApp(v)
 		if err != nil {
-			installMgr.CleanTempFiles(v.IpaPath)
+			installMgr.CleanTempFiles(v.IpaPath, v.Icon)
 			msg := fmt.Sprintf("ERROR: save app to db failed. %s", err.Error())
 			mgr.WriteMessage(msg)
 			mgr.WriteMessage("\n")
@@ -228,10 +228,15 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		} else {
 			installMgr.SaveLog(app.ID)
 			mgr.WriteMessage("Installation Succeeded!")
+			// The upload was installed: sweep orphans uploaded earlier
+			// but never installed (e.g. abandoned uploads).
+			installMgr.SweepStaleUploadTempFiles()
 		}
 	}
 
-	installMgr.CleanTempFiles(v.IpaPath)
+	// SaveApp moves the temp files to their permanent location on success,
+	// so cleaning the original paths is a no-op in that case.
+	installMgr.CleanTempFiles(v.IpaPath, v.Icon)
 }
 
 // runExternalInstallMessage signs and installs v with its external signing

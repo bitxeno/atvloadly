@@ -345,14 +345,6 @@ export default {
     });
   },
 
-  clean: (data) => {
-    return request({
-      url: "/api/clean",
-      method: "post",
-      data,
-    });
-  },
-
   getSettings: (params) => {
     return request({
       url: "/api/settings",

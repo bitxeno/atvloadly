@@ -254,6 +254,9 @@ func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool, batchI
 		return true
 	default:
 		t.InstallingApps.Delete(key)
+		// The task is dropped before any install runs: clean a local
+		// upload now, since no later stage will see it.
+		manager.CleanUploadTempFiles(v.IpaPath, v.Icon)
 		log.Warnf("The install queue is full, skip task: %s", v.IpaName)
 		return false
 	}
@@ -307,6 +310,8 @@ func (t *Task) tryInstallApp(item TaskItem) {
 	resolvedApp, err := t.resolveIPA(item.App)
 	if err != nil {
 		log.Err(err).Msgf("Prepare ipa path failed: %s", item.App.IpaName)
+		// No install runs, so nothing else will clean a local upload.
+		manager.CleanUploadTempFiles(item.App.IpaPath, item.App.Icon)
 		t.handleInstallFailure(item, item.App, err)
 		return
 	}
@@ -329,13 +334,16 @@ func (t *Task) tryInstallApp(item TaskItem) {
 
 	log.Infof("Start installing ipa: %s", v.IpaName)
 	installMgr := manager.NewInstallManager()
+	// SaveApp replaces the temp paths with permanent ones on success. Clean
+	// the originals as well so the snapshot taken here is authoritative.
+	origIpaPath, origIcon := v.IpaPath, v.Icon
 	defer func() {
 		installMgr.SaveLog(v.ID)
 		if v.IsExternalSigning() {
 			// Never the global temporary files: other installations may use them.
 			service.CleanExternalUpload(uploadedIPA, uploadedIcon)
 		} else {
-			installMgr.CleanTempFiles(v.IpaPath)
+			installMgr.CleanTempFiles(origIpaPath, origIcon, v.IpaPath, v.Icon)
 		}
 		installMgr.Close()
 	}()
@@ -367,6 +375,9 @@ func (t *Task) tryInstallApp(item TaskItem) {
 		}
 
 		log.Infof("Installing ipa success: %s", v.IpaName)
+		// The upload was installed: sweep orphans uploaded earlier but
+		// never installed (e.g. abandoned uploads).
+		installMgr.SweepStaleUploadTempFiles()
 	} else {
 		t.handleInstallFailure(item, v, err)
 		return
