@@ -177,6 +177,12 @@ func ScreenshotDataBase64(png []byte) string {
 	return base64.StdEncoding.EncodeToString(png)
 }
 
+// ScreenshotFilename builds the filename offered when a screenshot is
+// downloaded as an attachment.
+func ScreenshotFilename(now time.Time) string {
+	return fmt.Sprintf("screenshot-%s.jpg", now.Format("20060102-150405"))
+}
+
 // resolveDeveloperDiskImage locates the developer disk image files for the device.
 func resolveDeveloperDiskImage(dev *model.Device) (string, string, string, error) {
 	root := developerDiskImageRoot()

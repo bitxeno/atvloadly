@@ -6,10 +6,18 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/model"
 )
+
+func TestScreenshotFilename(t *testing.T) {
+	got := ScreenshotFilename(time.Date(2026, 9, 24, 9, 5, 7, 0, time.UTC))
+	if got != "screenshot-20260924-090507.jpg" {
+		t.Fatalf("ScreenshotFilename = %q, want %q", got, "screenshot-20260924-090507.jpg")
+	}
+}
 
 func TestResolveDeveloperDiskImageUsesDataDirRoot(t *testing.T) {
 	dataDir := t.TempDir()

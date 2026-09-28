@@ -112,7 +112,7 @@
                   $t("install.form.account.label")
                 }}</span>
               </label>
-              <div class="join w-full atv-install-account-picker">
+              <div class="join w-full atv-join atv-install-account-picker">
                 <select
                   class="select select-bordered join-item flex-1 min-w-0"
                   v-model="form.account"
@@ -301,6 +301,13 @@ import { toast } from "vue3-toastify";
 import { parseBundleIdFromPlist } from "@/utils/utils";
 import { installFailureMessage as formatInstallFailureMessage } from "@/utils/install-error-feedback.mjs";
 import { accountStatusLabel as formatAccountStatus } from "@/utils/install-feedback.mjs";
+import {
+  buildScreenshotFilename,
+  downloadDataUrl,
+  downloadViaFormPost,
+  needsServerDownload,
+  splitDataUrl,
+} from "@/utils/download.mjs";
 import { guessSourceKind } from "@/utils/source.mjs";
 import JSZip from "jszip";
 import Login from "@/components/Login.vue";
@@ -757,23 +764,41 @@ export default {
       if (!this.screenshot.image) {
         return;
       }
-      const now = new Date();
-      const pad = (n) => String(n).padStart(2, "0");
-      const stamp =
-        now.getFullYear() +
-        pad(now.getMonth() + 1) +
-        pad(now.getDate()) +
-        "-" +
-        pad(now.getHours()) +
-        pad(now.getMinutes()) +
-        pad(now.getSeconds());
-      const filename = `screenshot-${stamp}.jpg`;
-      const a = document.createElement("a");
-      a.href = this.screenshot.image;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+
+      // Client-side download works in regular browsers and saves the exact
+      // preview bytes. Embedded WebViews (iOS in particular) cannot save a
+      // blob:/data: download and only offer to "open an external app", so the
+      // preview is posted and the response itself is the attachment.
+      if (!needsServerDownload(navigator)) {
+        const outcome = this.downloadPreviewLocally();
+        if (outcome === "opened") {
+          toast.info(this.$t("install.screenshot.toast.opened_new_tab"));
+        } else if (outcome === "blocked" || outcome === "unsupported") {
+          toast.error(this.$t("install.screenshot.toast.download_failed"));
+        }
+        return;
+      }
+
+      const parsed = splitDataUrl(this.screenshot.image);
+      if (!parsed) {
+        toast.error(this.$t("install.screenshot.toast.download_failed"));
+        return;
+      }
+
+      const outcome = downloadViaFormPost(api.screenshotDownloadUrl(), {
+        data: parsed.base64,
+      });
+      if (outcome === "blocked" || outcome === "unsupported") {
+        toast.error(this.$t("install.screenshot.toast.download_failed"));
+      }
+    },
+    downloadPreviewLocally() {
+      try {
+        return downloadDataUrl(this.screenshot.image, buildScreenshotFilename());
+      } catch (error) {
+        console.error("screenshot download failed", error);
+        return "blocked";
+      }
     },
   },
 };
@@ -813,28 +838,6 @@ import GithubIcon from "@/assets/icons/github.svg";
   outline: 2px solid transparent;
   border-color: hsl(var(--nc) / 0.45);
   box-shadow: none;
-}
-
-/* Keep daisyUI join groups fused: the theme layer sets input/select/btn
-   heights and radii that would otherwise split the joined edges apart. */
-.atv-install-page .join {
-  align-items: stretch;
-}
-
-.atv-install-page .join > .join-item:is(.input, .select, .file-input, .btn) {
-  height: auto;
-  min-height: 3rem;
-  border-radius: 0;
-}
-
-.atv-install-page .join > .join-item:is(.input, .select, .file-input, .btn):first-child {
-  border-start-start-radius: var(--rounded-btn, 0.5rem);
-  border-end-start-radius: var(--rounded-btn, 0.5rem);
-}
-
-.atv-install-page .join > .join-item.btn:last-child {
-  border-start-end-radius: var(--rounded-btn, 0.5rem);
-  border-end-end-radius: var(--rounded-btn, 0.5rem);
 }
 
 /* Screenshot action sits on the device icon's bottom-right corner,
