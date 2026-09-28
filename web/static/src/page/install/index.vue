@@ -119,7 +119,7 @@
               <label class="label">
                 <span class="label-text">{{ $t("install.form.signer.label") }}</span>
               </label>
-              <div class="join w-full atv-install-account-picker">
+              <div class="join w-full atv-join atv-install-account-picker">
                 <select
                   class="select select-bordered join-item flex-1 min-w-0"
                   v-model="selectedSigner"
@@ -465,6 +465,11 @@ import { toast } from "vue3-toastify";
 import { parseBundleIdFromPlist } from "@/utils/utils";
 import { installFailureMessage as formatInstallFailureMessage } from "@/utils/install-error-feedback.mjs";
 import { accountStatusLabel as formatAccountStatus } from "@/utils/install-feedback.mjs";
+import { guessSourceKind } from "@/utils/source.mjs";
+import JSZip from "jszip";
+import SigningIssueList from "@/components/SigningIssueList.vue";
+import SigningPlan from "@/components/SigningPlan.vue";
+import SourcePicker from "@/components/SourcePicker.vue";
 import {
   createSigningReportStream,
   hasWaivableEntitlementIssues,
@@ -472,11 +477,6 @@ import {
   signingCodeText,
   summarizePlan,
 } from "@/utils/signing-report.mjs";
-import { guessSourceKind } from "@/utils/source.mjs";
-import JSZip from "jszip";
-import SigningIssueList from "@/components/SigningIssueList.vue";
-import SigningPlan from "@/components/SigningPlan.vue";
-import SourcePicker from "@/components/SourcePicker.vue";
 
 const appleIDMode = "apple_id";
 const externalMode = "external_certificate";
@@ -1468,37 +1468,23 @@ import GithubIcon from "@/assets/icons/github.svg";
   box-shadow: none;
 }
 
-/* Keep daisyUI join groups fused: the theme layer sets input/select/btn
-   heights and radii that would otherwise split the joined edges apart. */
-.atv-install-page .join {
-  align-items: stretch;
+/* Screenshot action sits on the device icon's bottom-right corner,
+   like a profile-avatar edit badge. */
+.atv-install-device-icon {
+  position: relative;
 }
 
-.atv-install-page .join > .join-item:is(.input, .select, .file-input, .btn) {
-  height: auto;
-  min-height: 3rem;
-  border-radius: 0;
-}
-
-.atv-install-page .join > .join-item:is(.input, .select, .file-input, .btn):first-child {
-  border-start-start-radius: var(--rounded-btn, 0.5rem);
-  border-end-start-radius: var(--rounded-btn, 0.5rem);
-}
-
-.atv-install-page .join > .join-item.btn:last-child {
-  border-start-end-radius: var(--rounded-btn, 0.5rem);
-  border-end-end-radius: var(--rounded-btn, 0.5rem);
-}
-
-.atv-install-page .join > .join-item.btn:first-child {
-  border-start-start-radius: var(--rounded-btn, 0.5rem);
-  border-end-start-radius: var(--rounded-btn, 0.5rem);
-}
-
-.atv-install-signing-mode > .btn {
-  min-width: 0;
-  white-space: normal;
-  line-height: 1.2;
+.atv-install-device-icon .atv-install-screenshot-btn {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 9999px;
+  box-shadow: var(--atv-menu-shadow);
 }
 
 /* Compatibility plan of the external certificate mode, below the form. */
@@ -1576,24 +1562,5 @@ import GithubIcon from "@/assets/icons/github.svg";
   cursor: pointer;
   font-size: .86rem;
   color: var(--atv-muted);
-}
-
-/* Screenshot action sits on the device icon's bottom-right corner,
-   like a profile-avatar edit badge. */
-.atv-install-device-icon {
-  position: relative;
-}
-
-.atv-install-device-icon .atv-install-screenshot-btn {
-  position: absolute;
-  right: -6px;
-  bottom: -6px;
-  width: 36px;
-  min-width: 36px;
-  height: 36px;
-  min-height: 36px;
-  padding: 0;
-  border-radius: 9999px;
-  box-shadow: var(--atv-menu-shadow);
 }
 </style>
