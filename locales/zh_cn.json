@@ -644,11 +644,13 @@
             "expires": "{{date}} 过期",
             "certificate_validity": "证书：{{from}} → {{to}}",
             "profile_validity": "描述文件：{{from}} → {{to}}",
+            "devices_one": "{{count}} 台设备",
             "devices": "{{count}} 台设备",
             "all_devices": "所有设备（企业）"
         },
         "status": {
             "in_use": "正在被安装任务使用",
+            "used_by_one": "被 {{count}} 个应用使用",
             "used_by": "被 {{count}} 个应用使用",
             "unused": "未被任何应用使用"
         },
@@ -677,6 +679,7 @@
             },
             "referenced": {
                 "title": "身份正被已安装的应用使用",
+                "content_one": "有 {{count}} 个已安装的应用使用 {{name}}。删除后，这些应用将无法再用此身份重新安装。仍要删除吗？",
                 "content": "有 {{count}} 个已安装的应用使用 {{name}}。删除后，这些应用将无法再用此身份重新安装。仍要删除吗？",
                 "confirm": "仍然删除"
             }
