@@ -6,7 +6,6 @@ require (
 	github.com/betamos/zeroconf v0.1.8-0.20250208023331-d559d61612b7
 	github.com/creasty/defaults v1.5.2
 	github.com/fatih/color v1.9.0
-	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/ggwhite/go-masker/v2 v2.1.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-errors/errors v1.5.1
@@ -32,12 +31,14 @@ require (
 	github.com/rs/zerolog v1.29.1
 	github.com/runletapp/go-console v0.0.0-20211204140000-27323a28410a
 	github.com/silenceper/wechat/v2 v2.1.5
+	github.com/smallstep/pkcs7 v0.2.3
 	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/image v0.41.0
 	golang.org/x/text v0.37.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gorm.io/gorm v1.25.7
-	howett.net/plist v1.0.0
+	howett.net/plist v1.0.1
+	software.sslmate.com/src/go-pkcs12 v0.7.3
 )
 
 require (
@@ -93,3 +94,10 @@ require (
 )
 
 replace github.com/iineva/bom => github.com/bitxeno/bom v0.0.0-20260823051148-16148bb9e854
+
+// go-pkcs12 v0.7.3 derives keys with whatever iteration count the file asks
+// for, so a tiny P12 can pin a CPU indefinitely. third_party/go-pkcs12 is
+// v0.7.3 plus the patch of SSLMate/go-pkcs12#81, which refuses counts above
+// 5,000,000 in every KDF; drop this replace once a release bounds KDF
+// iterations.
+replace software.sslmate.com/src/go-pkcs12 => ./third_party/go-pkcs12

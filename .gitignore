@@ -26,3 +26,18 @@ atvloadly
 /.vscode
 doc/todo/
 .agents
+
+# Real signing material must never be committed. Synthetic test fixtures under
+# testdata/ stay tracked.
+*.p12
+*.pfx
+*.mobileprovision
+*.pem
+*.key
+keys/
+signing-work/
+!**/testdata/**/*.p12
+!**/testdata/**/*.pfx
+!**/testdata/**/*.mobileprovision
+!**/testdata/**/*.pem
+!**/testdata/**/*.key

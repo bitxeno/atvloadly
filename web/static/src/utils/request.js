@@ -41,10 +41,17 @@ service.interceptors.response.use(
     }
 
     // if the custom code is not 200, it is judged as an error.
+    // The rejected error keeps the API result so callers can read its data
+    // payload; `silent: true` in the request config skips the toast for
+    // callers that present the error themselves.
     if (res.code !== 200) {
       const msg = res.msg ? `${res.msg} (code: ${res.code})` : `Error (code: ${res.code})`;
-      toast.error(msg, { autoClose: 5000 });
-      return Promise.reject(new Error(msg));
+      if (!response.config.silent) {
+        toast.error(msg, { autoClose: 5000 });
+      }
+      const error = new Error(msg);
+      error.result = res;
+      return Promise.reject(error);
     } else {
       return res;
     }

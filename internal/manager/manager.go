@@ -51,6 +51,12 @@ func GetDeviceByUDID(udid string) (*model.Device, bool) {
 	return deviceManager.GetDeviceByUDID(udid)
 }
 
+// GetDeviceInfo queries the device for its lockdown values, including the
+// hardware UniqueDeviceID.
+func GetDeviceInfo(dev *model.Device) (*model.DeviceInfo, error) {
+	return deviceManager.GetDeviceInfo(dev)
+}
+
 func ReloadDevices() {
 	deviceManager.ReloadDevices()
 }

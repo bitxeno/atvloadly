@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
@@ -20,6 +21,16 @@ import (
 )
 
 var ErrAccountInvalid = errors.New("account invalid")
+
+// installTimeout bounds one signing engine run. Large tvOS apps can take
+// longer than 30 minutes to sign and install.
+const installTimeout = 60 * time.Minute
+
+// maxCapturedOutput bounds the engine output kept in memory for one
+// installation; older output is dropped and replaced by a truncation marker.
+const maxCapturedOutput = 4 << 20
+
+const outputTruncatedMarker = "[... earlier output truncated ...]\n"
 
 type InstallManager struct {
 	quietMode bool
@@ -42,6 +53,10 @@ type InstallOptions struct {
 	CustomName       string
 	RemoveExtensions bool
 	RefreshMode      bool
+	// SigningMode selects how the app is signed; empty means SigningModeAppleID.
+	SigningMode model.SigningMode
+	// External holds the signing material of SigningModeExternalCertificate.
+	External *ExternalSigning
 }
 
 func NewInstallManager() *InstallManager {
@@ -63,8 +78,11 @@ func NewInteractiveInstallManager() *InstallManager {
 func (t *InstallManager) TryStart(ctx context.Context, opts InstallOptions) error {
 	err := t.Start(ctx, opts)
 	if err != nil {
-		if t.IsAccountInvalid() {
+		if opts.SigningMode.OrDefault() == model.SigningModeAppleID && t.IsAccountInvalid() {
 			return fmt.Errorf("%s %s %w", t.ErrorLog(), err.Error(), ErrAccountInvalid)
+		}
+		if !shouldRetryInstall(opts.SigningMode, err, ctx.Err()) {
+			return err
 		}
 
 		// AppleTV system has reboot/lockdownd sleep, try restart usbmuxd to fix
@@ -81,19 +99,24 @@ func (t *InstallManager) TryStart(ctx context.Context, opts InstallOptions) erro
 	return err
 }
 
+// Start signs and installs the IPA once with the signing mode of opts.
+// External certificate failures are *signing.Error values classified from
+// the engine output.
 func (t *InstallManager) Start(ctx context.Context, opts InstallOptions) error {
+	switch opts.SigningMode.OrDefault() {
+	case model.SigningModeAppleID:
+		return t.startAppleID(ctx, opts)
+	case model.SigningModeExternalCertificate:
+		return t.startExternal(ctx, opts)
+	default:
+		return fmt.Errorf("unknown signing mode: %q", opts.SigningMode)
+	}
+}
+
+func (t *InstallManager) startAppleID(ctx context.Context, opts InstallOptions) error {
 	t.outputStdout.Reset()
 
-	// Large tvOS apps can take longer than 30 minutes to sign and install.
-	timeout := 60 * time.Minute
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	// Release the previous install context: overwriting t.cancel without
-	// calling it would keep the old 60-minute timeout timer alive until it
-	// fires, leaking the context and its timer on every repeated install.
-	if t.cancel != nil {
-		t.cancel()
-	}
-	t.cancel = cancel
+	ctx = t.withRunTimeout(ctx)
 
 	provisionPath := t.GetMobileProvisionPath()
 	defer func() {
@@ -125,22 +148,7 @@ func (t *InstallManager) Start(ctx context.Context, opts InstallOptions) error {
 		t.stdin = nil
 	}()
 
-	cmd := execx.CommandContext(ctx, "plumesign", args...).
-		WithTimeout(timeout).
-		WithDir(app.Config.Server.DataDir).
-		WithEnv(GetRunEnvs()).
-		WithStdout(t.outputStdout).
-		WithStderr(t.outputStdout).
-		WithStdin(stdinReader)
-
-	log.Debugf("Install Command: %s", strings.Join(append([]string{cmd.Name}, cmd.Args...), " "))
-
-	err = cmd.Run()
-	if err != nil {
-		if errors.Is(err, execx.ErrCommandTimeout) {
-			log.Err(err).Msgf("Installation exceeded %d-minute timeout limit. %s", int(timeout.Minutes()), t.ErrorLog())
-			return fmt.Errorf("installation exceeded %d-minute timeout limit: %w", int(timeout.Minutes()), err)
-		}
+	if err := t.runEngine(ctx, args, app.Config.Server.DataDir, GetRunEnvs(), stdinReader); err != nil {
 		return err
 	}
 
@@ -148,6 +156,44 @@ func (t *InstallManager) Start(ctx context.Context, opts InstallOptions) error {
 		t.ProvisioningProfile = provisionProfile
 	}
 
+	return nil
+}
+
+// withRunTimeout bounds ctx by installTimeout and makes it the context
+// cancelled by Close.
+func (t *InstallManager) withRunTimeout(ctx context.Context) context.Context {
+	ctx, cancel := context.WithTimeout(ctx, installTimeout)
+	// Release the previous install context: overwriting t.cancel without
+	// calling it would keep the old 60-minute timeout timer alive until it
+	// fires, leaking the context and its timer on every repeated install.
+	if t.cancel != nil {
+		t.cancel()
+	}
+	t.cancel = cancel
+	return ctx
+}
+
+// runEngine runs plumesign with args, streaming its output into the captured
+// install output. A nil stdin connects the engine to the null device.
+func (t *InstallManager) runEngine(ctx context.Context, args []string, dir string, env []string, stdin io.Reader) error {
+	cmd := execx.CommandContext(ctx, "plumesign", args...).
+		WithTimeout(installTimeout).
+		WithDir(dir).
+		WithEnv(env).
+		WithStdout(t.outputStdout).
+		WithStderr(t.outputStdout).
+		WithStdin(stdin)
+
+	log.Debugf("Install Command: %s", strings.Join(append([]string{cmd.Name}, cmd.Args...), " "))
+
+	err := cmd.Run()
+	if err != nil {
+		if errors.Is(err, execx.ErrCommandTimeout) {
+			log.Err(err).Msgf("Installation exceeded %d-minute timeout limit. %s", int(installTimeout.Minutes()), t.ErrorLog())
+			return fmt.Errorf("installation exceeded %d-minute timeout limit: %w", int(installTimeout.Minutes()), err)
+		}
+		return err
+	}
 	return nil
 }
 
@@ -239,6 +285,13 @@ func (t *InstallManager) WriteLog(msg string) {
 	_, _ = t.outputStdout.Write([]byte(msg))
 }
 
+// ResetLog clears the captured output. Apple ID runs reset it at every
+// attempt; external certificate installations reset it once per installation
+// so their SIGNING_REPORT lines and every attempt stay in the task log.
+func (t *InstallManager) ResetLog() {
+	t.outputStdout.Reset()
+}
+
 func (t *InstallManager) SaveLog(id uint) {
 	data := t.OutputLog()
 
@@ -258,19 +311,38 @@ func (t *InstallManager) SaveLog(id uint) {
 	}
 }
 
+// outputWriter captures the install output, keeping only the most recent
+// maxCapturedOutput bytes, and forwards every write to the output listeners.
 type outputWriter struct {
-	data []byte
-	em   *event.Manager
+	mu        sync.Mutex
+	data      []byte
+	written   int64
+	truncated bool
+	limit     int
+	em        *event.Manager
 }
 
 func newOutputWriter(em *event.Manager) *outputWriter {
 	return &outputWriter{
-		em: em,
+		limit: maxCapturedOutput,
+		em:    em,
 	}
 }
 
 func (w *outputWriter) Write(p []byte) (n int, err error) {
+	w.mu.Lock()
 	w.data = append(w.data, p...)
+	w.written += int64(len(p))
+	// Trim with some slack so the retained window is compacted in place once
+	// in a while instead of on every write.
+	if len(w.data) > w.limit+w.limit/4 {
+		drop := len(w.data) - w.limit
+		copy(w.data, w.data[drop:])
+		w.data = w.data[:w.limit]
+		w.truncated = true
+	}
+	w.mu.Unlock()
+
 	w.em.MustFire("output", event.M{"text": string(p)})
 
 	n = len(p)
@@ -278,9 +350,40 @@ func (w *outputWriter) Write(p []byte) (n int, err error) {
 }
 
 func (w *outputWriter) String() string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.truncated {
+		return outputTruncatedMarker + string(w.data)
+	}
 	return string(w.data)
 }
 
+// Mark returns the position of the next written byte, for Since.
+func (w *outputWriter) Mark() int64 {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.written
+}
+
+// Since returns the retained output written after mark, or all of it when the
+// output was reset after mark was taken.
+func (w *outputWriter) Since(mark int64) string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if mark > w.written {
+		return string(w.data)
+	}
+	start := int64(len(w.data)) - (w.written - mark)
+	if start < 0 {
+		start = 0
+	}
+	return string(w.data[start:])
+}
+
 func (w *outputWriter) Reset() {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 	w.data = []byte{}
+	w.written = 0
+	w.truncated = false
 }

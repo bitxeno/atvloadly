@@ -59,3 +59,16 @@ const (
 type DeviceStatus string
 type DeviceClass string
 type DeviceConnection string
+
+// ProfilePlatform returns the provisioning profile platform ("iOS", "tvOS")
+// required to install apps on the device class, or "" when unknown.
+func (c DeviceClass) ProfilePlatform() string {
+	switch c {
+	case DeviceClassAppleTV:
+		return "tvOS"
+	case DeviceClassiPhone, DeviceClassiPad:
+		return "iOS"
+	default:
+		return ""
+	}
+}

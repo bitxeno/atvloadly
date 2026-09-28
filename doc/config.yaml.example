@@ -2,3 +2,7 @@ server:
   work_dir: /data
 log:
   log_file: /data/app.log
+# signing:
+#   # Deployment key sealing the private keys of imported signing identities
+#   # (external certificate mode). Default: <work_dir>/keys/signing-identity.key
+#   key_file: /data/keys/signing-identity.key

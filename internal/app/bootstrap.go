@@ -30,6 +30,9 @@ func InitConfig(path string, debug bool) (*Configuration, error) {
 	if configuration.Server.DataDir == "" {
 		configuration.Server.DataDir = cfg.DefaultConfigDir()
 	}
+	if configuration.Signing.KeyFile == "" {
+		configuration.Signing.KeyFile = filepath.Join(configuration.Server.DataDir, "keys", "signing-identity.key")
+	}
 	Config = &configuration
 
 	if debug {
@@ -93,7 +96,7 @@ func InitDb(conf *Configuration) error {
 	if conf.Db.Path == "" {
 		conf.Db.Path = cfg.DefaultConfigDir()
 	}
-	if err := db.Open(conf.Db).AutoMigrate(&model.InstalledApp{}, &model.SavedSource{}); err != nil {
+	if err := db.Open(conf.Db).AutoMigrate(&model.InstalledApp{}, &model.SigningIdentity{}, &model.SavedSource{}); err != nil {
 		return err
 	}
 

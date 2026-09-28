@@ -236,17 +236,39 @@
               <td class="lg:break-all" v-html="formatDeviceName(item)">
               </td>
               <td class="lg:break-all">
-                <div class="tooltip" :data-tip="$t('home.table.tips.account_invalid')" v-if="item.refreshed_error == 1">
-                  <div class="text-red-500"> {{ item.account }}</div>
+                <div v-if="isExternalApp(item)" class="flex flex-col items-start gap-y-1">
+                  <span class="badge atv-badge-external min-w-max">{{
+                    $t("home.table.signing.external_badge")
+                  }}</span>
+                  <div
+                    class="tooltip"
+                    :data-tip="externalErrorText(item)"
+                    v-if="externalErrorText(item)"
+                  >
+                    <div class="text-red-500">{{ identityName(item) }}</div>
+                  </div>
+                  <div v-else>{{ identityName(item) }}</div>
                 </div>
-                <div v-else>
-                  {{ item.account }}
-                </div>
+                <template v-else>
+                  <div class="tooltip" :data-tip="$t('home.table.tips.account_invalid')" v-if="item.refreshed_error == 1">
+                    <div class="text-red-500"> {{ item.account }}</div>
+                  </div>
+                  <div v-else>
+                    {{ item.account }}
+                  </div>
+                </template>
               </td>
               <td>
                 <div :class="expiryHue(item) === null ? 'badge badge-ghost min-w-max' : 'badge atv-expiry min-w-max'"
                   :style="{ '--expiry-hue': expiryHue(item) }">
                   {{ formatExpiredTime(item) }}
+                </div>
+                <div
+                  v-if="isExternalApp(item) && item.expiration_date"
+                  class="stat-title text-xs mt-1 whitespace-nowrap"
+                  :title="$t('home.table.tips.reinstall_external')"
+                >
+                  {{ $t("home.table.signing.valid_until", { date: formatDate(item.expiration_date) }) }}
                 </div>
               </td>
               <td>
@@ -258,8 +280,15 @@
                     :disabled="isInstalling(item)"
                     @click="updateApp(item)"
                   >{{ $t("home.table.button.update") }}</button>
-                  <button type="button" class="btn atv-action atv-action--refresh" @click="refreshApp(item)">{{
-                    $t("home.table.button.refresh")
+                  <button
+                    type="button"
+                    class="btn atv-action atv-action--refresh"
+                    :title="isExternalApp(item) ? $t('home.table.tips.reinstall_external') : undefined"
+                    @click="refreshApp(item)"
+                  >{{
+                    isExternalApp(item)
+                      ? $t("home.table.button.reinstall")
+                      : $t("home.table.button.refresh")
                   }}</button>
                   <Popper placement="top" arrow="true">
                     <template #content="{ close }">
@@ -310,6 +339,12 @@
       >
         {{ $t("home.table.tips.footer") }}
       </div>
+      <div
+        v-if="hasExternalApps"
+        class="stat-title text-sm whitespace-normal atv-refresh-footer-note"
+      >
+        {{ $t("home.table.tips.footer_external") }}
+      </div>
     </div>
 
     <SourceDialog
@@ -359,6 +394,7 @@ export default {
       sortKey: "",
       sortOrder: "asc",
       failedIcons: {},
+      identities: null,
       checkingUpdates: false,
       // IDs of apps whose update request is pending. The installing list
       // polled from the server does not include them yet.
@@ -393,6 +429,9 @@ export default {
       }
       return list;
     },
+    hasExternalApps: function () {
+      return this.list.some((item) => this.isExternalApp(item));
+    },
   },
   created() {
     this.fetchData();
@@ -422,6 +461,13 @@ export default {
 
       _this.checkInstallingApp();
       _this.fetchAppList();
+
+      api.getSigningIdentities().then((res) => {
+        _this.identities = res.data || [];
+      }).catch(() => {
+        // Unknown identities: an app must not be labelled with a deleted identity.
+        _this.identities = null;
+      });
     },
     fetchAppList() {
       let _this = this;
@@ -490,12 +536,47 @@ export default {
 
       api.refreshApp(item.ID).then((res) => {
         _this.checkInstallingAppDelay();
+        if (_this.isExternalApp(item)) {
+          toast.info(
+            this.$t("home.toast.reinstall_app_started", {
+              name: item.ipa_name,
+            })
+          );
+          return;
+        }
         toast.info(
           this.$t("home.toast.refresh_app_started", {
             name: item.ipa_name,
           })
         );
       });
+    },
+    isExternalApp(item) {
+      return item.signing_mode === "external_certificate";
+    },
+    identityName(item) {
+      if (!this.identities) {
+        // Neutral placeholder while the identities are loading or unavailable.
+        return "—";
+      }
+      const identity = this.identities.find((entry) => entry.id === item.signing_identity_id);
+      return identity ? identity.name : this.$t("home.table.signing.identity_missing");
+    },
+    // externalErrorText explains the last failure of an external-certificate app.
+    externalErrorText(item) {
+      switch (item.refreshed_error) {
+        case 2:
+          return this.$t("home.table.tips.signing_identity_error");
+        case 3:
+          return this.$t("home.table.tips.signing_error");
+        case 4:
+          return this.$t("home.table.tips.transport_error");
+        default:
+          return "";
+      }
+    },
+    formatDate(value) {
+      return dayjs(value).format("YYYY-MM-DD");
     },
     updateApp(item) {
       // The request fetches the source before it queues the update: the app
