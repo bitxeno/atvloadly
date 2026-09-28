@@ -28,6 +28,11 @@ func (i *IPA) Build() string {
 	return i.info.CFBundleVersion
 }
 
+// Platforms returns CFBundleSupportedPlatforms, e.g. AppleTVOS or iPhoneOS.
+func (i *IPA) Platforms() []string {
+	return i.info.CFBundleSupportedPlatforms
+}
+
 func (i *IPA) Channel() string {
 	return i.info.Channel
 }

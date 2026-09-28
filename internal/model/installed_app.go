@@ -30,6 +30,7 @@ type InstalledApp struct {
 	RemoveExtensions bool           `json:"remove_extensions"`
 	CustomName       string         `json:"custom_name,omitempty"`
 	Enabled          bool           `json:"enabled,omitempty"`
+	Source           AppSource      `gorm:"embedded;embeddedPrefix:source_" json:"source"`
 }
 
 type RefreshedError int
@@ -50,6 +51,14 @@ func (t InstalledApp) MarshalJSON() ([]byte, error) {
 		Alias:    (*Alias)(&t),
 		Password: "",
 	})
+}
+
+// DisplayName returns the custom name of the app, or its IPA name.
+func (t InstalledApp) DisplayName() string {
+	if t.CustomName != "" {
+		return t.CustomName
+	}
+	return t.IpaName
 }
 
 func (t InstalledApp) MaskAccount() string {

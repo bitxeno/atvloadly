@@ -79,6 +79,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 		app.ID = cur.ID
 
 		now := time.Now()
+		cur.IpaName = app.IpaName
 		cur.IpaPath = app.IpaPath
 		cur.Icon = app.Icon
 		cur.Version = app.Version
@@ -88,6 +89,9 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 		cur.RefreshedError = app.RefreshedError
 		cur.Password = app.Password
 		cur.CustomName = app.CustomName
+		// The source link describes how the app was last installed: installing
+		// from a file or URL stops tracking.
+		cur.Source = app.Source
 
 		// 把 ipa/icon 移动到 ipa 保存目录
 		saveDir := filepath.Join(conf.Config.Server.DataDir, "ipa", fmt.Sprintf("%d", app.ID))
@@ -109,6 +113,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 		}
 
 		updateData := map[string]any{
+			"ipa_name":         cur.IpaName,
 			"ipa_path":         cur.IpaPath,
 			"icon":             cur.Icon,
 			"version":          cur.Version,
@@ -118,6 +123,9 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 			"refreshed_error":  cur.RefreshedError,
 			"password":         cur.Password,
 			"custom_name":      cur.CustomName,
+		}
+		for k, v := range sourceColumns(cur.Source) {
+			updateData[k] = v
 		}
 		if result := db.Store().Model(&cur).Updates(updateData); result.Error != nil {
 			return nil, result.Error

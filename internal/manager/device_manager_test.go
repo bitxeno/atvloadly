@@ -70,6 +70,43 @@ func TestPairingThrottleClearedOnDisconnect(t *testing.T) {
 	}
 }
 
+// TestRemotePairingDisconnectUsesIdentifier covers Avahi's asymmetric
+// service events: ItemNew contains the pairing identifier in TXT, while
+// ItemRemove contains only the service name. The latter must still cancel the
+// check and clear the throttle that are both keyed by identifier.
+func TestRemotePairingDisconnectUsesIdentifier(t *testing.T) {
+	dm := newDeviceManager()
+	const (
+		serviceName = "iPhone._remotepairing._tcp.local"
+		identifier  = "pairing-identifier"
+	)
+
+	if dm.checkPairingThrottle(identifier) {
+		t.Fatal("first pairing check should not be throttled")
+	}
+
+	cancelled := false
+	dm.pairingMu.Lock()
+	dm.pairingCancel[identifier] = &pairingCheck{cancel: func() { cancelled = true }}
+	dm.pairingMu.Unlock()
+	dm.rememberRemotePairingService(serviceName, identifier)
+
+	dm.removeRemotePairingService(serviceName)
+
+	if !cancelled {
+		t.Fatal("disconnect did not cancel the pairing check")
+	}
+	if _, ok := dm.pairingCancel[identifier]; ok {
+		t.Fatal("disconnect left a stale pairing check")
+	}
+	if _, ok := dm.remotePairingServices[serviceName]; ok {
+		t.Fatal("disconnect left a stale service mapping")
+	}
+	if dm.checkPairingThrottle(identifier) {
+		t.Fatal("reconnect after disconnect should not be throttled")
+	}
+}
+
 // TestUpdateRemotePairingDevice verifies that a throttled Add event still
 // refreshes the connection metadata, so a device that reconnects without a
 // goodbye reflects its new address instead of keeping stale data.

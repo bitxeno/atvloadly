@@ -15,7 +15,7 @@
 
 <div align="center">
 
-English | [中文](./README_cn.md)
+English | [Svenska](./README_sv.md) | [中文](./README_cn.md)
 
 </div>
 
@@ -26,6 +26,7 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
 * Docker running (only supports Linux/OpenWrt platforms)
 * Supports AppleTV pairing
 * Supports automatic app refresh
+* Supports tracking GitHub releases / AltStore sources, with manual or automatic app updates
 * Supports use of multiple Apple ID accounts
 * I18n support
 

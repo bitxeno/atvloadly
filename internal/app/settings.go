@@ -32,6 +32,9 @@ type SettingsConfiguration struct {
 		CrodTime      string   `koanf:"crod_time" json:"crod_time" default:"0,30 3-6 * * *"`
 		AdvanceDays   int      `koanf:"advance_days" json:"advance_days" default:"1"`
 	} `koanf:"task" json:"task"`
+	Update struct {
+		CheckInterval int `koanf:"check_interval" json:"check_interval" default:"6"` // hours between background update checks, 0 disables them
+	} `koanf:"update" json:"update"`
 	Notification struct {
 		Enabled  bool   `koanf:"enabled" json:"enabled"`
 		Type     string `koanf:"type" json:"type" default:"weixin"`

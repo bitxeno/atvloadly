@@ -100,7 +100,20 @@
     </div>
 
     <div class="lg:basis-9/12 flex flex-col gap-y-2">
-      <h4>{{ $t("home.heading.installed_app") }}</h4>
+      <div class="flex items-center justify-between gap-x-2">
+        <h4>{{ $t("home.heading.installed_app") }}</h4>
+        <button
+          type="button"
+          class="btn btn-sm btn-ghost gap-x-2"
+          v-if="hasTrackedApps"
+          :disabled="checkingUpdates"
+          @click="checkUpdates"
+        >
+          <span class="loading loading-spinner loading-xs" v-if="checkingUpdates"></span>
+          <span class="w-4 h-4" v-else><RefreshIcon /></span>
+          {{ $t("home.source.check_updates") }}
+        </button>
+      </div>
       <div class="overflow-x-auto">
         <table class="table table-auto static">
           <!-- head -->
@@ -135,7 +148,7 @@
             <!-- row 1 -->
             <tr class="hover" v-for="item in sortedList" v-bind:key="item.ID">
               <td>
-                <div class="flex items-center gap-x-2">
+                <div class="flex items-center gap-x-2 atv-app-cell">
                   <div class="indicator">
                     <span
                       class="indicator-item badge badge-warning"
@@ -172,9 +185,42 @@
                     </div>
                   </div>
 
-                  <div class="flex flex-col justify-start prose">
+                  <div class="flex flex-col justify-start prose atv-app-text">
                     <div>{{ appName(item) }}</div>
                     <div class="stat-title text-sm">{{ item.version }}</div>
+                    <div class="flex flex-wrap items-center gap-1 atv-source-line">
+                      <button
+                        type="button"
+                        class="atv-source-track"
+                        v-if="!item.source.kind"
+                        @click="openSourceDialog(item)"
+                      >{{ $t("home.source.track") }}</button>
+                      <template v-else>
+                        <button
+                          type="button"
+                          class="atv-source-chip max-w-full"
+                          :title="item.source.url"
+                          @click="openSourceDialog(item)"
+                        >
+                          <span class="w-3.5 h-3.5 shrink-0">
+                            <GithubIcon v-if="item.source.kind === 'github'" />
+                            <LinkIcon v-else />
+                          </span>
+                          <span class="truncate">{{ item.source.version || "—" }}</span>
+                          <span class="badge badge-ghost badge-xs shrink-0" v-if="item.source.auto_update">{{
+                            $t("home.source.auto")
+                          }}</span>
+                        </button>
+                        <div class="tooltip" :data-tip="sourceWarning(item)" v-if="sourceWarning(item)">
+                          <span class="block w-4 h-4 atv-source-warning"><WarningIcon /></span>
+                        </div>
+                        <span class="badge badge-info badge-sm max-w-full" v-if="item.source.latest_build_id">
+                          <span class="truncate">{{
+                            $t("home.source.available", { version: item.source.latest_version })
+                          }}</span>
+                        </span>
+                      </template>
+                    </div>
                     <div class="stat-title text-sm">
                       <a
                         class="link link-hover stat-title font-normal"
@@ -204,7 +250,14 @@
                 </div>
               </td>
               <td>
-                <div class="flex gap-x-2">
+                <div class="flex gap-x-2 atv-app-actions">
+                  <button
+                    type="button"
+                    class="btn atv-action atv-action--update"
+                    v-if="item.source.latest_build_id"
+                    :disabled="isInstalling(item)"
+                    @click="updateApp(item)"
+                  >{{ $t("home.table.button.update") }}</button>
                   <button type="button" class="btn atv-action atv-action--refresh" @click="refreshApp(item)">{{
                     $t("home.table.button.refresh")
                   }}</button>
@@ -258,6 +311,12 @@
         {{ $t("home.table.tips.footer") }}
       </div>
     </div>
+
+    <SourceDialog
+      ref="sourceDialog"
+      @saved="fetchAppList"
+      @update-started="onUpdateStarted"
+    />
   </div>
 </template>
   
@@ -267,9 +326,12 @@ import dayjs from "dayjs";
 import api from "@/api/api";
 import { toast } from "vue3-toastify";
 import { truncateIP } from "@/utils/utils";
+import SourceDialog from "@/components/SourceDialog.vue";
+import { updateFailed } from "@/utils/source.mjs";
 
 export default {
   name: "Home",
+  components: { SourceDialog },
   data() {
     return {
       devices: [],
@@ -297,6 +359,10 @@ export default {
       sortKey: "",
       sortOrder: "asc",
       failedIcons: {},
+      checkingUpdates: false,
+      // IDs of apps whose update request is pending. The installing list
+      // polled from the server does not include them yet.
+      pendingUpdates: {},
     };
   },
   computed: {
@@ -309,6 +375,9 @@ export default {
       return this.devices.filter(function (item) {
         return item.status == "paired";
       });
+    },
+    hasTrackedApps: function () {
+      return this.list.some((item) => item.source.kind);
     },
     sortedList: function () {
       let list = this.list.slice();
@@ -427,6 +496,68 @@ export default {
           })
         );
       });
+    },
+    updateApp(item) {
+      // The request fetches the source before it queues the update: the app
+      // shows as installing meanwhile, so another click cannot queue it twice.
+      this.pendingUpdates[item.ID] = true;
+      api
+        .updateAppFromSource(item.ID, {})
+        .then((res) => {
+          this.onUpdateStarted(item, res.data);
+        })
+        .catch((err) => {
+          // request.js already shows the error.
+          console.error(err);
+        })
+        .finally(() => {
+          delete this.pendingUpdates[item.ID];
+        });
+    },
+    onUpdateStarted(item, data) {
+      this.installingApps.push(item);
+      this.checkInstallingAppDelay();
+      toast.info(
+        this.$t("home.toast.update_started", {
+          name: this.appName(item),
+          version: data.version,
+        })
+      );
+    },
+    openSourceDialog(item) {
+      this.$refs.sourceDialog.show(item);
+    },
+    // sourceWarning explains why an app needs attention: the last check
+    // failed, or its latest build failed to install and is not retried.
+    sourceWarning(item) {
+      const source = item.source;
+      if (source.check_error) return source.check_error;
+      return updateFailed(source) ? this.$t("home.source.update_failed", { version: source.latest_version }) : "";
+    },
+    checkUpdates() {
+      this.checkingUpdates = true;
+      api
+        .checkSourceUpdates()
+        .then((res) => {
+          this.list = res.data || [];
+          const tracked = this.list.filter((item) => item.source.kind);
+          const updates = tracked.filter((item) => item.source.latest_build_id).length;
+          const errors = tracked.filter((item) => item.source.check_error).length;
+          if (updates > 0) {
+            toast.info(this.$t("home.toast.updates_available", { count: updates }));
+          } else if (errors > 0) {
+            toast.warning(this.$t("home.toast.check_errors", { count: errors }));
+          } else {
+            toast.success(this.$t("home.toast.check_done"));
+          }
+        })
+        .catch((err) => {
+          // request.js already shows the error.
+          console.error(err);
+        })
+        .finally(() => {
+          this.checkingUpdates = false;
+        });
     },
     startPair(device) {
       this.$router.push({ name: "pair", params: { id: device.id } });
@@ -602,6 +733,7 @@ export default {
       return this.$t("home.sidebar.device_status.unpaired");
     },
     isInstalling(item) {
+      if (this.pendingUpdates[item.ID]) return true;
       if (!this.installingApps || this.installingApps.length == 0) return false;
 
       for (let i = 0; i < this.installingApps.length; i++) {
@@ -634,6 +766,10 @@ import IPhoneIcon from "@/assets/icons/iphone.svg";
 import HelpIcon from "@/assets/icons/help.svg";
 import CheckMarkIcon from "@/assets/icons/checkmark.svg";
 import DismissIcon from "@/assets/icons/dismiss.svg";
+import GithubIcon from "@/assets/icons/github.svg";
+import LinkIcon from "@/assets/icons/link.svg";
+import RefreshIcon from "@/assets/icons/refresh.svg";
+import WarningIcon from "@/assets/icons/warning.svg";
 </script>
 
   
@@ -650,6 +786,51 @@ import DismissIcon from "@/assets/icons/dismiss.svg";
     hsl(var(--b2)) 14px
   );
   @apply border-base-300 bg-base-100 rounded-b-box flex min-h-[6rem]  flex-wrap items-center justify-center gap-2 overflow-x-hidden border bg-cover bg-top p-4;
+}
+
+.atv-source-track {
+  color: var(--atv-muted);
+  font-size: 0.8rem;
+}
+
+.atv-source-track:hover,
+.atv-source-track:focus-visible {
+  color: var(--atv-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.atv-source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 22px;
+  padding: 1px 8px;
+  border: 1px solid var(--atv-border);
+  border-radius: 999px;
+  background: var(--atv-surface-alt);
+  color: var(--atv-muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+  white-space: nowrap;
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+.atv-source-chip:hover,
+.atv-source-chip:focus-visible {
+  border-color: var(--atv-accent);
+  color: var(--atv-accent);
+}
+
+.atv-source-warning {
+  color: var(--atv-warning-text);
+}
+
+.atv-source-line .badge-info {
+  white-space: nowrap;
+  color: var(--atv-success-text);
+  background: var(--atv-success-soft);
+  border-color: var(--atv-success-border);
 }
 
 :deep(.popper) {

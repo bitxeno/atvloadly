@@ -51,14 +51,19 @@ type DeviceManager struct {
 	// device identifier, so a disconnect (Remove event) can cancel the
 	// slow plumesign subprocess immediately and release the goroutine.
 	pairingCancel map[string]*pairingCheck
+	// remotePairingServices connects the service instance name supplied by
+	// Avahi's ItemRemove signal to the identifier supplied only by ItemNew.
+	// Both pairingCancel and pairingCheckedAt are keyed by the identifier.
+	remotePairingServices map[string]string
 }
 
 func newDeviceManager() *DeviceManager {
 	return &DeviceManager{
-		onDeviceConnected:    func(device model.Device) {},
-		onDeviceDisconnected: func(device model.Device) {},
-		pairingCheckedAt:     make(map[string]time.Time),
-		pairingCancel:        make(map[string]*pairingCheck),
+		onDeviceConnected:     func(device model.Device) {},
+		onDeviceDisconnected:  func(device model.Device) {},
+		pairingCheckedAt:      make(map[string]time.Time),
+		pairingCancel:         make(map[string]*pairingCheck),
+		remotePairingServices: make(map[string]string),
 	}
 }
 
@@ -121,6 +126,36 @@ func (dm *DeviceManager) finishPairingCheck(identifier string, check *pairingChe
 func (dm *DeviceManager) clearPairingThrottle(identifier string) {
 	dm.pairingMu.Lock()
 	defer dm.pairingMu.Unlock()
+	delete(dm.pairingCheckedAt, identifier)
+}
+
+// rememberRemotePairingService records the identifier from an ItemNew event.
+// Avahi's matching ItemRemove event includes only the service name, not TXT
+// records, so this mapping is needed to cancel and unthrottle the correct
+// pairing check when the service disappears.
+func (dm *DeviceManager) rememberRemotePairingService(serviceName, identifier string) {
+	dm.pairingMu.Lock()
+	defer dm.pairingMu.Unlock()
+	dm.remotePairingServices[serviceName] = identifier
+}
+
+// removeRemotePairingService handles a remote-pairing ItemRemove event. It
+// cancels only the check associated with that service and clears the matching
+// throttle entry so an immediate reconnect can be checked again.
+func (dm *DeviceManager) removeRemotePairingService(serviceName string) {
+	dm.pairingMu.Lock()
+	defer dm.pairingMu.Unlock()
+
+	identifier, ok := dm.remotePairingServices[serviceName]
+	if !ok {
+		return
+	}
+	delete(dm.remotePairingServices, serviceName)
+
+	if check, ok := dm.pairingCancel[identifier]; ok {
+		check.cancel()
+		delete(dm.pairingCancel, identifier)
+	}
 	delete(dm.pairingCheckedAt, identifier)
 }
 

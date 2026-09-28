@@ -7,6 +7,11 @@ import sv from "@locales/sv.json";
 i18next.use(LanguageDetector).init({
   //   debug: true,
   fallbackLng: "en",
+  // Translations are rendered as text (Vue interpolation, toasts), which
+  // escapes them already: escaping here would show entities like &#39;.
+  interpolation: {
+    escapeValue: false,
+  },
   resources: {
     en: {
       name: "English",
