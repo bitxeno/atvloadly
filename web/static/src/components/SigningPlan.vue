@@ -1,6 +1,6 @@
 <template>
   <div class="atv-signing-plan">
-    <div class="atv-signing-plan-status">
+    <div class="atv-signing-plan-status" v-if="!hideStatus">
       <span
         class="atv-status"
         :class="summary.blocking ? 'atv-status--invalid' : 'atv-status--valid'"
@@ -57,6 +57,7 @@ export default {
   props: {
     // Output of summarizePlan().
     summary: { type: Object, required: true },
+    hideStatus: { type: Boolean, default: false },
   },
   computed: {
     deviceStatus() {

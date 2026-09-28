@@ -90,7 +90,7 @@
               <td class="atv-field" :data-label="$t('identity.table.header.status')">
                 <div class="atv-identity-badges">
                   <span
-                    v-for="(issue, index) in identity.status || []"
+                    v-for="(issue, index) in visibleStatusIssues(identity.status)"
                     :key="`${issue.code}-${index}`"
                     class="atv-status"
                     :class="severityClass(issue.severity)"
@@ -420,6 +420,9 @@ export default {
       if (err?.result) {
         toast.error(this.errorText(requestError(err)));
       }
+    },
+    visibleStatusIssues(status) {
+      return (status || []).filter((issue) => issue && issue.code !== "revocation_not_checked");
     },
     issueLabel(issue) {
       return issueText(issue, this.translate);

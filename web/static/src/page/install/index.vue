@@ -40,31 +40,6 @@
 
         <div class="p-6 flex flex-col gap-y-4 w-full max-w-lg atv-install-form-wrap">
           <form id="form" class="flex flex-col gap-y-4" @submit.prevent>
-            <div class="form-control w-full">
-              <label class="label">
-                <span class="label-text">{{ $t("install.form.signing_mode.label") }}</span>
-              </label>
-              <div
-                class="join w-full atv-install-signing-mode"
-                role="radiogroup"
-                :aria-label="$t('install.form.signing_mode.label')"
-              >
-                <button
-                  v-for="mode in signingModes"
-                  :key="mode"
-                  type="button"
-                  role="radio"
-                  class="btn join-item flex-1"
-                  :class="{ 'btn-primary': signing.mode === mode }"
-                  :aria-checked="signing.mode === mode"
-                  :disabled="loading"
-                  @click="setSigningMode(mode)"
-                >
-                  {{ $t(`signing.mode.${mode}`) }}
-                </button>
-              </div>
-            </div>
-
             <div class="join w-full atv-install-mode">
               <button
                 type="button"
@@ -140,77 +115,59 @@
               />
             </div>
 
-            <div class="form-control w-full" v-if="!isExternal">
+            <div class="form-control w-full">
               <label class="label">
-                <span class="label-text">{{
-                  $t("install.form.account.label")
-                }}</span>
+                <span class="label-text">{{ $t("install.form.signer.label") }}</span>
               </label>
               <div class="join w-full atv-install-account-picker">
                 <select
                   class="select select-bordered join-item flex-1 min-w-0"
-                  v-model="form.account"
+                  v-model="selectedSigner"
+                  :disabled="loading"
                   required
                 >
                   <option value="" disabled selected>
-                    {{ $t("install.form.account.select.placeholder") }}
+                    {{ $t("install.form.signer.placeholder") }}
                   </option>
-                  <option
-                    v-for="account in accounts"
-                    :key="account.email"
-                    :value="account.email"
+                  <optgroup
+                    v-if="accounts.length > 0"
+                    :label="$t('signing.mode.apple_id')"
                   >
-                    {{ account.email }}
-                    {{
-                      account.email === recommendedAccount
-                        ? "(" + $t("install.form.account.last_used") + ")"
-                        : "(" + accountStatusLabel(account.status) + ")"
-                    }}
-                  </option>
-                </select>
-                <button type="button" class="btn join-item" @click.prevent="showLoginDialog">
-                  <div class="w-6 h-6">
-                    <PersonIcon />
-                  </div>
-                </button>
-              </div>
-              <label class="label">
-                <span class="label-text-alt block whitespace-normal break-words">{{
-                  $t("install.form.account.alt")
-                }}</span>
-              </label>
-            </div>
-
-            <div class="form-control w-full" v-if="isExternal">
-              <label class="label">
-                <span class="label-text">{{ $t("install.form.identity.label") }}</span>
-              </label>
-              <div class="join w-full atv-install-account-picker">
-                <select
-                  class="select select-bordered join-item flex-1 min-w-0"
-                  v-model="signing.identityId"
-                  required
-                >
-                  <option value="" disabled>
-                    {{ $t("install.form.identity.placeholder") }}
-                  </option>
-                  <option
-                    v-for="identity in signing.identities"
-                    :key="identity.id"
-                    :value="identity.id"
+                    <option
+                      v-for="account in accounts"
+                      :key="'apple_id:' + account.email"
+                      :value="'apple_id:' + account.email"
+                    >
+                      {{ account.email }}
+                      {{
+                        account.email === recommendedAccount
+                          ? "(" + $t("install.form.account.last_used") + ")"
+                          : "(" + accountStatusLabel(account.status) + ")"
+                      }}
+                    </option>
+                  </optgroup>
+                  <optgroup
+                    v-if="signing.identities.length > 0"
+                    :label="$t('signing.mode.external_certificate')"
                   >
-                    {{ identity.name }}
-                    ({{ identity.id === recommendedIdentityId
-                      ? $t("install.form.account.last_used")
-                      : $t("install.form.identity.expires", { date: formatDate(identity.expires_at) }) }})
-                  </option>
+                    <option
+                      v-for="identity in signing.identities"
+                      :key="'external:' + identity.id"
+                      :value="'external:' + identity.id"
+                    >
+                      {{ identity.name }}
+                      ({{ identity.id === recommendedIdentityId
+                        ? $t("install.form.account.last_used")
+                        : $t("install.form.identity.expires", { date: formatDate(identity.expires_at) }) }})
+                    </option>
+                  </optgroup>
                 </select>
                 <button
                   type="button"
                   class="btn join-item"
-                  :title="$t('install.form.identity.manage')"
-                  :aria-label="$t('install.form.identity.manage')"
-                  @click.prevent="manageIdentities"
+                  :title="$t('install.form.signer.manage')"
+                  :aria-label="$t('install.form.signer.manage')"
+                  @click.prevent="goToAccounts"
                 >
                   <div class="w-6 h-6">
                     <SettingsIcon />
@@ -218,11 +175,27 @@
                 </button>
               </div>
               <label class="label">
-                <span class="label-text-alt block whitespace-normal break-words">{{
-                  signing.identities.length > 0
-                    ? $t("install.form.identity.alt")
-                    : $t("install.form.identity.empty")
-                }}</span>
+                <span
+                  v-if="accounts.length === 0 && signing.identities.length === 0"
+                  class="label-text-alt block whitespace-normal break-words"
+                >
+                  {{ $t("install.form.signer.empty") }}
+                  <a href="#" class="link link-primary ml-1" @click.prevent="goToAccounts">
+                    {{ $t("install.form.signer.go_to_accounts") }}
+                  </a>
+                </span>
+                <span
+                  v-else-if="isExternal"
+                  class="label-text-alt block whitespace-normal break-words"
+                >
+                  {{ $t("install.form.identity.alt") }}
+                </span>
+                <span
+                  v-else
+                  class="label-text-alt block whitespace-normal break-words"
+                >
+                  {{ $t("install.form.account.alt") }}
+                </span>
               </label>
             </div>
 
@@ -352,7 +325,20 @@
                 :issues="signing.checkError.issues"
               />
             </div>
-            <SigningPlan v-else-if="checkSummary" :summary="checkSummary" />
+            <details v-else-if="checkSummary" class="atv-install-plan-collapse">
+              <summary class="atv-install-plan-summary">
+                <span
+                  class="atv-status"
+                  :class="checkSummary.blocking ? 'atv-status--invalid' : 'atv-status--valid'"
+                >
+                  {{ checkSummary.blocking ? $t("signing.plan.blocking") : $t("signing.plan.ready") }}
+                </span>
+                <span class="atv-install-plan-view-details">
+                  {{ $t("signing.plan.view_details") }}
+                </span>
+              </summary>
+              <SigningPlan class="mt-3" :summary="checkSummary" :hide-status="true" />
+            </details>
             <p v-else class="atv-install-plan-hint">{{ $t(planHintKey) }}</p>
           </section>
 
@@ -371,8 +357,6 @@
           </div>
         </div>
       </div>
-
-      <Login ref="loginModal" @success="fetchData" />
     </div>
 
     <section
@@ -490,7 +474,6 @@ import {
 } from "@/utils/signing-report.mjs";
 import { guessSourceKind } from "@/utils/source.mjs";
 import JSZip from "jszip";
-import Login from "@/components/Login.vue";
 import SigningIssueList from "@/components/SigningIssueList.vue";
 import SigningPlan from "@/components/SigningPlan.vue";
 import SourcePicker from "@/components/SourcePicker.vue";
@@ -505,7 +488,7 @@ function sourceBuildKey(selection) {
 }
 
 export default {
-  components: { Login, SigningIssueList, SigningPlan, SourcePicker },
+  components: { SigningIssueList, SigningPlan, SourcePicker },
   data() {
     return {
       id: "",
@@ -576,6 +559,36 @@ export default {
     };
   },
   computed: {
+    selectedSigner: {
+      get() {
+        if (this.signing.mode === externalMode) {
+          return this.signing.identityId ? `external:${this.signing.identityId}` : "";
+        }
+        if (this.signing.mode === appleIDMode) {
+          return this.form.account ? `apple_id:${this.form.account}` : "";
+        }
+        return "";
+      },
+      set(val) {
+        this.signing.modeChosen = true;
+        if (!val) {
+          this.form.account = "";
+          this.signing.identityId = "";
+          return;
+        }
+        if (val.startsWith("apple_id:")) {
+          const email = val.slice("apple_id:".length);
+          this.applySigningMode(appleIDMode);
+          this.form.account = email;
+          this.signing.identityId = "";
+        } else if (val.startsWith("external:")) {
+          const id = Number(val.slice("external:".length));
+          this.applySigningMode(externalMode);
+          this.form.account = "";
+          this.signing.identityId = id;
+        }
+      },
+    },
     isExternal() {
       return this.signing.mode === externalMode;
     },
@@ -682,9 +695,6 @@ export default {
       });
       const identities = api.getSigningIdentities().then((res) => {
         _this.signing.identities = res.data || [];
-        if (_this.signing.identities.length === 1 && !_this.signing.identityId) {
-          _this.signing.identityId = _this.signing.identities[0].id;
-        }
       }).catch(() => {
         _this.signing.identities = [];
       });
@@ -693,11 +703,18 @@ export default {
       }).catch(() => {
         _this.installedApps = [];
       });
-      // Without any Apple account, default to the imported identities.
+      // When only one type of signer exists, default to it.
       Promise.all([accounts, identities]).then(() => {
-        if (!_this.signing.modeChosen && _this.accounts.length === 0 &&
-          _this.signing.identities.length > 0) {
-          _this.applySigningMode(externalMode);
+        if (!_this.signing.modeChosen) {
+          if (_this.accounts.length === 0 && _this.signing.identities.length > 0) {
+            _this.applySigningMode(externalMode);
+            if (_this.signing.identities.length === 1 && !_this.signing.identityId) {
+              _this.signing.identityId = _this.signing.identities[0].id;
+            }
+          } else if (_this.accounts.length === 1 && _this.signing.identities.length === 0 && !_this.form.account) {
+            _this.applySigningMode(appleIDMode);
+            _this.form.account = _this.accounts[0].email;
+          }
         }
       });
     },
@@ -725,8 +742,8 @@ export default {
         this.cancelExternalIpa();
       }
     },
-    manageIdentities() {
-      this.$router.push({ name: "account", query: { section: "signing-identities" } });
+    goToAccounts() {
+      this.$router.push({ name: "account" });
     },
     formatDate(value) {
       const date = dayjs(value);
@@ -1047,6 +1064,7 @@ export default {
     onSourceSelection(selection) {
       this.sourceSelection = selection;
       this.recommendedAccount = "";
+      this.recommendedIdentityId = 0;
       this.clearPrefilled();
       if (!selection) {
         if (this.isExternal) {
@@ -1057,31 +1075,34 @@ export default {
 
       // Reuse the account or signing identity of the app already installed
       // from this source on this device, else of an app with the same bundle
-      // identifier, signed in the current signing mode.
+      // identifier.
       const url = selection.url.toLowerCase();
       const bundleId = selection.build.bundle_id;
       const isSameSource = (a) => a.udid === this.device.udid && a.source.url.toLowerCase() === url;
+      const candidates = this.installedApps.filter(isSameSource).concat(
+        bundleId ? this.installedApps.filter((a) => a.bundle_identifier === bundleId) : [],
+      );
+      let matched = false;
+      for (const app of candidates) {
+        if (this.recommendApp(app)) {
+          matched = true;
+          break;
+        }
+      }
+      if (!matched && !this.signing.modeChosen) {
+        if (this.accounts.length === 0 && this.signing.identities.length === 1) {
+          this.signing.identityId = this.signing.identities[0].id;
+          this.applySigningMode(externalMode);
+        } else if (this.accounts.length === 1 && this.signing.identities.length === 0) {
+          this.form.account = this.accounts[0].email;
+          this.applySigningMode(appleIDMode);
+        }
+      }
       if (this.isExternal) {
-        const externalApps = this.installedApps.filter((a) => a.signing_mode === externalMode);
-        const candidates = externalApps.filter(isSameSource).concat(
-          bundleId ? externalApps.filter((a) => a.bundle_identifier === bundleId) : [],
-        );
-        this.recommendedIdentityId = 0;
-        candidates.some((app) => this.recommendIdentity(app));
         // A filter edit or a prerelease toggle keeps the build: keep its IPA.
         if (sourceBuildKey(selection) !== this.externalIpaKey) {
           this.prepareExternalIpa();
         }
-        return;
-      }
-      const appleIDApps = this.installedApps.filter((a) => a.signing_mode !== externalMode);
-      const app =
-        appleIDApps.find(isSameSource) ||
-        (bundleId && appleIDApps.find((a) => a.bundle_identifier === bundleId));
-      if (app) {
-        this.recommendedAccount = app.account;
-        this.form.account = app.account;
-        this.prefill("custom_name", app.custom_name);
       }
     },
     async onFileChange(e) {
@@ -1113,19 +1134,9 @@ export default {
                 if (app.bundle_identifier !== bundleId) {
                   continue;
                 }
-                if (this.isExternal) {
-                  if (this.recommendIdentity(app)) {
-                    break;
-                  }
-                  continue;
+                if (this.recommendApp(app)) {
+                  break;
                 }
-                if (app.signing_mode === externalMode) {
-                  continue;
-                }
-                this.recommendedAccount = app.account;
-                this.form.account = app.account;
-                this.prefill("custom_name", app.custom_name);
-                break;
               }
               if (this.recommendedAccount || this.recommendedIdentityId) break;
             }
@@ -1134,7 +1145,37 @@ export default {
           console.error("Failed to read IPA bundle identifier:", err);
         }
       }
+      if (!this.recommendedAccount && !this.recommendedIdentityId && !this.signing.modeChosen) {
+        if (this.accounts.length === 0 && this.signing.identities.length === 1) {
+          this.signing.identityId = this.signing.identities[0].id;
+          this.applySigningMode(externalMode);
+        } else if (this.accounts.length === 1 && this.signing.identities.length === 0) {
+          this.form.account = this.accounts[0].email;
+          this.applySigningMode(appleIDMode);
+        }
+      }
       this.prepareExternalIpa();
+    },
+    recommendApp(app) {
+      if (app.signing_mode === externalMode) {
+        return this.recommendIdentity(app);
+      }
+      return this.recommendAccount(app);
+    },
+    recommendAccount(app) {
+      if (app.signing_mode === externalMode) {
+        return false;
+      }
+      const account = this.accounts.find((item) => item.email === app.account);
+      if (!account) {
+        return false;
+      }
+      this.signing.identityId = "";
+      this.applySigningMode(appleIDMode);
+      this.recommendedAccount = account.email;
+      this.form.account = account.email;
+      this.prefill("custom_name", app.custom_name);
+      return true;
     },
     // recommendIdentity preselects the identity that signed an earlier
     // installation of the same app.
@@ -1146,6 +1187,8 @@ export default {
       if (!identity) {
         return false;
       }
+      this.form.account = "";
+      this.applySigningMode(externalMode);
       this.recommendedIdentityId = identity.id;
       this.signing.identityId = identity.id;
       this.prefill("custom_name", app.custom_name);
@@ -1181,9 +1224,6 @@ export default {
         return false;
       }
       return true;
-    },
-    showLoginDialog() {
-        this.$refs.loginModal.show();
     },
     initWebSocket() {
       //初始化weosocket
@@ -1397,7 +1437,6 @@ import { truncateIP } from "@/utils/utils";
 import AppleTVIcon from "@/assets/icons/appletv.svg";
 import IPhoneIcon from "@/assets/icons/iphone.svg";
 import WarningIcon from "@/assets/icons/warning.svg";
-import PersonIcon from "@/assets/icons/person.badge.plus.svg";
 import HelpIcon from "@/assets/icons/help.svg";
 import CameraIcon from "@/assets/icons/camera.svg";
 import RefreshIcon from "@/assets/icons/refresh.svg";
@@ -1516,6 +1555,21 @@ import GithubIcon from "@/assets/icons/github.svg";
   color: var(--atv-ink);
   font-size: .86rem;
   overflow-wrap: anywhere;
+}
+
+.atv-install-plan-collapse summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: .86rem;
+}
+
+.atv-install-plan-view-details {
+  font-size: .8rem;
+  color: var(--atv-muted);
 }
 
 .atv-install-report summary {

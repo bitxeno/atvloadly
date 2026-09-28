@@ -242,6 +242,14 @@
         "label": "IPA-URL:",
         "external_unavailable": "Signering med externt certifikat kräver en uppladdad IPA-fil eller en källa"
       },
+      "signer": {
+        "label": "Apple-ID eller certifikat:",
+        "placeholder": "Välj ett Apple-ID eller certifikat",
+        "manage": "Hantera konton och certifikat",
+        "alt": "Välj ett Apple-ID eller ett importerat signeringscertifikat för att signera appen.",
+        "empty": "Inget Apple-konto eller signeringsidentitet än.",
+        "go_to_accounts": "Gå till konton"
+      },
       "account": {
         "label": "Apple-konto:",
         "select": {
@@ -696,6 +704,10 @@
       "warning": "Varningar",
       "info": "Information"
     },
+    "issues": {
+      "show_more": "Visa {{count}} fler…",
+      "show_less": "Visa färre"
+    },
     "classes": {
       "identity": "Signeringsidentitet",
       "signing": "Signering",
@@ -710,6 +722,7 @@
     "plan": {
       "title": "Kompatibilitetskontroll",
       "run_check": "Kontrollera igen",
+      "view_details": "Visa detaljer",
       "uploading": "Laddar upp IPA-filen för kompatibilitetskontrollen…",
       "downloading": "Laddar ner IPA-filen från källan för kompatibilitetskontrollen…",
       "checking": "Kontrollerar IPA-filen, identiteten och enheten…",

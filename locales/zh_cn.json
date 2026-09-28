@@ -237,6 +237,14 @@
                 "label": "IPA链接:",
                 "external_unavailable": "外部证书签名需要上传 IPA 文件或使用来源"
             },
+            "signer": {
+                "label": "Apple ID 或证书：",
+                "placeholder": "请选择 Apple ID 或证书",
+                "manage": "管理帐号与证书",
+                "alt": "选择用于签名应用的 Apple ID 或已导入的签名证书。",
+                "empty": "尚无 Apple 帐号或签名身份。",
+                "go_to_accounts": "前往帐号管理"
+            },
             "account": {
                 "label": "Apple帐号:",
                 "select": {
@@ -691,6 +699,10 @@
             "warning": "警告",
             "info": "提示"
         },
+        "issues": {
+            "show_more": "展开另外 {{count}} 项…",
+            "show_less": "收起"
+        },
         "classes": {
             "identity": "签名身份",
             "signing": "签名",
@@ -705,6 +717,7 @@
         "plan": {
             "title": "兼容性检查",
             "run_check": "重新检查",
+            "view_details": "查看详情",
             "uploading": "正在上传 IPA 以进行兼容性检查…",
             "downloading": "正在从来源下载 IPA 以进行兼容性检查…",
             "checking": "正在检查 IPA、签名身份和设备…",

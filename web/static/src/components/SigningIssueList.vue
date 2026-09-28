@@ -1,5 +1,5 @@
 <template>
-  <div class="atv-signing-issues">
+  <div class="atv-signing-issues" v-if="groups.length > 0">
     <section
       v-for="group in groups"
       :key="group.severity"
@@ -11,7 +11,7 @@
       </h5>
       <ul>
         <li
-          v-for="(issue, index) in group.issues"
+          v-for="(issue, index) in visibleGroupIssues(group)"
           :key="`${issue.code}-${index}`"
           class="atv-signing-issue"
         >
@@ -22,6 +22,18 @@
           <code v-if="issue.bundle" class="atv-signing-issue-bundle">{{ issue.bundle }}</code>
         </li>
       </ul>
+      <div v-if="group.issues.length > maxVisible" class="mt-2">
+        <button
+          type="button"
+          class="btn btn-xs btn-ghost atv-signing-issue-toggle"
+          @click="toggleGroup(group.severity)"
+        >
+          {{ isExpanded(group.severity)
+            ? $t("signing.issues.show_less")
+            : $t("signing.issues.show_more", { count: group.issues.length - maxVisible })
+          }}
+        </button>
+      </div>
     </section>
   </div>
 </template>
@@ -33,15 +45,39 @@ export default {
   name: "SigningIssueList",
   props: {
     issues: { type: Array, default: () => [] },
+    maxVisible: { type: Number, default: 2 },
+  },
+  data() {
+    return {
+      expanded: {},
+    };
   },
   computed: {
+    filteredIssues() {
+      return (this.issues || []).filter((issue) => issue && issue.code !== "revocation_not_checked");
+    },
     groups() {
-      return groupIssuesBySeverity(this.issues);
+      return groupIssuesBySeverity(this.filteredIssues);
     },
   },
   methods: {
     text(issue) {
       return issueText(issue, (key) => this.$t(key));
+    },
+    isExpanded(severity) {
+      return !!this.expanded[severity];
+    },
+    toggleGroup(severity) {
+      this.expanded = {
+        ...this.expanded,
+        [severity]: !this.expanded[severity],
+      };
+    },
+    visibleGroupIssues(group) {
+      if (this.isExpanded(group.severity) || group.issues.length <= this.maxVisible) {
+        return group.issues;
+      }
+      return group.issues.slice(0, this.maxVisible);
     },
   },
 };
@@ -111,5 +147,18 @@ export default {
 .atv-signing-issue-bundle {
   font-size: .74rem;
   color: var(--atv-muted);
+}
+
+.atv-signing-issue-toggle {
+  padding: 0 4px;
+  height: 20px;
+  min-height: 20px;
+  font-size: .78rem;
+  color: var(--atv-muted);
+}
+
+.atv-signing-issue-toggle:hover {
+  background: transparent;
+  text-decoration: underline;
 }
 </style>
