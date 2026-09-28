@@ -152,10 +152,15 @@ func parseIPAMetadata(ipaPath string, saveDir string) (*DownloadResult, error) {
 		iconPath := filepath.Join(saveDir, iconName)
 		iconFile, err := os.Create(iconPath)
 		if err == nil {
-			if png.Encode(iconFile, icon) == nil {
-				result.IconPath = iconPath
-			}
+			encodeErr := png.Encode(iconFile, icon)
 			_ = iconFile.Close()
+			if encodeErr == nil {
+				result.IconPath = iconPath
+			} else {
+				// Leave no empty icon file behind: the caller only
+				// tracks IconPath on success.
+				_ = os.Remove(iconPath)
+			}
 		}
 	}
 

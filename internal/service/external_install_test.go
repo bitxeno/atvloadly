@@ -379,6 +379,12 @@ func TestValidateInstallRequest(t *testing.T) {
 	dataDir := setTestDataDir(t)
 	uploaded := writeTestFile(t, filepath.Join(dataDir, "tmp", "app_1.ipa"))
 	outside := writeTestFile(t, filepath.Join(t.TempDir(), "app.ipa"))
+	// ResolveClientIPAPath returns the symlink-free path, which differs from
+	// the temp directory path on macOS (/var vs /private/var).
+	resolvedUploaded, err := filepath.EvalSymlinks(uploaded)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		name     string
@@ -390,7 +396,7 @@ func TestValidateInstallRequest(t *testing.T) {
 		{name: "apple id path passed through", request: model.InstalledApp{UDID: "DEVICE", Account: "user@example.com", IpaPath: outside}, wantPath: outside},
 		{name: "apple id custom identifier", request: model.InstalledApp{UDID: "DEVICE", Account: "user@example.com", IpaPath: uploaded, CustomIdentifier: "app.custom"}, wantErr: true},
 		{name: "external path outside the data directories", request: model.InstalledApp{UDID: "DEVICE", IpaPath: outside, SigningMode: model.SigningModeExternalCertificate, SigningIdentityID: 1}, wantErr: true},
-		{name: "external custom identifier trimmed", request: model.InstalledApp{UDID: "DEVICE", IpaPath: uploaded, SigningMode: model.SigningModeExternalCertificate, SigningIdentityID: 1, CustomIdentifier: " app.custom "}, wantPath: uploaded, wantID: "app.custom"},
+		{name: "external custom identifier trimmed", request: model.InstalledApp{UDID: "DEVICE", IpaPath: uploaded, SigningMode: model.SigningModeExternalCertificate, SigningIdentityID: 1, CustomIdentifier: " app.custom "}, wantPath: resolvedUploaded, wantID: "app.custom"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

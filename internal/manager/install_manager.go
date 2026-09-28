@@ -16,7 +16,6 @@ import (
 	execx "github.com/bitxeno/atvloadly/internal/exec"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
-	"github.com/bitxeno/atvloadly/internal/utils"
 	"github.com/gookit/event"
 )
 
@@ -219,14 +218,142 @@ func (t *InstallManager) GetMobileProvisionPath() string {
 	return path.Join(os.TempDir(), fmt.Sprintf("embedded.mobileprovision.%d", time.Now().UnixNano()))
 }
 
-func (t *InstallManager) CleanTempFiles(ipaPath string) {
-	ipaName := filepath.Base(ipaPath)
-	fileNameWithoutExt := strings.TrimSuffix(ipaName, filepath.Ext(ipaName))
+// reservedUploadTempFiles holds the canonical paths of upload temp files
+// owned by a queued or running installation. Stale-file sweeps keep them
+// until they are released.
+var reservedUploadTempFiles sync.Map
 
-	utils.RemoveAllFiles(filepath.Join(app.Config.Server.DataDir, "tmp"), fileNameWithoutExt+"*")
-	utils.RemoveAllFiles(os.TempDir(), fileNameWithoutExt+"*")
+// ReserveUploadTempFiles marks upload temp files as owned by a queued or
+// running installation so that stale-file sweeps keep them. Remote URLs
+// and unresolvable paths are ignored.
+func ReserveUploadTempFiles(paths ...string) {
+	for _, p := range paths {
+		if canonical := canonicalTempPath(p); canonical != "" {
+			reservedUploadTempFiles.Store(canonical, struct{}{})
+		}
+	}
+}
 
-	utils.RemoveAllFiles(os.TempDir(), "plume_stage*")
+// ReleaseUploadTempFiles drops the ownership marks of ReserveUploadTempFiles,
+// letting stale-file sweeps remove the files again.
+func ReleaseUploadTempFiles(paths ...string) {
+	for _, p := range paths {
+		if canonical := canonicalTempPath(p); canonical != "" {
+			reservedUploadTempFiles.Delete(canonical)
+		}
+	}
+}
+
+// UploadTempFileReserved reports whether the upload temp file at path is
+// owned by a queued or running installation and must be kept by stale-file
+// sweeps.
+func UploadTempFileReserved(path string) bool {
+	canonical := canonicalTempPath(path)
+	if canonical == "" {
+		return false
+	}
+	_, reserved := reservedUploadTempFiles.Load(canonical)
+	return reserved
+}
+
+// canonicalTempPath resolves p to an absolute path with symlinks resolved,
+// or returns "" for remote URLs and unresolvable paths. Reservations and
+// removals compare canonical paths, so callers may hand in either form.
+func canonicalTempPath(p string) string {
+	p = strings.TrimSpace(p)
+	if p == "" || isRemotePath(p) {
+		return ""
+	}
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		return ""
+	}
+	if resolved, err := filepath.EvalSymlinks(abs); err == nil {
+		return resolved
+	}
+	return abs
+}
+
+// uploadTempDir returns the canonical absolute path of the upload temp
+// directory.
+func uploadTempDir() (string, error) {
+	dir := canonicalTempPath(filepath.Join(app.Config.Server.DataDir, "tmp"))
+	if dir == "" {
+		return "", errors.New("resolve upload temp directory")
+	}
+	return dir, nil
+}
+
+func (t *InstallManager) CleanTempFiles(files ...string) {
+	CleanUploadTempFiles(files...)
+	// The installation owning this manager has finished, so its plumesign
+	// process is gone and its staging leftovers can be removed. Staging
+	// directories of concurrently running installations stay untouched.
+	cleanPlumeStageFiles()
+}
+
+// CleanUploadTempFiles removes the given upload temp files without needing an
+// InstallManager instance. Paths outside the upload temp directory are
+// skipped.
+func CleanUploadTempFiles(files ...string) {
+	for _, filePath := range files {
+		if err := removeUploadTempFile(filePath); err != nil {
+			log.Warnf("failed to clean upload temp file %s: %v", filePath, err)
+		}
+	}
+}
+
+// removeUploadTempFile removes a single file created in the upload temp
+// directory. Remote URLs, paths outside the temp directory and directories
+// are skipped. Removing an already gone file is not an error.
+func removeUploadTempFile(filePath string) error {
+	target := canonicalTempPath(filePath)
+	if target == "" {
+		return nil
+	}
+
+	tempDir, err := uploadTempDir()
+	if err != nil {
+		return err
+	}
+
+	// Uploads and extracted icons are created as direct files in <data>/tmp.
+	// Reject the directory itself, nested paths and every path outside it.
+	if target == tempDir || filepath.Dir(target) != tempDir {
+		return nil
+	}
+
+	info, err := os.Lstat(target)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("inspect upload temp file: %w", err)
+	}
+	if info.IsDir() {
+		return nil
+	}
+
+	if err := os.Remove(target); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("remove upload temp file: %w", err)
+	}
+	return nil
+}
+
+// cleanPlumeStageFiles removes plumesign staging files from the OS temp
+// directory. They are small fixed-pattern leftovers that must not accumulate.
+func cleanPlumeStageFiles() {
+	matches, _ := filepath.Glob(filepath.Join(os.TempDir(), "plume_stage*"))
+	for _, m := range matches {
+		_ = os.RemoveAll(m)
+	}
+}
+
+func isRemotePath(p string) bool {
+	return strings.HasPrefix(p, "http:") || strings.HasPrefix(p, "https:")
 }
 
 func (t *InstallManager) Close() {

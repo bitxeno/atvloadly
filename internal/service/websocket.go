@@ -183,6 +183,12 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		v.Icon = result.IconPath
 	}
 
+	// The IPA and icon of an interactive install wait in the upload temp
+	// directory while it runs; mark them so the stale-file sweep keeps
+	// them until this install finishes.
+	manager.ReserveUploadTempFiles(v.IpaPath, v.Icon)
+	defer manager.ReleaseUploadTempFiles(v.IpaPath, v.Icon)
+
 	if v.IsExternalSigning() {
 		runExternalInstallMessage(mgr, installMgr, v, dev)
 		return
@@ -199,7 +205,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		RefreshMode:      false,
 	})
 	if err != nil {
-		installMgr.CleanTempFiles(v.IpaPath)
+		installMgr.CleanTempFiles(v.IpaPath, v.Icon)
 		msg := fmt.Sprintf("ERROR: %s", err.Error())
 		mgr.WriteMessage(msg)
 		mgr.WriteMessage("\n")
@@ -219,7 +225,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 
 		app, err := SaveApp(v)
 		if err != nil {
-			installMgr.CleanTempFiles(v.IpaPath)
+			installMgr.CleanTempFiles(v.IpaPath, v.Icon)
 			msg := fmt.Sprintf("ERROR: save app to db failed. %s", err.Error())
 			mgr.WriteMessage(msg)
 			mgr.WriteMessage("\n")
@@ -231,7 +237,9 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		}
 	}
 
-	installMgr.CleanTempFiles(v.IpaPath)
+	// SaveApp moves the temp files to their permanent location on success,
+	// so cleaning the original paths is a no-op in that case.
+	installMgr.CleanTempFiles(v.IpaPath, v.Icon)
 }
 
 // runExternalInstallMessage signs and installs v with its external signing

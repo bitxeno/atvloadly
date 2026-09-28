@@ -466,6 +466,10 @@ func route(fi *fiber.App) {
 
 			// Upload the file to specific dst.
 			if err := c.SaveFile(file, dst); err != nil {
+				// Drop the partial file and everything saved earlier in
+				// this request: the client never receives those paths.
+				_ = os.Remove(dst)
+				removeUploadArtifacts(result...)
 				return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 			}
 
@@ -476,6 +480,8 @@ func route(fi *fiber.App) {
 
 			parsed, err := ipa.ParseLocalIPA(dst)
 			if err != nil {
+				_ = os.Remove(dst)
+				removeUploadArtifacts(result...)
 				return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 			}
 
@@ -553,6 +559,8 @@ func route(fi *fiber.App) {
 			dst := filepath.Join(saveDir, dstName)
 
 			if err := c.SaveFile(file, dst); err != nil {
+				// The client never receives this path: drop the partial file.
+				_ = os.Remove(dst)
 				return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 			}
 			ipaPath = dst
@@ -569,9 +577,12 @@ func route(fi *fiber.App) {
 		manager.ReloadDevices()
 		devices, err := manager.GetDevices()
 		if err != nil {
+			// The uploaded file never reaches a task: clean it here.
+			manager.CleanUploadTempFiles(ipaPath)
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 		if len(devices) == 0 {
+			manager.CleanUploadTempFiles(ipaPath)
 			return c.Status(http.StatusOK).JSON(apiError("no available devices found"))
 		}
 
@@ -586,6 +597,7 @@ func route(fi *fiber.App) {
 				}
 			}
 			if !found {
+				manager.CleanUploadTempFiles(ipaPath)
 				return c.Status(http.StatusOK).JSON(apiError("device_id not found: " + deviceID))
 			}
 		} else {
@@ -596,6 +608,7 @@ func route(fi *fiber.App) {
 				}
 			}
 			if len(atvDevices) == 0 {
+				manager.CleanUploadTempFiles(ipaPath)
 				return c.Status(http.StatusOK).JSON(apiError("no Apple TV devices found"))
 			}
 			selectedDevice = atvDevices[0]
@@ -617,7 +630,12 @@ func route(fi *fiber.App) {
 			CustomIdentifier:         customIdentifier,
 		}
 
-		task.StartInstallApps([]model.InstalledApp{appModel}, true)
+		if task.StartInstallApps([]model.InstalledApp{appModel}, true) == 0 {
+			// Nothing was queued (duplicate or full queue): the uploaded
+			// file has no task to clean it.
+			manager.CleanUploadTempFiles(ipaPath)
+			return c.Status(http.StatusOK).JSON(apiError("install task was not queued, please retry"))
+		}
 
 		return c.Status(http.StatusOK).JSON(apiSuccess(map[string]interface{}{
 			"status":              "installing",
@@ -736,23 +754,6 @@ func route(fi *fiber.App) {
 				return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 			}
 		}
-		return c.Status(http.StatusOK).JSON(apiSuccess(true))
-	})
-
-	api.Post("/clean", func(c *fiber.Ctx) error {
-		var ipa model.IpaFile
-		if err := c.BodyParser(&ipa); err != nil {
-			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
-		}
-
-		// clean upload temp file
-		if ipa.Path != "" {
-			_ = os.RemoveAll(ipa.Path)
-		}
-		if ipa.Icon != "" {
-			_ = os.RemoveAll(ipa.Icon)
-		}
-
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))
 	})
 
@@ -877,6 +878,16 @@ func route(fi *fiber.App) {
 		}
 	})
 
+}
+
+// removeUploadArtifacts removes the temp files of already parsed uploads in a
+// failed multi-file request. The client never receives those paths, so only
+// the server can clean them.
+func removeUploadArtifacts(files ...model.IpaFile) {
+	for _, f := range files {
+		_ = os.Remove(f.Path)
+		_ = os.Remove(f.Icon)
+	}
 }
 
 const documentCacheControl = "no-cache, no-store, must-revalidate"
