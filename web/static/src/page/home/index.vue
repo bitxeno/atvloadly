@@ -233,9 +233,9 @@
                   </div>
                 </div>
               </td>
-              <td class="lg:break-all" v-html="formatDeviceName(item)">
+              <td v-html="formatDeviceName(item)">
               </td>
-              <td class="lg:break-all">
+              <td>
                 <div v-if="isExternalApp(item)" class="flex flex-col items-start gap-y-1">
                   <span class="badge atv-badge-external min-w-max">{{
                     $t("home.table.signing.external_badge")
