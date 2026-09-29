@@ -152,13 +152,13 @@
                   <div class="indicator">
                     <div
                       class="tooltip tooltip-right indicator-item atv-indicator-tip"
-                      :data-tip="sourceWarning(item)"
-                      v-if="sourceWarning(item)"
+                      :data-tip="indicatorTip(item)"
+                      v-if="indicatorTip(item)"
                     >
                       <span class="badge badge-warning">!</span>
                     </div>
                     <span
-                      v-else-if="!item.refreshed_result"
+                      v-else-if="!item.refreshed_result || sourceWarning(item)"
                       class="indicator-item badge badge-warning"
                       >!</span
                     >
@@ -650,6 +650,27 @@ export default {
       if (source.check_error) return source.check_error;
       return updateFailed(source) ? this.$t("home.source.update_failed", { version: source.latest_version }) : "";
     },
+    // refreshErrorTip maps the refreshed_error code to its message.
+    refreshErrorTip(item) {
+      if (this.isExternalApp(item)) return this.externalErrorText(item);
+      if (item.refreshed_error == 1) {
+        return this.$t("home.table.tips.account_invalid");
+      }
+      if (!item.refreshed_result && item.refreshed_date) {
+        return this.$t("home.table.tips.refresh_failed");
+      }
+      return "";
+    },
+    // indicatorTip explains the corner badge: the refresh failure reason
+    // first, then any source warning.
+    indicatorTip(item) {
+      const tips = [];
+      const refreshTip = this.refreshErrorTip(item);
+      if (refreshTip) tips.push(refreshTip);
+      const warning = this.sourceWarning(item);
+      if (warning) tips.push(warning);
+      return tips.join("\n");
+    },
     checkUpdates() {
       this.checkingUpdates = true;
       api
@@ -945,9 +966,10 @@ import RefreshIcon from "@/assets/icons/refresh.svg";
 }
 
 /* Undo the white-space: nowrap inherited from .indicator-item so the
-   tooltip bubble wraps long error messages instead of one long line. */
+   tooltip bubble wraps long error messages instead of one long line,
+   while pre-line keeps the line break between combined messages. */
 .atv-indicator-tip::before {
-  white-space: normal;
+  white-space: pre-line;
   text-align: left;
 }
 

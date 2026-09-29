@@ -136,7 +136,8 @@
                 "reinstall_external": "Reinstalling with the same certificate and provisioning profile does not extend the validity. After replacing the profile (or with a new identity), reinstall the app to extend it.",
                 "signing_identity_error": "The signing identity (certificate, private key or provisioning profile) is invalid or not compatible. Check the log and the identity in Accounts.",
                 "signing_error": "Signing failed or the signed app did not pass verification. Check the log for details.",
-                "transport_error": "The device could not be reached or rejected the installation. Check the log for details."
+                "transport_error": "The device could not be reached or rejected the installation. Check the log for details.",
+                "refresh_failed": "Refresh failed. Check the log for details."
             },
             "signing": {
                 "external_badge": "External certificate",

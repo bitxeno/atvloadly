@@ -136,7 +136,8 @@
         "reinstall_external": "En ominstallation med samma certifikat och provisioneringsprofil förlänger inte giltighetstiden. Byt profil (eller använd en ny signeringsidentitet) och installera sedan om appen för att förlänga den.",
         "signing_identity_error": "Signeringsidentiteten (certifikat, privat nyckel eller provisioneringsprofil) är ogiltig eller inte kompatibel. Kontrollera loggen och identiteten under Konton.",
         "signing_error": "Signeringen misslyckades eller den signerade appen klarade inte verifieringen. Se loggen för mer information.",
-        "transport_error": "Det gick inte att nå enheten, eller så avvisade den installationen. Se loggen för mer information."
+        "transport_error": "Det gick inte att nå enheten, eller så avvisade den installationen. Se loggen för mer information.",
+        "refresh_failed": "Uppdateringen misslyckades. Se loggen för mer information."
       },
       "signing": {
         "external_badge": "Externt certifikat",
