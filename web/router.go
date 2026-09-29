@@ -131,7 +131,7 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(app.Version))
 	})
 	api.Get("/settings", func(c *fiber.Ctx) error {
-		return c.Status(http.StatusOK).JSON(apiSuccess(app.Settings))
+		return c.Status(http.StatusOK).JSON(apiSuccess(safeSettings()))
 	})
 
 	api.Get("/accounts", func(c *fiber.Ctx) error {
@@ -258,12 +258,16 @@ func route(fi *fiber.App) {
 	})
 
 	api.Post("/settings/:key", func(c *fiber.Ctx) error {
+		key := c.Params("key")
+		if key == "update" {
+			return saveUpdateSettings(c)
+		}
+
 		var settings app.SettingsConfiguration
 		if err := c.BodyParser(&settings); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError("Invalid argument. error: " + err.Error()))
 		}
 
-		key := c.Params("key")
 		switch key {
 		case "notification":
 			app.Settings.Notification = settings.Notification
@@ -274,16 +278,6 @@ func route(fi *fiber.App) {
 			if err := task.ReloadTask(); err != nil {
 				errMsg := fmt.Sprintf("invalid time format: %s", err.Error())
 				return c.Status(http.StatusOK).JSON(apiError(errMsg))
-			}
-		case "update":
-			switch settings.Update.CheckInterval {
-			case 0, 1, 3, 6, 12, 24:
-			default:
-				return c.Status(http.StatusOK).JSON(apiError("invalid check interval"))
-			}
-			app.Settings.Update = settings.Update
-			if err := task.ReloadTask(); err != nil {
-				return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 			}
 		}
 

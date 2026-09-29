@@ -406,6 +406,13 @@
         "every_hour": "Varje timme",
         "every_hours": "Var {{num}}:e timme"
       },
+      "github_token": {
+        "label": "GitHub-token",
+        "placeholder": "ghp_... (valfritt)",
+        "tips": "Valfri personlig åtkomsttoken som skickas som Bearer-token med GitHub API-förfrågningar, för att höja gränsen på 60 oautentiserade förfrågningar per timme. Läsbehörighet för offentliga repon räcker.",
+        "configured_placeholder": "Konfigurerad - ange ett nytt värde för att ersätta",
+        "clear": "Ta bort"
+      },
       "tips": "Appar som installerats från ett GitHub-repo eller en AltStore-källa kontrolleras i bakgrunden, och du aviseras om nya versioner när aviseringar är aktiverade. Automatiska uppgraderingar installeras under tidsintervallet för automatisk appuppdatering, även om appen inte behöver uppdateras än. GitHub tillåter 60 oautentiserade förfrågningar per timme.",
       "task_disabled": "Automatisk appuppdatering är avstängd: nya versioner upptäcks fortfarande, men uppgraderingar installeras inte automatiskt.",
       "button": {

@@ -84,6 +84,11 @@ func action(c *cli.Context) error {
 		return err
 	}
 	initSigning(conf)
+	// The GitHub token is sealed at rest; unseal it now that the deployment
+	// key is configured. A failure only disables authenticated GitHub calls.
+	if err := app.LoadGitHubToken(); err != nil {
+		log.Warnf("Stored GitHub token cannot be unlocked: %v", err)
+	}
 	// Staged uploads and downloads abandoned by the install page; the task
 	// scheduler repeats this every hour.
 	if _, err := service.RemoveStaleTempFiles(); err != nil {

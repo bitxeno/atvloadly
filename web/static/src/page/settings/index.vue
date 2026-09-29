@@ -288,6 +288,40 @@
           </div>
         </div>
 
+        <div class="form-item">
+          <label class="form-item-label">
+            <span class="label-text">{{
+              $t("settings.update.github_token.label")
+            }}</span>
+          </label>
+          <div class="flex flex-col grow">
+            <div class="join w-full atv-saved-source-add">
+              <input
+                v-model="githubTokenInput"
+                type="text"
+                :placeholder="githubTokenSet ? $t('settings.update.github_token.configured_placeholder') : $t('settings.update.github_token.placeholder')"
+                class="input input-bordered join-item flex-1 min-w-0"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+              />
+              <button
+                v-if="githubTokenSet"
+                type="button"
+                class="btn btn-primary join-item"
+                :title="$t('settings.update.github_token.clear')"
+                :aria-label="$t('settings.update.github_token.clear')"
+                @click="clearGithubToken"
+              >×</button>
+            </div>
+            <label class="label">
+              <span class="label-text-alt whitespace-normal">{{
+                $t("settings.update.github_token.tips")
+              }}</span>
+            </label>
+          </div>
+        </div>
+
         <div class="form-item" v-if="!settings.task.enabled">
           <label class="form-item-label"></label>
           <div class="alert alert-warning atv-warning text-sm">
@@ -503,6 +537,8 @@ export default {
       savedSources: [],
       newSourceUrl: "",
       addingSource: false,
+      githubTokenInput: "",
+      githubTokenSet: false,
     };
   },
 
@@ -515,6 +551,9 @@ export default {
       let _this = this;
       api.getSettings().then((res) => {
         _this.settings = res.data;
+        const update = res.data.update || {};
+        _this.githubTokenSet = !!update.github_token_set;
+        _this.githubTokenInput = "";
         _this.parseCronTime();
       });
     },
@@ -540,13 +579,38 @@ export default {
     },
 
     saveUpdate() {
-      let _this = this;
+      const payload = {
+        check_interval: this.settings.update.check_interval,
+      };
+      // Only a non-empty input replaces the token; an empty one keeps it.
+      // Removal is done through the delete button instead.
+      const input = (this.githubTokenInput || "").trim();
+      if (input) {
+        payload.github_token = input;
+      }
 
-      api.saveUpdateSettings(_this.settings).then((res) => {
+      api.saveUpdateSettings(payload).then((res) => {
         if (res.data) {
           toast.success(this.$t("settings.toast.save_success"));
+          this.githubTokenInput = "";
+          this.fetchData();
         }
       });
+    },
+
+    clearGithubToken() {
+      api
+        .saveUpdateSettings({
+          check_interval: this.settings.update.check_interval,
+          github_token: "",
+        })
+        .then((res) => {
+          if (res.data) {
+            toast.success(this.$t("settings.toast.save_success"));
+            this.githubTokenInput = "";
+            this.fetchData();
+          }
+        });
     },
 
     fetchSavedSources() {
