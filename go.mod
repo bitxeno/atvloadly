@@ -93,7 +93,7 @@ require (
 	modernc.org/sqlite v1.23.1 // indirect
 )
 
-replace github.com/iineva/bom => github.com/bitxeno/bom v0.0.0-20260823051148-16148bb9e854
+replace github.com/iineva/bom => github.com/bitxeno/bom v0.0.0-20260929143343-0e05147ba077
 
 // go-pkcs12 v0.7.3 derives keys with whatever iteration count the file asks
 // for, so a tiny P12 can pin a CPU indefinitely. third_party/go-pkcs12 is

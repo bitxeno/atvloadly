@@ -220,6 +220,13 @@ func parseIconImage(iconFile *zip.File) (image.Image, error) {
 	return img, nil
 }
 
+// isFlattenedImage reports whether an asset name refers to the flattened
+// composite image of a layered tvOS icon. It matches "flattened"
+// case-insensitively to cover "FlattenedImage" and its variants.
+func isFlattenedImage(name string) bool {
+	return strings.Contains(strings.ToLower(name), "flattened")
+}
+
 func parseIconAssets(assetFile *zip.File) (image.Image, error) {
 	f, err := assetFile.Open()
 	if err != nil {
@@ -243,6 +250,26 @@ func parseIconAssets(assetFile *zip.File) (image.Image, error) {
 	}
 
 	if candidates, err := a.ImageCandidates("icon"); err == nil && len(candidates) > 0 {
+		// Prefer flattened composite image for tvOS layered icons.
+		// A layered tvOS icon consists of separate Back/Middle/Front layers,
+		// picking a single layer yields an incomplete icon, while the
+		// flattened image is the complete composite, so pick the largest one.
+		var flattenedBest *asset.ImageCandidateInfo
+		flattenedBestArea := -1
+		for i := range candidates {
+			if !isFlattenedImage(candidates[i].Name) && !isFlattenedImage(candidates[i].RenditionName) {
+				continue
+			}
+			area := candidates[i].Width * candidates[i].Height
+			if flattenedBest == nil || area > flattenedBestArea {
+				flattenedBest = &candidates[i]
+				flattenedBestArea = area
+			}
+		}
+		if flattenedBest != nil {
+			return flattenedBest.Image, nil
+		}
+
 		var best *asset.ImageCandidateInfo
 
 		// find not layered icon and return
