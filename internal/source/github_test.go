@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/bitxeno/atvloadly/internal/app"
 )
 
 func TestParseRepo(t *testing.T) {
@@ -138,6 +140,35 @@ func TestFetchGitHubDecode(t *testing.T) {
 		b.DownloadURL != "https://github.com/owner/repo/releases/download/x/OrivioTV-V9.Sideload.ipa" ||
 		b.Filter != `(?i)(^|[^a-z0-9])sideload([^a-z0-9]|$)` || b.Date.IsZero() {
 		t.Fatalf("unexpected build %+v", b)
+	}
+}
+
+func TestFetchGitHubSendsConfiguredToken(t *testing.T) {
+	old := app.Settings
+	t.Cleanup(func() { app.Settings = old })
+
+	app.Settings = &app.SettingsConfiguration{}
+	app.Settings.Update.GitHubToken = " ghp_token123 "
+
+	serveGitHub(t, func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Authorization"); got != "Bearer ghp_token123" {
+			t.Errorf("Authorization = %q, want %q", got, "Bearer ghp_token123")
+		}
+		_, _ = w.Write([]byte(`[]`))
+	})
+	if _, err := Fetch(KindGitHub, "owner/repo"); err != nil {
+		t.Fatalf("Fetch with token: %v", err)
+	}
+
+	app.Settings.Update.GitHubToken = ""
+	serveGitHub(t, func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Authorization"); got != "" {
+			t.Errorf("Authorization = %q, want no header", got)
+		}
+		_, _ = w.Write([]byte(`[]`))
+	})
+	if _, err := Fetch(KindGitHub, "owner/repo"); err != nil {
+		t.Fatalf("Fetch without token: %v", err)
 	}
 }
 

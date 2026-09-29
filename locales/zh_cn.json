@@ -408,6 +408,13 @@
                 "every_hour": "每小时",
                 "every_hours": "每 {{num}} 小时"
             },
+            "github_token": {
+                "label": "GitHub Token",
+                "placeholder": "ghp_...（可选）",
+                "tips": "可选的个人访问令牌。配置后，检查更新请求 GitHub API 时会携带它，避免触发未认证请求每小时 60 次的限制。只需授予公开仓库的读取权限。",
+                "configured_placeholder": "已配置 - 输入新值可替换",
+                "clear": "移除"
+            },
             "tips": "从 GitHub 仓库或 AltStore 来源安装的应用会在后台检查新版本，启用通知后有新版本时会通知你。自动更新会在自动刷新的运行时间段内安装，即使应用还不需要刷新。GitHub 未认证请求每小时限 60 次。",
             "task_disabled": "自动刷新 App 已关闭：仍会检测新版本，但不会自动安装更新。",
             "button": {

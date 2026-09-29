@@ -408,6 +408,13 @@
                 "every_hour": "Every hour",
                 "every_hours": "Every {{num}} hours"
             },
+            "github_token": {
+                "label": "GitHub Token",
+                "placeholder": "ghp_... (optional)",
+                "tips": "Optional personal access token sent as a Bearer token with GitHub API requests, to raise the limit of 60 unauthenticated requests per hour. Read access to public repositories is enough.",
+                "configured_placeholder": "Configured - enter a new value to replace it",
+                "clear": "Remove"
+            },
             "tips": "Apps installed from a GitHub repository or an AltStore source are checked in the background, and you are notified of new versions when notifications are enabled. Automatic updates are installed during the Auto Refresh running time period, even if the app does not need a refresh yet. GitHub allows 60 unauthenticated requests per hour.",
             "task_disabled": "Auto Refresh App is disabled: new versions are still detected, but automatic updates are not installed.",
             "button": {

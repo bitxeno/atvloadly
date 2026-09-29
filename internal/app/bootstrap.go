@@ -65,7 +65,9 @@ func InitSettings(conf *Configuration, debug bool) (*SettingsConfiguration, erro
 	Settings = &settings
 
 	if debug {
-		c.PrintConfig()
+		// Never dump settings.json verbatim: it holds notification secrets
+		// and the sealed GitHub token. Log a redacted summary instead.
+		printRedactedSettings()
 	}
 
 	return &settings, nil
