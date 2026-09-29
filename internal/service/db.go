@@ -89,6 +89,8 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 		app.ID = cur.ID
 
 		now := time.Now()
+		cur.Device = app.Device
+		cur.DeviceClass = app.DeviceClass
 		cur.IpaName = app.IpaName
 		cur.IpaPath = app.IpaPath
 		cur.Version = app.Version
@@ -120,6 +122,8 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 		cur.Icon = storeAppIcon(app.Icon, saveDir, cur.Icon)
 
 		updateData := map[string]any{
+			"device":                     cur.Device,
+			"device_class":               cur.DeviceClass,
 			"ipa_name":                   cur.IpaName,
 			"ipa_path":                   cur.IpaPath,
 			"icon":                       cur.Icon,
