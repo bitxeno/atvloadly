@@ -761,9 +761,9 @@ html[data-theme="dark"] {
 }
 
 /* Table layout of the installed apps (mobile.css turns them into cards): the
-   source line spans the app cell under the icon without widening it, and
-   Update sits above Refresh and Delete. Tracking a source then keeps the
-   column widths, so the Device and Account cells are not squeezed. */
+   source line sits under the app title in the same column. Tracking a source
+   then keeps the column widths, so the Device and Account cells are not
+   squeezed. */
 @media (min-width: 768px) {
   .app-container .main-container .table td .flex.atv-app-cell {
     display: grid;
@@ -784,7 +784,7 @@ html[data-theme="dark"] {
   }
 
   .app-container .main-container .table td .atv-app-text > .atv-source-line {
-    grid-column: 1 / -1;
+    grid-column: 2;
     grid-row: 4;
     margin-top: 10px;
     contain: inline-size;
@@ -794,10 +794,6 @@ html[data-theme="dark"] {
     display: grid;
     grid-template-columns: repeat(2, max-content);
     gap: 8px;
-  }
-
-  .app-container .main-container .table td .atv-app-actions > .atv-action--update {
-    grid-column: 1 / -1;
   }
 }
 

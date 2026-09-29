@@ -75,7 +75,7 @@
     },
     "source": {
       "track": "Följ nya versioner",
-      "auto": "Auto",
+      "manage": "Hantera källa",
       "available": "{{version}} tillgänglig",
       "check_updates": "Sök efter nya versioner",
       "update_failed": "Installationen av {{version}} misslyckades och görs inte om automatiskt. Använd Uppgradera för att försöka igen."
@@ -122,7 +122,9 @@
         "refresh": "Uppdatera",
         "delete": "Ta bort",
         "reinstall": "Installera om",
-        "update": "Uppgradera"
+        "update": "Uppgradera",
+        "more": "Mer",
+        "confirm_delete": "Bekräfta borttagning"
       },
       "tips": {
         "view_log": "Klicka för att visa installationsloggen",
