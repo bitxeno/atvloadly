@@ -196,28 +196,11 @@
                     <div>{{ appName(item) }}</div>
                     <div class="stat-title text-sm">{{ item.version }}</div>
                     <div class="flex flex-wrap items-center gap-1 atv-source-line">
-                      <template v-if="item.source.kind">
-                        <button
-                          type="button"
-                          class="atv-source-chip max-w-full"
-                          :title="item.source.url"
-                          @click="openSourceDialog(item)"
-                        >
-                          <span class="w-3.5 h-3.5 shrink-0">
-                            <GithubIcon v-if="item.source.kind === 'github'" />
-                            <LinkIcon v-else />
-                          </span>
-                          <span class="truncate">{{ item.source.version || "—" }}</span>
-                          <span class="badge badge-ghost badge-xs shrink-0" v-if="item.source.auto_update">{{
-                            $t("home.source.auto")
-                          }}</span>
-                        </button>
-                        <span class="badge badge-info badge-sm max-w-full" v-if="item.source.latest_build_id">
-                          <span class="truncate">{{
-                            $t("home.source.available", { version: item.source.latest_version })
-                          }}</span>
-                        </span>
-                      </template>
+                      <span class="badge badge-info badge-sm max-w-full" v-if="item.source.latest_build_id">
+                        <span class="truncate">{{
+                          $t("home.source.available", { version: item.source.latest_version })
+                        }}</span>
+                      </span>
                     </div>
                     <div class="stat-title text-sm">
                       <a
@@ -301,32 +284,51 @@
                     >{{ $t("home.table.button.more") }}</div>
                     <ul
                       tabindex="0"
-                      class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-44 gap-1"
+                      class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-48 gap-1"
                     >
-                      <li v-if="!item.source.kind">
-                        <a @click="openSourceDialog(item)">{{
-                          $t("home.source.track")
-                        }}</a>
+                      <li>
+                        <a @click="openSourceDialog(item)">
+                          <span class="w-4 h-4 shrink-0">
+                            <GithubIcon v-if="item.source.kind === 'github'" />
+                            <LinkIcon v-else />
+                          </span>
+                          {{
+                            item.source.kind
+                              ? $t("home.source.manage")
+                              : $t("home.source.track")
+                          }}
+                        </a>
                       </li>
                       <li v-if="item.source.latest_build_id">
                         <a
                           :title="isExternalApp(item) ? $t('home.table.tips.reinstall_external') : undefined"
                           @click="refreshApp(item)"
-                        >{{
-                          isExternalApp(item)
-                            ? $t("home.table.button.reinstall")
-                            : $t("home.table.button.refresh")
-                        }}</a>
+                        >
+                          <span class="w-4 h-4 shrink-0">
+                            <RefreshIcon />
+                          </span>
+                          {{
+                            isExternalApp(item)
+                              ? $t("home.table.button.reinstall")
+                              : $t("home.table.button.refresh")
+                          }}
+                        </a>
                       </li>
                       <li v-if="confirmDeleteId !== item.ID">
-                        <a class="atv-menu-danger" @click="confirmDelete(item)">{{
-                          $t("home.table.button.delete")
-                        }}</a>
+                        <a class="atv-menu-danger" @click="confirmDelete(item)">
+                          <span class="w-4 h-4 shrink-0">
+                            <DismissIcon />
+                          </span>
+                          {{ $t("home.table.button.delete") }}
+                        </a>
                       </li>
                       <li v-else>
-                        <a class="atv-menu-danger" @click="deleteApp(item)">{{
-                          $t("home.table.button.confirm_delete")
-                        }}</a>
+                        <a class="atv-menu-danger" @click="deleteApp(item)">
+                          <span class="w-4 h-4 shrink-0">
+                            <DismissIcon />
+                          </span>
+                          {{ $t("home.table.button.confirm_delete") }}
+                        </a>
                       </li>
                     </ul>
                   </div>
@@ -895,28 +897,6 @@ import RefreshIcon from "@/assets/icons/refresh.svg";
 .menu li > .atv-menu-danger:focus-visible {
   color: var(--atv-danger-hover);
   background-color: var(--atv-danger-soft);
-}
-
-.atv-source-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 22px;
-  padding: 1px 8px;
-  border: 1px solid var(--atv-border);
-  border-radius: 999px;
-  background: var(--atv-surface-alt);
-  color: var(--atv-muted);
-  font-size: 0.75rem;
-  font-weight: 650;
-  white-space: nowrap;
-  transition: border-color 150ms ease, color 150ms ease;
-}
-
-.atv-source-chip:hover,
-.atv-source-chip:focus-visible {
-  border-color: var(--atv-accent);
-  color: var(--atv-accent);
 }
 
 /* Keep the tooltip bubble anchored to the corner badge: daisyUI's

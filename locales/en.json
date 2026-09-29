@@ -75,7 +75,7 @@
         },
         "source": {
             "track": "Track updates",
-            "auto": "Auto",
+            "manage": "Manage source",
             "available": "{{version}} available",
             "check_updates": "Check for updates",
             "update_failed": "Installing {{version}} failed and is not retried automatically. Use Update to retry."
