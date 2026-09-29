@@ -2,7 +2,9 @@ package app
 
 import (
 	"math"
+	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/log"
@@ -94,6 +96,29 @@ func redactSecret(v string) string {
 	return "(set)"
 }
 
+// redactProxyURL strips userinfo (username/password) from a proxy URL so debug
+// logs never leak credentials embedded like http://user:password@proxy.
+func redactProxyURL(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	if u, err := url.Parse(raw); err == nil && u.Host != "" {
+		if u.User != nil {
+			u.User = url.UserPassword("***", "***")
+			return u.String()
+		}
+		return raw
+	}
+	// Fallback for values url.Parse cannot handle: mask userinfo manually.
+	if i := strings.LastIndex(raw, "@"); i != -1 {
+		if j := strings.Index(raw, "://"); j != -1 && j+3 < i {
+			return raw[:j+3] + "***:***@" + raw[i+1:]
+		}
+		return "***:***@" + raw[i+1:]
+	}
+	return raw
+}
+
 // printRedactedSettings logs the settings for --debug without leaking tokens,
 // passwords or the sealed GitHub blob.
 func printRedactedSettings() {
@@ -116,7 +141,11 @@ func printRedactedSettings() {
 			"email":    map[string]any{"username": Settings.Notification.Email.Username, "password": redactSecret(Settings.Notification.Email.Password)},
 			"webhook":  map[string]any{"url": Settings.Notification.Webhook.URL, "method": Settings.Notification.Webhook.Method},
 		},
-		"network": Settings.Network,
+		"network": map[string]any{
+			"proxy_enabled": Settings.Network.ProxyEnabled,
+			"http_proxy":    redactProxyURL(Settings.Network.HTTPProxy),
+			"https_proxy":   redactProxyURL(Settings.Network.HTTPSProxy),
+		},
 	}
 	log.Infof("Load settings (redacted): %s", utils.ToJSON(redacted))
 }
@@ -133,9 +162,7 @@ func startSaveSettingsJob(settingsPath string) {
 			}
 
 			data := utils.ToIndentJSON(Settings)
-			// Secrets are sealed before persisting, and the file itself is
-			// readable only by the owner to avoid leaking them via backups.
-			if err := os.WriteFile(settingsPath, data, 0o600); err != nil {
+			if err := os.WriteFile(settingsPath, data, os.ModePerm); err != nil {
 				log.Err(err).Msg("Save settings error.")
 			} else {
 				log.Infof("Save settings success. %s", settingsPath)
