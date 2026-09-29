@@ -795,10 +795,6 @@ html[data-theme="dark"] {
     grid-template-columns: repeat(2, max-content);
     gap: 8px;
   }
-
-  .app-container .main-container .table td .atv-app-actions > .atv-action--update {
-    grid-column: 1 / -1;
-  }
 }
 
 .app-container :focus-visible {

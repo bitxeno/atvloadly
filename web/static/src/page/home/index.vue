@@ -146,7 +146,7 @@
           </thead>
           <tbody class="bg-base-100">
             <!-- row 1 -->
-            <tr class="hover" v-for="item in sortedList" v-bind:key="item.ID">
+            <tr class="hover" v-for="(item, index) in sortedList" v-bind:key="item.ID">
               <td>
                 <div class="flex items-center gap-x-2 atv-app-cell">
                   <div class="indicator">
@@ -196,13 +196,7 @@
                     <div>{{ appName(item) }}</div>
                     <div class="stat-title text-sm">{{ item.version }}</div>
                     <div class="flex flex-wrap items-center gap-1 atv-source-line">
-                      <button
-                        type="button"
-                        class="atv-source-track"
-                        v-if="!item.source.kind"
-                        @click="openSourceDialog(item)"
-                      >{{ $t("home.source.track") }}</button>
-                      <template v-else>
+                      <template v-if="item.source.kind">
                         <button
                           type="button"
                           class="atv-source-chip max-w-full"
@@ -287,6 +281,7 @@
                   <button
                     type="button"
                     class="btn atv-action atv-action--refresh"
+                    v-if="!item.source.latest_build_id"
                     :title="isExternalApp(item) ? $t('home.table.tips.reinstall_external') : undefined"
                     @click="refreshApp(item)"
                   >{{
@@ -294,39 +289,47 @@
                       ? $t("home.table.button.reinstall")
                       : $t("home.table.button.refresh")
                   }}</button>
-                  <Popper placement="top" arrow="true">
-                    <template #content="{ close }">
-                      <div class="flex flex-col gap-y-2">
-                        <div class="py-2">
-                          {{
-                            $t("home.dialog.delete_confirm.title", {
-                              name: appName(item),
-                            })
-                          }}
-                        </div>
-                        <div class="flex gap-x-2 justify-end items-center">
-                          <a
-                            class="link link-primary link-hover"
-                            @click="close"
-                            >{{
-                              $t("home.dialog.delete_confirm.button.cancel")
-                            }}</a
-                          >
-                          <button
-                            class="btn btn-primary btn-xs"
-                            @click="deleteApp(item, close)"
-                          >
-                            {{
-                              $t("home.dialog.delete_confirm.button.confirm")
-                            }}
-                          </button>
-                        </div>
-                      </div>
-                    </template>
-                    <button type="button" class="btn atv-action atv-action--danger">{{
-                      $t("home.table.button.delete")
-                    }}</button>
-                  </Popper>
+                  <div
+                    class="dropdown dropdown-hover dropdown-end"
+                    :class="{ 'dropdown-top': index === sortedList.length - 1 }"
+                    @mouseleave="resetConfirmDelete"
+                  >
+                    <div
+                      tabindex="0"
+                      role="button"
+                      class="btn atv-action"
+                    >{{ $t("home.table.button.more") }}</div>
+                    <ul
+                      tabindex="0"
+                      class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-44 gap-1"
+                    >
+                      <li v-if="!item.source.kind">
+                        <a @click="openSourceDialog(item)">{{
+                          $t("home.source.track")
+                        }}</a>
+                      </li>
+                      <li v-if="item.source.latest_build_id">
+                        <a
+                          :title="isExternalApp(item) ? $t('home.table.tips.reinstall_external') : undefined"
+                          @click="refreshApp(item)"
+                        >{{
+                          isExternalApp(item)
+                            ? $t("home.table.button.reinstall")
+                            : $t("home.table.button.refresh")
+                        }}</a>
+                      </li>
+                      <li v-if="confirmDeleteId !== item.ID">
+                        <a class="atv-menu-danger" @click="confirmDelete(item)">{{
+                          $t("home.table.button.delete")
+                        }}</a>
+                      </li>
+                      <li v-else>
+                        <a class="atv-menu-danger" @click="deleteApp(item)">{{
+                          $t("home.table.button.confirm_delete")
+                        }}</a>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </td>
             </tr>
@@ -403,6 +406,9 @@ export default {
       // IDs of apps whose update request is pending. The installing list
       // polled from the server does not include them yet.
       pendingUpdates: {},
+      // ID of the app armed for deletion in the row dropdown menu. Clicking
+      // delete once arms it, clicking again confirms.
+      confirmDeleteId: null,
     };
   },
   computed: {
@@ -524,9 +530,16 @@ export default {
         _this.checkInstallingApp();
       }, 10 * 1000);
     },
+    confirmDelete(item) {
+      this.confirmDeleteId = item.ID;
+    },
+    resetConfirmDelete() {
+      this.confirmDeleteId = null;
+    },
     deleteApp(item, closePopper) {
       let _this = this;
 
+      _this.confirmDeleteId = null;
       api.deleteApp(item.ID).then((res) => {
         _this.fetchData();
       });
@@ -872,16 +885,16 @@ import RefreshIcon from "@/assets/icons/refresh.svg";
   @apply border-base-300 bg-base-100 rounded-b-box flex min-h-[6rem]  flex-wrap items-center justify-center gap-2 overflow-x-hidden border bg-cover bg-top p-4;
 }
 
-.atv-source-track {
-  color: var(--atv-muted);
-  font-size: 0.8rem;
+/* Danger menu item: keep the original danger red in normal, hover and
+   focus states. Beats daisyUI's menu hover rule that resets the color. */
+.menu li > .atv-menu-danger {
+  color: var(--atv-danger);
 }
 
-.atv-source-track:hover,
-.atv-source-track:focus-visible {
-  color: var(--atv-accent);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+.menu li > .atv-menu-danger:hover,
+.menu li > .atv-menu-danger:focus-visible {
+  color: var(--atv-danger-hover);
+  background-color: var(--atv-danger-soft);
 }
 
 .atv-source-chip {

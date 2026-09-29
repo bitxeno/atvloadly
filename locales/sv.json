@@ -122,7 +122,9 @@
         "refresh": "Uppdatera",
         "delete": "Ta bort",
         "reinstall": "Installera om",
-        "update": "Uppgradera"
+        "update": "Uppgradera",
+        "more": "Mer",
+        "confirm_delete": "Bekräfta borttagning"
       },
       "tips": {
         "view_log": "Klicka för att visa installationsloggen",

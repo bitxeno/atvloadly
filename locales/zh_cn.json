@@ -122,7 +122,9 @@
                 "refresh": "刷新",
                 "delete": "删除",
                 "reinstall": "重新安装",
-                "update": "更新"
+                "update": "更新",
+                "more": "更多",
+                "confirm_delete": "确认删除"
             },
             "tips": {
                 "view_log": "点击查看安装日志",
