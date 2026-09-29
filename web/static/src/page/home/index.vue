@@ -150,9 +150,16 @@
               <td>
                 <div class="flex items-center gap-x-2 atv-app-cell">
                   <div class="indicator">
+                    <div
+                      class="tooltip tooltip-right indicator-item atv-indicator-tip"
+                      :data-tip="sourceWarning(item)"
+                      v-if="sourceWarning(item)"
+                    >
+                      <span class="badge badge-warning">!</span>
+                    </div>
                     <span
+                      v-else-if="!item.refreshed_result"
                       class="indicator-item badge badge-warning"
-                      v-show="!item.refreshed_result"
                       >!</span
                     >
                     <div class="inline-flex">
@@ -211,9 +218,6 @@
                             $t("home.source.auto")
                           }}</span>
                         </button>
-                        <div class="tooltip" :data-tip="sourceWarning(item)" v-if="sourceWarning(item)">
-                          <span class="block w-4 h-4 atv-source-warning"><WarningIcon /></span>
-                        </div>
                         <span class="badge badge-info badge-sm max-w-full" v-if="item.source.latest_build_id">
                           <span class="truncate">{{
                             $t("home.source.available", { version: item.source.latest_version })
@@ -850,7 +854,6 @@ import DismissIcon from "@/assets/icons/dismiss.svg";
 import GithubIcon from "@/assets/icons/github.svg";
 import LinkIcon from "@/assets/icons/link.svg";
 import RefreshIcon from "@/assets/icons/refresh.svg";
-import WarningIcon from "@/assets/icons/warning.svg";
 </script>
 
   
@@ -903,8 +906,18 @@ import WarningIcon from "@/assets/icons/warning.svg";
   color: var(--atv-accent);
 }
 
-.atv-source-warning {
-  color: var(--atv-warning-text);
+/* Keep the tooltip bubble anchored to the corner badge: daisyUI's
+   .tooltip sets position relative, which would override the
+   .indicator-item absolute corner positioning, so pin it back. */
+.atv-indicator-tip {
+  position: absolute;
+}
+
+/* Undo the white-space: nowrap inherited from .indicator-item so the
+   tooltip bubble wraps long error messages instead of one long line. */
+.atv-indicator-tip::before {
+  white-space: normal;
+  text-align: left;
 }
 
 .atv-source-line .badge-info {
