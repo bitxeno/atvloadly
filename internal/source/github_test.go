@@ -5,11 +5,13 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/secret"
 )
 
 func TestParseRepo(t *testing.T) {
@@ -148,11 +150,15 @@ func TestFetchGitHubSendsConfiguredToken(t *testing.T) {
 	t.Cleanup(func() { app.Settings = old })
 
 	app.Settings = &app.SettingsConfiguration{}
-	app.Settings.Update.GitHubToken = " ghp_token123 "
+	secret.Configure(filepath.Join(t.TempDir(), "keys", "secret-store.key"))
+	t.Cleanup(func() { secret.Configure("") })
+	if err := app.SetGitHubToken("ghp_token1234567890"); err != nil {
+		t.Fatalf("SetGitHubToken: %v", err)
+	}
 
 	serveGitHub(t, func(w http.ResponseWriter, r *http.Request) {
-		if got := r.Header.Get("Authorization"); got != "Bearer ghp_token123" {
-			t.Errorf("Authorization = %q, want %q", got, "Bearer ghp_token123")
+		if got := r.Header.Get("Authorization"); got != "Bearer ghp_token1234567890" {
+			t.Errorf("Authorization = %q, want %q", got, "Bearer ghp_token1234567890")
 		}
 		_, _ = w.Write([]byte(`[]`))
 	})
@@ -160,7 +166,7 @@ func TestFetchGitHubSendsConfiguredToken(t *testing.T) {
 		t.Fatalf("Fetch with token: %v", err)
 	}
 
-	app.Settings.Update.GitHubToken = ""
+	app.DeleteGitHubToken()
 	serveGitHub(t, func(w http.ResponseWriter, r *http.Request) {
 		if got := r.Header.Get("Authorization"); got != "" {
 			t.Errorf("Authorization = %q, want no header", got)

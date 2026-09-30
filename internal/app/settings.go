@@ -36,13 +36,11 @@ type SettingsConfiguration struct {
 	} `koanf:"task" json:"task"`
 	Update struct {
 		CheckInterval int `koanf:"check_interval" json:"check_interval" default:"6"` // hours between background update checks, 0 disables them
-		// GitHubToken holds the plaintext token in memory only. It is never
-		// written to settings.json nor exposed through the settings API.
-		GitHubToken string `koanf:"-" json:"-"`
-		// GitHubTokenSealed is the AES-256-GCM sealed token persisted in
-		// settings.json. It is never exposed through the settings API; the
-		// API only reports whether a token is configured.
-		GitHubTokenSealed string `koanf:"github_token_sealed" json:"github_token_sealed"`
+		// GitHubToken holds the AES-256-GCM sealed token (base64) persisted
+		// in settings.json. It never holds plaintext: read it with
+		// GetGitHubToken and write it with Set/DeleteGitHubToken. The
+		// settings API only reports whether a token is configured.
+		GitHubToken string `koanf:"github_token" json:"github_token"`
 	} `koanf:"update" json:"update"`
 	Notification struct {
 		Enabled  bool   `koanf:"enabled" json:"enabled"`
@@ -130,7 +128,7 @@ func printRedactedSettings() {
 		"task": Settings.Task,
 		"update": map[string]any{
 			"check_interval": Settings.Update.CheckInterval,
-			"github_token":   redactSecret(Settings.Update.GitHubTokenSealed),
+			"github_token":   redactSecret(Settings.Update.GitHubToken),
 		},
 		"notification": map[string]any{
 			"enabled":  Settings.Notification.Enabled,

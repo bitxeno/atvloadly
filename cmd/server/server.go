@@ -6,6 +6,7 @@ import (
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/manager"
+	"github.com/bitxeno/atvloadly/internal/secret"
 	"github.com/bitxeno/atvloadly/internal/service"
 	"github.com/bitxeno/atvloadly/internal/signing"
 	"github.com/bitxeno/atvloadly/internal/task"
@@ -84,11 +85,7 @@ func action(c *cli.Context) error {
 		return err
 	}
 	initSigning(conf)
-	// The GitHub token is sealed at rest; unseal it now that the deployment
-	// key is configured. A failure only disables authenticated GitHub calls.
-	if err := app.LoadGitHubToken(); err != nil {
-		log.Warnf("Stored GitHub token cannot be unlocked: %v", err)
-	}
+	initSecrets(conf)
 	// Staged uploads and downloads abandoned by the install page; the task
 	// scheduler repeats this every hour.
 	if _, err := service.RemoveStaleTempFiles(); err != nil {
@@ -105,6 +102,15 @@ func action(c *cli.Context) error {
 		port = c.Int("port")
 	}
 	return web.Run(conf.Server.ListenAddr, port)
+}
+
+// initSecrets configures the dedicated secret store. A stored GitHub token
+// that cannot be opened only disables authenticated GitHub calls.
+func initSecrets(conf *app.Configuration) {
+	secret.Configure(conf.Secret.KeyFile)
+	if err := app.CheckGitHubToken(); err != nil {
+		log.Warnf("Stored GitHub token cannot be unlocked: %v", err)
+	}
 }
 
 // initSigning configures the external certificate signing mode and removes

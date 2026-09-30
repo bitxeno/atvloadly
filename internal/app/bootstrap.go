@@ -33,6 +33,9 @@ func InitConfig(path string, debug bool) (*Configuration, error) {
 	if configuration.Signing.KeyFile == "" {
 		configuration.Signing.KeyFile = filepath.Join(configuration.Server.DataDir, "keys", "signing-identity.key")
 	}
+	if configuration.Secret.KeyFile == "" {
+		configuration.Secret.KeyFile = filepath.Join(configuration.Server.DataDir, "keys", "secret-store.key")
+	}
 	Config = &configuration
 
 	if debug {

@@ -1,10 +1,9 @@
 package app
 
 import (
-	"encoding/base64"
 	"strings"
 
-	"github.com/bitxeno/atvloadly/internal/signing"
+	"github.com/bitxeno/atvloadly/internal/secret"
 	"github.com/go-errors/errors"
 )
 
@@ -36,90 +35,76 @@ func ValidateGitHubToken(token string) error {
 	return nil
 }
 
-// GetGitHubToken returns the configured plaintext token, or "" when none is set.
-func GetGitHubToken() string {
+// sealedGitHubToken returns the sealed blob stored in settings.
+func sealedGitHubToken() string {
 	if Settings == nil {
 		return ""
 	}
 	return strings.TrimSpace(Settings.Update.GitHubToken)
 }
 
-// GitHubTokenConfigured reports whether a token is stored.
+// GetGitHubToken returns the configured plaintext token, or "" when none is
+// set or the sealed value cannot be opened.
+func GetGitHubToken() string {
+	sealed := sealedGitHubToken()
+	if sealed == "" {
+		return ""
+	}
+	store, err := secret.Default()
+	if err != nil {
+		return ""
+	}
+	plaintext, err := store.OpenString(sealed, githubTokenAAD)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(plaintext)
+}
+
+// GitHubTokenConfigured reports whether a token is stored. It checks the
+// sealed value only and never decrypts.
 func GitHubTokenConfigured() bool {
-	return GetGitHubToken() != ""
+	return sealedGitHubToken() != ""
 }
 
-func sealGitHubToken(plaintext string, sealer *signing.Sealer) (string, error) {
-	blob, err := sealer.Seal([]byte(plaintext), []byte(githubTokenAAD))
-	if err != nil {
-		return "", err
-	}
-	return base64.StdEncoding.EncodeToString(blob), nil
-}
-
-func openGitHubToken(sealed string, sealer *signing.Sealer) (string, error) {
-	blob, err := base64.StdEncoding.DecodeString(sealed)
-	if err != nil {
-		return "", err
-	}
-	plaintext, err := sealer.Open(blob, []byte(githubTokenAAD))
-	if err != nil {
-		return "", err
-	}
-	return string(plaintext), nil
-}
-
-// SetGitHubToken validates and seals plaintext, staging it in memory for the
-// next SaveSettings call. The caller must call SaveSettings to persist it.
+// SetGitHubToken validates and seals plaintext, staging it for the next
+// SaveSettings call. The caller must call SaveSettings to persist it.
 func SetGitHubToken(plaintext string) error {
 	t := strings.TrimSpace(plaintext)
 	if err := ValidateGitHubToken(t); err != nil {
 		return err
 	}
-	sealer, err := signing.DefaultSealer()
+	store, err := secret.Default()
 	if err != nil {
 		return err
 	}
-	sealed, err := sealGitHubToken(t, sealer)
+	sealed, err := store.SealString(t, githubTokenAAD)
 	if err != nil {
 		return err
 	}
-	Settings.Update.GitHubToken = t
-	Settings.Update.GitHubTokenSealed = sealed
+	Settings.Update.GitHubToken = sealed
 	return nil
 }
 
-// ClearGitHubToken removes the token from memory and from the next persisted file.
-func ClearGitHubToken() {
+// DeleteGitHubToken removes the token from the next persisted file.
+func DeleteGitHubToken() {
 	if Settings == nil {
 		return
 	}
 	Settings.Update.GitHubToken = ""
-	Settings.Update.GitHubTokenSealed = ""
 }
 
-// LoadGitHubToken unseals the persisted token into memory. Call it once after
-// signing.Configure so the deployment key is available. A missing token is
-// not an error; a corrupt one clears the in-memory copy and returns the error.
-func LoadGitHubToken() error {
-	if Settings == nil {
-		return nil
-	}
-	sealed := strings.TrimSpace(Settings.Update.GitHubTokenSealed)
+// CheckGitHubToken reports whether the persisted token can be opened. A
+// missing token is not an error.
+func CheckGitHubToken() error {
+	sealed := sealedGitHubToken()
 	if sealed == "" {
-		Settings.Update.GitHubToken = ""
 		return nil
 	}
-	sealer, err := signing.DefaultSealer()
+	store, err := secret.Default()
 	if err != nil {
-		Settings.Update.GitHubToken = ""
 		return err
 	}
-	plaintext, err := openGitHubToken(sealed, sealer)
-	if err != nil {
-		Settings.Update.GitHubToken = ""
-		return err
-	}
-	Settings.Update.GitHubToken = strings.TrimSpace(plaintext)
-	return nil
+	_, err = store.OpenString(sealed, githubTokenAAD)
+	return err
 }
