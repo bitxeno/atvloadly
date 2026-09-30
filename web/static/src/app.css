@@ -522,6 +522,24 @@ html[data-theme="dark"] {
   color: var(--atv-ink);
 }
 
+/* Neutral fallback for bare .btn (back button, install mode tabs, join
+   action buttons, modal closes): without a color modifier they fall back
+   to the daisyUI .btn default, which is near-black in the dark theme.
+   Color variants, ghost buttons and .atv-action buttons keep their own
+   styles and are excluded here. */
+.app-container .btn:not(.btn-primary):not(.btn-secondary):not(.btn-accent):not(.btn-neutral):not(.btn-info):not(.btn-success):not(.btn-warning):not(.btn-error):not(.btn-ghost):not(.btn-link):not(.atv-action) {
+  background: var(--atv-button-soft-bg);
+  border-color: var(--atv-border);
+  color: var(--atv-ink);
+}
+
+.app-container .btn:not(.btn-primary):not(.btn-secondary):not(.btn-accent):not(.btn-neutral):not(.btn-info):not(.btn-success):not(.btn-warning):not(.btn-error):not(.btn-ghost):not(.btn-link):not(.atv-action):hover:not(:disabled),
+.app-container .btn:not(.btn-primary):not(.btn-secondary):not(.btn-accent):not(.btn-neutral):not(.btn-info):not(.btn-success):not(.btn-warning):not(.btn-error):not(.btn-ghost):not(.btn-link):not(.atv-action):focus-visible:not(:disabled) {
+  background: var(--atv-button-soft-hover);
+  border-color: var(--atv-border);
+  color: var(--atv-ink);
+}
+
 .app-container .btn[disabled],
 .app-container .btn:disabled {
   opacity: 0.58;
@@ -580,6 +598,23 @@ html[data-theme="dark"] {
   color: var(--atv-success-text);
   background: var(--atv-surface-hover);
   border-color: var(--atv-success-text);
+}
+
+/* Neutral action (e.g. the "more" dropdown trigger): the base .atv-action
+   defines no colors and falls back to the daisyUI .btn default, which is
+   near-black in the dark theme. Give it an explicit theme-aware surface
+   so it stays readable in both themes. */
+.app-container .atv-action:not(.atv-action--refresh):not(.atv-action--update):not(.atv-action--danger) {
+  color: var(--atv-ink);
+  background: var(--atv-surface-alt);
+  border-color: var(--atv-border);
+}
+
+.app-container .atv-action:not(.atv-action--refresh):not(.atv-action--update):not(.atv-action--danger):hover:not(:disabled),
+.app-container .atv-action:not(.atv-action--refresh):not(.atv-action--update):not(.atv-action--danger):focus-visible:not(:disabled) {
+  color: var(--atv-accent);
+  background: var(--atv-surface-hover);
+  border-color: var(--atv-accent);
 }
 
 .app-container .main-container .input,
