@@ -1,6 +1,6 @@
 <template>
-  <div class="lg:flex lg:flex-row lg:gap-x-12">
-    <div class="lg:basis-3/12 flex gap-x-16 flex-col gap-y-8 mb-8">
+  <div class="xl:flex xl:flex-row xl:gap-x-12">
+    <div class="xl:basis-3/12 min-w-0 flex gap-x-16 flex-col gap-y-8 mb-8 xl:mb-0">
       <div v-show="pairableDevices.length > 0">
         <h4 class="mb-2">{{ $t("home.heading.pairable_devices") }}</h4>
         <div class="flex flex-col w-full border-opacity-50">
@@ -99,7 +99,7 @@
       </div>
     </div>
 
-    <div class="lg:basis-9/12 flex flex-col gap-y-2">
+    <div class="xl:basis-9/12 min-w-0 flex-1 flex flex-col gap-y-2">
       <div class="flex items-center justify-between gap-x-2">
         <h4>{{ $t("home.heading.installed_app") }}</h4>
         <button
@@ -114,7 +114,7 @@
           {{ $t("home.source.check_updates") }}
         </button>
       </div>
-      <div class="overflow-x-auto">
+      <div class="overflow-x-auto min-w-0 max-w-full">
         <table class="table table-auto static">
           <!-- head -->
           <thead>
