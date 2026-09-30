@@ -87,11 +87,11 @@ func saveUpdateSettings(c *fiber.Ctx) error {
 	}
 
 	if req.ClearGitHubToken {
-		app.ClearGitHubToken()
+		app.DeleteGitHubToken()
 	} else if tokenProvided {
 		// Saving an empty value removes the token.
 		if tokenValue == "" {
-			app.ClearGitHubToken()
+			app.DeleteGitHubToken()
 		} else if err := app.SetGitHubToken(tokenValue); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}

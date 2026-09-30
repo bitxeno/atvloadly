@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/bitxeno/atvloadly/internal/app"
-	"github.com/bitxeno/atvloadly/internal/signing"
+	"github.com/bitxeno/atvloadly/internal/secret"
 )
 
 func setupGithubTokenSettings(t *testing.T, token string) {
@@ -27,9 +27,9 @@ func setupGithubTokenSettings(t *testing.T, token string) {
 	app.Config = &app.Configuration{}
 	app.Config.Server.DataDir = t.TempDir()
 
-	keyFile := filepath.Join(t.TempDir(), "keys", "signing-identity.key")
-	signing.Configure(keyFile, t.TempDir())
-	t.Cleanup(func() { signing.Configure("", "") })
+	keyFile := filepath.Join(t.TempDir(), "keys", "secret-store.key")
+	secret.Configure(keyFile)
+	t.Cleanup(func() { secret.Configure("") })
 
 	if token != "" {
 		if err := app.SetGitHubToken(token); err != nil {

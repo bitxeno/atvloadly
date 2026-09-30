@@ -43,6 +43,12 @@ type Configuration struct {
 		// imported signing identities. Empty means <work_dir>/keys/signing-identity.key.
 		KeyFile string `koanf:"key_file" json:"key_file"`
 	} `koanf:"signing" json:"signing"`
+
+	Secret struct {
+		// KeyFile seals generic secrets such as the GitHub token.
+		// Empty means <work_dir>/keys/secret-store.key.
+		KeyFile string `koanf:"key_file" json:"key_file"`
+	} `koanf:"secret" json:"secret"`
 }
 
 func SideloadDataDir() string {
