@@ -236,7 +236,7 @@ func parseIconAssets(assetFile *zip.File) (image.Image, error) {
 		_ = f.Close()
 	}()
 
-	buf, err := seekbuf.Open(f, seekbuf.MemoryMode)
+	buf, err := seekbuf.Open(f, seekbuf.FileMode)
 	if err != nil {
 		return nil, err
 	}
