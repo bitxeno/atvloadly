@@ -2,12 +2,15 @@ package ipa
 
 import (
 	"archive/zip"
+	"bytes"
+	"encoding/binary"
 	"image"
 	"image/png"
 	"io"
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"testing"
 )
 
@@ -90,3 +93,54 @@ const fixtureInfoPlist = `<?xml version="1.0" encoding="UTF-8"?>
   <key>CFBundleVersion</key><string>123</string>
   <key>CFBundleSupportedPlatforms</key><array><string>AppleTVOS</string></array>
 </dict></plist>`
+
+func TestParseIconAssetsDoesNotCacheCatalogInMemory(t *testing.T) {
+	const indexOffset = 16 << 20
+	catalog := make([]byte, indexOffset+12)
+	copy(catalog, "BOMStore")
+	binary.BigEndian.PutUint32(catalog[8:12], 1)
+	binary.BigEndian.PutUint32(catalog[16:20], indexOffset)
+	binary.BigEndian.PutUint32(catalog[20:24], 12)
+	binary.BigEndian.PutUint32(catalog[24:28], 512)
+	binary.BigEndian.PutUint32(catalog[28:32], 4)
+	binary.BigEndian.PutUint32(catalog[indexOffset:indexOffset+4], 1)
+
+	var compressed bytes.Buffer
+	archive := zip.NewWriter(&compressed)
+	entry, err := archive.Create("Payload/Fixture.app/Assets.car")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := entry.Write(catalog); err != nil {
+		t.Fatal(err)
+	}
+	if err := archive.Close(); err != nil {
+		t.Fatal(err)
+	}
+	reader, err := zip.NewReader(bytes.NewReader(compressed.Bytes()), int64(compressed.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// This empty catalog forces a seek to the late BOM index without decoding pixels.
+	tempDir := t.TempDir()
+	t.Setenv("TMPDIR", tempDir)
+	runtime.GC()
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	_, err = parseIconAssets(reader.File[0])
+	runtime.ReadMemStats(&after)
+	if err == nil || err.Error() != "icon not found" {
+		t.Fatalf("parseIconAssets() error = %v, want icon not found", err)
+	}
+	if allocated := after.TotalAlloc - before.TotalAlloc; allocated > indexOffset/2 {
+		t.Fatalf("allocated %d bytes reading a %d-byte catalog prefix", allocated, indexOffset)
+	}
+	files, err := os.ReadDir(tempDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 0 {
+		t.Fatalf("catalog cache was not removed: %v", files)
+	}
+}
