@@ -508,6 +508,7 @@ export default {
       ipa: {},
       device: {},
       loading: false,
+      websock: null,
       accounts: [],
       installedApps: [],
       recommendedAccount: "",
@@ -677,9 +678,6 @@ export default {
     this.reportStream = createSigningReportStream();
 
     this.fetchData();
-  },
-  mounted() {
-    this.initWebSocket();
   },
   unmounted() {
     this.closeWebSocket();
@@ -902,7 +900,7 @@ export default {
       output.reports.forEach(this.applySigningReport);
       this.log.newcontent += output.text;
     },
-    // onInstallFinished runs once the stream reported the final result.
+    // onInstallFinished releases the state of a completed or interrupted attempt.
     onInstallFinished() {
       this.appendStreamOutput(this.reportStream.flush());
       this.loading = false;
@@ -918,7 +916,7 @@ export default {
       if (!_this.validateForm("#form")) {
         return;
       }
-      if (!_this.canInstall) {
+      if (_this.loading || !_this.canInstall) {
         return;
       }
       const external = _this.isExternal;
@@ -942,7 +940,14 @@ export default {
       _this.stopUpdateLog();
       _this.startUpdateLog();
       _this.log.output += "checking device status...\n";
+      let socket;
       try {
+        const connected = _this.initWebSocket();
+        socket = _this.websock;
+        await connected;
+        if (socket !== _this.websock || !_this.loading) {
+          return;
+        }
         _this.log.output += `connection mode: ${_this.device.connection}\n`;
         if (_this.device.connection === "Lockdown") {
           _this.log.output += `product type: ${_this.device.product_type}\n`;
@@ -950,9 +955,12 @@ export default {
           _this.log.output += `developer mode: ${_this.device.developer_mode_status ? "enabled" : "disabled"}\n`;
           _this.log.output += `personalized image: ${_this.device.personalized_image_mounted ? "mounted" : "not mounted"}\n`;
 
-          await _this.checkAfcService(_this.id);
+          await _this.checkAfcService(_this.id, socket);
         }
 
+        if (socket !== _this.websock || !_this.loading) {
+          return;
+        }
         let ipa;
         let source;
         if (_this.installMode === "source") {
@@ -1003,6 +1011,9 @@ export default {
             version: build.version,
           };
         }
+        if (socket !== _this.websock || !_this.loading) {
+          return;
+        }
         _this.ipa = ipa;
         // send start install msg
         _this.websocketsend(1, {
@@ -1026,9 +1037,12 @@ export default {
             source,
         });
       } catch (error) {
+        if ((socket && socket !== _this.websock) || !_this.loading) {
+          return;
+        }
         console.log(error);
         _this.log.newcontent += error;
-        _this.loading = false;
+        _this.onInstallFinished();
         toast.error(this.$t("install.toast.install_failed"));
         return;
       }
@@ -1231,28 +1245,34 @@ export default {
       return true;
     },
     initWebSocket() {
-      //初始化weosocket
+      this.closeWebSocket();
       const wsuri =
         (location.protocol === "https:" ? "wss://" : "ws://") +
-        location.host +
-        "/ws/install"; //ws地址
-      console.log(wsuri);
-      this.websock = new WebSocket(wsuri);
-      this.websock.onopen = this.websocketonopen;
-      this.websock.onerror = this.websocketonerror;
-      this.websock.onmessage = this.websocketonmessage;
-      this.websock.onclose = this.websocketclose;
+        location.host + "/ws/install";
+      const socket = new WebSocket(wsuri);
+      this.websock = socket;
+      return new Promise((resolve, reject) => {
+        socket.onopen = () => resolve();
+        socket.onerror = () => reject(new Error(this.$t("install.toast.connection_closed")));
+        socket.onmessage = (e) => {
+          if (socket === this.websock) {
+            this.websocketonmessage(e);
+          }
+        };
+        socket.onclose = (e) => {
+          reject(new Error(this.$t("install.toast.connection_closed")));
+          this.websocketclose(e);
+        };
+      });
     },
     closeWebSocket() {
-      this.websock.close();
+      const socket = this.websock;
+      this.websock = null;
+      if (socket) {
+        socket.close();
+      }
     },
 
-    websocketonopen() {
-      console.log("WebSocket connect success.");
-    },
-    websocketonerror(e) {
-      console.log("WebSocket connect failed.");
-    },
     websocketonmessage(e) {
       let _this = this;
       // hide password string
@@ -1302,21 +1322,32 @@ export default {
       const json = JSON.stringify({ t: t, d: data });
       console.log("--> ", json);
       if (_this.websock.readyState !== WebSocket.OPEN) {
-        throw new Error("WebSocket is in CLOSING or CLOSED state.");
+        throw new Error(this.$t("install.toast.connection_closed"));
       }
       _this.websock.send(json);
     },
 
     websocketclose(e) {
-      console.log(`connection closed (${e.code})`);
+      if (e.currentTarget !== this.websock || !this.loading) {
+        return;
+      }
+      const message = this.$t("install.toast.connection_closed");
+      this.log.newcontent += message + "\n";
+      this.onInstallFinished();
+      toast.error(message);
     },
-    async checkAfcService(id) {
+    async checkAfcService(id, socket) {
       let _this = this;
       try {
         await api.checkAfcService(id);
+        if (socket !== _this.websock || !_this.loading) {
+          return;
+        }
         _this.log.output += "afc service: OK!\n";
       } catch (error) {
-        _this.log.output += `afc service: Failed!\n`;
+        if (socket === _this.websock && _this.loading) {
+          _this.log.output += `afc service: Failed!\n`;
+        }
         throw error;
       }
     },
