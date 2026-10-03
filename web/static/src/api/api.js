@@ -258,6 +258,13 @@ export default {
     });
   },
 
+  reinstallApp: (id) => {
+    return request({
+      url: `/api/apps/${id}/reinstall`,
+      method: "post",
+    });
+  },
+
   previewSource: (params) => {
     return request({
       url: "/api/sources/preview",

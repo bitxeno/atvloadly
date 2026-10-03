@@ -44,6 +44,9 @@ type TaskItem struct {
 	Notify  bool
 	BatchID string
 	Key     installOperationKey
+	// Reinstall runs the full install flow for an existing app instead of
+	// the refresh flow: the stored IPA is signed and installed from scratch.
+	Reinstall bool
 }
 
 // installOperationKey identifies one queued installation. Installed apps have
@@ -209,6 +212,10 @@ func (t *Task) Run() {
 // StartInstallApps queues apps for installation and returns how many were
 // queued; apps already installing are skipped.
 func (t *Task) StartInstallApps(apps []model.InstalledApp, notify bool) int {
+	return t.startInstallApps(apps, notify, false)
+}
+
+func (t *Task) startInstallApps(apps []model.InstalledApp, notify bool, reinstall bool) int {
 	t.resetInvalidAccounts()
 
 	if len(apps) == 0 {
@@ -223,7 +230,7 @@ func (t *Task) StartInstallApps(apps []model.InstalledApp, notify bool) int {
 
 	queued := 0
 	for _, v := range apps {
-		if t.startInstallAppInternal(v, notify, batchID) {
+		if t.startInstallAppInternal(v, notify, batchID, reinstall) {
 			queued++
 		}
 	}
@@ -244,13 +251,13 @@ func (t *Task) StartInstallApps(apps []model.InstalledApp, notify bool) int {
 	return queued
 }
 
-func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool, batchID string) bool {
+func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool, batchID string, reinstall bool) bool {
 	key := installKey(v)
 	if _, loaded := t.InstallingApps.LoadOrStore(key, v); loaded {
 		return false
 	}
 	select {
-	case t.InstallAppQueue <- TaskItem{App: v, Notify: notify, BatchID: batchID, Key: key}:
+	case t.InstallAppQueue <- TaskItem{App: v, Notify: notify, BatchID: batchID, Key: key, Reinstall: reinstall}:
 		// The queued upload waits in the upload temp directory until its
 		// turn; mark it so the stale-file sweep keeps it until the task
 		// is done.
@@ -308,7 +315,7 @@ func (t *Task) runQueue() {
 
 func (t *Task) tryInstallApp(item TaskItem) {
 	// Decide before resolveIPA replaces a remote IpaPath with the downloaded file.
-	refresh := shouldUseRefreshMode(item.App)
+	refresh := shouldUseRefreshMode(item.App, item.Reinstall)
 	update := isSourceUpdate(item.App)
 
 	resolvedApp, err := t.resolveIPA(item.App)
@@ -613,8 +620,9 @@ func (t *Task) runExternal(v model.InstalledApp, installMgr *manager.InstallMana
 
 // shouldUseRefreshMode reports whether v is a refresh of an installed app,
 // which re-uses its stored IPA and only renews the provisioning profiles.
-func shouldUseRefreshMode(v model.InstalledApp) bool {
-	return v.ID != 0 && !ipa.IsRemoteURL(v.IpaPath)
+// An explicit reinstall (item.Reinstall) runs the full install flow instead.
+func shouldUseRefreshMode(v model.InstalledApp, reinstall bool) bool {
+	return v.ID != 0 && !reinstall && !ipa.IsRemoteURL(v.IpaPath)
 }
 
 // isSourceUpdate reports whether v installs a new build of an installed app
@@ -732,6 +740,12 @@ func ScheduleRefreshApps() error {
 
 func RefreshApp(v model.InstalledApp) {
 	instance.StartInstallApps([]model.InstalledApp{v}, true)
+}
+
+// ReinstallApp queues the installed app for a full installation: the stored
+// IPA is signed and installed from scratch instead of the refresh flow.
+func ReinstallApp(v model.InstalledApp) {
+	instance.startInstallApps([]model.InstalledApp{v}, true, true)
 }
 
 // StartInstallApps queues apps for installation and returns how many were queued.
