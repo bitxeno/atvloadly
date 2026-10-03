@@ -330,6 +330,14 @@
                           }}
                         </a>
                       </li>
+                      <li v-if="!isExternalApp(item)">
+                        <a @click="reinstallApp(item)">
+                          <span class="w-4 h-4 shrink-0">
+                            <DownloadIcon />
+                          </span>
+                          {{ $t("home.table.button.reinstall") }}
+                        </a>
+                      </li>
                       <li v-if="confirmDeleteId !== item.ID">
                         <a class="atv-menu-danger" @click="confirmDelete(item)">
                           <span class="w-4 h-4 shrink-0">
@@ -581,6 +589,20 @@ export default {
         }
         toast.info(
           this.$t("home.toast.refresh_app_started", {
+            name: item.ipa_name,
+          })
+        );
+      });
+    },
+    reinstallApp(item) {
+      let _this = this;
+
+      _this.installingApps.push(item);
+
+      api.reinstallApp(item.ID).then((res) => {
+        _this.checkInstallingAppDelay();
+        toast.info(
+          this.$t("home.toast.reinstall_app_started", {
             name: item.ipa_name,
           })
         );
@@ -906,6 +928,7 @@ import DismissIcon from "@/assets/icons/dismiss.svg";
 import GithubIcon from "@/assets/icons/github.svg";
 import LinkIcon from "@/assets/icons/link.svg";
 import RefreshIcon from "@/assets/icons/refresh.svg";
+import DownloadIcon from "@/assets/icons/download.svg";
 </script>
 
   

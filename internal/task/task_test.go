@@ -13,24 +13,28 @@ import (
 
 func TestShouldUseRefreshMode(t *testing.T) {
 	newApp := model.InstalledApp{}
-	if shouldUseRefreshMode(newApp) || isSourceUpdate(newApp) {
+	if shouldUseRefreshMode(newApp, false) || isSourceUpdate(newApp) {
 		t.Fatal("new app install should neither use refresh mode nor be an update")
 	}
 
 	newURLApp := model.InstalledApp{IpaPath: "https://example.com/app.ipa"}
-	if shouldUseRefreshMode(newURLApp) || isSourceUpdate(newURLApp) {
+	if shouldUseRefreshMode(newURLApp, false) || isSourceUpdate(newURLApp) {
 		t.Fatal("new app install from a URL should neither use refresh mode nor be an update")
 	}
 
 	existingApp := model.InstalledApp{IpaPath: "/data/ipa/1/app.ipa"}
 	existingApp.ID = 1
-	if !shouldUseRefreshMode(existingApp) || isSourceUpdate(existingApp) {
+	if !shouldUseRefreshMode(existingApp, false) || isSourceUpdate(existingApp) {
 		t.Fatal("existing app refresh should use refresh mode")
+	}
+
+	if shouldUseRefreshMode(existingApp, true) || isSourceUpdate(existingApp) {
+		t.Fatal("existing app reinstall should run the full install flow without being an update")
 	}
 
 	updatedApp := model.InstalledApp{IpaPath: "https://github.com/owner/repo/releases/download/v2/App.ipa"}
 	updatedApp.ID = 1
-	if shouldUseRefreshMode(updatedApp) || !isSourceUpdate(updatedApp) {
+	if shouldUseRefreshMode(updatedApp, false) || !isSourceUpdate(updatedApp) {
 		t.Fatal("installing a new build of an existing app should sign it again")
 	}
 }
