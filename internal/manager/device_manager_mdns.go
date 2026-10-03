@@ -361,15 +361,10 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.D
 }
 
 func firstAddrString(addrs []netip.Addr) (string, bool) {
-	// Prefer returning IPv4 addresses
+	// Only a private LAN IPv4 is usable: plumesign cannot connect to the
+	// global IPv6 or public addresses a device may announce.
 	for _, addr := range addrs {
-		if addr.IsValid() && !addr.IsUnspecified() && addr.Is4() {
-			return addr.String(), true
-		}
-	}
-	// If no IPv4 address is found, return the first valid address
-	for _, addr := range addrs {
-		if addr.IsValid() && !addr.IsUnspecified() && !addr.IsLinkLocalUnicast() && !addr.IsLinkLocalMulticast() {
+		if isLanAddr(addr) {
 			return addr.String(), true
 		}
 	}

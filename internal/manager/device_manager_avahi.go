@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/netip"
 	"strings"
 	"sync"
 	"time"
@@ -193,8 +194,8 @@ func (dm *DeviceManager) runDiscovery(ctx context.Context, server *avahi.Server)
 			if !ok {
 				return errAvahiBrowserFreed
 			}
-			service, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
-				service.Type, service.Domain, avahi.ProtoUnspec, 0)
+			service, err := resolveService(server, service.Interface, service.Protocol, service.Name,
+				service.Type, service.Domain)
 			if err != nil {
 				log.Err(err).Msgf("Failed to resolve service: name=%s type=%s", service.Name, service.Type)
 				continue
@@ -245,8 +246,8 @@ func (dm *DeviceManager) runDiscovery(ctx context.Context, server *avahi.Server)
 			if !ok {
 				return errAvahiBrowserFreed
 			}
-			service, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
-				service.Type, service.Domain, avahi.ProtoUnspec, 0)
+			service, err := resolveService(server, service.Interface, service.Protocol, service.Name,
+				service.Type, service.Domain)
 			if err != nil {
 				log.Err(err).Msgf("Failed to resolve service: name=%s type=%s", service.Name, service.Type)
 				continue
@@ -306,8 +307,8 @@ func (dm *DeviceManager) runDiscovery(ctx context.Context, server *avahi.Server)
 			}
 			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[+]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
 
-			service, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
-				service.Type, service.Domain, avahi.ProtoUnspec, 0)
+			service, err := resolveService(server, service.Interface, service.Protocol, service.Name,
+				service.Type, service.Domain)
 			if err != nil {
 				log.Err(err).Msgf("Failed to resolve service: name=%s type=%s", service.Name, service.Type)
 				continue
@@ -498,8 +499,8 @@ func (dm *DeviceManager) scanServiceTypeContinuous(ctx context.Context, browsers
 			if !ok {
 				return
 			}
-			resolved, err := server.ResolveService(service.Interface, service.Protocol, service.Name,
-				service.Type, service.Domain, avahi.ProtoUnspec, 0)
+			resolved, err := resolveService(server, service.Interface, service.Protocol, service.Name,
+				service.Type, service.Domain)
 			if err == nil {
 				callback(resolved.Type, resolved.Name, resolved.Host, resolved.Address, resolved.Port, resolved.Txt)
 			}
@@ -515,14 +516,20 @@ func (dm *DeviceManager) scanServiceTypeContinuous(ctx context.Context, browsers
 	}
 }
 
-// avahiServiceRef carries the fields needed to resolve a browsed service
-// without keeping a reference to the channel element itself.
-type avahiServiceRef struct {
-	iface       int32
-	protocol    int32
-	name        string
-	serviceType string
-	domain      string
+// resolveService resolves a browsed service to a usable device address: a
+// private IPv4 LAN address. ProtoInet pins the lookup to IPv4, since global
+// IPv6 addresses announced by the device cannot be connected to. A resolved
+// address outside the private LAN ranges fails too; the resolved service is
+// still returned so callers can log the service identity.
+func resolveService(server *avahi.Server, iface, protocol int32, name, serviceType, domain string) (avahi.Service, error) {
+	resolved, err := server.ResolveService(iface, protocol, name, serviceType, domain, avahi.ProtoInet, 0)
+	if err == nil {
+		ip, parseErr := netip.ParseAddr(resolved.Address)
+		if parseErr != nil || !isLanAddr(ip) {
+			return resolved, fmt.Errorf("resolved address %s is not a private LAN address", resolved.Address)
+		}
+	}
+	return resolved, err
 }
 
 func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.Duration) ([]model.Device, error) {
@@ -558,15 +565,15 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.D
 	// ResolveService is a synchronous D-Bus call without its own timeout.
 	// Run it in a goroutine so a hanging avahi-daemon can never stall the
 	// scan past scanCtx's deadline (which the gateway would report as 502).
-	resolveService := func(svc avahiServiceRef) (avahi.Service, bool) {
+	resolve := func(svc avahi.Service) (avahi.Service, bool) {
 		type result struct {
 			service avahi.Service
 			err     error
 		}
 		ch := make(chan result, 1)
 		go func() {
-			resolved, err := server.ResolveService(svc.iface, svc.protocol, svc.name,
-				svc.serviceType, svc.domain, avahi.ProtoUnspec, 0)
+			resolved, err := resolveService(server, svc.Interface, svc.Protocol, svc.Name,
+				svc.Type, svc.Domain)
 			ch <- result{service: resolved, err: err}
 		}()
 		select {
@@ -588,13 +595,7 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.D
 			if !ok {
 				return devices, nil
 			}
-			resolved, ok := resolveService(avahiServiceRef{
-				iface:       service.Interface,
-				protocol:    service.Protocol,
-				name:        service.Name,
-				serviceType: service.Type,
-				domain:      service.Domain,
-			})
+			resolved, ok := resolve(service)
 			if !ok {
 				if scanCtx.Err() != nil {
 					return devices, nil

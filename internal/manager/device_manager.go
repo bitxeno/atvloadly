@@ -3,6 +3,7 @@ package manager
 import (
 	"context"
 	"fmt"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -27,6 +28,14 @@ var deviceManager = newDeviceManager()
 // Without throttling the event loop falls behind, the avahi signal channel
 // backs up, and godbus leaks one goroutine per undelivered signal.
 const pairingCheckInterval = 60 * time.Second
+
+// isLanAddr reports whether addr is a private IPv4 address that the
+// plumesign tooling can connect to. Global IPv6 addresses (e.g. an
+// ISP-delegated prefix announced via AAAA) and public addresses are
+// rejected: LAN devices are reached over private IPv4 only.
+func isLanAddr(addr netip.Addr) bool {
+	return addr.IsValid() && addr.Is4() && addr.IsPrivate()
+}
 
 // pairingCheck identifies one in-flight check so an older check cannot
 // remove the cancellation function belonging to a newer check.
