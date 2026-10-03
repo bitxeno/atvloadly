@@ -6,6 +6,7 @@ package source
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"path"
 	"regexp"
@@ -48,6 +49,28 @@ type Build struct {
 	Prerelease  bool      `json:"prerelease"`   // GitHub: release is a pre-release
 	Platform    Platform  `json:"platform"`     // name-based hint
 	Filter      string    `json:"filter"`       // filter that keeps tracking this build in later releases
+}
+
+// DownloadRequest describes the server-side HTTP request used to fetch a
+// source build. Header is internal download metadata and is never sent to the
+// frontend.
+type DownloadRequest struct {
+	URL    string
+	Header http.Header
+}
+
+// ResolveDownload returns the request used to download a source build. GitHub
+// builds use the authenticated release-asset API when a token is configured;
+// AltStore builds keep their published download URL.
+func ResolveDownload(kind, location, buildID, downloadURL string) (DownloadRequest, error) {
+	switch kind {
+	case KindGitHub:
+		return githubDownloadRequest(location, buildID, downloadURL)
+	case KindAltStore:
+		return DownloadRequest{URL: downloadURL}, nil
+	default:
+		return DownloadRequest{}, fmt.Errorf("unknown source kind %q", kind)
+	}
 }
 
 // Preview is what the user picks from when installing or linking.

@@ -416,7 +416,7 @@
             "github_token": {
                 "label": "GitHub Token",
                 "placeholder": "ghp_...（可选）",
-                "tips": "可选的个人访问令牌。配置后，检查更新请求 GitHub API 时会携带它，避免触发未认证请求每小时 60 次的限制。只需授予公开仓库的读取权限。",
+                "tips": "可选的个人访问令牌，用于 GitHub API 请求。它可提高 API 速率限制并支持私有 GitHub 仓库。使用细粒度令牌时，请为需要使用的仓库授予 Contents: Read-only 权限。",
                 "configured_placeholder": "已配置 - 输入新值可替换",
                 "clear": "移除"
             },

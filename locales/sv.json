@@ -414,7 +414,7 @@
       "github_token": {
         "label": "GitHub-token",
         "placeholder": "ghp_... (valfritt)",
-        "tips": "Valfri personlig åtkomsttoken som skickas som Bearer-token med GitHub API-förfrågningar, för att höja gränsen på 60 oautentiserade förfrågningar per timme. Läsbehörighet för offentliga repon räcker.",
+        "tips": "Valfri personlig åtkomsttoken för GitHub API. Den höjer API-gränsen och ger stöd för privata GitHub-repon. För en finmaskig token, ge Contents: Read-only för de repon du vill använda.",
         "configured_placeholder": "Konfigurerad - ange ett nytt värde för att ersätta",
         "clear": "Ta bort"
       },

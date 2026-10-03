@@ -89,6 +89,34 @@ func githubAPIToken() string {
 	return app.GetGitHubToken()
 }
 
+// githubDownloadRequest returns the supported GitHub release-asset download
+// request. Anonymous downloads retain browser_download_url. Authenticated
+// downloads use the asset REST endpoint, which also works for private repos.
+func githubDownloadRequest(repo, assetID, browserURL string) (DownloadRequest, error) {
+	token := githubAPIToken()
+	if token == "" {
+		return DownloadRequest{URL: browserURL}, nil
+	}
+
+	repo, err := ParseRepo(repo)
+	if err != nil {
+		return DownloadRequest{}, err
+	}
+	id, err := strconv.ParseInt(assetID, 10, 64)
+	if err != nil || id <= 0 {
+		return DownloadRequest{}, fmt.Errorf("invalid GitHub release asset id %q", assetID)
+	}
+
+	header := make(http.Header)
+	header.Set("Accept", "application/octet-stream")
+	header.Set("Authorization", "Bearer "+token)
+	header.Set("X-GitHub-Api-Version", "2022-11-28")
+	return DownloadRequest{
+		URL:    fmt.Sprintf("%s/repos/%s/releases/assets/%d", apiBaseURL, repo, id),
+		Header: header,
+	}, nil
+}
+
 // fetchGitHub lists the latest releases of repo ("owner/repo"). It asks for
 // the largest page GitHub serves so that a stable build published before many
 // pre-releases is still seen, in a single request.

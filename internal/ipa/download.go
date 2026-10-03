@@ -41,13 +41,20 @@ type DownloadProgressFn func(downloaded, total int64)
 //
 // If progressFn is nil, no progress is reported.
 func DownloadAndParse(rawURL string, progressFn DownloadProgressFn) (*DownloadResult, error) {
+	return DownloadAndParseWithHeaders(rawURL, nil, progressFn)
+}
+
+// DownloadAndParseWithHeaders is DownloadAndParse with headers applied to the
+// initial HTTP request. Go's redirect policy removes sensitive headers such as
+// Authorization when a redirect crosses to an unrelated host.
+func DownloadAndParseWithHeaders(rawURL string, header http.Header, progressFn DownloadProgressFn) (*DownloadResult, error) {
 	tmpDir := filepath.Join(app.Config.Server.DataDir, "tmp")
 	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
 
 	// Download
-	tmpPath, err := downloadIPA(rawURL, tmpDir, progressFn)
+	tmpPath, err := downloadIPAWithHeaders(rawURL, tmpDir, header, progressFn)
 	if err != nil {
 		return nil, err
 	}
@@ -84,8 +91,8 @@ func IsRemoteURL(p string) bool {
 	return strings.HasPrefix(p, "http:") || strings.HasPrefix(p, "https:")
 }
 
-// downloadIPA downloads an IPA from rawURL to a temp file in saveDir.
-func downloadIPA(rawURL string, saveDir string, progressFn DownloadProgressFn) (string, error) {
+// downloadIPAWithHeaders downloads an IPA with headers on the initial request.
+func downloadIPAWithHeaders(rawURL string, saveDir string, header http.Header, progressFn DownloadProgressFn) (string, error) {
 	tmpFile, err := os.CreateTemp(saveDir, "install_url_*.ipa")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp file: %w", err)
@@ -97,6 +104,11 @@ func downloadIPA(rawURL string, saveDir string, progressFn DownloadProgressFn) (
 		_ = tmpFile.Close()
 		_ = os.Remove(tmpPath)
 		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	for key, values := range header {
+		for _, value := range values {
+			req.Header.Add(key, value)
+		}
 	}
 	req.Header.Set(atvhttp.HEADER_USER_AGENT, atvhttp.HTTP_USER_AGENT)
 

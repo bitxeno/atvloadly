@@ -145,7 +145,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 	if ipa.IsRemoteURL(ipaPath) {
 		mgr.WriteMessage("Downloading IPA from URL...\n")
 		lastPct := int64(-1)
-		result, err := ipa.DownloadAndParse(ipaPath, func(downloaded, total int64) {
+		progress := func(downloaded, total int64) {
 			if total <= 0 {
 				return
 			}
@@ -154,7 +154,14 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 				lastPct = pct - (pct % 5)
 				mgr.WriteMessage(fmt.Sprintf("Download progress: %d%%\n", lastPct))
 			}
-		})
+		}
+		var result *ipa.DownloadResult
+		var err error
+		if v.Source.Tracked() {
+			result, err = DownloadSourceIPA(v.Source, ipaPath, progress)
+		} else {
+			result, err = ipa.DownloadAndParse(ipaPath, progress)
+		}
 		if err != nil {
 			msg := fmt.Sprintf("ERROR: failed to download IPA: %s", err.Error())
 			mgr.WriteMessage(msg)

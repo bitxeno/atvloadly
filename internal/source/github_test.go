@@ -178,6 +178,46 @@ func TestFetchGitHubSendsConfiguredToken(t *testing.T) {
 	}
 }
 
+func TestGitHubDownloadRequest(t *testing.T) {
+	old := app.Settings
+	t.Cleanup(func() { app.Settings = old })
+	app.Settings = &app.SettingsConfiguration{}
+
+	browserURL := "https://github.com/owner/repo/releases/download/v1/App.ipa"
+	got, err := ResolveDownload(KindGitHub, "owner/repo", "42", browserURL)
+	if err != nil {
+		t.Fatalf("ResolveDownload without token: %v", err)
+	}
+	if got.URL != browserURL || len(got.Header) != 0 {
+		t.Fatalf("download without token = %+v, want browser URL without headers", got)
+	}
+
+	secret.Configure(filepath.Join(t.TempDir(), "keys", "secret-store.key"))
+	t.Cleanup(func() { secret.Configure("") })
+	if err := app.SetGitHubToken("github_pat_1234567890"); err != nil {
+		t.Fatalf("SetGitHubToken: %v", err)
+	}
+
+	serveGitHub(t, func(http.ResponseWriter, *http.Request) {})
+	got, err = ResolveDownload(KindGitHub, "owner/repo", "42", browserURL)
+	if err != nil {
+		t.Fatalf("ResolveDownload with token: %v", err)
+	}
+	wantURL := apiBaseURL + "/repos/owner/repo/releases/assets/42"
+	if got.URL != wantURL {
+		t.Fatalf("download URL = %q, want %q", got.URL, wantURL)
+	}
+	if got.Header.Get("Authorization") != "Bearer github_pat_1234567890" ||
+		got.Header.Get("Accept") != "application/octet-stream" ||
+		got.Header.Get("X-GitHub-Api-Version") != "2022-11-28" {
+		t.Fatalf("unexpected download headers %v", got.Header)
+	}
+
+	if _, err := ResolveDownload(KindGitHub, "owner/repo", "../42", browserURL); err == nil {
+		t.Fatal("invalid asset id accepted")
+	}
+}
+
 func TestFetchGitHubErrors(t *testing.T) {
 	serveGitHub(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
