@@ -122,7 +122,9 @@ func DownloadSourceBuild(kind, location, buildID string) (*model.IpaFile, error)
 	if err != nil {
 		return nil, err
 	}
-	result, err := ipa.DownloadAndParse(b.DownloadURL, nil)
+	result, err := DownloadSourceIPA(model.AppSource{
+		Kind: kind, URL: location, BuildID: b.ID,
+	}, b.DownloadURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -133,6 +135,17 @@ func DownloadSourceBuild(kind, location, buildID string) (*model.IpaFile, error)
 		BundleIdentifier: result.BundleIdentifier,
 		Version:          result.Version,
 	}, nil
+}
+
+// DownloadSourceIPA downloads one build of a server-validated source. GitHub
+// authentication is derived from the configured token and source metadata;
+// callers cannot supply arbitrary authentication headers.
+func DownloadSourceIPA(s model.AppSource, rawURL string, progressFn ipa.DownloadProgressFn) (*ipa.DownloadResult, error) {
+	req, err := source.ResolveDownload(s.Kind, s.URL, s.BuildID, rawURL)
+	if err != nil {
+		return nil, err
+	}
+	return ipa.DownloadAndParseWithHeaders(req.URL, req.Header, progressFn)
 }
 
 // notNewer reports whether b, another build than the installed one of s, is

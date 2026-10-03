@@ -416,7 +416,7 @@
             "github_token": {
                 "label": "GitHub Token",
                 "placeholder": "ghp_... (optional)",
-                "tips": "Optional personal access token sent as a Bearer token with GitHub API requests, to raise the limit of 60 unauthenticated requests per hour. Read access to public repositories is enough.",
+                "tips": "Optional personal access token used for GitHub API requests. It raises the API rate limit and enables private GitHub repositories. For a fine-grained token, grant Contents: Read-only for the repositories you want to use.",
                 "configured_placeholder": "Configured - enter a new value to replace it",
                 "clear": "Remove"
             },

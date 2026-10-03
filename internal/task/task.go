@@ -426,7 +426,11 @@ func (t *Task) resolveIPA(v model.InstalledApp) (*model.InstalledApp, error) {
 	var result *ipa.DownloadResult
 	var err error
 	if remote {
-		result, err = ipa.DownloadAndParse(v.IpaPath, nil)
+		if v.Source.Tracked() {
+			result, err = service.DownloadSourceIPA(v.Source, v.IpaPath, nil)
+		} else {
+			result, err = ipa.DownloadAndParse(v.IpaPath, nil)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to download ipa: %w", err)
 		}
