@@ -753,6 +753,9 @@ func route(fi *fiber.App) {
 
 	api.Post("/apps/:id/delete", func(c *fiber.Ctx) error {
 		id := utils.MustParseInt(c.Params("id"))
+		if task.IsInstalling(uint(id)) {
+			return c.Status(http.StatusOK).JSON(apiError("app is installing"))
+		}
 
 		ok, err := service.DeleteApp(uint(id))
 		if err != nil {
