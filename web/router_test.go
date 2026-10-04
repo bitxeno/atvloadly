@@ -18,6 +18,7 @@ import (
 	"github.com/bitxeno/atvloadly/internal/signing"
 	"github.com/bitxeno/atvloadly/internal/task"
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 )
 
 // newTestServer returns the routed server over a fresh data directory and
@@ -107,7 +108,7 @@ func TestDeleteRefusesInstallingApp(t *testing.T) {
 	const appID uint = 900001
 	ipaPath := writeFile(t, filepath.Join(dataDir, "ipa", strconv.FormatUint(uint64(appID), 10), "app.ipa"), "ipa")
 	record := model.InstalledApp{
-		ID:               appID,
+		Model:            gorm.Model{ID: appID},
 		IpaName:          "Test",
 		IpaPath:          ipaPath,
 		BundleIdentifier: "com.example.test",
