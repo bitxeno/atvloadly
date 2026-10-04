@@ -774,6 +774,18 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))
 	})
 
+	api.Post("/apps/:id/reinstall", func(c *fiber.Ctx) error {
+		id := utils.MustParseInt(c.Params("id"))
+
+		t, err := service.GetApp(uint(id))
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+
+		task.ReinstallApp(*t)
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
 	api.Post("/apps/:id/source", func(c *fiber.Ctx) error {
 		id := utils.MustParseInt(c.Params("id"))
 		// A running update saves the source settings it was queued with.
