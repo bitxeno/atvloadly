@@ -173,7 +173,6 @@ func TestInstallRefusesUnusableCustomIdentifier(t *testing.T) {
 	}
 }
 
-
 func TestTTYRouteOnlyInDevelopment(t *testing.T) {
 	originalMode := build.Mode
 	t.Cleanup(func() { build.Mode = originalMode })
