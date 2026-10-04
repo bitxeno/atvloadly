@@ -104,8 +104,10 @@ func TestAppIconServesOnlyStoredIcons(t *testing.T) {
 // operation has finished, matching the source-edit guards.
 func TestDeleteRefusesInstallingApp(t *testing.T) {
 	server, dataDir := newTestServer(t)
-	ipaPath := writeFile(t, filepath.Join(dataDir, "ipa", "1", "app.ipa"), "ipa")
+	const appID uint = 900001
+	ipaPath := writeFile(t, filepath.Join(dataDir, "ipa", strconv.FormatUint(uint64(appID), 10), "app.ipa"), "ipa")
 	record := model.InstalledApp{
+		ID:               appID,
 		IpaName:          "Test",
 		IpaPath:          ipaPath,
 		BundleIdentifier: "com.example.test",
