@@ -1,0 +1,826 @@
+{
+  "language": "sr-Latn",
+  "common": {
+    "loading": "Učitavanje...",
+    "button": {
+      "close": "Zatvori"
+    }
+  },
+  "notify": {
+    "title": "[{{.name}}] Osvežavanje nije uspelo",
+    "content": "Nalog: {{.account}}\nGreška: {{.error}}",
+    "batch_title": "atvloadly: osvežavanje nije uspelo",
+    "batch_content": "{{.name}}: {{.error}}\n\n",
+    "update_title": "atvloadly: dostupna ažuriranja aplikacija",
+    "update_available": "{{.name}}: dostupna je verzija {{.version}}\n",
+    "update_attention": "{{.name}}: ažuriranje zahteva pažnju: {{.error}}\n",
+    "update_installed_title": "atvloadly: aplikacije su ažurirane",
+    "update_installed": "{{.name}}: ažurirano na verziju {{.version}}\n"
+  },
+  "nav": {
+    "settings": "Podešavanja",
+    "tools": "Alatke",
+    "laboratory": "Laboratorija",
+    "language": "Srpski",
+    "theme": "Tema",
+    "theme_system": "Sistem",
+    "theme_light": "Svetla",
+    "theme_dark": "Tamna",
+    "preferences": "Opcije",
+    "account": "Nalozi",
+    "devices": "Uređaji",
+    "donate": "Doniraj",
+    "about": "O programu"
+  },
+  "about": {
+    "version": "Verzija",
+    "build_date": "Datum izrade"
+  },
+  "donate": {
+    "title": "Podrži projekat",
+    "desc": "Ako vam ovaj projekat koristi, razmislite o tome da podržite njegov razvoj. Vaša podrška pomaže da projekat nastavi da živi!",
+    "github_sponsor": "Podrži putem GitHub Sponsors",
+    "kofi": "Podrži putem Ko-fi",
+    "afdian": "Podrži putem Afadian",
+    "close": "Zatvori"
+  },
+  "result": {
+    "success": "Uspešno",
+    "fail": "Neuspešno"
+  },
+  "home": {
+    "heading": {
+      "pairable_devices": "Uređaji spremni za uparivanje",
+      "paired_devices": "Upareni uređaji",
+      "service_status": "Status usluge",
+      "installed_app": "Instalirane aplikacije"
+    },
+    "dialog": {
+      "delete_confirm": {
+        "title": "Da li ste sigurni da želite da obrišete {{name}}?",
+        "button": {
+          "cancel": "Otkaži",
+          "confirm": "Potvrdi"
+        }
+      }
+    },
+    "toast": {
+      "refresh_app_started": "Pokrenuto je osvežavanje aplikacije {{name}}",
+      "installing_app": "Instaliranje aplikacije {{name}}…",
+      "reinstall_app_started": "Pokrenuta je ponovna instalacija aplikacije {{name}}",
+      "update_started": "Pokrenuto je ažuriranje aplikacije {{name}} na verziju {{version}}",
+      "updates_available": "Dostupna ažuriranja: {{count}}",
+      "check_errors": "Izvori koje nije bilo moguće proveriti: {{count}}",
+      "check_done": "Sve praćene aplikacije su ažurne"
+    },
+    "source": {
+      "track": "Prati ažuriranja",
+      "manage": "Upravljaj izvorom",
+      "auto": "Automatski",
+      "available": "Dostupna je verzija {{version}}",
+      "check_updates": "Proveri ažuriranja",
+      "update_failed": "Instaliranje verzije {{version}} nije uspelo i neće se automatski ponoviti. Koristite „Ažuriraj“ da pokušate ponovo."
+    },
+    "sidebar": {
+      "device_status": {
+        "pairable": "Spreman za uparivanje",
+        "paired": "Uparen",
+        "unpaired": "Nije uparen"
+      },
+      "tips": {
+        "no_paired_devices": "Nema povezanih uređaja",
+        "how_pair_device": "Na Apple TV-u otvorite 'Settings -> Remotes and Devices -> Remote App and Devices' da biste uključili režim uparivanja i završili postupak"
+      }
+    },
+    "table": {
+      "header": {
+        "app": "Aplikacija",
+        "device": "Uređaj",
+        "account": "Nalog",
+        "expired_date": "Datum isteka",
+        "operate": "Radnja"
+      },
+      "expired_time_format": {
+        "expired_tips": "Isteklo",
+        "days_one": "{{num}} DAN",
+        "days": "{{num}} DANA",
+        "hours_one": "{{num}} h",
+        "hours": "{{num}} h",
+        "less_than_hour": "Uskoro"
+      },
+      "refresh_date_format": {
+        "installing_tips": "Instaliranje...",
+        "seconds_one": "pre {{num}} s",
+        "seconds": "pre {{num}} s",
+        "miniutes_one": "pre {{num}} min",
+        "miniutes": "pre {{num}} min",
+        "hours_one": "pre {{num}} h",
+        "hours": "pre {{num}} h",
+        "days_one": "pre {{num}} dana",
+        "days": "pre {{num}} dana"
+      },
+      "button": {
+        "refresh": "Osveži",
+        "delete": "Obriši",
+        "reinstall": "Ponovo instaliraj",
+        "update": "Ažuriraj",
+        "more": "Više",
+        "confirm_delete": "Potvrdi brisanje"
+      },
+      "tips": {
+        "view_log": "Kliknite da biste videli dnevnik instalacije",
+        "account_invalid": "Postoji problem sa nalogom. Proverite dnevnike i otklonite problem.",
+        "no_data": "Nema podataka",
+        "footer": "Podrazumevano, kada do isteka aplikacije ostane manje od jednog dana, ona se automatski osvežava između 3 i 6 časova. Za aplikacije povezane sa GitHub ili AltStore izvorom nove verzije se proveravaju u pozadini, a automatska ažuriranja se instaliraju u istom vremenskom periodu.",
+        "footer_external": "Aplikacije potpisane spoljnim sertifikatom nikada se ne osvežavaju automatski: prestaće da rade kada istekne sertifikat ili provisioning profil. Ponovna instalacija sa istim sertifikatom i profilom ne produžava ovaj datum: zamenite profil (ili uvezite novi identitet ako sertifikat ističe prvi), pa zatim ponovo instalirajte aplikaciju.",
+        "reinstall_external": "Ponovna instalacija sa istim sertifikatom i provisioning profilom ne produžava važenje. Nakon zamene profila (ili uvoza novog identiteta), ponovo instalirajte aplikaciju da biste produžili važenje.",
+        "signing_identity_error": "Identitet za potpisivanje (sertifikat, privatni ključ ili provisioning profil) nije važeći ili nije kompatibilan. Proverite dnevnik i identitet u odeljku Nalozi.",
+        "signing_error": "Potpisivanje nije uspelo ili potpisana aplikacija nije prošla proveru. Više detalja potražite u dnevniku.",
+        "transport_error": "Uređaj nije dostupan ili je odbio instalaciju. Više detalja potražite u dnevniku.",
+        "refresh_failed": "Osvežavanje nije uspelo. Više detalja potražite u dnevniku."
+      },
+      "signing": {
+        "external_badge": "Spoljni sertifikat",
+        "identity_missing": "Obrisan identitet",
+        "valid_until": "Važi do {{date}}"
+      }
+    }
+  },
+  "pair": {
+    "toast": {
+      "pin_incorrect": "PIN kod nije ispravan",
+      "pair_error": "Greška pri uparivanju. Više informacija potražite u konzoli.",
+      "no_device_found": "Uređaj nije pronađen. Proverite da li je usluga usbmuxd pokrenuta."
+    },
+    "step": {
+      "start": {
+        "title": "Početak",
+        "device": "Uređaj",
+        "button": "Započni uparivanje"
+      },
+      "pin": {
+        "title": "Unesite PIN kod",
+        "loading": "Povezivanje…",
+        "placeholder": "Unesite PIN prikazan na Apple TV-u",
+        "button": "Potvrdi"
+      },
+      "completed": {
+        "title": "Uparivanje je završeno",
+        "msg": "Uparivanje je uspelo",
+        "button": "Nazad"
+      }
+    }
+  },
+  "install": {
+    "tips": {
+      "warning": "Ovaj uređaj će se predstavljati kao MacBook. Kada se prijavljujete na nalog za instalaciju, držite iPhone ili drugi ovlašćeni uređaj u blizini radi prijema 2FA verifikacionih kodova.",
+      "external": "Režim spoljnog sertifikata potpisuje aplikaciju uvezenim sertifikatom i provisioning profilom, bez Apple ID naloga. Aplikacija važi dok ne istekne sertifikat ili profil, osim ako Apple ranije ne opozove sertifikat; atvloadly ne proverava opoziv."
+    },
+    "dialog": {
+      "input_pin": {
+        "title": "Unesite 2FA verifikacioni kod",
+        "input": {
+          "placeholder": ""
+        },
+        "button": {
+          "submit": "Potvrdi"
+        }
+      }
+    },
+    "toast": {
+      "install_success": "Instalacija je uspela",
+      "install_failed": "Instalacija nije uspela. Više informacija potražite u dnevnicima.",
+      "connection_closed": "Veza za instalaciju je prekinuta. Pokušajte ponovo.",
+      "app_group_unavailable": "Grupu deljenog prostora aplikacije nije moguće registrovati na ovom Apple nalogu. Proverite da li nalog može da kreira App Groups i da li podržava mogućnosti koje aplikacija zahteva. Više detalja potražite u tehničkom dnevniku.",
+      "login_success": "Prijavljivanje je uspelo"
+    },
+    "form": {
+      "mode": {
+        "file": "IPA datoteka",
+        "link": "IPA URL",
+        "source": "Izvor"
+      },
+      "source": {
+        "label": "Izvor:",
+        "url_placeholder": {
+          "github": "owner/repo ili https://github.com/owner/repo",
+          "altstore": "https://example.com/apps.json"
+        },
+        "fetch": "Učitaj",
+        "prerelease": "Uključi preliminarna izdanja",
+        "prerelease_badge": "Pre izdavanja",
+        "recommended": "Preporučeno",
+        "choose_tips": "Ovo izdanje sadrži više IPA datoteka. Izaberite onu napravljenu za vaš uređaj (tvOS za Apple TV, iOS za iPhone i iPad). Varijante kao što su Sideload i Sideloadly mogu biti različite aplikacije, zato za ažuriranja nastavite da koristite istu varijantu.",
+        "choose_app_tips": "Ovaj izvor sadrži više aplikacija. Izaberite aplikaciju koju želite da instalirate.",
+        "advanced": "Napredno",
+        "filter": {
+          "label": "Filter naziva datoteke",
+          "tips": "Regularni izraz koji pronalazi istu IPA datoteku u budućim izdanjima. Izvodi se iz izabrane datoteke.",
+          "custom": "Prilagođeno",
+          "reset": "Resetuj",
+          "mismatch": "Filter se ne podudara sa izabranom datotekom."
+        },
+        "bundle_id": {
+          "label": "Identifikator paketa",
+          "tips": "AltStore aplikacije se prate prema identifikatoru paketa."
+        },
+        "auto_update": "Automatski instaliraj ažuriranja",
+        "auto_update_tips": "Nove verzije se instaliraju tokom perioda za automatsko osvežavanje, čak i kada aplikaciju još nije potrebno osvežiti. Potpisuju se istim nalogom ili identitetom za potpisivanje.",
+        "select_build": "Učitajte izvor i izaberite IPA datoteku za instalaciju.",
+        "choose_saved_app_tips": "Sačuvani izvori sadrže više aplikacija. Izaberite aplikaciju koju želite da instalirate.",
+        "saved": {
+          "label": "Sačuvani izvori",
+          "all": "Svi sačuvani izvori"
+        },
+        "search_placeholder": "Pretraži aplikacije…",
+        "more_results": "Još {{num}} rezultata — precizirajte pretragu",
+        "no_match": "Nijedna aplikacija ne odgovara pretrazi",
+        "save_source": "Sačuvaj izvor",
+        "toast": {
+          "source_saved": "{{name}} je dodat u sačuvane izvore"
+        }
+      },
+      "choose_ipa": {
+        "label": "Izaberite IPA:"
+      },
+      "ipa_url": {
+        "label": "IPA URL:",
+        "external_unavailable": "Za potpisivanje spoljnim sertifikatom potrebna je otpremljena IPA datoteka ili izvor"
+      },
+      "signer": {
+        "label": "Apple ID ili sertifikat:",
+        "placeholder": "Izaberite Apple ID ili sertifikat",
+        "manage": "Upravljaj nalozima i sertifikatima",
+        "alt": "Izaberite Apple ID ili uvezeni sertifikat za potpisivanje aplikacije.",
+        "empty": "Još nema Apple naloga niti identiteta za potpisivanje.",
+        "go_to_accounts": "Idi na Naloge"
+      },
+      "account": {
+        "label": "Apple nalog:",
+        "select": {
+          "placeholder": "Izaberite nalog"
+        },
+        "last_used": "Poslednji korišćen",
+        "alt": "Radi bezbednosti naloga, nemojte koristiti svoj glavni nalog za instalaciju."
+      },
+      "custom_name": {
+        "label": "Naziv aplikacije:",
+        "placeholder": "Ostavite prazno da zadržite originalni naziv aplikacije",
+        "tips": "Menja naziv aplikacije na početnom ekranu. Identifikator paketa ostaje nepromenjen, pa će aplikacija i dalje biti zamenjena pri osvežavanju."
+      },
+      "password": {
+        "label": "Apple lozinka:"
+      },
+      "button": {
+        "back": "Nazad",
+        "submit": "Instaliraj"
+      },
+      "extensions": {
+        "remove_extensions": "Ukloni ekstenzije (Plug-ins)",
+        "tips": "Korisno kada nema dovoljno dostupnih App ID identifikatora za registraciju",
+        "tips_external": "Uklanja sve ekstenzije aplikacije (vidžete, dodatke). Ekstenzije se podrazumevano zadržavaju i potpisuju provisioning profilom. Uklonjene ekstenzije su navedene u proveri kompatibilnosti."
+      },
+      "signing_mode": {
+        "label": "Potpisivanje:"
+      },
+      "identity": {
+        "label": "Identitet za potpisivanje:",
+        "placeholder": "Izaberite identitet za potpisivanje",
+        "expires": "ističe {{date}}",
+        "manage": "Upravljaj identitetima za potpisivanje",
+        "alt": "Aplikacija se potpisuje ovim sertifikatom i provisioning profilom; Apple ID se ne koristi.",
+        "empty": "Još nema identiteta za potpisivanje. Uvezite P12 sertifikat i provisioning profil u odeljku Nalozi."
+      },
+      "custom_identifier": {
+        "label": "Prilagođeni identifikator paketa:",
+        "placeholder": "Identifikator paketa IPA aplikacije",
+        "alt": "Ostavite prazno da zadržite identifikatore iz IPA datoteke. Identifikatori ekstenzija aplikacije prate prilagođeni identifikator."
+      },
+      "allow_missing_entitlements": {
+        "label": "Dozvoli nedostajuća ovlašćenja",
+        "tips": "Potpiši čak i ako provisioning profil ne odobrava neka ovlašćenja koja aplikacija zahteva. Funkcije koje zavise od njih možda neće raditi."
+      }
+    },
+    "login_modal": {
+      "title": "Prijava na Apple nalog",
+      "button": {
+        "close": "Zatvori",
+        "login": "Prijavi se",
+        "add_account": "Dodaj nalog"
+      }
+    },
+    "screenshot": {
+      "title": "Snimak ekrana uređaja",
+      "action": "Snimak ekrana",
+      "empty": "Još nema snimka ekrana",
+      "status": {
+        "capturing": "Pravljenje snimka ekrana…",
+        "success": "Snimak ekrana je napravljen",
+        "failed": "Pravljenje snimka ekrana nije uspelo"
+      },
+      "toast": {
+        "device_not_ready": "Informacije o uređaju još nisu spremne. Pokušajte ponovo kasnije.",
+        "mount_failed": "Uređaj nije moguće pripremiti za snimak ekrana",
+        "failed": "Pravljenje snimka ekrana nije uspelo",
+        "opened_new_tab": "Pregledač je blokirao automatsko preuzimanje, pa je snimak ekrana otvoren u novoj kartici radi ručnog čuvanja",
+        "download_failed": "Preuzimanje snimka ekrana nije uspelo jer je pregledač blokirao preuzimanje"
+      },
+      "button": {
+        "close": "Zatvori",
+        "refresh": "Osveži",
+        "download": "Preuzmi"
+      }
+    }
+  },
+  "settings": {
+    "toast": {
+      "save_success": "Uspešno sačuvano",
+      "notify_success": "Obaveštenje je uspešno poslato"
+    },
+    "notification": {
+      "title": "Obaveštenja",
+      "toggle": {
+        "label": "Omogući"
+      },
+      "type": {
+        "label": "Vrsta obaveštenja"
+      },
+      "weixin": {
+        "title": "Wecom",
+        "corp_id": "CorpID",
+        "corp_secret": "CorpSecret",
+        "agent_id": "AgentID",
+        "touser": "ToUser"
+      },
+      "email": {
+        "smtp_host": "SMTP server",
+        "smtp_port": "SMTP port",
+        "username": "Korisničko ime",
+        "password": "Lozinka",
+        "from": "Adresa pošiljaoca",
+        "to": "Adresa primaoca"
+      },
+      "webhook": {
+        "url": "URL",
+        "url_placeholder": "Podržava promenljive šablona {{title}} i {{message}}",
+        "method": "HTTP metod",
+        "content_type": "Content-Type",
+        "header": "HTTP zaglavlja",
+        "header_placeholder": "Više zaglavlja odvojite tačkom i zarezom, npr.: Authorization: Bearer token; X-Custom: value",
+        "body": "Telo zahteva",
+        "body_placeholder": "Podržava promenljive šablona {{title}} i {{message}}\nPrimer: {\"title\": \"{{title}}\", \"message\": \"{{message}}\"}"
+      },
+      "button": {
+        "submit": "Sačuvaj",
+        "send_test": "Pošalji probno obaveštenje"
+      }
+    },
+    "refresh": {
+      "title": "Automatsko osvežavanje aplikacija",
+      "toggle": {
+        "label": "Omogući"
+      },
+      "iphone_toggle": {
+        "label": "Automatsko osvežavanje iPhone-a",
+        "tips": "Osvežavanje iPhone-a nije ograničeno podešenim periodom izvršavanja; pokušavaće da osveži aplikacije kada je iPhone povezan na WiFi"
+      },
+      "mode": {
+        "label": "Režim osvežavanja",
+        "day_before_expired": "Jedan dan pre isteka",
+        "custom": "Prilagođeno"
+      },
+      "advance_days": {
+        "label": "Broj dana unapred",
+        "1_day": "1 dan",
+        "2_days": "2 dana",
+        "3_days": "3 dana"
+      },
+      "run_time": {
+        "label": "Period izvršavanja",
+        "format_tips": "Linux crontab format, ograničen režimom osvežavanja"
+      },
+      "button": {
+        "submit": "Sačuvaj"
+      }
+    },
+    "update": {
+      "title": "Ažuriranja aplikacija",
+      "interval": {
+        "label": "Provera ažuriranja",
+        "off": "Isključeno",
+        "every_hour": "Svakog sata",
+        "every_hours": "Svakih {{num}} sati"
+      },
+      "github_token": {
+        "label": "GitHub token",
+        "placeholder": "ghp_... (opciono)",
+        "tips": "Opcioni lični pristupni token za GitHub API zahteve. Povećava ograničenje broja API zahteva i omogućava privatne GitHub repozitorijume. Za token sa precizno definisanim dozvolama, dodelite dozvolu Contents: Read-only repozitorijumima koje želite da koristite.",
+        "configured_placeholder": "Podešeno — unesite novu vrednost da biste zamenili postojeću",
+        "clear": "Ukloni"
+      },
+      "tips": "Aplikacije instalirane iz GitHub repozitorijuma ili AltStore izvora proveravaju se u pozadini, a kada su obaveštenja omogućena dobićete obaveštenje o novim verzijama. Automatska ažuriranja se instaliraju tokom perioda automatskog osvežavanja, čak i kada aplikaciju još nije potrebno osvežiti. GitHub dozvoljava 60 neautentifikovanih zahteva na sat.",
+      "task_disabled": "Automatsko osvežavanje aplikacija je isključeno: nove verzije će i dalje biti otkrivene, ali se automatska ažuriranja neće instalirati.",
+      "button": {
+        "submit": "Sačuvaj"
+      }
+    },
+    "sources": {
+      "title": "AltStore izvori",
+      "list": {
+        "label": "Sačuvani izvori",
+        "empty": "Još nema sačuvanih izvora."
+      },
+      "add": {
+        "label": "Dodaj izvor"
+      },
+      "tips": "Sačuvane izvore možete pregledati i pretraživati u režimu Izvor na stranici za instalaciju.",
+      "delete_confirm": "Ukloniti {{name}} iz sačuvanih izvora? To neće uticati na aplikacije koje ga prate.",
+      "button": {
+        "add": "Dodaj",
+        "delete": "Ukloni",
+        "cancel": "Otkaži",
+        "confirm": "Potvrdi"
+      },
+      "toast": {
+        "added": "{{name}} je sačuvan",
+        "deleted": "{{name}} je uklonjen"
+      }
+    },
+    "network": {
+      "title": "Mrežna podešavanja",
+      "proxy_toggle": {
+        "label": "Omogući proksi"
+      },
+      "http_proxy": {
+        "label": "HTTP proksi",
+        "placeholder": "npr. http://proxy.example.com:8080"
+      },
+      "https_proxy": {
+        "label": "HTTPS proksi",
+        "placeholder": "npr. http://proxy.example.com:8080"
+      },
+      "button": {
+        "submit": "Sačuvaj"
+      }
+    },
+    "advanced": {
+      "title": "Napredno",
+      "update_coreadi": "Ažuriraj CoreADI",
+      "update_coreadi_confirm": "Da li ste sigurni da želite da ažurirate CoreADI biblioteke?",
+      "cancel": "Otkaži",
+      "confirm": "Potvrdi",
+      "toast": {
+        "downloading": "Preuzimanje...",
+        "success": "Ažuriranje je završeno",
+        "failed": "Ažuriranje nije uspelo"
+      }
+    }
+  },
+  "account": {
+    "status_labels": {
+      "valid": "Važeći",
+      "invalid": "Nevažeći"
+    },
+    "select_account": "Izaberite nalog",
+    "select_placeholder": "Izaberite nalog",
+    "table": {
+      "header": {
+        "email": "E-adresa",
+        "account": "Nalog",
+        "status": "Status",
+        "machine_name": "Naziv računara"
+      },
+      "button": {
+        "certificate": "Sertifikati",
+        "devices": "Uređaji",
+        "logout": "Odjavi se"
+      },
+      "empty": "Nema pronađenih naloga"
+    },
+    "dialog": {
+      "logout_confirm": {
+        "title": "Da li ste sigurni da želite da odjavite {{name}}?"
+      }
+    },
+    "toast": {
+      "delete_success": "Nalog je uspešno obrisan",
+      "delete_failed": "Brisanje naloga nije uspelo",
+      "logout_success": "Nalog je uspešno odjavljen",
+      "logout_failed": "Odjavljivanje naloga nije uspelo"
+    },
+    "heading": {
+      "apple_accounts": "Apple nalozi"
+    }
+  },
+  "source_dialog": {
+    "title_track": "Prati ažuriranja za {{name}}",
+    "title": "Ažuriranja za {{name}}",
+    "installed_version": "Instalirana verzija",
+    "installed_build": "Broj izrade",
+    "checked_at": "Poslednja provera",
+    "never": "Nikada",
+    "already_installed": "Verzija {{version}} je već instalirana",
+    "untrack_confirm": "Prekinuti praćenje ažuriranja za {{name}}?",
+    "button": {
+      "untrack": "Prekini praćenje",
+      "save": "Sačuvaj",
+      "install": "Instaliraj",
+      "cancel": "Otkaži",
+      "confirm": "Potvrdi"
+    },
+    "toast": {
+      "saved": "Izvor je sačuvan",
+      "untracked": "Prekinuto je praćenje aplikacije {{name}}"
+    }
+  },
+  "certificate": {
+    "modal": {
+      "title": "Upravljanje sertifikatima — {{email}}",
+      "import_title": "Uvoz sertifikata",
+      "export_title": "Izvoz sertifikata"
+    },
+    "button": {
+      "import": "Uvezi"
+    },
+    "import": {
+      "file_selected": "Izabrana datoteka: {{name}}"
+    },
+    "import_form": {
+      "password_label": "Lozinka sertifikata",
+      "password_placeholder": "Unesite P12 lozinku"
+    },
+    "export_form": {
+      "password_label": "P12 lozinka",
+      "password_placeholder": "Unesite P12 lozinku"
+    },
+    "table": {
+      "header": {
+        "serial": "Serijski broj",
+        "name": "Naziv",
+        "machine_name": "Naziv računara",
+        "expiration": "Datum isteka"
+      },
+      "button": {
+        "revoke": "Opozovi",
+        "export": "Izvezi",
+        "import": "Uvezi"
+      }
+    },
+    "dialog": {
+      "revoke_confirm": {
+        "title": "Da li ste sigurni da želite da opozovete sertifikat {{serial}}?"
+      }
+    },
+    "toast": {
+      "revoke_success": "Sertifikat je uspešno opozvan",
+      "revoke_failed": "Opozivanje sertifikata nije uspelo",
+      "export_success": "Izvoz je uspeo",
+      "export_failed": "Izvoz nije uspeo",
+      "export_password_required": "Unesite lozinku sertifikata",
+      "import_success": "Uvoz je uspeo",
+      "import_failed": "Uvoz nije uspeo"
+    },
+    "no_certificates": "Nema pronađenih sertifikata"
+  },
+  "device": {
+    "modal": {
+      "title": "Uređaji — {{email}}"
+    },
+    "table": {
+      "header": {
+        "name": "Naziv",
+        "udid": "UDID",
+        "platform": "Platforma"
+      },
+      "empty": "Nema pronađenih uređaja"
+    },
+    "toast": {
+      "delete_success": "Uređaj je uspešno obrisan",
+      "delete_failed": "Brisanje uređaja nije uspelo"
+    }
+  },
+  "tools": {
+    "ssdp": {
+      "title": "SSDP skener",
+      "pairable_label": "Tip usluge uređaja spremnog za uparivanje: _remotepairing-manual-pairing._tcp"
+    }
+  },
+  "laboratory": {
+    "title": "Poveži iPhone",
+    "tips": {
+      "step1": "Proverite da li je na iPhone-u omogućen režim za programere i da li je instaliran iOS 17.4 ili noviji.",
+      "step2": "Preuzmite <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a>, povežite iPhone i izvezite datoteku za uparivanje u režimu <b>RPPairing</b>.",
+      "step3": "Pomoću alata idevice_pair omogućite bežično otklanjanje grešaka.",
+      "step4": "Proverite da li je vaš iPhone vidljiv u odeljku <a href=\"/#/tools\" class=\"link\">Alatke</a>.",
+      "step5": "Pouzdan rad automatskog osvežavanja na iPhone-u nije zagarantovan; iPhone mora biti otključan da bi udaljeno osvežavanje pravilno radilo."
+    },
+    "form": {
+      "device_label": "Izaberite odgovarajući uređaj",
+      "device_placeholder": "Izaberite uređaj",
+      "device_unlock": "iPhone mora biti otključan da bi bio otkriven",
+      "refresh": "Osveži",
+      "refresh_devices": "Osveži listu uređaja",
+      "upload_label": "Otpremi datoteku za uparivanje",
+      "submit": "Pošalji"
+    },
+    "toast": {
+      "import_success": "Uvoz je uspeo",
+      "import_failed": "Uvoz nije uspeo: {{msg}}",
+      "load_devices_failed": "Učitavanje liste uređaja nije uspelo: {{msg}}"
+    },
+    "dialog": {
+      "override": {
+        "title": "Potvrdite zamenu",
+        "content": "Datoteka za uparivanje sa istim nazivom već postoji. Da li želite da je zamenite?",
+        "cancel": "Otkaži",
+        "confirm": "Zameni"
+      }
+    }
+  },
+  "identity": {
+    "title": "Identiteti za potpisivanje (spoljni sertifikat)",
+    "subtitle": "P12 sertifikati i provisioning profili koji se koriste za potpisivanje aplikacija bez Apple ID naloga.",
+    "notice": "Za potpisivanje uvezenim sertifikatom nije potreban Apple ID u atvloadly-ju. Aplikacije mogu da se instaliraju dok ne istekne sertifikat ili provisioning profil; Apple ipak može ranije da opozove sertifikat, a atvloadly ne proverava opoziv.",
+    "button": {
+      "import": "Uvezi P12",
+      "replace_profile": "Zameni profil",
+      "copy": "Kopiraj",
+      "copy_fingerprint": "Kopiraj SHA-1 otisak",
+      "done": "Gotovo"
+    },
+    "table": {
+      "header": {
+        "identity": "Identitet",
+        "certificate": "Sertifikat",
+        "profile": "Provisioning profil",
+        "validity": "Važenje",
+        "status": "Status"
+      },
+      "empty": "Nije uvezen nijedan identitet za potpisivanje"
+    },
+    "fields": {
+      "team": "Tim",
+      "expires": "Ističe {{date}}",
+      "certificate_validity": "Sertifikat: {{from}} → {{to}}",
+      "profile_validity": "Profil: {{from}} → {{to}}",
+      "devices_one": "{{count}} uređaj",
+      "devices": "{{count}} uređaja",
+      "all_devices": "Svi uređaji (enterprise)"
+    },
+    "status": {
+      "in_use": "Koristi ga instalacija koja je trenutno u toku",
+      "used_by_one": "Koristi: {{count}} aplik.",
+      "used_by": "Koristi: {{count}} aplik.",
+      "unused": "Ne koristi ga nijedna aplikacija"
+    },
+    "import_modal": {
+      "title": "Uvezi identitet za potpisivanje",
+      "name_label": "Naziv (opciono)",
+      "name_placeholder": "Podrazumevano se koristi naziv sertifikata",
+      "p12_label": "Sertifikat (.p12)",
+      "password_label": "P12 lozinka",
+      "password_placeholder": "Ostavite prazno ako P12 nema lozinku",
+      "password_tips": "Lozinka se koristi samo za dešifrovanje P12 datoteke tokom uvoza i nikada se ne čuva.",
+      "profile_label": "Provisioning profil (.mobileprovision)",
+      "submit": "Uvezi",
+      "files_required": "Izaberite P12 datoteku i provisioning profil.",
+      "issues_title": "Identitet je uvezen uz sledeće napomene:"
+    },
+    "replace_modal": {
+      "title": "Zameni profil za {{name}}",
+      "current": "Trenutni profil: {{name}}",
+      "tips": "Novi provisioning profil mora da sadrži sertifikat ovog identiteta. Instalirane aplikacije zadržavaju trenutni potpis dok ih ponovo ne instalirate.",
+      "submit": "Zameni"
+    },
+    "dialog": {
+      "delete_confirm": {
+        "title": "Obrisati identitet za potpisivanje {{name}}?"
+      },
+      "referenced": {
+        "title": "Identitet koriste instalirane aplikacije",
+        "content_one": "{{count}} instalirana aplikacija koristi {{name}}. Nakon brisanja više neće moći ponovo da se instalira pomoću ovog identiteta. Ipak obrisati?",
+        "content": "Broj instaliranih aplikacija koje koriste {{name}}: {{count}}. Nakon brisanja više neće moći ponovo da se instaliraju pomoću ovog identiteta. Ipak obrisati?",
+        "confirm": "Ipak obriši"
+      }
+    },
+    "toast": {
+      "import_success": "Identitet za potpisivanje je uvezen",
+      "replace_success": "Provisioning profil je zamenjen",
+      "delete_success": "Identitet za potpisivanje je obrisan",
+      "copied": "Otisak je kopiran",
+      "copy_failed": "Kopiranje otiska nije uspelo"
+    }
+  },
+  "signing": {
+    "mode": {
+      "apple_id": "Apple ID",
+      "external_certificate": "Spoljni sertifikat"
+    },
+    "severity": {
+      "error": "Blokira instalaciju",
+      "warning": "Upozorenja",
+      "info": "Informacije"
+    },
+    "issues": {
+      "show_more": "Prikaži još {{count}}…",
+      "show_less": "Prikaži manje"
+    },
+    "classes": {
+      "identity": "Identitet za potpisivanje",
+      "signing": "Potpisivanje",
+      "transport": "Veza sa uređajem"
+    },
+    "profile_kinds": {
+      "development": "Razvojni",
+      "ad_hoc": "Ad Hoc",
+      "enterprise": "Enterprise",
+      "app_store": "App Store"
+    },
+    "plan": {
+      "title": "Provera kompatibilnosti",
+      "run_check": "Proveri ponovo",
+      "view_details": "Prikaži detalje",
+      "uploading": "Otpremanje IPA datoteke radi provere kompatibilnosti…",
+      "downloading": "Preuzimanje IPA datoteke iz izvora radi provere kompatibilnosti…",
+      "checking": "Provera IPA datoteke, identiteta i uređaja…",
+      "check_failed": "Provera kompatibilnosti nije uspela",
+      "pending": "Izaberite IPA datoteku ili verziju iz izvora i identitet za potpisivanje da biste proverili kompatibilnost sa ovim uređajem.",
+      "rerun_needed": "Pokrenite proveru kompatibilnosti da biste instalirali ovu IPA datoteku.",
+      "blocking": "Instalacija je blokirana: otklonite greške u nastavku",
+      "ready": "Spremno za potpisivanje",
+      "bundle_id": "Identifikator paketa",
+      "application_identifier": "Identifikator potpisane aplikacije",
+      "unchanged": "nepromenjeno",
+      "removed_extensions": "Uklonjene ekstenzije",
+      "none": "Nema",
+      "device": "Uređaj i platforma",
+      "device_ok": "Obuhvaćen profilom",
+      "device_warning": "Obuhvaćen, uz upozorenja",
+      "device_problem": "Nije obuhvaćen profilom"
+    },
+    "report": {
+      "title": "Izveštaj o potpisivanju",
+      "plan": "Korišćeni plan potpisivanja",
+      "verified": "Potpisana aplikacija je proverena"
+    },
+    "codes": {
+      "upload_too_large": "Datoteka je prevelika.",
+      "p12_invalid": "Datoteka nije važeća PKCS#12 (.p12) datoteka ili nije čitljiva.",
+      "p12_wrong_password": "P12 lozinka nije ispravna.",
+      "p12_password_unsupported": "P12 lozinka sadrži znakove koje PKCS#12 datoteke ne podržavaju, na primer emoji. Ponovo izvezite P12 sa drugom lozinkom.",
+      "p12_no_private_key": "P12 datoteka ne sadrži privatni ključ.",
+      "p12_no_certificate": "P12 datoteka ne sadrži sertifikat koji odgovara privatnom ključu.",
+      "p12_key_mismatch": "Privatni ključ ne odgovara sertifikatu.",
+      "p12_ambiguous": "P12 datoteka sadrži više identiteta. Izvezite samo jedan sertifikat sa njegovim privatnim ključem.",
+      "p12_unsupported": "P12 datoteka koristi nepodržan format, šifrovanje ili tip ključa.",
+      "certificate_not_code_signing": "Sertifikat nije važeći za potpisivanje koda.",
+      "certificate_expired": "Sertifikat je istekao.",
+      "certificate_not_yet_valid": "Sertifikat još nije važeći.",
+      "certificate_no_team": "Sertifikat nema identifikator Apple razvojnog tima.",
+      "revocation_not_checked": "Opoziv nije proveren",
+      "profile_invalid": "Provisioning profil nije važeći ili ga nije moguće pročitati.",
+      "profile_signature_invalid": "Provisioning profil nije potpisao Apple ili njegov potpis nije važeći.",
+      "profile_expired": "Provisioning profil je istekao.",
+      "profile_not_installable": "App Store provisioning profili ne mogu da se koriste za instaliranje aplikacija na uređaje.",
+      "profile_certificate_mismatch": "Provisioning profil ne sadrži ovaj sertifikat.",
+      "profile_team_mismatch": "Provisioning profil pripada drugom timu od sertifikata.",
+      "identity_expiring_soon": "Uskoro ističe",
+      "identity_duplicate": "Identitet sa istim sertifikatom i provisioning profilom već postoji.",
+      "identity_not_found": "Identitet za potpisivanje više ne postoji.",
+      "identity_in_use": "Identitet za potpisivanje koristi instalacija koja je trenutno u toku. Pokušajte ponovo kada se završi.",
+      "identity_referenced": "Instalirane aplikacije i dalje koriste ovaj identitet za potpisivanje.",
+      "key_unavailable": "Ključ za potpisivanje ove instalacije nije dostupan, pa privatni ključ nije moguće otključati.",
+      "key_mismatch": "Privatni ključ je zaštićen drugim ključem za potpisivanje. Vratite originalnu datoteku ključa ili ponovo uvezite identitet.",
+      "sealed_key_corrupt": "Sačuvani privatni ključ je oštećen. Ponovo uvezite identitet.",
+      "workspace_failed": "Privremeno radno okruženje za potpisivanje nije moguće pripremiti.",
+      "device_platform_unknown": "Platforma uređaja nije poznata.",
+      "device_unreachable": "Uređaj nije dostupan.",
+      "profile_platform_mismatch": "Provisioning profil ne podržava platformu ovog uređaja.",
+      "ipa_platform_mismatch": "Aplikacija nije napravljena za platformu ovog uređaja.",
+      "ipa_platform_unknown": "Nije moguće utvrditi za koju platformu je aplikacija napravljena.",
+      "device_not_provisioned": "Ovaj uređaj nije uključen u provisioning profil.",
+      "ipa_invalid": "IPA datoteka nije važeća ili je nije moguće pročitati.",
+      "ipa_path_rejected": "IPA datoteka nije otpremljena niti instalirana IPA datoteka. Otpremite je ponovo.",
+      "nested_bundles_not_signed": "Aplikaciju ugnežđenu unutar druge aplikacije nije moguće potpisati provisioning profilom.",
+      "bundle_identifier_rewritten": "Identifikator paketa biće promenjen u prilagođeni identifikator; identifikatori ekstenzija aplikacije pratiće tu promenu.",
+      "extension_removed": "Ekstenzija će biti uklonjena iz aplikacije.",
+      "application_identifier_mismatch": "Identifikator aplikacije se ne bi podudarao sa provisioning profilom.",
+      "wildcard_requires_binary_entitlements": "Izvršna datoteka nema ugrađena ovlašćenja, pa wildcard profil ne može da joj dodeli očekivani identifikator aplikacije.",
+      "entitlements_missing": "Provisioning profil ne odobrava neka ovlašćenja koja aplikacija zahteva.",
+      "entitlement_value_changed": "Neka ovlašćenja bi bila potpisana vrednostima drugačijim od onih koje aplikacija zahteva.",
+      "application_identifier_from_profile": "Ovaj paket se potpisuje identifikatorom aplikacije iz provisioning profila, a ne sopstvenim. App Groups, deljenje keychain-a, push obaveštenja i iCloud možda neće raditi.",
+      "custom_identifier_invalid": "Prilagođeni identifikator paketa nije važeći: koristite samo slova, cifre, crtice i tačke.",
+      "incompatible": "IPA datoteka, provisioning profil i uređaj nisu kompatibilni.",
+      "engine_failed": "Došlo je do greške u mehanizmu za potpisivanje.",
+      "signed_output_missing": "Mehanizam za potpisivanje nije napravio potpisanu IPA datoteku.",
+      "signed_bundles_mismatch": "Potpisana IPA datoteka ne sadrži očekivane aplikacije i ekstenzije.",
+      "signed_bundle_identifier_mismatch": "Potpisani paket ima neočekivan identifikator paketa.",
+      "signed_profile_mismatch": "Potpisani paket ne sadrži provisioning profil ovog identiteta.",
+      "signed_certificate_mismatch": "Potpisani paket nije potpisan sertifikatom ovog identiteta.",
+      "signed_entitlements_invalid": "Potpisani paket ima neočekivana ovlašćenja.",
+      "transport_failed": "Uređaj nije dostupan ili je odbio instalaciju.",
+      "pairing_record_invalid": "Zapis o uparivanju uređaja nedostaje ili nije čitljiv. Ponovo uparite uređaj.",
+      "certificate_invalid": "Sačuvani sertifikat nije moguće pročitati. Ponovo uvezite identitet."
+    }
+  }
+}
