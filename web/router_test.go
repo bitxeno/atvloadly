@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/app/build"
 	"github.com/bitxeno/atvloadly/internal/db"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/signing"
@@ -167,6 +168,39 @@ func TestInstallRefusesUnusableCustomIdentifier(t *testing.T) {
 			}
 			if entries, _ := os.ReadDir(filepath.Join(dataDir, "tmp")); len(entries) != 0 {
 				t.Fatalf("the refused upload was kept: %v", entries)
+			}
+		})
+	}
+}
+
+
+func TestTTYRouteOnlyInDevelopment(t *testing.T) {
+	originalMode := build.Mode
+	t.Cleanup(func() { build.Mode = originalMode })
+
+	for _, tt := range []struct {
+		name string
+		mode string
+		want bool
+	}{
+		{name: "development", mode: string(app.DevelopmentMode), want: true},
+		{name: "production", mode: string(app.ProductionMode), want: false},
+		{name: "test", mode: string(app.TestMode), want: false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			build.Mode = tt.mode
+			server := fiber.New()
+			route(server)
+
+			found := false
+			for _, r := range server.GetRoutes(true) {
+				if r.Method == fiber.MethodGet && r.Path == "/ws/tty" {
+					found = true
+					break
+				}
+			}
+			if found != tt.want {
+				t.Fatalf("TTY route registered = %v, want %v in %s mode", found, tt.want, tt.mode)
 			}
 		})
 	}
