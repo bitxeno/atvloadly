@@ -70,18 +70,22 @@ func route(fi *fiber.App) {
 		}
 		return fiber.ErrUpgradeRequired
 	})
-	fi.Get("/ws/tty", websocket.New(func(c *websocket.Conn) {
-		term, err := tty.New(c, "bash")
-		if err != nil {
-			msg := fmt.Sprintf("ERROR: %s", err.Error())
-			_ = c.WriteMessage(websocket.TextMessage, []byte(msg))
-			return
-		}
-		defer term.Close()
+	// The TTY endpoint provides an interactive shell and must never be exposed
+	// by release builds. Keep it available for local development only.
+	if app.IsDevelopmentMode() {
+		fi.Get("/ws/tty", websocket.New(func(c *websocket.Conn) {
+			term, err := tty.New(c, "bash")
+			if err != nil {
+				msg := fmt.Sprintf("ERROR: %s", err.Error())
+				_ = c.WriteMessage(websocket.TextMessage, []byte(msg))
+				return
+			}
+			defer term.Close()
 
-		term.SetCWD(app.Config.Server.DataDir)
-		term.Start()
-	}))
+			term.SetCWD(app.Config.Server.DataDir)
+			term.Start()
+		}))
+	}
 	fi.Get("/ws/pair", websocket.New(service.HandlePairMessage))
 	fi.Get("/ws/install", websocket.New(service.HandleInstallMessage))
 	fi.Get("/ws/login", websocket.New(service.HandleLoginMessage))
