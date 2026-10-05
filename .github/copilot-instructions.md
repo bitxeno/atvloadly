@@ -19,7 +19,6 @@ atvloadly is a web service for sideloading apps on Apple TV, built with Go + Fib
 - **WebSocket Real-time Communication**: [internal/service/websocket.go](internal/service/websocket.go)
   - `/ws/install`: IPA installation progress streaming
   - `/ws/pair`: Device pairing workflow
-  - `/ws/tty`: Terminal access (for debugging)
 
 - **Scheduled Tasks**: [internal/task/](internal/task/)
   - Auto-refresh installed apps (prevents 7-day signature expiration)
@@ -126,12 +125,10 @@ Edit [internal/task/task.go](internal/task/task.go), modify cron expression pars
 ## Debugging Tips
 
 - Use `--debug` flag to see verbose logs and database queries
-- Access container bash via `/ws/tty` WebSocket (dev environment only)
 - Check service status: `GET /api/service/status` (returns avahi-daemon and usbmuxd status)
 - View installation logs: `/apps/:id/log` returns task log file
 
 ## Security Considerations
 
-- **NEVER enable TTY WebSocket in production** ([web/router.go](web/router.go) line 42)
 - Apple ID passwords passed as command-line arguments to `plumesign`, ensure sensitive info is filtered in logs
 - Container requires `--privileged` mode for USB device access (usbmuxd requirement)
