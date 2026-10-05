@@ -16,6 +16,7 @@ import (
 	execx "github.com/bitxeno/atvloadly/internal/exec"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
+	"github.com/bitxeno/atvloadly/internal/utils"
 	"github.com/gookit/event"
 )
 
@@ -117,6 +118,16 @@ func (t *InstallManager) startAppleID(ctx context.Context, opts InstallOptions) 
 
 	ctx = t.withRunTimeout(ctx)
 
+	runEnv, runTempDir, err := appleIDRunEnv(GetRunEnvs())
+	if err != nil {
+		return fmt.Errorf("create isolated install temp dir: %w", err)
+	}
+	defer func() {
+		if err := os.RemoveAll(runTempDir); err != nil {
+			log.Warnf("failed to remove install temp dir %s: %v", runTempDir, err)
+		}
+	}()
+
 	provisionPath := t.GetMobileProvisionPath()
 	defer func() {
 		if _, err := os.Stat(provisionPath); err == nil {
@@ -147,7 +158,7 @@ func (t *InstallManager) startAppleID(ctx context.Context, opts InstallOptions) 
 		t.stdin = nil
 	}()
 
-	if err := t.runEngine(ctx, args, app.Config.Server.DataDir, GetRunEnvs(), stdinReader); err != nil {
+	if err := t.runEngine(ctx, args, app.Config.Server.DataDir, runEnv, stdinReader); err != nil {
 		return err
 	}
 
@@ -156,6 +167,18 @@ func (t *InstallManager) startAppleID(ctx context.Context, opts InstallOptions) 
 	}
 
 	return nil
+}
+
+// appleIDRunEnv gives one Apple ID signing engine run its own temporary root.
+// PlumeImpactor creates plume_stage_* below TMPDIR, so isolating TMPDIR keeps
+// concurrent installs from sharing staging directories while preserving the
+// shared HOME that contains Apple ID sessions.
+func appleIDRunEnv(base []string) ([]string, string, error) {
+	tempDir, err := os.MkdirTemp("", "atvloadly-plumesign-*")
+	if err != nil {
+		return nil, "", err
+	}
+	return utils.MergeEnvs(base, []string{"TMPDIR=" + tempDir}), tempDir, nil
 }
 
 // withRunTimeout bounds ctx by installTimeout and makes it the context
@@ -286,10 +309,6 @@ func uploadTempDir() (string, error) {
 
 func (t *InstallManager) CleanTempFiles(files ...string) {
 	CleanUploadTempFiles(files...)
-	// The installation owning this manager has finished, so its plumesign
-	// process is gone and its staging leftovers can be removed. Staging
-	// directories of concurrently running installations stay untouched.
-	cleanPlumeStageFiles()
 }
 
 // CleanUploadTempFiles removes the given upload temp files without needing an
@@ -343,14 +362,6 @@ func removeUploadTempFile(filePath string) error {
 	return nil
 }
 
-// cleanPlumeStageFiles removes plumesign staging files from the OS temp
-// directory. They are small fixed-pattern leftovers that must not accumulate.
-func cleanPlumeStageFiles() {
-	matches, _ := filepath.Glob(filepath.Join(os.TempDir(), "plume_stage*"))
-	for _, m := range matches {
-		_ = os.RemoveAll(m)
-	}
-}
 
 func isRemotePath(p string) bool {
 	return strings.HasPrefix(p, "http:") || strings.HasPrefix(p, "https:")

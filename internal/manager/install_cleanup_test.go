@@ -1,16 +1,15 @@
 package manager
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
-	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
 )
 
-func TestCleanUploadTempFilesKeepsPlumeStageFiles(t *testing.T) {
+func TestCleanTempFilesKeepsOtherPlumeStageFiles(t *testing.T) {
 	dataDir := t.TempDir()
 	app.Config = &app.Configuration{}
 	app.Config.Server.DataDir = dataDir
@@ -23,26 +22,59 @@ func TestCleanUploadTempFilesKeepsPlumeStageFiles(t *testing.T) {
 	if err := os.WriteFile(uploaded, []byte("ipa"), 0o644); err != nil {
 		t.Fatalf("write %s: %v", uploaded, err)
 	}
-	stage := filepath.Join(os.TempDir(), fmt.Sprintf("plume_stage_atvloadly_test_%d", time.Now().UnixNano()))
-	if err := os.MkdirAll(stage, 0o755); err != nil {
-		t.Fatalf("mkdir stage dir: %v", err)
+
+	// This directory represents a different plumesign process that is still
+	// running. CleanTempFiles must never remove staging it does not own.
+	stage, err := os.MkdirTemp("", "plume_stage_atvloadly_concurrent_*")
+	if err != nil {
+		t.Fatalf("mkdir plume stage: %v", err)
 	}
 	defer func() { _ = os.RemoveAll(stage) }()
 
-	// A request-rejection cleanup removes only the given upload file; the
-	// staging directories of running installations stay untouched.
-	CleanUploadTempFiles(uploaded)
+	ins := &InstallManager{}
+	ins.CleanTempFiles(uploaded)
+
 	if _, err := os.Stat(uploaded); !os.IsNotExist(err) {
 		t.Fatalf("uploaded file still exists: %v", err)
 	}
 	if _, err := os.Stat(stage); err != nil {
-		t.Fatalf("stage dir was removed by CleanUploadTempFiles: %v", err)
+		t.Fatalf("another install's stage dir was removed: %v", err)
+	}
+}
+
+func TestAppleIDRunEnvUsesPrivateTempDir(t *testing.T) {
+	base := []string{
+		"HOME=/shared-home",
+		"TMPDIR=/shared-tmp",
+		"PATH=/usr/bin",
 	}
 
-	// After an installation finished, its staging leftovers are removed.
-	ins := &InstallManager{}
-	ins.CleanTempFiles()
-	if _, err := os.Stat(stage); !os.IsNotExist(err) {
-		t.Fatalf("stage dir still exists after CleanTempFiles: %v", err)
+	env, tempDir, err := appleIDRunEnv(base)
+	if err != nil {
+		t.Fatalf("appleIDRunEnv: %v", err)
+	}
+	defer func() { _ = os.RemoveAll(tempDir) }()
+
+	info, err := os.Stat(tempDir)
+	if err != nil {
+		t.Fatalf("private temp dir missing: %v", err)
+	}
+	if !info.IsDir() {
+		t.Fatalf("private temp path is not a directory: %s", tempDir)
+	}
+
+	values := make(map[string][]string)
+	for _, kv := range env {
+		key, value, ok := strings.Cut(kv, "=")
+		if ok {
+			values[key] = append(values[key], value)
+		}
+	}
+
+	if got := values["TMPDIR"]; len(got) != 1 || got[0] != tempDir {
+		t.Fatalf("TMPDIR = %v, want only %q", got, tempDir)
+	}
+	if got := values["HOME"]; len(got) != 1 || got[0] != "/shared-home" {
+		t.Fatalf("HOME = %v, want shared Apple ID home", got)
 	}
 }
