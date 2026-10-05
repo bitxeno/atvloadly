@@ -113,7 +113,6 @@ c.Status(http.StatusOK).JSON(apiError("error message"))
 - `/ws/install` - Installation progress
 - `/ws/pair` - Device pairing
 - `/ws/login` - Login workflow
-- `/ws/tty` - Terminal access (dev only!)
 
 ### Key File Locations
 - Router: `web/router.go`
@@ -124,7 +123,6 @@ c.Status(http.StatusOK).JSON(apiError("error message"))
 
 ## Security Considerations
 
-- **NEVER** enable TTY WebSocket (`/ws/tty`) in production
 - Filter sensitive data (passwords) from logs
 - Container requires `--privileged` for USB access
 
