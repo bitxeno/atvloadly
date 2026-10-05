@@ -16,7 +16,9 @@ import (
 	"github.com/bitxeno/atvloadly/internal/db"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/signing"
+	"github.com/bitxeno/atvloadly/internal/task"
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 )
 
 // newTestServer returns the routed server over a fresh data directory and
@@ -95,6 +97,57 @@ func TestAppIconServesOnlyStoredIcons(t *testing.T) {
 				t.Fatalf("refused icon leaked %q", body)
 			}
 		})
+	}
+}
+
+// Deleting an app while it is queued for refresh/reinstall would remove its
+// stored IPA directory out from under the worker. Refuse the delete until the
+// operation has finished, matching the source-edit guards.
+func TestDeleteRefusesInstallingApp(t *testing.T) {
+	server, dataDir := newTestServer(t)
+	const appID uint = 900001
+	ipaPath := writeFile(t, filepath.Join(dataDir, "ipa", strconv.FormatUint(uint64(appID), 10), "app.ipa"), "ipa")
+	record := model.InstalledApp{
+		Model:            gorm.Model{ID: appID},
+		IpaName:          "Test",
+		IpaPath:          ipaPath,
+		BundleIdentifier: "com.example.test",
+		UDID:             "device",
+		Account:          "user@example.com",
+		Enabled:          true,
+	}
+	if err := db.Store().Create(&record).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	if task.StartInstallApps([]model.InstalledApp{record}, false) != 1 {
+		t.Fatal("failed to queue test app")
+	}
+
+	resp, err := server.Test(httptest.NewRequest(http.MethodPost, "/api/apps/"+strconv.FormatUint(uint64(record.ID), 10)+"/delete", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	var result struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Code != -1 {
+		t.Fatalf("code = %d, want -1", result.Code)
+	}
+	if _, err := os.Stat(ipaPath); err != nil {
+		t.Fatalf("stored IPA was removed while install is queued: %v", err)
+	}
+	var count int64
+	if err := db.Store().Model(&model.InstalledApp{}).Where("id = ?", record.ID).Count(&count).Error; err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("installed app record count = %d, want 1", count)
 	}
 }
 
