@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	conf "github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/ipa"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/manager"
@@ -82,13 +84,26 @@ func writeInstallRejected(mgr *manager.WebsocketManager, reason string) {
 	mgr.WriteMessage("Installation Failed!")
 }
 
-// validateInstallRequest checks an install request of the install page. Apple
-// ID installs need an account and take the IPA path as given. External
-// certificate installs need a signing identity and no account; they may carry
-// a source like Apple ID installs. Their local IPA path is confined to the
-// upload and installed apps directories, a remote URL passes as given. Only
-// external certificate installs accept a custom bundle identifier; the plan
-// reports an invalid one.
+// resolveInteractiveUploadIPAPath accepts only a regular file that resolves
+// inside the upload directory. Interactive install requests must not borrow an
+// installed app's persistent IPA: SaveApp moves the successful request's IPA
+// into its own record, which would otherwise remove or overwrite another
+// record's stored package.
+func resolveInteractiveUploadIPAPath(p string) (string, error) {
+	resolved, err := resolvePathWithin(p, filepath.Join(conf.Config.Server.DataDir, "tmp"))
+	if err != nil {
+		return "", signing.Wrap(signing.ClassSigning, signing.CodeIPAPathRejected, err, "the IPA path is not an uploaded IPA")
+	}
+	return resolved, nil
+}
+
+// validateInstallRequest checks an install request of the install page. Local
+// IPA paths are accepted only from the upload directory: the install page
+// receives those paths from /api/upload (or a server-side source download),
+// while installed-app paths belong to the background reinstall/refresh flow.
+// Remote URLs pass as given. Apple ID installs need an account; external
+// certificate installs need a signing identity and no account. Only external
+// certificate installs accept a custom bundle identifier.
 func validateInstallRequest(v *model.InstalledApp) error {
 	if v.SigningMode != "" && !v.SigningMode.IsValid() {
 		return fmt.Errorf("invalid signing mode: %q", v.SigningMode)
@@ -115,13 +130,13 @@ func validateInstallRequest(v *model.InstalledApp) error {
 		if v.SigningIdentityID == 0 {
 			return fmt.Errorf("no signing identity selected")
 		}
-		if !ipa.IsRemoteURL(v.IpaPath) {
-			resolved, err := ResolveClientIPAPath(v.IpaPath)
-			if err != nil {
-				return err
-			}
-			v.IpaPath = resolved
+	}
+	if !ipa.IsRemoteURL(v.IpaPath) {
+		resolved, err := resolveInteractiveUploadIPAPath(v.IpaPath)
+		if err != nil {
+			return err
 		}
+		v.IpaPath = resolved
 	}
 	v.SignedBundleIdentifier = ""
 	return nil
