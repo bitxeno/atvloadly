@@ -38,7 +38,10 @@ func SendWithConfig(title string, message string, settings app.SettingsConfigura
 		if chatId == 0 || settings.Notification.Telegram.BotToken == "" {
 			return errors.New("配置错误")
 		}
-		telegramService, _ := telegram.New(settings.Notification.Telegram.BotToken)
+		telegramService, err := telegram.New(settings.Notification.Telegram.BotToken)
+		if err != nil {
+			return err
+		}
 		telegramService.AddReceivers(chatId)
 		no.UseServices(telegramService)
 	case "weixin":
