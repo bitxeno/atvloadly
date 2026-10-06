@@ -224,3 +224,14 @@ func TestInstallRefusesUnusableCustomIdentifier(t *testing.T) {
 		})
 	}
 }
+
+func TestTTYRouteIsNotRegistered(t *testing.T) {
+	server := fiber.New()
+	route(server)
+
+	for _, r := range server.GetRoutes(true) {
+		if r.Method == fiber.MethodGet && r.Path == "/ws/tty" {
+			t.Fatal("deprecated TTY route is still registered")
+		}
+	}
+}
