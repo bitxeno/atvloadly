@@ -49,6 +49,11 @@ type InstalledApp struct {
 	// AllowMissingEntitlements records the explicit user choice to sign even when
 	// the provisioning profile does not grant every entitlement requested by the app.
 	AllowMissingEntitlements bool `json:"allow_missing_entitlements"`
+	// RevokeCertificateSerial authorizes revoking this one certificate when the
+	// Apple ID account is at its certificate limit. Never persisted: the install
+	// page sends it only on the retry after a certificate_reset_required failure,
+	// and the signing engine applies it only if its account currently lists it.
+	RevokeCertificateSerial string `gorm:"-" json:"revoke_certificate_serial,omitempty"`
 }
 
 type RefreshedError int

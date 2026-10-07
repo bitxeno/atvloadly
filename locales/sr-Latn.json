@@ -172,6 +172,15 @@
     }
   },
   "install": {
+    "cert_revoke": {
+      "title": "Apple ID-ju je dostignut limit sertifikata",
+      "warning": "Jedan sertifikat mora biti opozvan da bi ova instalacija bila potpisana novim. Aplikacije potpisane tim sertifikatom prestaju da rade na svojim uređajima. Ništa se ne opoziva dok ovde ne izaberete.",
+      "no_certificates": "Za ovaj nalog nije pronađen sertifikat koji može da se opozove. Otkažite i opozovite jedan ručno na stranici Nalozi.",
+      "button": {
+        "revoke": "Opozovi izabrani sertifikat"
+      },
+      "resuming": "Pokušaj instalacije sa odobrenim opozivom sertifikata…"
+    },
     "tips": {
       "warning": "Ovaj uređaj će se predstavljati kao MacBook. Kada se prijavljujete na nalog za instalaciju, držite iPhone ili drugi ovlašćeni uređaj u blizini radi prijema 2FA verifikacionih kodova.",
       "external": "Režim spoljnog sertifikata potpisuje aplikaciju uvezenim sertifikatom i provisioning profilom, bez Apple ID naloga. Aplikacija važi dok ne istekne sertifikat ili profil, osim ako Apple ranije ne opozove sertifikat; atvloadly ne proverava opoziv."

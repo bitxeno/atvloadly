@@ -172,6 +172,15 @@
         }
     },
     "install": {
+        "cert_revoke": {
+            "title": "The Apple ID is at its certificate limit",
+            "warning": "At most one certificate can be revoked so this installation can sign with a new one. The apps signed with the certificate you revoke stop working on their devices. Nothing is revoked until you choose here.",
+            "no_certificates": "No revocable certificate was found for this account. Cancel and revoke one manually on the Accounts page.",
+            "button": {
+                "revoke": "Revoke the selected certificate"
+            },
+            "resuming": "Retrying the installation with the authorized certificate revocation..."
+        },
         "tips": {
             "warning": "This device will emulate a MacBook. When signing in with the installation account, please ensure you have an iPhone or an authorized device nearby to receive 2FA verification codes.",
             "external": "External certificate mode signs with your imported certificate and provisioning profile, without any Apple ID. The app stays valid until the certificate or the profile expires, unless Apple revokes the certificate earlier; atvloadly does not verify revocation."
