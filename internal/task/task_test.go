@@ -158,6 +158,46 @@ func TestStartInstallAppsKeepsBatchInFlight(t *testing.T) {
 	}
 }
 
+func TestStartInstallAppsKeepsDistinctBatchesInOrder(t *testing.T) {
+	tk := new()
+	app := func(id uint) model.InstalledApp {
+		v := model.InstalledApp{IpaName: "app"}
+		v.ID = id
+		return v
+	}
+
+	if n := tk.StartInstallApps([]model.InstalledApp{app(1)}, false); n != 1 {
+		t.Fatalf("first batch queued %d apps, want 1", n)
+	}
+	first := <-tk.InstallAppQueue
+	firstBatch := tk.currentBatch
+	if firstBatch == nil || firstBatch.ID != first.BatchID {
+		t.Fatalf("current batch = %+v, want first batch %s", firstBatch, first.BatchID)
+	}
+
+	// Queue another, distinct app while the first batch is still in flight.
+	// Its channel item is behind the first one, so it must not displace the
+	// first batch's notification state.
+	if n := tk.StartInstallApps([]model.InstalledApp{app(2)}, false); n != 1 {
+		t.Fatalf("second batch queued %d apps, want 1", n)
+	}
+	second := <-tk.InstallAppQueue
+
+	if tk.currentBatch != firstBatch {
+		t.Fatalf("first batch was displaced by later batch %s", second.BatchID)
+	}
+
+	tk.trackBatchProgress(first, true, nil)
+	if tk.currentBatch == nil || tk.currentBatch.ID != second.BatchID {
+		t.Fatalf("current batch after first completes = %+v, want second batch %s", tk.currentBatch, second.BatchID)
+	}
+
+	tk.trackBatchProgress(second, false, errors.New("boom"))
+	if tk.currentBatch != nil {
+		t.Fatalf("completed second batch kept: %+v", tk.currentBatch)
+	}
+}
+
 func TestUpdateCheckSpec(t *testing.T) {
 	cases := map[int]string{
 		1:  "17 */1 * * *",
