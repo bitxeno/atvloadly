@@ -20,6 +20,12 @@ func TestValidateInstallRequestConfinesLocalIPAPathToUploadDir(t *testing.T) {
 	if err := os.Symlink(installed, symlinkInstalled); err != nil {
 		t.Fatal(err)
 	}
+	// The validator resolves the symlink-free path, which differs from the
+	// temporary directory path on macOS (/var vs /private/var).
+	resolvedUploaded, err := filepath.EvalSymlinks(uploaded)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		name       string
@@ -28,13 +34,13 @@ func TestValidateInstallRequestConfinesLocalIPAPathToUploadDir(t *testing.T) {
 		wantPath   string
 		wantReject bool
 	}{
-		{name: "apple id upload", mode: model.SigningModeAppleID, path: uploaded, wantPath: uploaded},
+		{name: "apple id upload", mode: model.SigningModeAppleID, path: uploaded, wantPath: resolvedUploaded},
 		{name: "apple id remote", mode: model.SigningModeAppleID, path: "https://example.com/app.ipa", wantPath: "https://example.com/app.ipa"},
 		{name: "apple id installed app", mode: model.SigningModeAppleID, path: installed, wantReject: true},
 		{name: "apple id outside data dir", mode: model.SigningModeAppleID, path: outside, wantReject: true},
 		{name: "apple id symlink to installed app", mode: model.SigningModeAppleID, path: symlinkInstalled, wantReject: true},
 		{name: "apple id empty path", mode: model.SigningModeAppleID, path: "", wantReject: true},
-		{name: "external upload", mode: model.SigningModeExternalCertificate, path: uploaded, wantPath: uploaded},
+		{name: "external upload", mode: model.SigningModeExternalCertificate, path: uploaded, wantPath: resolvedUploaded},
 		{name: "external installed app", mode: model.SigningModeExternalCertificate, path: installed, wantReject: true},
 	}
 
