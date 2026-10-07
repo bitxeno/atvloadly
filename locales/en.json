@@ -130,6 +130,7 @@
             "tips": {
                 "view_log": "Click to view installation log",
                 "account_invalid": "There is an issue with the account. Please check logs and fix it.",
+                "certificate_limit": "The Apple ID has no free certificate slot, so nothing was installed or revoked. Open the app on the install page to choose which certificate may be revoked.",
                 "no_data": "No data",
                 "footer": "By default, when the app expiration time is less than 1 day, it will automatically refresh between 3-6am. Apps linked to a GitHub or AltStore source are checked for new versions in the background; automatic updates are installed in the same time window.",
                 "footer_external": "Apps signed with an external certificate are never refreshed automatically: they stop working when the certificate or the provisioning profile expires. Reinstalling with the same certificate and profile does not extend this date: replace the profile (or import a new identity when the certificate expires first), then reinstall the app.",

@@ -678,6 +678,9 @@ export default {
       if (item.refreshed_error == 1) {
         return this.$t("home.table.tips.account_invalid");
       }
+      if (item.refreshed_error == 5) {
+        return this.$t("home.table.tips.certificate_limit");
+      }
       if (!item.refreshed_result && item.refreshed_date) {
         return this.$t("home.table.tips.refresh_failed");
       }

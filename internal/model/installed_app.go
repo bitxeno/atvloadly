@@ -66,8 +66,12 @@ const (
 	// RefreshedErrorSigning: signing failed or the signed output did not pass verification.
 	RefreshedErrorSigning RefreshedError = 3
 	// RefreshedErrorTransport: the device could not be reached or the installation failed on it.
-	RefreshedErrorTransport    RefreshedError = 4
-	RefreshedErrorInvalidOther RefreshedError = 99
+	RefreshedErrorTransport RefreshedError = 4
+	// RefreshedErrorCertificateLimit: the Apple ID holds as many signing
+	// certificates as Apple allows and revoking one was not authorized; an
+	// automatic refresh revokes nothing by itself.
+	RefreshedErrorCertificateLimit RefreshedError = 5
+	RefreshedErrorInvalidOther     RefreshedError = 99
 )
 
 // EffectiveSigningMode returns the signing mode, treating historical records as Apple ID.

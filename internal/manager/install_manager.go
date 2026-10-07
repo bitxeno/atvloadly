@@ -22,6 +22,12 @@ import (
 
 var ErrAccountInvalid = errors.New("account invalid")
 
+// ErrCertificateResetRequired marks an Apple ID installation that stopped
+// because the account holds as many signing certificates as Apple allows and
+// revoking one was not authorized. The engine revoked nothing; a user has to
+// pick a certificate on the install page first.
+var ErrCertificateResetRequired = errors.New("certificate reset required")
+
 // installTimeout bounds one signing engine run. Large tvOS apps can take
 // longer than 30 minutes to sign and install.
 const installTimeout = 60 * time.Minute
@@ -82,6 +88,11 @@ func NewInteractiveInstallManager() *InstallManager {
 func (t *InstallManager) TryStart(ctx context.Context, opts InstallOptions) error {
 	err := t.Start(ctx, opts)
 	if err != nil {
+		if opts.SigningMode.OrDefault() == model.SigningModeAppleID && t.NeedsCertificateReset() {
+			// A background refresh has no user to ask: report that a
+			// certificate slot is missing and that nothing was revoked.
+			return fmt.Errorf("%s %s %w", t.ErrorLog(), err.Error(), ErrCertificateResetRequired)
+		}
 		if opts.SigningMode.OrDefault() == model.SigningModeAppleID && t.IsAccountInvalid() {
 			return fmt.Errorf("%s %s %w", t.ErrorLog(), err.Error(), ErrAccountInvalid)
 		}

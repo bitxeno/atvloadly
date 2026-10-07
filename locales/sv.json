@@ -130,6 +130,7 @@
       "tips": {
         "view_log": "Klicka för att visa installationsloggen",
         "account_invalid": "Det finns ett problem med kontot. Kontrollera loggarna och åtgärda felet.",
+        "certificate_limit": "Apple-ID:et har inget ledigt certificatutrymme, så inget installerades eller drogs in. Öppna appen på installationssidan för att välja vilket certifikat som får dras in.",
         "no_data": "Inga uppgifter",
         "footer": "Som standard uppdateras appar automatiskt mellan kl. 03 och 06 när mindre än ett dygn återstår till utgångsdatumet. Appar som är kopplade till en GitHub- eller AltStore-källa kontrolleras i bakgrunden efter nya versioner; automatiska uppgraderingar installeras under samma tidsperiod.",
         "footer_external": "Appar som signerats med ett externt certifikat uppdateras aldrig automatiskt: de slutar fungera när certifikatet eller provisioneringsprofilen går ut. En ominstallation med samma certifikat och profil förlänger inte det datumet: byt profil (eller importera en ny signeringsidentitet om certifikatet går ut först) och installera sedan om appen.",

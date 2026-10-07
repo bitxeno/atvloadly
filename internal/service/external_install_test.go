@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -166,6 +167,7 @@ func TestRefreshedErrorOf(t *testing.T) {
 		want model.RefreshedError
 	}{
 		{name: "invalid Apple account", err: manager.ErrAccountInvalid, want: model.RefreshedErrorInvalidAccount},
+		{name: "certificate limit reached", err: fmt.Errorf("install failed: %w", manager.ErrCertificateResetRequired), want: model.RefreshedErrorCertificateLimit},
 		{name: "identity", err: signing.Errorf(signing.ClassIdentity, signing.CodeIncompatible, "x"), want: model.RefreshedErrorSigningIdentity},
 		{name: "signing", err: signing.Errorf(signing.ClassSigning, signing.CodeEngineFailed, "x"), want: model.RefreshedErrorSigning},
 		{name: "transport", err: signing.Errorf(signing.ClassTransport, signing.CodeTransportFailed, "x"), want: model.RefreshedErrorTransport},
