@@ -34,9 +34,11 @@ type Task struct {
 	// ExternalSkipLogged records the external certificate apps whose skipped
 	// automatic refresh was already logged, to log it once per app.
 	ExternalSkipLogged sync.Map
-	// Batch tracking for aggregated notifications
-	batchMu      sync.Mutex
-	currentBatch *BatchInfo
+	// Batch tracking for aggregated notifications. InstallAppQueue is FIFO,
+	// so later batches wait here until the current batch completes.
+	batchMu        sync.Mutex
+	currentBatch   *BatchInfo
+	pendingBatches []*BatchInfo
 }
 
 type TaskItem struct {
@@ -235,16 +237,21 @@ func (t *Task) startInstallApps(apps []model.InstalledApp, notify bool, reinstal
 		}
 	}
 
-	// The batch only waits for the queued apps. When none was queued (they
-	// are already installing), the batch in flight stays current so that its
-	// notification is still sent.
+	// The batch only waits for the queued apps. When none was queued, existing
+	// batches stay untouched. A later batch is kept pending because its channel
+	// items are behind the current batch in the FIFO install queue.
 	if queued > 0 {
-		t.currentBatch = &BatchInfo{
+		batch := &BatchInfo{
 			ID:           batchID,
 			TotalCount:   queued,
 			SuccessCount: 0,
 			FailedApps:   make([]FailedAppInfo, 0),
 			Notify:       notify,
+		}
+		if t.currentBatch == nil {
+			t.currentBatch = batch
+		} else {
+			t.pendingBatches = append(t.pendingBatches, batch)
 		}
 	}
 
@@ -505,15 +512,26 @@ func (t *Task) trackBatchProgress(item TaskItem, success bool, err error) {
 	t.completeBatchIfDone()
 }
 
-// completeBatchIfDone sends the notification of the current batch and clears
-// it once every queued app is done. batchMu must be held.
+// completeBatchIfDone sends the notification of the current batch and advances
+// to the next queued batch once every app in the current one is done.
+// batchMu must be held.
 func (t *Task) completeBatchIfDone() {
 	completedCount := t.currentBatch.SuccessCount + len(t.currentBatch.FailedApps)
-	if completedCount >= t.currentBatch.TotalCount {
-		// Batch complete, send aggregated notification
-		t.sendBatchNotification(t.currentBatch)
-		t.currentBatch = nil
+	if completedCount < t.currentBatch.TotalCount {
+		return
 	}
+
+	t.sendBatchNotification(t.currentBatch)
+
+	if len(t.pendingBatches) == 0 {
+		t.currentBatch = nil
+		return
+	}
+
+	next := t.pendingBatches[0]
+	t.pendingBatches[0] = nil
+	t.pendingBatches = t.pendingBatches[1:]
+	t.currentBatch = next
 }
 
 func (t *Task) sendBatchNotification(batch *BatchInfo) {
