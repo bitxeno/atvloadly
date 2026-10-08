@@ -235,3 +235,73 @@ func TestTTYRouteIsNotRegistered(t *testing.T) {
 		}
 	}
 }
+
+// The certificate import reports a stable signing code when the P12 cannot be
+// used, and keeps nothing on disk: the upload is decoded in process.
+func TestCertificateImportRefusesUnusableP12(t *testing.T) {
+	server, dataDir := newTestServer(t)
+
+	tests := []struct {
+		name     string
+		file     []byte
+		password string
+		noFile   bool
+		wantCode string
+	}{
+		{name: "not a PKCS#12 file", file: []byte("not a PKCS#12 file"), wantCode: signing.CodeP12Invalid},
+		{name: "too large", file: bytes.Repeat([]byte{0x30}, signing.MaxP12Size+1), wantCode: signing.CodeUploadTooLarge},
+		{name: "missing file", noFile: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var body bytes.Buffer
+			form := multipart.NewWriter(&body)
+			_ = form.WriteField("email", "user@example.com")
+			_ = form.WriteField("password", tt.password)
+			if !tt.noFile {
+				part, err := form.CreateFormFile("file", "identity.p12")
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, _ = part.Write(tt.file)
+			}
+			_ = form.Close()
+
+			req := httptest.NewRequest(http.MethodPost, "/api/certificates/import", &body)
+			req.Header.Set("Content-Type", form.FormDataContentType())
+			resp, err := server.Test(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = resp.Body.Close() }()
+
+			var result struct {
+				Code int             `json:"code"`
+				Data json.RawMessage `json:"data"`
+			}
+			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+				t.Fatal(err)
+			}
+			if result.Code != -1 {
+				t.Fatalf("code = %d, want -1", result.Code)
+			}
+			if tt.noFile {
+				return
+			}
+			var data *SigningErrorData
+			if err := json.Unmarshal(result.Data, &data); err != nil {
+				t.Fatal(err)
+			}
+			gotCode := ""
+			if data != nil {
+				gotCode = data.Code
+			}
+			if gotCode != tt.wantCode {
+				t.Fatalf("signing code = %q, want %q", gotCode, tt.wantCode)
+			}
+			if entries, _ := os.ReadDir(filepath.Join(dataDir, "tmp")); len(entries) != 0 {
+				t.Fatalf("the refused upload was kept: %v", entries)
+			}
+		})
+	}
+}

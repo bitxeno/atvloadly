@@ -21,6 +21,7 @@ import (
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/notify"
 	"github.com/bitxeno/atvloadly/internal/service"
+	"github.com/bitxeno/atvloadly/internal/signing"
 	"github.com/bitxeno/atvloadly/internal/signing/appcheck"
 	"github.com/bitxeno/atvloadly/internal/task"
 	"github.com/bitxeno/atvloadly/internal/utils"
@@ -219,26 +220,19 @@ func route(fi *fiber.App) {
 	api.Post("/certificates/import", func(c *fiber.Ctx) error {
 		email := c.FormValue("email")
 		password := c.FormValue("password")
-		file, err := c.FormFile("file")
-		if err != nil {
+		if _, err := c.FormFile("file"); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError("No file uploaded"))
 		}
 
-		// Save to temp file
-		tempDir := os.TempDir()
-		timestamp := time.Now().Unix()
-		fileName := fmt.Sprintf("import_cert_%d_%s", timestamp, file.Filename)
-		tempPath := filepath.Join(tempDir, fileName)
-
-		if err := c.SaveFile(file, tempPath); err != nil {
-			return c.Status(http.StatusOK).JSON(apiError("Failed to save uploaded file"))
+		// The P12 is decoded in process; it is never written to disk. The
+		// import reports a stable signing code when the file cannot be used.
+		p12, err := readSigningUpload(c, "file", "P12", signing.MaxP12Size)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiSigningError(err))
 		}
-		defer func() {
-			_ = os.Remove(tempPath)
-		}()
 
-		if err := manager.ImportCertificate(email, password, tempPath); err != nil {
-			return c.Status(http.StatusOK).JSON(apiError("Import failed: " + err.Error()))
+		if err := manager.ImportCertificate(email, password, p12); err != nil {
+			return c.Status(http.StatusOK).JSON(apiSigningError(err))
 		}
 
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))

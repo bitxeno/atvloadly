@@ -1,6 +1,8 @@
 package manager
 
 import (
+	"fmt"
+	"os"
 	"regexp"
 	"strings"
 
@@ -8,6 +10,7 @@ import (
 	"github.com/bitxeno/atvloadly/internal/exec"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
+	"github.com/bitxeno/atvloadly/internal/signing"
 )
 
 var certificateManager = newCertificateManager()
@@ -67,6 +70,7 @@ func (m *CertificateManager) ExportCertificate(email, password, path string) (st
 	output, err := exec.NewCommand("plumesign", "certificate", "export", "-u", email, "-p", password, "-o", path).
 		WithDir(app.Config.Server.DataDir).
 		WithEnv(GetRunEnvs()).
+		WithSecret(password).
 		CombinedOutput()
 	if err != nil {
 		log.Err(err).Msgf("Error exporting certificate for %s", email)
@@ -75,14 +79,58 @@ func (m *CertificateManager) ExportCertificate(email, password, path string) (st
 	return string(output), nil
 }
 
-func (m *CertificateManager) ImportCertificate(email, password, path string) error {
-	output, err := exec.NewCommand("plumesign", "certificate", "import", "-u", email, "-p", password, "-i", path).
+// ImportCertificate imports the certificate of the PKCS#12 file p12 for email
+// through the signing engine.
+//
+// The file is decoded in process and written again as a legacy PKCS#12 file
+// before the engine runs. SideStore's "Export Full (.p12)" stores the private
+// key as a plain keyBag without a MAC, which the engine's reader reports as
+// holding no private key.
+//
+// password only decodes the input here: the engine is handed the throwaway
+// password of the re-wrapped file, so the password of the user never reaches
+// the command line or the debug log. The input is never written to disk; only
+// the re-wrapped copy is, for the duration of the engine run.
+func (m *CertificateManager) ImportCertificate(email, password string, p12 []byte) error {
+	rewrapped, rewrapPassword, err := signing.RewrapP12(p12, password)
+	if err != nil {
+		return err
+	}
+
+	path, cleanup, err := writeTempP12(rewrapped)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	output, err := exec.NewCommand("plumesign", "certificate", "import", "-u", email, "-p", rewrapPassword, "-i", path).
 		WithDir(app.Config.Server.DataDir).
 		WithEnv(GetRunEnvs()).
+		WithSecret(rewrapPassword).
 		CombinedOutput()
 	if err != nil {
 		log.Err(err).Msgf("Error importing certificate for %s: %s", email, string(output))
 		return err
 	}
 	return nil
+}
+
+// writeTempP12 stores data in a private temporary file and returns its path
+// and a cleanup function. os.CreateTemp creates the file with mode 0600.
+func writeTempP12(data []byte) (string, func(), error) {
+	file, err := os.CreateTemp("", "atvloadly-cert-*.p12")
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to create a temporary certificate file: %w", err)
+	}
+	cleanup := func() { _ = os.Remove(file.Name()) }
+	if _, err := file.Write(data); err != nil {
+		_ = file.Close()
+		cleanup()
+		return "", nil, fmt.Errorf("failed to write the temporary certificate file: %w", err)
+	}
+	if err := file.Close(); err != nil {
+		cleanup()
+		return "", nil, fmt.Errorf("failed to write the temporary certificate file: %w", err)
+	}
+	return file.Name(), cleanup, nil
 }

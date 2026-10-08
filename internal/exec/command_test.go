@@ -6,8 +6,56 @@ import (
 	"time"
 )
 
+// A secret argument is masked in the debug log while the process still gets
+// the real value. -p carries a password for some subcommands and a package
+// path for others, so masking is by value, not by position.
+func TestCommand_LogLineMasksSecrets(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		secrets []string
+		want    string
+	}{
+		{
+			name:    "password is masked",
+			args:    []string{"certificate", "import", "-u", "user@example.com", "-p", "s3cret", "-i", "/tmp/a.p12"},
+			secrets: []string{"s3cret"},
+			want:    "plumesign certificate import -u user@example.com -p *** -i /tmp/a.p12",
+		},
+		{
+			name:    "a path that is not a secret is kept",
+			args:    []string{"sign", "-u", "user@example.com", "-p", "app.ipa"},
+			secrets: []string{"other-secret"},
+			want:    "plumesign sign -u user@example.com -p app.ipa",
+		},
+		{
+			name:    "an empty secret matches nothing",
+			args:    []string{"certificate", "import", "-p", "", "-i", "/tmp/a.p12"},
+			secrets: []string{""},
+			want:    "plumesign certificate import -p  -i /tmp/a.p12",
+		},
+		{
+			name:    "every occurrence is masked",
+			args:    []string{"login", "-u", "user", "-p", "twice", "--again", "twice"},
+			secrets: []string{"twice"},
+			want:    "plumesign login -u user -p *** --again ***",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cmd := NewCommand("plumesign", tc.args...).WithSecret(tc.secrets...)
+			if got := cmd.logLine(); got != tc.want {
+				t.Fatalf("logLine() = %q, want %q", got, tc.want)
+			}
+			// The real argument list is untouched.
+			if strings.Join(cmd.Args, "\x00") != strings.Join(tc.args, "\x00") {
+				t.Fatalf("Args changed: %q", cmd.Args)
+			}
+		})
+	}
+}
+
 func TestCommand_CombinedOutput(t *testing.T) {
-	// Test success
 	cmd := NewCommand("echo", "hello world")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
