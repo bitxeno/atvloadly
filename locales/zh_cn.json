@@ -557,7 +557,7 @@
         },
         "import_form": {
             "password_label": "证书密码",
-            "password_placeholder": "请输入 P12 密码"
+            "password_placeholder": "请输入 P12 密码（可选）"
         },
         "export_form": {
             "password_label": "P12 密码",

@@ -554,7 +554,7 @@
     },
     "import_form": {
       "password_label": "Certifikatlösenord",
-      "password_placeholder": "Ange P12-lösenord"
+      "password_placeholder": "Ange P12-lösenord (valfritt)"
     },
     "export_form": {
       "password_label": "P12-lösenord",

@@ -557,7 +557,7 @@
     },
     "import_form": {
       "password_label": "Lozinka sertifikata",
-      "password_placeholder": "Unesite P12 lozinku"
+      "password_placeholder": "Unesite P12 lozinku (opciono)"
     },
     "export_form": {
       "password_label": "P12 lozinka",

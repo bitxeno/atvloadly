@@ -557,7 +557,7 @@
         },
         "import_form": {
             "password_label": "Certificate Password",
-            "password_placeholder": "Enter P12 Password"
+            "password_placeholder": "Enter P12 Password (optional)"
         },
         "export_form": {
             "password_label": "P12 Password",

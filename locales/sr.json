@@ -557,7 +557,7 @@
     },
     "import_form": {
       "password_label": "Лозинка сертификата",
-      "password_placeholder": "Унесите P12 лозинку"
+      "password_placeholder": "Унесите P12 лозинку (опционо)"
     },
     "export_form": {
       "password_label": "P12 лозинка",
