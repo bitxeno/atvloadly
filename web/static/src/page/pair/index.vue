@@ -203,7 +203,6 @@ export default {
         data = JSON.stringify(data);
       }
       const json = JSON.stringify({ t: t, d: data });
-      console.log("--> ", json);
       _this.websock.send(json);
     },
 

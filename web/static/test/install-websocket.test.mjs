@@ -17,6 +17,7 @@ const script = source.match(/<script>([\s\S]*?)<\/script>/)[1]
 function page(upload = async () => [{ name: "app.ipa", path: "/tmp/app.ipa" }], checkAfcService, certificates = async () => ({ data: [] })) {
   const sockets = [];
   const errors = [];
+  const consoleMessages = [];
   class WebSocket {
     static CONNECTING = 0;
     static OPEN = 1;
@@ -37,7 +38,7 @@ function page(upload = async () => [{ name: "app.ipa", path: "/tmp/app.ipa" }], 
     location: { protocol: "http:", host: "localhost" },
     api: { upload, checkAfcService, getCertificates: certificates },
     toast: { error: (message) => errors.push(message), success() {} },
-    console: { log() {} },
+    console: { log: (...args) => consoleMessages.push(args.join(" ")) },
   });
   vm.runInContext(script, context);
   const component = context.component;
@@ -52,10 +53,24 @@ function page(upload = async () => [{ name: "app.ipa", path: "/tmp/app.ipa" }], 
     $t: (key) => key, validateForm: () => true, startUpdateLog() {}, stopUpdateLog() {},
   });
   component.mounted?.call(state);
-  return { state, sockets, errors };
+  return { state, sockets, errors, consoleMessages };
 }
 
 const settle = () => new Promise(setImmediate);
+
+test("does not log Apple ID credentials when submitting an install", async () => {
+  const { state, sockets, consoleMessages } = page();
+  const password = "secret-only-for-the-websocket";
+  state.form.account = "user@example.com";
+  state.form.password = password;
+  const pending = state.onSubmit();
+  sockets[0].open();
+  await pending;
+
+  const sent = JSON.parse(sockets[0].sent[0].d);
+  assert.equal(sent.password, password);
+  assert.equal(consoleMessages.some((message) => message.includes(password)), false);
+});
 
 test("waits for the install socket to open before sending", async () => {
   const { state, sockets } = page();
