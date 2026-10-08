@@ -126,8 +126,8 @@ func ExportCertificate(email, password string) ([]byte, error) {
 	return content, nil
 }
 
-func ImportCertificate(email, password, path string) error {
-	return certificateManager.ImportCertificate(email, password, path)
+func ImportCertificate(email, password string, p12 []byte) error {
+	return certificateManager.ImportCertificate(email, password, p12)
 }
 
 func GetRunEnvs() []string {

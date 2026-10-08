@@ -63,6 +63,7 @@ func (t *LoginManager) Start(ctx context.Context, account, password string) erro
 		WithStdout(t.outputStdout).
 		WithStderr(t.outputStdout).
 		WithStdin(stdinReader).
+		WithSecret(password).
 		Run()
 	if err != nil {
 		if errors.Is(err, execx.ErrCommandTimeout) {

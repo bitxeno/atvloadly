@@ -15,6 +15,9 @@ import (
 
 var ErrCommandTimeout = errors.New("command execute timeout")
 
+// secretPlaceholder replaces a secret argument in the debug log.
+const secretPlaceholder = "***"
+
 // Cmd represents a Cmd to be executed.
 type Cmd struct {
 	Name    string
@@ -26,6 +29,7 @@ type Cmd struct {
 	Stderr  io.Writer
 	Stdin   io.Reader
 	ctx     context.Context
+	secrets []string
 }
 
 // Command creates a new command instance.
@@ -85,6 +89,38 @@ func (c *Cmd) WithStdin(stdin io.Reader) *Cmd {
 	return c
 }
 
+// WithSecret marks values that must never be written to a log. An argument
+// equal to one of them is replaced by a placeholder in the debug log; the
+// argument list passed to the process is unchanged. Values are matched exactly
+// and empty values are ignored.
+//
+// A value is used rather than a flag position on purpose: PlumeImpactor reuses
+// -p for the password of certificate import/export and account login, but for
+// the package path of sign, which is not a secret.
+func (c *Cmd) WithSecret(values ...string) *Cmd {
+	c.secrets = append(c.secrets, values...)
+	return c
+}
+
+// logLine returns the command line for the debug log with every secret
+// argument masked.
+func (c *Cmd) logLine() string {
+	if len(c.secrets) == 0 {
+		return c.Name + " " + strings.Join(c.Args, " ")
+	}
+	args := make([]string, len(c.Args))
+	for i, arg := range c.Args {
+		args[i] = arg
+		for _, secret := range c.secrets {
+			if secret != "" && arg == secret {
+				args[i] = secretPlaceholder
+				break
+			}
+		}
+	}
+	return c.Name + " " + strings.Join(args, " ")
+}
+
 // Run executes the command and waits for it to finish.
 func (c *Cmd) Run() error {
 	ctx := c.ctx
@@ -94,7 +130,7 @@ func (c *Cmd) Run() error {
 	ctx, cancel := context.WithTimeout(ctx, c.Timeout)
 	defer cancel()
 
-	log.Debugf(">> %s %s", c.Name, strings.Join(c.Args, " "))
+	log.Debugf(">> %s", c.logLine())
 	cmd := exec.CommandContext(ctx, c.Name, c.Args...)
 	c.setupCmd(cmd)
 
@@ -118,7 +154,7 @@ func (c *Cmd) CombinedOutput() ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.Timeout)
 	defer cancel()
 
-	log.Debugf(">> %s %s", c.Name, strings.Join(c.Args, " "))
+	log.Debugf(">> %s", c.logLine())
 	cmd := exec.CommandContext(ctx, c.Name, c.Args...)
 	c.setupCmd(cmd)
 
