@@ -130,6 +130,7 @@
       "tips": {
         "view_log": "Klicka för att visa installationsloggen",
         "account_invalid": "Det finns ett problem med kontot. Kontrollera loggarna och åtgärda felet.",
+        "certificate_limit": "Apple-ID:et har inget ledigt certificatutrymme, så inget installerades eller drogs in. Öppna appen på installationssidan för att välja vilket certifikat som får dras in.",
         "no_data": "Inga uppgifter",
         "footer": "Som standard uppdateras appar automatiskt mellan kl. 03 och 06 när mindre än ett dygn återstår till utgångsdatumet. Appar som är kopplade till en GitHub- eller AltStore-källa kontrolleras i bakgrunden efter nya versioner; automatiska uppgraderingar installeras under samma tidsperiod.",
         "footer_external": "Appar som signerats med ett externt certifikat uppdateras aldrig automatiskt: de slutar fungera när certifikatet eller provisioneringsprofilen går ut. En ominstallation med samma certifikat och profil förlänger inte det datumet: byt profil (eller importera en ny signeringsidentitet om certifikatet går ut först) och installera sedan om appen.",
@@ -172,6 +173,15 @@
     }
   },
   "install": {
+    "cert_revoke": {
+      "title": "Apple-ID:et har nått sin certificatgräns",
+      "warning": "Ett certifikat måste dras in så att den här installationen kan signeras med ett nytt. Appar som signerats med det certifikat du drar in slutar fungera på sina enheter. Inget dras in innan du väljer här.",
+      "no_certificates": "Inget certifikat som kan dras in hittades för det här kontot. Avbryt och dra in ett manuellt på kontosidan.",
+      "button": {
+        "revoke": "Dra in det valda certifikatet"
+      },
+      "resuming": "Försöker igen med det godkända certifikatindragandet..."
+    },
     "tips": {
       "warning": "Enheten kommer att efterlikna en MacBook. Ha en iPhone eller annan betrodd enhet till hands när du loggar in med installationskontot, så att du kan ta emot verifieringskoder för tvåfaktorsautentisering.",
       "external": "Läget med externt certifikat signerar med ditt importerade certifikat och din provisioneringsprofil, utan något Apple-ID. Appen är giltig tills certifikatet eller profilen går ut, om inte Apple återkallar certifikatet tidigare; atvloadly kontrollerar inte återkallelse."

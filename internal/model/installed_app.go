@@ -49,6 +49,11 @@ type InstalledApp struct {
 	// AllowMissingEntitlements records the explicit user choice to sign even when
 	// the provisioning profile does not grant every entitlement requested by the app.
 	AllowMissingEntitlements bool `json:"allow_missing_entitlements"`
+	// RevokeCertificateSerial authorizes revoking this one certificate when the
+	// Apple ID account is at its certificate limit. Never persisted: the install
+	// page sends it only on the retry after a certificate_reset_required failure,
+	// and the signing engine applies it only if its account currently lists it.
+	RevokeCertificateSerial string `gorm:"-" json:"revoke_certificate_serial,omitempty"`
 }
 
 type RefreshedError int
@@ -61,8 +66,12 @@ const (
 	// RefreshedErrorSigning: signing failed or the signed output did not pass verification.
 	RefreshedErrorSigning RefreshedError = 3
 	// RefreshedErrorTransport: the device could not be reached or the installation failed on it.
-	RefreshedErrorTransport    RefreshedError = 4
-	RefreshedErrorInvalidOther RefreshedError = 99
+	RefreshedErrorTransport RefreshedError = 4
+	// RefreshedErrorCertificateLimit: the Apple ID holds as many signing
+	// certificates as Apple allows and revoking one was not authorized; an
+	// automatic refresh revokes nothing by itself.
+	RefreshedErrorCertificateLimit RefreshedError = 5
+	RefreshedErrorInvalidOther     RefreshedError = 99
 )
 
 // EffectiveSigningMode returns the signing mode, treating historical records as Apple ID.

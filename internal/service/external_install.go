@@ -331,6 +331,9 @@ func RefreshedErrorOf(err error) model.RefreshedError {
 	if errors.Is(err, manager.ErrAccountInvalid) {
 		return model.RefreshedErrorInvalidAccount
 	}
+	if errors.Is(err, manager.ErrCertificateResetRequired) {
+		return model.RefreshedErrorCertificateLimit
+	}
 	switch signing.ClassOf(err) {
 	case signing.ClassIdentity:
 		return model.RefreshedErrorSigningIdentity

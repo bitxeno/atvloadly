@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -84,6 +85,12 @@ func writeInstallRejected(mgr *manager.WebsocketManager, reason string) {
 	mgr.WriteMessage("Installation Failed!")
 }
 
+// revokeCertificateSerialPattern bounds the certificate serial the install
+// page may authorize for revocation: an Apple serial is a hex string, and the
+// value is passed through to the engine as one argument. The engine still
+// refuses any serial its account does not currently list.
+var revokeCertificateSerialPattern = regexp.MustCompile(`^[0-9A-Fa-f]{0,64}$`)
+
 // resolveInteractiveUploadIPAPath accepts only a regular file that resolves
 // inside the upload directory. Interactive install requests must not borrow an
 // installed app's persistent IPA: SaveApp moves the successful request's IPA
@@ -120,7 +127,14 @@ func validateInstallRequest(v *model.InstalledApp) error {
 		}
 		v.SigningIdentityID = 0
 		v.AllowMissingEntitlements = false
+		// The serial arrives as plain text from the install page and becomes
+		// one engine argument; Apple serials are hex, and the engine refuses
+		// it unless the account currently lists it.
+		if !revokeCertificateSerialPattern.MatchString(v.RevokeCertificateSerial) {
+			return fmt.Errorf("invalid certificate serial: %q", v.RevokeCertificateSerial)
+		}
 	case model.SigningModeExternalCertificate:
+		v.RevokeCertificateSerial = ""
 		if v.UDID == "" {
 			return fmt.Errorf("UDID is empty")
 		}
@@ -217,16 +231,29 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 	}
 
 	err := installMgr.Start(mgr.Context(), manager.InstallOptions{
-		UDID:             v.UDID,
-		Account:          v.Account,
-		IP:               dev.IP,
-		Port:             dev.Port,
-		IpaPath:          ipaPath,
-		CustomName:       v.CustomName,
-		RemoveExtensions: v.RemoveExtensions,
-		RefreshMode:      false,
+		UDID:                    v.UDID,
+		Account:                 v.Account,
+		IP:                      dev.IP,
+		Port:                    dev.Port,
+		IpaPath:                 ipaPath,
+		CustomName:              v.CustomName,
+		RemoveExtensions:        v.RemoveExtensions,
+		RefreshMode:             false,
+		RevokeCertificateSerial: v.RevokeCertificateSerial,
 	})
 	if err != nil {
+		// The account is at its certificate limit and revoking a certificate
+		// was not authorized. The engine revoked nothing and its marker line
+		// already streamed to the install page, which asks the user to pick a
+		// certificate and resends this request with the authorization. The
+		// staged IPA is kept for that retry; an abandoned one is swept after
+		// 24 hours like any other upload.
+		if installMgr.NeedsCertificateReset() {
+			mgr.WriteMessage(fmt.Sprintf("ERROR: %s", err.Error()))
+			mgr.WriteMessage("\n")
+			mgr.WriteMessage("Installation Failed!")
+			return
+		}
 		installMgr.CleanTempFiles(v.IpaPath, v.Icon)
 		msg := fmt.Sprintf("ERROR: %s", err.Error())
 		mgr.WriteMessage(msg)

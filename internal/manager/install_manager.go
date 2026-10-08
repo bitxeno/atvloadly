@@ -22,6 +22,12 @@ import (
 
 var ErrAccountInvalid = errors.New("account invalid")
 
+// ErrCertificateResetRequired marks an Apple ID installation that stopped
+// because the account holds as many signing certificates as Apple allows and
+// revoking one was not authorized. The engine revoked nothing; a user has to
+// pick a certificate on the install page first.
+var ErrCertificateResetRequired = errors.New("certificate reset required")
+
 // installTimeout bounds one signing engine run. Large tvOS apps can take
 // longer than 30 minutes to sign and install.
 const installTimeout = 60 * time.Minute
@@ -57,6 +63,10 @@ type InstallOptions struct {
 	SigningMode model.SigningMode
 	// External holds the signing material of SigningModeExternalCertificate.
 	External *ExternalSigning
+	// RevokeCertificateSerial authorizes the engine to revoke this one
+	// certificate when the Apple ID account is at its certificate limit.
+	// Apple ID mode only; empty keeps every certificate untouched.
+	RevokeCertificateSerial string
 }
 
 func NewInstallManager() *InstallManager {
@@ -78,6 +88,11 @@ func NewInteractiveInstallManager() *InstallManager {
 func (t *InstallManager) TryStart(ctx context.Context, opts InstallOptions) error {
 	err := t.Start(ctx, opts)
 	if err != nil {
+		if opts.SigningMode.OrDefault() == model.SigningModeAppleID && t.NeedsCertificateReset() {
+			// A background refresh has no user to ask: report that a
+			// certificate slot is missing and that nothing was revoked.
+			return fmt.Errorf("%s %s %w", t.ErrorLog(), err.Error(), ErrCertificateResetRequired)
+		}
 		if opts.SigningMode.OrDefault() == model.SigningModeAppleID && t.IsAccountInvalid() {
 			return fmt.Errorf("%s %s %w", t.ErrorLog(), err.Error(), ErrAccountInvalid)
 		}
@@ -234,6 +249,12 @@ func buildInstallArgs(opts InstallOptions, provisionPath string) []string {
 		args = append(args, "--custom-name", opts.CustomName)
 	}
 
+	// The engine revokes nothing unless handed this one-shot authorization,
+	// which the install page gives only after the user picked a certificate.
+	if opts.RevokeCertificateSerial != "" {
+		args = append(args, "--revoke-certificate", opts.RevokeCertificateSerial)
+	}
+
 	return args
 }
 
@@ -362,7 +383,6 @@ func removeUploadTempFile(filePath string) error {
 	return nil
 }
 
-
 func isRemotePath(p string) bool {
 	return strings.HasPrefix(p, "http:") || strings.HasPrefix(p, "https:")
 }
@@ -408,6 +428,18 @@ func (t *InstallManager) ErrorLog() string {
 func (t *InstallManager) IsAccountInvalid() bool {
 	log := t.OutputLog()
 	return strings.Contains(log, "plumesign account list") || strings.Contains(log, "Can't log-in") || strings.Contains(log, "DeveloperSession creation failed")
+}
+
+// certificateResetRequiredMarker is the stable token the signing engine puts on
+// the error it returns when the account is at its certificate limit and no
+// revocation was authorized. It matches the display of the engine's
+// Error::CertificateResetRequired.
+const certificateResetRequiredMarker = "[certificate_reset_required]"
+
+// NeedsCertificateReset reports whether the run stopped because a certificate
+// slot had to be freed and the user never authorized revoking one.
+func (t *InstallManager) NeedsCertificateReset() bool {
+	return strings.Contains(t.OutputLog(), certificateResetRequiredMarker)
 }
 
 func (t *InstallManager) IsSuccess() bool {

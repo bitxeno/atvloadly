@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -166,6 +167,7 @@ func TestRefreshedErrorOf(t *testing.T) {
 		want model.RefreshedError
 	}{
 		{name: "invalid Apple account", err: manager.ErrAccountInvalid, want: model.RefreshedErrorInvalidAccount},
+		{name: "certificate limit reached", err: fmt.Errorf("install failed: %w", manager.ErrCertificateResetRequired), want: model.RefreshedErrorCertificateLimit},
 		{name: "identity", err: signing.Errorf(signing.ClassIdentity, signing.CodeIncompatible, "x"), want: model.RefreshedErrorSigningIdentity},
 		{name: "signing", err: signing.Errorf(signing.ClassSigning, signing.CodeEngineFailed, "x"), want: model.RefreshedErrorSigning},
 		{name: "transport", err: signing.Errorf(signing.ClassTransport, signing.CodeTransportFailed, "x"), want: model.RefreshedErrorTransport},
@@ -372,9 +374,10 @@ func TestCleanExternalUploadRemovesOnlyItsUploadFiles(t *testing.T) {
 	}
 }
 
-// Apple ID requests keep their IPA path as given; external certificate
-// requests are confined to the upload and installed apps directories and only
-// they accept a custom bundle identifier.
+// Local IPA paths are confined to the upload directory and remote URLs pass
+// as given; Apple ID installs need an account and external certificate
+// installs need a signing identity. Only external certificate installs accept
+// a custom bundle identifier.
 func TestValidateInstallRequest(t *testing.T) {
 	dataDir := setTestDataDir(t)
 	uploaded := writeTestFile(t, filepath.Join(dataDir, "tmp", "app_1.ipa"))
@@ -392,11 +395,16 @@ func TestValidateInstallRequest(t *testing.T) {
 		wantErr  bool
 		wantPath string
 		wantID   string
+		// wantSerial is the revocation authorization kept for the engine.
+		wantSerial string
 	}{
-		{name: "apple id path passed through", request: model.InstalledApp{UDID: "DEVICE", Account: "user@example.com", IpaPath: outside}, wantPath: outside},
+		{name: "apple id upload path accepted", request: model.InstalledApp{UDID: "DEVICE", Account: "user@example.com", IpaPath: uploaded}, wantPath: resolvedUploaded},
 		{name: "apple id custom identifier", request: model.InstalledApp{UDID: "DEVICE", Account: "user@example.com", IpaPath: uploaded, CustomIdentifier: "app.custom"}, wantErr: true},
 		{name: "external path outside the data directories", request: model.InstalledApp{UDID: "DEVICE", IpaPath: outside, SigningMode: model.SigningModeExternalCertificate, SigningIdentityID: 1}, wantErr: true},
 		{name: "external custom identifier trimmed", request: model.InstalledApp{UDID: "DEVICE", IpaPath: uploaded, SigningMode: model.SigningModeExternalCertificate, SigningIdentityID: 1, CustomIdentifier: " app.custom "}, wantPath: resolvedUploaded, wantID: "app.custom"},
+		{name: "apple id revocation authorization passed through", request: model.InstalledApp{UDID: "DEVICE", Account: "user@example.com", IpaPath: uploaded, RevokeCertificateSerial: "AB12cd34"}, wantPath: resolvedUploaded, wantSerial: "AB12cd34"},
+		{name: "apple id revocation authorization not an argument", request: model.InstalledApp{UDID: "DEVICE", Account: "user@example.com", IpaPath: outside, RevokeCertificateSerial: "--custom-name evil"}, wantErr: true},
+		{name: "external mode has no revocation authorization", request: model.InstalledApp{UDID: "DEVICE", IpaPath: uploaded, SigningMode: model.SigningModeExternalCertificate, SigningIdentityID: 1, RevokeCertificateSerial: "AB12"}, wantPath: resolvedUploaded, wantSerial: ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -408,8 +416,11 @@ func TestValidateInstallRequest(t *testing.T) {
 			if tt.wantErr {
 				return
 			}
-			if request.IpaPath != tt.wantPath || request.CustomIdentifier != tt.wantID {
-				t.Fatalf("ipa path %q custom id %q, want %q %q", request.IpaPath, request.CustomIdentifier, tt.wantPath, tt.wantID)
+			if request.IpaPath != tt.wantPath || request.CustomIdentifier != tt.wantID ||
+				request.RevokeCertificateSerial != tt.wantSerial {
+				t.Fatalf("ipa path %q custom id %q serial %q, want %q %q %q",
+					request.IpaPath, request.CustomIdentifier, request.RevokeCertificateSerial,
+					tt.wantPath, tt.wantID, tt.wantSerial)
 			}
 		})
 	}

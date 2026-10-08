@@ -130,6 +130,7 @@
       "tips": {
         "view_log": "Kliknite da biste videli dnevnik instalacije",
         "account_invalid": "Postoji problem sa nalogom. Proverite dnevnike i otklonite problem.",
+        "certificate_limit": "Apple ID-ju nema slobodnog mesta za sertifikat, pa ništa nije instalirano ni opozvano. Otvorite aplikaciju na stranici za instalaciju i izaberite koji sertifikat sme da se opozove.",
         "no_data": "Nema podataka",
         "footer": "Podrazumevano, kada do isteka aplikacije ostane manje od jednog dana, ona se automatski osvežava između 3 i 6 časova. Za aplikacije povezane sa GitHub ili AltStore izvorom nove verzije se proveravaju u pozadini, a automatska ažuriranja se instaliraju u istom vremenskom periodu.",
         "footer_external": "Aplikacije potpisane spoljnim sertifikatom nikada se ne osvežavaju automatski: prestaće da rade kada istekne sertifikat ili provisioning profil. Ponovna instalacija sa istim sertifikatom i profilom ne produžava ovaj datum: zamenite profil (ili uvezite novi identitet ako sertifikat ističe prvi), pa zatim ponovo instalirajte aplikaciju.",
@@ -172,6 +173,15 @@
     }
   },
   "install": {
+    "cert_revoke": {
+      "title": "Apple ID-ju je dostignut limit sertifikata",
+      "warning": "Jedan sertifikat mora biti opozvan da bi ova instalacija bila potpisana novim. Aplikacije potpisane tim sertifikatom prestaju da rade na svojim uređajima. Ništa se ne opoziva dok ovde ne izaberete.",
+      "no_certificates": "Za ovaj nalog nije pronađen sertifikat koji može da se opozove. Otkažite i opozovite jedan ručno na stranici Nalozi.",
+      "button": {
+        "revoke": "Opozovi izabrani sertifikat"
+      },
+      "resuming": "Pokušaj instalacije sa odobrenim opozivom sertifikata…"
+    },
     "tips": {
       "warning": "Ovaj uređaj će se predstavljati kao MacBook. Kada se prijavljujete na nalog za instalaciju, držite iPhone ili drugi ovlašćeni uređaj u blizini radi prijema 2FA verifikacionih kodova.",
       "external": "Režim spoljnog sertifikata potpisuje aplikaciju uvezenim sertifikatom i provisioning profilom, bez Apple ID naloga. Aplikacija važi dok ne istekne sertifikat ili profil, osim ako Apple ranije ne opozove sertifikat; atvloadly ne proverava opoziv."
