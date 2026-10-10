@@ -571,6 +571,16 @@ export default {
       device: {},
       loading: false,
       websock: null,
+      // Generation of the current install attempt. Every release of the
+      // attempt bumps it, and guards after each await compare against it so
+      // an upload or check that finishes late never opens a socket or sends
+      // a stale install.
+      submitSeq: 0,
+      // Generation counters like submitSeq. They live in data() instead of
+      // created() because the test harness instantiates the component via
+      // data() alone.
+      uploadSeq: 0,
+      checkSeq: 0,
       accounts: [],
       installedApps: [],
       recommendedAccount: "",
@@ -741,8 +751,6 @@ export default {
   },
   created() {
     this.id = this.$route.params.id;
-    this.uploadSeq = 0;
-    this.checkSeq = 0;
     // Source build of the external IPA prepared or being prepared; empty for
     // an uploaded file.
     this.externalIpaKey = "";
@@ -754,7 +762,9 @@ export default {
     this.fetchData();
   },
   unmounted() {
-    this.closeWebSocket();
+    // A submission may still be uploading or checking with no socket open:
+    // release it so its guards return before opening a socket or sending.
+    this.releaseAttempt();
     this.stopUpdateLog();
     // Drops the external IPA, including one still being uploaded or
     // downloaded, unless a running installation owns it.
@@ -1014,14 +1024,13 @@ export default {
       _this.stopUpdateLog();
       _this.startUpdateLog();
       _this.log.output += "checking device status...\n";
-      let socket;
+      // The previous attempt leaves its socket on this.websock: release it
+      // before the long upload/check phase so its late onclose cannot end
+      // this attempt, and no idle socket is left behind to leak.
+      _this.releaseAttempt();
+      const submit = _this.submitSeq;
+      const isStale = () => submit !== _this.submitSeq || !_this.loading;
       try {
-        const connected = _this.initWebSocket();
-        socket = _this.websock;
-        await connected;
-        if (socket !== _this.websock || !_this.loading) {
-          return;
-        }
         _this.log.output += `connection mode: ${_this.device.connection}\n`;
         if (_this.device.connection === "Lockdown") {
           _this.log.output += `product type: ${_this.device.product_type}\n`;
@@ -1029,10 +1038,10 @@ export default {
           _this.log.output += `developer mode: ${_this.device.developer_mode_status ? "enabled" : "disabled"}\n`;
           _this.log.output += `personalized image: ${_this.device.personalized_image_mounted ? "mounted" : "not mounted"}\n`;
 
-          await _this.checkAfcService(_this.id, socket);
+          await _this.checkAfcService(_this.id, isStale);
         }
 
-        if (socket !== _this.websock || !_this.loading) {
+        if (isStale()) {
           return;
         }
         let ipa;
@@ -1085,7 +1094,15 @@ export default {
             version: build.version,
           };
         }
-        if (socket !== _this.websock || !_this.loading) {
+        if (isStale()) {
+          return;
+        }
+        // Connect the install socket only when ready to send the install
+        // request. Uploading a large IPA leaves the socket idle for minutes
+        // with zero traffic, and reverse proxies or routers close idle
+        // sockets, aborting the install after the upload finishes.
+        await _this.initWebSocket();
+        if (isStale()) {
           return;
         }
         _this.ipa = ipa;
@@ -1117,7 +1134,7 @@ export default {
         _this.certRevoke.payload = external ? null : payload;
         _this.websocketsend(1, payload);
       } catch (error) {
-        if ((socket && socket !== _this.websock) || !_this.loading) {
+        if (isStale()) {
           return;
         }
         console.log(error);
@@ -1345,6 +1362,14 @@ export default {
         };
       });
     },
+    // releaseAttempt abandons the attempt in flight: later uploads or
+    // checks see a bumped generation and return before opening a socket or
+    // sending. The previous attempt's socket, if any, is closed first so
+    // its late onclose cannot end the next attempt.
+    releaseAttempt() {
+      this.submitSeq++;
+      this.closeWebSocket();
+    },
     closeWebSocket() {
       const socket = this.websock;
       this.websock = null;
@@ -1475,7 +1500,7 @@ export default {
         data = JSON.stringify(data);
       }
       const json = JSON.stringify({ t: t, d: data });
-      if (_this.websock.readyState !== WebSocket.OPEN) {
+      if (!_this.websock || _this.websock.readyState !== WebSocket.OPEN) {
         throw new Error(this.$t("install.toast.connection_closed"));
       }
       _this.websock.send(json);
@@ -1490,16 +1515,19 @@ export default {
       this.onInstallFinished();
       toast.error(message);
     },
-    async checkAfcService(id, socket) {
+    // checkAfcService probes the AFC service over REST before the install
+    // socket opens. isStale reports whether this attempt was released while
+    // the probe was in flight.
+    async checkAfcService(id, isStale) {
       let _this = this;
       try {
         await api.checkAfcService(id);
-        if (socket !== _this.websock || !_this.loading) {
+        if (isStale()) {
           return;
         }
         _this.log.output += "afc service: OK!\n";
       } catch (error) {
-        if (socket === _this.websock && _this.loading) {
+        if (!isStale()) {
           _this.log.output += `afc service: Failed!\n`;
         }
         throw error;

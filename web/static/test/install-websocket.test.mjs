@@ -53,6 +53,9 @@ function page(upload = async () => [{ name: "app.ipa", path: "/tmp/app.ipa" }], 
     $t: (key) => key, validateForm: () => true, startUpdateLog() {}, stopUpdateLog() {},
   });
   component.mounted?.call(state);
+  if (component.unmounted) {
+    state.unmounted = component.unmounted.bind(state);
+  }
   return { state, sockets, errors, consoleMessages };
 }
 
@@ -110,30 +113,82 @@ test("ends a disconnected install and connects only for the next submission", as
   assert.equal(sockets[1].sent.length, 1);
 });
 
-test("does not send a late upload on a replacement socket", async () => {
+test("a stale socket closing during the next upload cannot end it", async () => {
+  let finishUpload;
+  const { state, sockets, errors } = page(() => new Promise((resolve) => { finishUpload = resolve; }));
+  // A previous attempt leaves its idle socket behind after succeeding.
+  const first = state.onSubmit();
+  await settle();
+  sockets[0].open();
+  await first;
+  sockets[0].onmessage({ currentTarget: sockets[0], data: "Installation Succeeded" });
+  assert.equal(state.loading, false);
+  assert.equal(state.websock, sockets[0]);
+
+  // The next attempt releases that socket up front, then uploads with no
+  // socket open for proxies to drop.
+  state.installMode = "file";
+  const second = state.onSubmit();
+  await settle();
+  await settle();
+  assert.equal(state.websock, null);
+  assert.equal(sockets.length, 1);
+  // A late FIN for the previous socket arrives mid-upload: ignored.
+  sockets[0].close();
+  assert.equal(errors.length, 0);
+  assert.equal(state.loading, true);
+  finishUpload([{ name: "app.ipa", path: "/tmp/app.ipa" }]);
+  await settle();
+  await settle();
+  assert.equal(sockets.length, 2);
+  sockets[1].open();
+  await second;
+  assert.equal(sockets[1].sent.length, 1);
+  assert.equal(sockets[1].sent[0].t, 1);
+  assert.equal(state.loading, true);
+});
+
+test("does not send a late upload after the page is left", async () => {
+  let finishUpload;
+  const { state, sockets, errors } = page(() => new Promise((resolve) => { finishUpload = resolve; }));
+  state.installMode = "file";
+  const first = state.onSubmit();
+  await settle();
+  // No socket opens before the upload finishes: the idle window with zero
+  // traffic that proxies and routers close is gone.
+  assert.equal(sockets.length, 0);
+  state.unmounted();
+  finishUpload([{ name: "old.ipa", path: "/tmp/old.ipa" }]);
+  await first;
+  assert.equal(sockets.length, 0);
+  assert.equal(errors.length, 0);
+});
+
+test("opens the install socket only after the file upload finishes", async () => {
   let finishUpload;
   const { state, sockets } = page(() => new Promise((resolve) => { finishUpload = resolve; }));
   state.installMode = "file";
-  const first = state.onSubmit();
-  sockets[0].open();
+  const pending = state.onSubmit();
   await settle();
-  sockets[0].close();
-  state.installMode = "link";
-  const second = state.onSubmit();
-  sockets[1].open();
-  await second;
-  finishUpload([{ name: "old.ipa", path: "/tmp/old.ipa" }]);
-  await first;
-  assert.equal(sockets[0].sent.length, 0);
-  assert.equal(sockets[1].sent.length, 1);
-  assert.equal(state.ipa.name, "app.ipa");
+  await settle();
+  // The large upload is in flight with no idle socket for proxies to drop.
+  assert.equal(sockets.length, 0);
   assert.equal(state.loading, true);
+  finishUpload([{ name: "app.ipa", path: "/tmp/app.ipa" }]);
+  await settle();
+  await settle();
+  assert.equal(sockets.length, 1);
+  assert.equal(sockets[0].sent.length, 0);
+  sockets[0].open();
+  await pending;
+  assert.equal(sockets[0].sent.length, 1);
+  assert.equal(sockets[0].sent[0].t, 1);
 });
 
 test("closing the page during connection does not submit or show a failure", async () => {
   const { state, sockets, errors } = page();
   const pending = state.onSubmit();
-  state.closeWebSocket();
+  state.unmounted();
   await pending;
   assert.equal(sockets[0].sent.length, 0);
   assert.equal(errors.length, 0);
@@ -164,7 +219,7 @@ test("a connection failure releases the prepared external IPA", async () => {
   assert.equal(errors.length, 1);
 });
 
-test("does not upload after a disconnected AFC check finishes", async () => {
+test("does not upload after the page is left during the AFC check", async () => {
   let finishCheck;
   let uploads = 0;
   const { state, sockets } = page(
@@ -174,20 +229,17 @@ test("does not upload after a disconnected AFC check finishes", async () => {
   state.device.connection = "Lockdown";
   state.installMode = "file";
   const first = state.onSubmit();
-  sockets[0].open();
   await settle();
-  sockets[0].close();
-  state.device.connection = "RPPairing";
-  state.installMode = "link";
-  const second = state.onSubmit();
-  sockets[1].open();
-  await second;
+  // The AFC check runs before any socket opens, so the check itself cannot
+  // be "disconnected": release the attempt by navigating away instead.
+  assert.equal(sockets.length, 0);
+  state.unmounted();
   const output = state.log.output;
   finishCheck();
   await first;
   assert.equal(uploads, 0);
   assert.equal(state.log.output, output);
-  assert.equal(sockets[1].sent.length, 1);
+  assert.equal(sockets.length, 0);
 });
 
 // The engine reports a required revocation as a failure line carrying its
