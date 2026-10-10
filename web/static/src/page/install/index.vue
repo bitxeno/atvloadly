@@ -1500,7 +1500,6 @@ export default {
         data = JSON.stringify(data);
       }
       const json = JSON.stringify({ t: t, d: data });
-      console.log("--> ", json);
       if (!_this.websock || _this.websock.readyState !== WebSocket.OPEN) {
         throw new Error(this.$t("install.toast.connection_closed"));
       }
