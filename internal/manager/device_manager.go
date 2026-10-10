@@ -468,7 +468,7 @@ func (dm *DeviceManager) CheckDevicePairedContext(ctx context.Context, identifie
 		return nil, nil
 	}
 
-	cmd := exec.CommandContext(ctx, "plumesign", "check", "find-pairing", "--identifier", identifier, "--auth-tag", authTag).WithTimeout(10 * time.Second)
+	cmd := exec.CommandContext(ctx, "plumesign", "check", "find-pairing", "--identifier", identifier, "--auth-tag", authTag).WithTimeout(10 * time.Second).WithSecret(authTag)
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {

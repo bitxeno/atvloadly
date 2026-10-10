@@ -200,7 +200,7 @@ func (dm *DeviceManager) runDiscovery(ctx context.Context, server *avahi.Server)
 				log.Err(err).Msgf("Failed to resolve service: name=%s type=%s", service.Name, service.Type)
 				continue
 			}
-			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[+]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
+			dm.logAvahiService("[+]", service)
 
 			macAddr := strings.Split(service.Name, "@")[0]
 			name := dm.parseName(service.Host)
@@ -238,7 +238,7 @@ func (dm *DeviceManager) runDiscovery(ctx context.Context, server *avahi.Server)
 			if !ok {
 				return errAvahiBrowserFreed
 			}
-			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[-]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
+			dm.logAvahiService("[-]", service)
 
 			macAddr := strings.Split(service.Name, "@")[0]
 			dm.DeleteDeviceByMacAddr(macAddr)
@@ -252,7 +252,7 @@ func (dm *DeviceManager) runDiscovery(ctx context.Context, server *avahi.Server)
 				log.Err(err).Msgf("Failed to resolve service: name=%s type=%s", service.Name, service.Type)
 				continue
 			}
-			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[+]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
+			dm.logAvahiService("[+]", service)
 
 			name := dm.parseName(service.Host)
 
@@ -294,7 +294,7 @@ func (dm *DeviceManager) runDiscovery(ctx context.Context, server *avahi.Server)
 			if !ok {
 				return errAvahiBrowserFreed
 			}
-			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[-]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
+			dm.logAvahiService("[-]", service)
 			// ItemRemove has no TXT records. Use the identifier captured from
 			// ItemNew rather than the service name: checks and throttle entries
 			// are keyed by identifier, not service name.
@@ -305,7 +305,7 @@ func (dm *DeviceManager) runDiscovery(ctx context.Context, server *avahi.Server)
 			if !ok {
 				return errAvahiBrowserFreed
 			}
-			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[+]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
+			dm.logAvahiService("[+]", service)
 
 			service, err := resolveService(server, service.Interface, service.Protocol, service.Name,
 				service.Type, service.Domain)
@@ -344,7 +344,7 @@ func (dm *DeviceManager) runDiscovery(ctx context.Context, server *avahi.Server)
 			if !ok {
 				return errAvahiBrowserFreed
 			}
-			log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", "[-]", service.Name, service.Type, service.Address, service.Port, dm.parseTextRecord(service.Txt))
+			dm.logAvahiService("[-]", service)
 			dm.DeleteDeviceByServiceName(service.Name, model.DeviceConnectionRemote)
 		}
 	}
@@ -629,6 +629,24 @@ func (dm *DeviceManager) ScanWirelessDevices(ctx context.Context, timeout time.D
 			}
 		}
 	}
+}
+
+// logAvahiService logs discovery metadata without exposing remote pairing
+// authentication tags. Pairing still uses the original TXT records.
+func (dm *DeviceManager) logAvahiService(event string, service avahi.Service) {
+	log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v",
+		event, service.Name, service.Type, service.Address, service.Port,
+		dm.parseTextRecordForLog(service.Txt))
+}
+
+// parseTextRecordForLog returns a separate map so redaction never changes
+// the authentication tag consumed by pairing.
+func (dm *DeviceManager) parseTextRecordForLog(txt [][]byte) map[string]string {
+	record := dm.parseTextRecord(txt)
+	if _, found := record["authTag"]; found {
+		record["authTag"] = "[REDACTED]"
+	}
+	return record
 }
 
 func (dm *DeviceManager) parseTextRecord(txt [][]byte) map[string]string {
