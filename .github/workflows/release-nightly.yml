@@ -2,8 +2,8 @@ name: "🚀 Release Nightly"
 
 # on events
 on:
-  # schedule:
-  #   - cron: '0 0 * * *' # runs daily at 00:00
+  schedule:
+    - cron: '0 0 * * *' # runs daily at 00:00
   workflow_dispatch:
   # push:
   #   branches: [main, master, release/v*, tvos17]
