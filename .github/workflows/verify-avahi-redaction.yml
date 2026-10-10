@@ -1,0 +1,21 @@
+name: Pairing debug log regression validation
+
+on:
+  push:
+    branches:
+      - fix/avahi-redact-pairing-auth-tag
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.25.x'
+      - name: Run focused pairing redaction tests with race detector
+        run: go test -race ./internal/manager -run '^TestAvahiLog' -count=1 -timeout=180s
+      - name: Run manager regression suite
+        run: go test ./internal/manager -count=1 -timeout=180s
+      - name: Vet manager code
+        run: go vet ./internal/manager
