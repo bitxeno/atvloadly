@@ -51,12 +51,16 @@ type InstallManager struct {
 }
 
 type InstallOptions struct {
-	UDID             string
-	IP               string
-	Port             uint16
-	Account          string
-	IpaPath          string
-	CustomName       string
+	UDID       string
+	IP         string
+	Port       uint16
+	Account    string
+	IpaPath    string
+	CustomName string
+	// CustomIdentifier is the main bundle identifier the app is installed
+	// under, in both signing modes; empty keeps the bundle identifiers of the
+	// IPA. The app is a different app on the device for each identifier.
+	CustomIdentifier string
 	RemoveExtensions bool
 	RefreshMode      bool
 	// SigningMode selects how the app is signed; empty means SigningModeAppleID.
@@ -247,6 +251,15 @@ func buildInstallArgs(opts InstallOptions, provisionPath string) []string {
 	// instead of registering a second App ID.
 	if opts.CustomName != "" {
 		args = append(args, "--custom-name", opts.CustomName)
+	}
+
+	// Installs the app under another bundle identifier, which registers a
+	// second App ID: the app on the device is then a different app from the one
+	// installed under the bundle identifier of the IPA. The value is attached
+	// to its flag because clap reads a separate value starting with '-' as a
+	// flag (see buildExternalInstallArgs).
+	if opts.CustomIdentifier != "" {
+		args = append(args, "--custom-identifier="+opts.CustomIdentifier)
 	}
 
 	// The engine revokes nothing unless handed this one-shot authorization,

@@ -304,8 +304,10 @@
             },
             "custom_identifier": {
                 "label": "自定义 Bundle ID：",
-                "placeholder": "IPA 的 Bundle ID",
-                "alt": "留空则保留 IPA 中的 Bundle ID。应用扩展的 Bundle ID 会随自定义 Bundle ID 一起修改。"
+                "placeholder": "留空则使用 IPA 自带的 Bundle ID",
+                "tips": "使用另一个 Bundle ID 安装，会另外注册一个 App ID，可与原应用同时存在。留空则保留 IPA 中的 Bundle ID。",
+                "tips_external": "使用另一个 Bundle ID 安装，可与原应用同时存在，应用扩展的 Bundle ID 会随之修改。留空则保留 IPA 中的 Bundle ID。",
+                "invalid": "自定义 Bundle ID 无效：只能包含字母、数字、连字符和点。"
             },
             "allow_missing_entitlements": {
                 "label": "允许缺少权限",

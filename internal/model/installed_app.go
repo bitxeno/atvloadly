@@ -41,9 +41,11 @@ type InstalledApp struct {
 	// on the device in SigningModeExternalCertificate: CustomIdentifier when
 	// set, else the bundle identifier of the IPA.
 	SignedBundleIdentifier string `json:"signed_bundle_identifier,omitempty"`
-	// CustomIdentifier is the main bundle identifier requested by the user in
-	// SigningModeExternalCertificate (passed to the engine as
-	// --custom-identifier); empty keeps the bundle identifiers of the IPA.
+	// CustomIdentifier is the main bundle identifier requested by the user
+	// (passed to the engine as --custom-identifier) in both signing modes;
+	// empty keeps the bundle identifiers of the IPA. It is the bundle
+	// identifier the app is installed under, so the same IPA installed with and
+	// without it is two different apps on the device and two records here.
 	// Reinstallations reuse it.
 	CustomIdentifier string `gorm:"column:custom_identifier" json:"custom_identifier,omitempty"`
 	// AllowMissingEntitlements records the explicit user choice to sign even when

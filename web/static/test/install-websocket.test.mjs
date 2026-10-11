@@ -14,7 +14,7 @@ const script = source.match(/<script>([\s\S]*?)<\/script>/)[1]
   .replace(/^import[\s\S]*?;\s*/gm, "")
   .replace("export default", "globalThis.component =");
 
-function page(upload = async () => [{ name: "app.ipa", path: "/tmp/app.ipa" }], checkAfcService, certificates = async () => ({ data: [] })) {
+function page(upload = async () => [{ name: "app.ipa", path: "/tmp/app.ipa" }], checkAfcService, certificates = async () => ({ data: [] }), ipaBundleId = "com.example.app") {
   const sockets = [];
   const errors = [];
   const consoleMessages = [];
@@ -30,9 +30,20 @@ function page(upload = async () => [{ name: "app.ipa", path: "/tmp/app.ipa" }], 
     close() { this.readyState = WebSocket.CLOSED; this.onclose?.({ currentTarget: this, code: 1006 }); }
     send(message) { this.sent.push(JSON.parse(message)); }
   }
+  // A chosen IPA is read in the browser: stand in for JSZip/plist so
+  // onFileChange resolves the bundle identifier without a real archive.
+  const ipaFile = {
+    arrayBuffer: async () => new ArrayBuffer(0),
+  };
+  const JSZip = {
+    loadAsync: async () => ({
+      files: { "Payload/App.app/Info.plist": { async: async () => new Uint8Array(0) } },
+    }),
+  };
   const context = vm.createContext({
     SigningIssueList: {}, SigningPlan: {}, SourcePicker: {},
-    WebSocket, createSigningReportStream, FormData,
+    WebSocket, createSigningReportStream, FormData, JSZip,
+    parseBundleIdFromPlist: () => ipaBundleId,
     formatInstallFailureMessage: installFailureMessage,
     needsCertificateReset, pickRevocableCertificates,
     location: { protocol: "http:", host: "localhost" },
@@ -47,9 +58,12 @@ function page(upload = async () => [{ name: "app.ipa", path: "/tmp/app.ipa" }], 
     state[name] = method.bind(state);
   }
   Object.defineProperty(state, "canInstall", { configurable: true, get: () => component.computed.canInstall.call(state) });
+  Object.defineProperty(state, "customIdentifierPlaceholder", { configurable: true, get: () => component.computed.customIdentifierPlaceholder.call(state) });
   Object.assign(state, {
     isExternal: false, installMode: "link", ipaUrl: "https://example.com/app.ipa",
     device: { connection: "RPPairing" }, reportStream: createSigningReportStream(),
+    // created() is not run: assign what it initializes before the tests use it.
+    prefilled: { custom_name: "", custom_identifier: "" },
     $t: (key) => key, validateForm: () => true, startUpdateLog() {}, stopUpdateLog() {},
   });
   component.mounted?.call(state);
@@ -349,4 +363,44 @@ test("revoked and expired certificates are not offered for pick", () => {
   ]);
   assert.deepEqual(picked.map((cert) => cert.serialNumber), ["AAAA1111", "BBBB2222"]);
   assert.equal(needsCertificateReset("plain failure"), false);
+});
+
+// The custom bundle identifier field previews the identifier the app keeps.
+// An Apple ID install never reaches the server before the install is queued,
+// so the identifier of a chosen IPA is read in the browser.
+test("previews the bundle identifier of the chosen IPA", async () => {
+  const { state } = page();
+  state.form.custom_identifier = "";
+  assert.equal(state.customIdentifierPlaceholder, "install.form.custom_identifier.placeholder");
+
+  state.files = [{ arrayBuffer: async () => new ArrayBuffer(0) }];
+  await state.onFileChange({ target: { files: state.files } });
+  assert.equal(state.customIdentifierPlaceholder, "com.example.app");
+});
+
+// The preview belongs to the chosen IPA: picking another mode clears it, so a
+// stale identifier is never shown as if it were the new IPA's.
+test("clears the previewed bundle identifier when the mode changes", async () => {
+  const { state } = page();
+  state.installMode = "file";
+  state.files = [{ arrayBuffer: async () => new ArrayBuffer(0) }];
+  await state.onFileChange({ target: { files: state.files } });
+  assert.equal(state.customIdentifierPlaceholder, "com.example.app");
+
+  state.setInstallMode("link");
+  assert.equal(state.customIdentifierPlaceholder, "install.form.custom_identifier.placeholder");
+});
+
+// A source build names its own bundle identifier.
+test("previews the bundle identifier of a selected source build", async () => {
+  const { state } = page();
+  state.device = { connection: "RPPairing", udid: "DEVICE" };
+  state.onSourceSelection({
+    kind: "github",
+    url: "https://github.com/owner/repo",
+    filter: "",
+    prerelease: false,
+    build: { id: "1", name: "App", bundle_id: "com.example.source", version: "1.0" },
+  });
+  assert.equal(state.customIdentifierPlaceholder, "com.example.source");
 });

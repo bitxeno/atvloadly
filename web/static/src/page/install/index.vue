@@ -215,9 +215,14 @@
               />
             </div>
 
-            <div class="form-control" v-if="isExternal">
+            <div class="form-control">
               <label class="label" for="install-custom-identifier">
                 <span class="label-text">{{ $t("install.form.custom_identifier.label") }}</span>
+                <div class="tooltip" :data-tip="isExternal
+                  ? $t('install.form.custom_identifier.tips_external')
+                  : $t('install.form.custom_identifier.tips')">
+                  <div class="w-4 h-4 text-secondary-content"><HelpIcon /></div>
+                </div>
               </label>
               <input
                 id="install-custom-identifier"
@@ -231,11 +236,6 @@
                 :placeholder="customIdentifierPlaceholder"
                 v-model.lazy.trim="form.custom_identifier"
               />
-              <label class="label" for="install-custom-identifier">
-                <span class="label-text-alt block whitespace-normal break-words">{{
-                  $t("install.form.custom_identifier.alt")
-                }}</span>
-              </label>
             </div>
 
             <div class="form-control">
@@ -556,6 +556,19 @@ function sourceBuildKey(selection) {
   return selection ? JSON.stringify([selection.kind, selection.url, selection.build.id]) : "";
 }
 
+// bundleIdentifierPattern is the bundle identifier the server accepts for a
+// custom identifier: dot separated, non-empty parts of letters, digits and
+// hyphens (see internal/signing/appcheck.ValidateBundleIdentifier).
+const bundleIdentifierPattern = /^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*$/;
+
+// validCustomIdentifier mirrors the server check, which refuses an invalid
+// identifier only when the install is queued. The install page validates it
+// first so the user is not sent to a failing install. An empty value is valid:
+// it keeps the bundle identifiers of the IPA.
+function validCustomIdentifier(id) {
+  return id === "" || (id.length <= 255 && bundleIdentifierPattern.test(id));
+}
+
 export default {
   components: { SigningIssueList, SigningPlan, SourcePicker },
   data() {
@@ -585,6 +598,10 @@ export default {
       installedApps: [],
       recommendedAccount: "",
       recommendedIdentityId: 0,
+      // Bundle identifier of the chosen IPA, read in the browser when a file is
+      // picked (Apple ID installs never reach the server before the install, so
+      // it is the only source there). Previews the identifier the app keeps.
+      ipaBundleIdentifier: "",
       signingModes: [appleIDMode, externalMode],
       signing: {
         mode: appleIDMode,
@@ -616,9 +633,9 @@ export default {
         password: "",
         custom_name: "",
         remove_extensions: false,
-        // Main bundle identifier of the signed app (external mode); empty
-        // keeps the identifiers of the IPA. Synced on change, not on input,
-        // so that the compatibility check runs once per edit.
+        // Main bundle identifier of the signed app; empty keeps the identifiers
+        // of the IPA. Synced on change, not on input, so that the compatibility
+        // check runs once per edit.
         custom_identifier: "",
         auto_update: false,
       },
@@ -688,8 +705,13 @@ export default {
       const check = this.signing.check;
       return check ? summarizePlan(check.plan, check.blocking) : null;
     },
+    // The placeholder previews the bundle identifier the app would keep: the
+    // one read from the chosen IPA, else the one of the uploaded IPA or of the
+    // last compatibility check (external mode prepares the IPA on the server),
+    // else the generic hint.
     customIdentifierPlaceholder() {
-      return this.signing.uploaded?.bundle_identifier ||
+      return this.ipaBundleIdentifier ||
+        this.signing.uploaded?.bundle_identifier ||
         this.signing.check?.plan?.main_bundle_id ||
         this.$t("install.form.custom_identifier.placeholder");
     },
@@ -1004,6 +1026,10 @@ export default {
         return;
       }
       const external = _this.isExternal;
+      if (!validCustomIdentifier(_this.form.custom_identifier.trim())) {
+        toast.error(this.$t("install.form.custom_identifier.invalid"));
+        return;
+      }
       if (_this.installMode === "source" && !_this.sourceSelection) {
         toast.error(this.$t("install.form.source.select_build"));
         return;
@@ -1121,7 +1147,7 @@ export default {
             version: _this.ipa.version,
             custom_name: _this.form.custom_name.trim(),
             remove_extensions: _this.form.remove_extensions,
-            custom_identifier: external ? _this.form.custom_identifier : "",
+            custom_identifier: _this.form.custom_identifier,
             signing_mode: _this.signing.mode,
             signing_identity_id: external ? Number(_this.signing.identityId) : 0,
             allow_missing_entitlements: external && _this.signing.allowMissingEntitlements,
@@ -1156,6 +1182,7 @@ export default {
       this.installMode = mode;
       this.files = [];
       this.ipaUrl = "";
+      this.ipaBundleIdentifier = "";
       this.sourceInitial = null;
       this.sourceSelection = null;
       // The external IPA and the values prefilled for it belonged to the
@@ -1181,6 +1208,7 @@ export default {
       this.sourceSelection = selection;
       this.recommendedAccount = "";
       this.recommendedIdentityId = 0;
+      this.ipaBundleIdentifier = "";
       this.clearPrefilled();
       if (!selection) {
         if (this.isExternal) {
@@ -1194,10 +1222,22 @@ export default {
       // identifier.
       const url = selection.url.toLowerCase();
       const bundleId = selection.build.bundle_id;
+      // A source build names its own bundle identifier, which the placeholder
+      // previews for an Apple ID install too.
+      this.ipaBundleIdentifier = bundleId || "";
       const isSameSource = (a) => a.udid === this.device.udid && a.source.url.toLowerCase() === url;
       const candidates = this.installedApps.filter(isSameSource).concat(
         bundleId ? this.installedApps.filter((a) => a.bundle_identifier === bundleId) : [],
       );
+      // The same IPA may be installed twice, with and without a custom bundle
+      // identifier. Prefer the record matching the identifier already typed,
+      // else the plain one, so the recommendation is the app the user means.
+      const typed = this.form.custom_identifier.trim();
+      const preferred = (a) => {
+        if (typed && a.custom_identifier === typed) return 0;
+        return a.custom_identifier ? 2 : 1;
+      };
+      candidates.sort((a, b) => preferred(a) - preferred(b));
       let matched = false;
       for (const app of candidates) {
         if (this.recommendApp(app)) {
@@ -1225,6 +1265,7 @@ export default {
       this.files = e.target.files;
       this.recommendedAccount = "";
       this.recommendedIdentityId = 0;
+      this.ipaBundleIdentifier = "";
       this.clearPrefilled();
       this.cancelExternalIpa();
       if (this.files.length > 0) {
@@ -1246,6 +1287,9 @@ export default {
             const bundleId = parseBundleIdFromPlist(plistData);
 
             if (bundleId) {
+              // The placeholder previews it, and an Apple ID install reads it
+              // here: the server sees the IPA only once the install is queued.
+              this.ipaBundleIdentifier = bundleId;
               for (let app of this.installedApps) {
                 if (app.bundle_identifier !== bundleId) {
                   continue;
@@ -1291,6 +1335,10 @@ export default {
       this.recommendedAccount = account.email;
       this.form.account = account.email;
       this.prefill("custom_name", app.custom_name);
+      // An Apple ID install under a custom identifier is a different app from
+      // the one installed without it: reusing the identifier reinstalls the
+      // app the user picked instead of creating a second one.
+      this.prefill("custom_identifier", app.custom_identifier);
       return true;
     },
     // recommendIdentity preselects the identity that signed an earlier

@@ -15,6 +15,7 @@ import (
 	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/signing"
+	"github.com/bitxeno/atvloadly/internal/signing/appcheck"
 	"github.com/gofiber/contrib/websocket"
 )
 
@@ -122,8 +123,11 @@ func validateInstallRequest(v *model.InstalledApp) error {
 		if v.Account == "" || v.UDID == "" {
 			return fmt.Errorf("account or UDID is empty")
 		}
+		// The installation is queued: an invalid identifier is refused now.
 		if v.CustomIdentifier != "" {
-			return fmt.Errorf("a custom bundle identifier requires an external signing certificate")
+			if err := appcheck.ValidateBundleIdentifier(v.CustomIdentifier); err != nil {
+				return err
+			}
 		}
 		v.SigningIdentityID = 0
 		v.AllowMissingEntitlements = false
@@ -237,6 +241,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		Port:                    dev.Port,
 		IpaPath:                 ipaPath,
 		CustomName:              v.CustomName,
+		CustomIdentifier:        v.CustomIdentifier,
 		RemoveExtensions:        v.RemoveExtensions,
 		RefreshMode:             false,
 		RevokeCertificateSerial: v.RevokeCertificateSerial,

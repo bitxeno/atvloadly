@@ -26,6 +26,11 @@ type appListItem struct {
 	ExpirationDate   *time.Time        `json:"expiration_date,omitempty"`
 	IsExpired        bool              `json:"is_expired"`
 	SigningMode      model.SigningMode `json:"signing_mode"`
+	// CustomIdentifier is the bundle identifier the app is installed under when
+	// the user requested one; empty keeps the bundle identifier of the IPA. Two
+	// records can share BundleIdentifier and differ only by this value: they
+	// are two different apps on the device.
+	CustomIdentifier string `json:"custom_identifier,omitempty"`
 	// SigningIdentityID is the external signing identity of the app.
 	SigningIdentityID uint `json:"signing_identity_id,omitempty"`
 	// AutoRefresh reports whether the scheduled refresh renews the app; apps
@@ -87,6 +92,7 @@ func toAppListItem(app model.InstalledApp) appListItem {
 		ExpirationDate:    app.ExpirationDate,
 		IsExpired:         app.IsExpired(),
 		SigningMode:       app.EffectiveSigningMode(),
+		CustomIdentifier:  app.CustomIdentifier,
 		SigningIdentityID: app.SigningIdentityID,
 		AutoRefresh:       !app.IsExternalSigning(),
 	}

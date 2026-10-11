@@ -138,6 +138,14 @@ With an explicit App ID profile the application identifier stays the profile
 App ID; with a wildcard profile it follows the new bundle identifiers. The
 custom identifier is stored with the app and reused by reinstalls.
 
+The custom identifier is available in both signing modes. It changes the app on
+the device, so installing the same IPA with and without it puts **two different
+apps** on the device and creates two records: an Apple ID install under a custom
+identifier registers a second App ID (and therefore consumes another slot of the
+account's App ID quota), and a refresh re-signs the app under the identifier
+recorded with it. The two records are keyed by the identifier the app is
+installed under, so they refresh, expire and reinstall independently.
+
 **Remove extensions** (optional): removes every app extension before signing.
 Extensions are never removed unless you enable it; the plan lists the removed
 extensions.
@@ -331,7 +339,8 @@ directory; its `path` is passed as `ipa_path` to the check and to the install
 message. Its failures have `data: null`.
 
 `custom_identifier` is optional (empty keeps the bundle identifiers of the IPA)
-and only accepted with `signing_mode=external_certificate`. The same fields are
+and accepted with either signing mode; it is validated before the install is
+queued. The same fields are
 accepted in the install message of the `/ws/install` WebSocket (`signing_mode`,
 `signing_identity_id`, `remove_extensions`, `allow_missing_entitlements`,
 `custom_identifier`) and, except `allow_missing_entitlements`, by the MCP

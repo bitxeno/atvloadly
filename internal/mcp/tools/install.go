@@ -25,7 +25,7 @@ type installAppInput struct {
 	AccountID         string `json:"account_id,omitempty" jsonschema:"Optional Apple account ID (md5 of account email). Omit when signing_identity_id is set"`
 	SigningIdentityID uint   `json:"signing_identity_id,omitempty" jsonschema:"Optional imported signing identity ID: signs with that external certificate and provisioning profile instead of an Apple account. Omit account_id when set"`
 	RemoveExtensions  bool   `json:"remove_extensions,omitempty" jsonschema:"Optional remove app extensions while installing"`
-	CustomIdentifier  string `json:"custom_identifier,omitempty" jsonschema:"Optional bundle identifier to install the app under, only with signing_identity_id. The IPA main bundle identifier is replaced by it in the app and its extensions. Omit to keep the IPA bundle identifiers"`
+	CustomIdentifier  string `json:"custom_identifier,omitempty" jsonschema:"Optional bundle identifier to install the app under, with either signing method. The IPA main bundle identifier is replaced by it in the app and its extensions. Omit to keep the IPA bundle identifiers. Installing the same IPA with and without it puts two different apps on the device and creates two records"`
 }
 
 type installDeviceOption struct {
@@ -77,7 +77,8 @@ func registerInstallApp(server *sdkmcp.Server) {
 			"If device_id or the signing choice is omitted, this tool returns options for interactive selection. " +
 			"Ensure the user has confirmed the device and the account or signing identity before proceeding. " +
 			"Apps signed with an external certificate are not refreshed automatically and expire with their signing identity. " +
-			"They keep the IPA bundle identifiers unless custom_identifier is set; the provisioning profile decides their application identifier. " +
+			"Either signing method keeps the IPA bundle identifiers unless custom_identifier is set; with an external certificate the provisioning profile decides the application identifier. " +
+			"Installing the same IPA with and without custom_identifier installs two different apps on the device. " +
 			"After app install task is queued, call get_install_status to track progress.",
 	}, handleInstallApp)
 }
@@ -96,9 +97,6 @@ func handleInstallApp(_ context.Context, _ *sdkmcp.CallToolRequest, input instal
 	}
 	customIdentifier := strings.TrimSpace(input.CustomIdentifier)
 	if customIdentifier != "" {
-		if input.SigningIdentityID == 0 {
-			return nil, installAppOutput{}, fmt.Errorf("custom_identifier requires signing_identity_id")
-		}
 		// The installation is queued: an invalid identifier is refused now.
 		if err := appcheck.ValidateBundleIdentifier(customIdentifier); err != nil {
 			return nil, installAppOutput{}, signingToolError(err)
@@ -117,15 +115,7 @@ func handleInstallApp(_ context.Context, _ *sdkmcp.CallToolRequest, input instal
 		}, nil
 	}
 
-	appModel := model.InstalledApp{
-		IpaName:          ipaFileNameFromURL(ipaURL),
-		IpaPath:          ipaURL,
-		Device:           selectedDevice.Name,
-		DeviceClass:      selectedDevice.DeviceClass,
-		UDID:             selectedDevice.UDID,
-		Enabled:          true,
-		RemoveExtensions: input.RemoveExtensions,
-	}
+	appModel := newInstallRecord(input, *selectedDevice, customIdentifier)
 	output := installAppOutput{
 		Status:         "installing",
 		Message:        "Install task queued to task.StartInstallApps.",
@@ -140,7 +130,6 @@ func handleInstallApp(_ context.Context, _ *sdkmcp.CallToolRequest, input instal
 		selected := toInstallSigningIdentityOption(*identity, time.Now())
 		appModel.SigningMode = model.SigningModeExternalCertificate
 		appModel.SigningIdentityID = identity.ID
-		appModel.CustomIdentifier = customIdentifier
 		output.SelectedSigningIdentity = &selected
 	} else {
 		if accountID == "" {
@@ -183,6 +172,22 @@ func handleInstallApp(_ context.Context, _ *sdkmcp.CallToolRequest, input instal
 	task.StartInstallApps([]model.InstalledApp{appModel}, true)
 
 	return nil, output, nil
+}
+
+// newInstallRecord builds the installed app record queued for device. The
+// signing mode and identity are filled in by the caller; the custom identifier
+// applies to either signing method, so it is recorded here for both.
+func newInstallRecord(input installAppInput, device installDeviceOption, customIdentifier string) model.InstalledApp {
+	return model.InstalledApp{
+		IpaName:          ipaFileNameFromURL(strings.TrimSpace(input.IpaURL)),
+		IpaPath:          strings.TrimSpace(input.IpaURL),
+		Device:           device.Name,
+		DeviceClass:      device.DeviceClass,
+		UDID:             device.UDID,
+		Enabled:          true,
+		RemoveExtensions: input.RemoveExtensions,
+		CustomIdentifier: customIdentifier,
+	}
 }
 
 // signingToolError returns the tool error of err, prefixed with its stable

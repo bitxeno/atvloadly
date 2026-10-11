@@ -29,6 +29,7 @@ atvloadly är en webbtjänst för sideloading av appar på Apple TV. Den använd
 * Stöd för att följa GitHub Releases / AltStore-källor med manuella eller automatiska appuppdateringar
 * Stöd för flera Apple ID-konton
 * Stöd för flera språk (i18n)
+* Stöd för att installera en app under ett anpassat paket-ID (Apple ID eller P12), bredvid den ursprungliga appen
 
 ## Skärmbilder
 

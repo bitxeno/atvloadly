@@ -303,8 +303,10 @@
       },
       "custom_identifier": {
         "label": "Prilagođeni identifikator paketa:",
-        "placeholder": "Identifikator paketa IPA aplikacije",
-        "alt": "Ostavite prazno da zadržite identifikatore iz IPA datoteke. Identifikatori ekstenzija aplikacije prate prilagođeni identifikator."
+        "placeholder": "Ostavite prazno da zadržite identifikator paketa IPA aplikacije",
+        "tips": "Instalira aplikaciju pod drugim identifikatorom paketa, što registruje još jedan App ID: aplikacija tada stoji pored originalne. Ostavite prazno da zadržite identifikatore iz IPA datoteke.",
+        "tips_external": "Instalira aplikaciju pod drugim identifikatorom paketa, pored originalne. Identifikatori ekstenzija aplikacije prate ga. Ostavite prazno da zadržite identifikatore iz IPA datoteke.",
+        "invalid": "Prilagođeni identifikator paketa nije važeći: koristite samo slova, cifre, crtice i tačke."
       },
       "allow_missing_entitlements": {
         "label": "Dozvoli nedostajuća ovlašćenja",

@@ -166,8 +166,9 @@ func TestInstallRefusesUnusableCustomIdentifier(t *testing.T) {
 		wantCode string
 	}{
 		{
-			name:   "apple id",
-			fields: map[string]string{"account": "user@example.com", "custom_identifier": "com.example.custom"},
+			name:     "apple id",
+			fields:   map[string]string{"account": "user@example.com", "custom_identifier": "com.example/custom"},
+			wantCode: signing.CodeCustomIdentifierInvalid,
 		},
 		{
 			name:     "invalid identifier",
@@ -222,6 +223,47 @@ func TestInstallRefusesUnusableCustomIdentifier(t *testing.T) {
 				t.Fatalf("the refused upload was kept: %v", entries)
 			}
 		})
+	}
+}
+
+// An Apple ID install with a valid custom bundle identifier is accepted: it
+// passes validation and is queued, so it is not refused as an unusable
+// combination.
+func TestInstallAcceptsAppleIDCustomIdentifier(t *testing.T) {
+	server, _ := newTestServer(t)
+
+	var body bytes.Buffer
+	form := multipart.NewWriter(&body)
+	_ = form.WriteField("account", "user@example.com")
+	_ = form.WriteField("custom_identifier", "com.example.custom")
+	part, err := form.CreateFormFile("file", "App.ipa")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = part.Write([]byte("ipa"))
+	_ = form.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/install", &body)
+	req.Header.Set("Content-Type", form.FormDataContentType())
+	resp, err := server.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	var result struct {
+		Code int             `json:"code"`
+		Data json.RawMessage `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	var data *SigningErrorData
+	if err := json.Unmarshal(result.Data, &data); err != nil {
+		t.Fatal(err)
+	}
+	if data != nil && data.Code == signing.CodeCustomIdentifierInvalid {
+		t.Fatalf("a valid custom identifier was refused: %+v", data)
 	}
 }
 

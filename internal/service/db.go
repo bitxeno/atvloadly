@@ -140,14 +140,14 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 			"custom_identifier":          cur.CustomIdentifier,
 			"allow_missing_entitlements": cur.AllowMissingEntitlements,
 		}
+		// The record is keyed by the app on the device, which another IPA can
+		// replace when it is installed under the same identifier.
+		cur.BundleIdentifier = app.BundleIdentifier
+		updateData["bundle_identifier"] = cur.BundleIdentifier
 		if cur.IsExternalSigning() {
 			// The next reinstall signs with the same plan as this installation.
 			cur.RemoveExtensions = app.RemoveExtensions
 			updateData["remove_extensions"] = cur.RemoveExtensions
-			// The record is keyed by the app on the device, which another IPA
-			// can replace when it is installed under the same identifier.
-			cur.BundleIdentifier = app.BundleIdentifier
-			updateData["bundle_identifier"] = cur.BundleIdentifier
 		}
 		for k, v := range sourceColumns(cur.Source) {
 			updateData[k] = v
@@ -227,17 +227,23 @@ func ResolveAppIconPath(icon string) (string, error) {
 
 // findInstalledApp returns the previous record of app for SaveApp. Records of
 // different signing modes are never merged. An Apple ID record is keyed by
-// device, bundle identifier and account. An external certificate record is
+// device, the bundle identifier installed on the device (see
+// signedBundleIdentifierOf) and account. An external certificate record is
 // keyed by the app actually on the device: device, main bundle identifier
-// installed (see signedBundleIdentifierOf) and signing identity, so the same
-// IPA installed under another custom identifier gets its own record.
+// installed and signing identity. Either way, the same IPA installed under
+// another custom identifier gets its own record: the custom identifier changes
+// the app on the device, so it is a different app.
 func findInstalledApp(app model.InstalledApp) (model.InstalledApp, bool, error) {
 	var cur model.InstalledApp
 	query := db.Store().Where("udid = ?", app.UDID)
 	if app.IsExternalSigning() {
 		query = query.Where("signed_bundle_identifier = ? AND signing_mode = ? AND signing_identity_id = ?", signedBundleIdentifierOf(app), model.SigningModeExternalCertificate, app.SigningIdentityID)
 	} else {
-		query = query.Where("bundle_identifier = ? AND account = ? AND (signing_mode IS NULL OR signing_mode IN ?)", app.BundleIdentifier, app.Account, []model.SigningMode{"", model.SigningModeAppleID})
+		// Apple ID records never carry a signed bundle identifier, so the key
+		// falls back to the custom identifier and then to the bundle identifier
+		// of the IPA. Columns added to existing rows by AutoMigrate are NULL,
+		// hence the COALESCE.
+		query = query.Where(installedBundleIdentifierColumn+" = ? AND account = ? AND (signing_mode IS NULL OR signing_mode IN ?)", signedBundleIdentifierOf(app), app.Account, []model.SigningMode{"", model.SigningModeAppleID})
 	}
 	result := query.First(&cur)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -249,10 +255,16 @@ func findInstalledApp(app model.InstalledApp) (model.InstalledApp, bool, error) 
 	return cur, true, nil
 }
 
-// signedBundleIdentifierOf returns the main bundle identifier an external
-// certificate installation of app puts on the device: the one recorded from
-// its plan, else the custom identifier (the engine installs the main app
-// under it), else the bundle identifier of the IPA.
+// installedBundleIdentifierColumn is the SQL expression of the bundle
+// identifier an installed app record puts on the device: the signed bundle
+// identifier of an external certificate installation, else the custom
+// identifier, else the bundle identifier of the IPA. Columns added to existing
+// rows by AutoMigrate are NULL, so each fallback ignores both NULL and empty.
+const installedBundleIdentifierColumn = "COALESCE(NULLIF(signed_bundle_identifier, ''), NULLIF(custom_identifier, ''), bundle_identifier)"
+
+// signedBundleIdentifierOf returns the main bundle identifier an installation
+// of app puts on the device: the one recorded from its plan, else the custom
+// identifier, else the bundle identifier of the IPA.
 func signedBundleIdentifierOf(app model.InstalledApp) string {
 	switch {
 	case app.SignedBundleIdentifier != "":

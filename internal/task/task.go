@@ -61,6 +61,9 @@ type installOperationKey struct {
 	IpaPath          string
 	Account          string
 	BundleIdentifier string
+	// CustomIdentifier is part of the key: the same IPA installed with and
+	// without it is two different apps, so both may be queued at once.
+	CustomIdentifier string
 	CustomName       string
 	RemoveExtensions bool
 	SourceKind       string
@@ -290,6 +293,7 @@ func installKey(v model.InstalledApp) installOperationKey {
 		IpaPath:          v.IpaPath,
 		Account:          v.Account,
 		BundleIdentifier: v.BundleIdentifier,
+		CustomIdentifier: v.CustomIdentifier,
 		CustomName:       v.CustomName,
 		RemoveExtensions: v.RemoveExtensions,
 		SourceKind:       v.Source.Kind,
@@ -588,6 +592,7 @@ func (t *Task) runInternal(v model.InstalledApp, refresh bool, installMgr *manag
 		Port:             dev.Port,
 		IpaPath:          v.IpaPath,
 		CustomName:       v.CustomName,
+		CustomIdentifier: v.CustomIdentifier,
 		RemoveExtensions: v.RemoveExtensions,
 		RefreshMode:      refresh,
 	})
