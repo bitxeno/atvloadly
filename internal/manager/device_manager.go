@@ -187,6 +187,7 @@ func (dm *DeviceManager) checkRemotePairingAsync(ctx context.Context, identifier
 	dm.pairingMu.Unlock()
 	defer dm.finishPairingCheck(identifier, check)
 
+	log.Debugf("pairing check started: identifier=%s service=%s ip=%s port=%d", identifier, serviceName, ip, port)
 	v, err := dm.CheckDevicePairedContext(checkCtx, identifier, authTag)
 	if err != nil || v == nil {
 		return

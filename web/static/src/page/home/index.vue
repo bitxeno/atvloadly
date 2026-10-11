@@ -997,6 +997,9 @@ import DownloadIcon from "@/assets/icons/download.svg";
 .atv-indicator-tip::before {
   white-space: pre-line;
   text-align: left;
+  /* Source errors carry unbreakable URLs: break them so the text stays
+     inside the bubble instead of running over it and the table behind. */
+  overflow-wrap: anywhere;
 }
 
 .atv-source-line .badge-info {
