@@ -303,8 +303,10 @@
       },
       "custom_identifier": {
         "label": "Anpassat paket-ID:",
-        "placeholder": "IPA-filens paket-ID",
-        "alt": "Lämna tomt för att behålla IPA-filens paket-ID:n. Apptilläggens paket-ID:n följer det anpassade paket-ID:t."
+        "placeholder": "Lämna tomt för att behålla IPA-filens paket-ID",
+        "tips": "Installerar appen under ett andra paket-ID, vilket registrerar ett andra App ID: appen ligger då bredvid den ursprungliga. Lämna tomt för att behålla IPA-filens paket-ID:n.",
+        "tips_external": "Installerar appen under ett andra paket-ID, bredvid den ursprungliga. Apptilläggens paket-ID:n följer det. Lämna tomt för att behålla IPA-filens paket-ID:n.",
+        "invalid": "Det anpassade paket-ID:t är ogiltigt: använd bara bokstäver, siffror, bindestreck och punkter."
       },
       "allow_missing_entitlements": {
         "label": "Tillåt saknade entitlements",

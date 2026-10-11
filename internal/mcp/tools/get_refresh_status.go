@@ -25,6 +25,10 @@ type getRefreshStatusItem struct {
 	LastErrorCode     model.RefreshedError `json:"last_error_code"`
 	IsExpired         bool                 `json:"is_expired"`
 	SigningMode       model.SigningMode    `json:"signing_mode"`
+	// CustomIdentifier is the bundle identifier the app is installed under when
+	// the user requested one; empty keeps the bundle identifier of the IPA. Two
+	// records can share BundleIdentifier and differ only by this value.
+	CustomIdentifier string `json:"custom_identifier,omitempty"`
 	// AutoRefresh is false for apps signed with an external certificate: they
 	// are never refreshed automatically and expire with their signing identity.
 	AutoRefresh bool `json:"auto_refresh"`
@@ -69,6 +73,7 @@ func handleGetRefreshStatus(_ context.Context, _ *sdkmcp.CallToolRequest, input 
 			AppID:             app.ID,
 			IpaName:           app.IpaName,
 			BundleIdentifier:  app.BundleIdentifier,
+			CustomIdentifier:  app.CustomIdentifier,
 			RefreshState:      state,
 			RefreshInProgress: inProgress,
 			LastRefreshAt:     app.RefreshedDate,

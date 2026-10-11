@@ -495,8 +495,11 @@ func route(fi *fiber.App) {
 			if account == "" {
 				return c.Status(http.StatusOK).JSON(apiError("account is required"))
 			}
+			// The installation is queued: an invalid identifier is refused now.
 			if customIdentifier != "" {
-				return c.Status(http.StatusOK).JSON(apiError("custom_identifier requires an external signing certificate"))
+				if err := appcheck.ValidateBundleIdentifier(customIdentifier); err != nil {
+					return c.Status(http.StatusOK).JSON(apiSigningError(err))
+				}
 			}
 		case model.SigningModeExternalCertificate:
 			if account != "" {

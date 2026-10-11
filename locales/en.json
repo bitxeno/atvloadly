@@ -304,8 +304,10 @@
             },
             "custom_identifier": {
                 "label": "Custom bundle identifier:",
-                "placeholder": "Bundle identifier of the IPA",
-                "alt": "Leave empty to keep the identifiers of the IPA. The identifiers of the app extensions follow the custom identifier."
+                "placeholder": "Leave blank to keep the IPA's bundle identifier",
+                "tips": "Installs the app under a second bundle identifier, which registers another App ID: the app then sits next to the original one. Leave empty to keep the identifiers of the IPA.",
+                "tips_external": "Installs the app under a second bundle identifier, next to the original one. The identifiers of the app extensions follow it. Leave empty to keep the identifiers of the IPA.",
+                "invalid": "The custom bundle identifier is invalid: use only letters, digits, hyphens and dots."
             },
             "allow_missing_entitlements": {
                 "label": "Allow missing entitlements",

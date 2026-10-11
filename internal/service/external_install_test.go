@@ -196,9 +196,19 @@ func TestSaveAppKeepsSigningModesApart(t *testing.T) {
 		app.SignedBundleIdentifier = customIdentifier
 		return app
 	}
+	// appleIDCustom is an Apple ID install under a custom bundle identifier.
+	// Apple ID records never carry a signed bundle identifier: the custom
+	// identifier alone says which app is on the device.
+	appleIDCustom := func(bundleID, customIdentifier string) model.InstalledApp {
+		app := appleID(model.SigningModeAppleID)
+		app.BundleIdentifier = bundleID
+		app.CustomIdentifier = customIdentifier
+		return app
+	}
 
 	// historical stores the existing record with a NULL signing mode, as
-	// AutoMigrate leaves the rows created before the column existed.
+	// AutoMigrate leaves the rows created before the column existed. Every
+	// column added later is NULL on such a row, not empty.
 	tests := []struct {
 		name       string
 		existing   model.InstalledApp
@@ -216,6 +226,13 @@ func TestSaveAppKeepsSigningModesApart(t *testing.T) {
 		{name: "external reinstall under the same custom identifier", existing: customized(external(1), bundleID, "app.custom"), saved: customized(external(1), bundleID, "app.custom"), wantMerge: true},
 		{name: "external install of the same app under a custom identifier", existing: external(1), saved: customized(external(1), bundleID, "app.custom")},
 		{name: "external install of another app under the same identifier", existing: customized(external(1), bundleID, "app.custom"), saved: customized(external(1), "com.example.other", "app.custom"), wantMerge: true},
+		{name: "apple id reinstall under the same custom identifier", existing: appleIDCustom(bundleID, "app.custom"), saved: appleIDCustom(bundleID, "app.custom"), wantMerge: true},
+		{name: "apple id install of the same app under a custom identifier", existing: appleID(model.SigningModeAppleID), saved: appleIDCustom(bundleID, "app.custom")},
+		{name: "apple id install without a custom identifier over a custom one", existing: appleIDCustom(bundleID, "app.custom"), saved: appleID(model.SigningModeAppleID)},
+		{name: "apple id install with another custom identifier", existing: appleIDCustom(bundleID, "app.custom"), saved: appleIDCustom(bundleID, "app.other")},
+		{name: "apple id install of another app under the same identifier", existing: appleIDCustom(bundleID, "app.custom"), saved: appleIDCustom("com.example.other", "app.custom"), wantMerge: true},
+		{name: "apple id custom identifier over a historical row", existing: appleID(""), historical: true, saved: appleIDCustom(bundleID, "app.custom")},
+		{name: "apple id install over a historical row with a custom identifier", existing: appleIDCustom(bundleID, "app.custom"), historical: true, saved: appleID(model.SigningModeAppleID), wantMerge: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -226,8 +243,8 @@ func TestSaveAppKeepsSigningModesApart(t *testing.T) {
 				t.Fatalf("save existing: %v", err)
 			}
 			if tt.historical {
-				if err := db.Store().Exec("UPDATE installed_apps SET signing_mode = NULL WHERE id = ?", existing.ID).Error; err != nil {
-					t.Fatalf("clear signing mode: %v", err)
+				if err := db.Store().Exec("UPDATE installed_apps SET signing_mode = NULL, custom_identifier = NULL, signed_bundle_identifier = NULL WHERE id = ?", existing.ID).Error; err != nil {
+					t.Fatalf("clear added columns: %v", err)
 				}
 			}
 			saved, err := SaveApp(tt.saved)
@@ -399,7 +416,8 @@ func TestValidateInstallRequest(t *testing.T) {
 		wantSerial string
 	}{
 		{name: "apple id upload path accepted", request: model.InstalledApp{UDID: "DEVICE", Account: "user@example.com", IpaPath: uploaded}, wantPath: resolvedUploaded},
-		{name: "apple id custom identifier", request: model.InstalledApp{UDID: "DEVICE", Account: "user@example.com", IpaPath: uploaded, CustomIdentifier: "app.custom"}, wantErr: true},
+		{name: "apple id custom identifier trimmed", request: model.InstalledApp{UDID: "DEVICE", Account: "user@example.com", IpaPath: uploaded, CustomIdentifier: " app.custom "}, wantPath: resolvedUploaded, wantID: "app.custom"},
+		{name: "apple id invalid custom identifier", request: model.InstalledApp{UDID: "DEVICE", Account: "user@example.com", IpaPath: uploaded, CustomIdentifier: "app/custom"}, wantErr: true},
 		{name: "external path outside the data directories", request: model.InstalledApp{UDID: "DEVICE", IpaPath: outside, SigningMode: model.SigningModeExternalCertificate, SigningIdentityID: 1}, wantErr: true},
 		{name: "external custom identifier trimmed", request: model.InstalledApp{UDID: "DEVICE", IpaPath: uploaded, SigningMode: model.SigningModeExternalCertificate, SigningIdentityID: 1, CustomIdentifier: " app.custom "}, wantPath: resolvedUploaded, wantID: "app.custom"},
 		{name: "apple id revocation authorization passed through", request: model.InstalledApp{UDID: "DEVICE", Account: "user@example.com", IpaPath: uploaded, RevokeCertificateSerial: "AB12cd34"}, wantPath: resolvedUploaded, wantSerial: "AB12cd34"},

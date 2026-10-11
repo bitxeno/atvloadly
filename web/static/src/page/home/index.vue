@@ -195,6 +195,16 @@
                   <div class="flex flex-col justify-start prose atv-app-text">
                     <div>{{ appName(item) }}</div>
                     <div class="stat-title text-sm">{{ item.version }}</div>
+                    <!-- The same IPA installed with and without a custom bundle
+                         identifier is two different apps on the device: show the
+                         identifier so the two rows can be told apart. -->
+                    <div
+                      v-if="item.custom_identifier"
+                      class="stat-title text-xs truncate"
+                      :title="item.custom_identifier"
+                    >
+                      {{ item.custom_identifier }}
+                    </div>
                     <div class="flex flex-wrap items-center gap-1 atv-source-line">
                       <span class="badge badge-info badge-sm max-w-full" v-if="item.source.latest_build_id">
                         <span class="truncate">{{

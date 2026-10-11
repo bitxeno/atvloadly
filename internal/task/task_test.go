@@ -293,3 +293,24 @@ func appIDs(apps []model.InstalledApp) []uint {
 	}
 	return ids
 }
+
+// The same IPA installed with and without a custom bundle identifier installs
+// two different apps on the device, so both may be queued at once instead of
+// the second being dropped as an installation already in progress.
+func TestInstallKeySeparatesCustomIdentifiers(t *testing.T) {
+	plain := model.InstalledApp{UDID: "DEVICE", Account: "user@example.com", IpaPath: "/data/tmp/app.ipa", BundleIdentifier: "com.example.app"}
+	custom := plain
+	custom.CustomIdentifier = "app.custom"
+
+	if installKey(plain) == installKey(custom) {
+		t.Fatal("installs under different bundle identifiers share one queue key")
+	}
+
+	// The custom identifier is the only difference: the rest of the request
+	// still identifies the installation.
+	customKey, plainKey := installKey(custom), installKey(plain)
+	customKey.CustomIdentifier, plainKey.CustomIdentifier = "", ""
+	if customKey != plainKey {
+		t.Fatalf("the keys differ by more than the custom identifier:\n%+v\n%+v", customKey, plainKey)
+	}
+}

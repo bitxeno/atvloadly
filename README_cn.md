@@ -31,6 +31,7 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 * 支持同时使用多个 Apple ID 帐号
 * 支持使用自有证书（P12 + 描述文件）签名，无需 Apple ID
 * i18n 多语言支持
+* 支持使用自定义 Bundle ID 安装应用（Apple ID 或 P12 均可），可与原应用共存
 
 ## 截图
 

@@ -30,6 +30,7 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
 * Supports use of multiple Apple ID accounts
 * Supports signing with your own certificate (P12 + provisioning profile), without an Apple ID
 * I18n support
+* Supports installing an app under a custom bundle identifier (Apple ID or P12), next to the original app
 
 ## Screenshots
 
