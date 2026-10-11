@@ -442,6 +442,17 @@
 
 }
 
+/* Tablets keep the desktop navbar, but daisyUI anchors every menu to its
+   trigger's left edge, so the rightmost menu (theme) runs past the viewport
+   and adds a page-wide horizontal scrollbar. Anchor the menus to their
+   trigger's right edge instead, as the phone breakpoint already does. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .app-container > .navbar .dropdown > .dropdown-content {
+    left: auto;
+    right: 0;
+  }
+}
+
 /* mobile-footer-clean-test-v1 */
 @media (max-width: 768px) {
   .atv-refresh-footer-note {
