@@ -428,6 +428,18 @@
     overflow-wrap: inherit;
   }
 
+  /* The warning badge tooltip must stay inside the phone viewport. daisyUI
+     anchors a right tooltip at the badge's right edge (left: 100% + tail)
+     and caps it with max-width, which clamps width but not the anchor: the
+     20rem bubble starts at x=133 and runs past the screen, making the whole
+     page scroll sideways. Pin it to the badge's left edge and cap it against
+     the viewport so the bubble fits without widening the page. */
+  .app-container .main-container .atv-indicator-tip::before {
+    left: 0;
+    right: auto;
+    max-width: min(20rem, calc(100vw - 7.5rem));
+  }
+
 }
 
 /* mobile-footer-clean-test-v1 */
