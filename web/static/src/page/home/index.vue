@@ -205,6 +205,15 @@
                     >
                       {{ item.custom_identifier }}
                     </div>
+                    <div class="stat-title text-sm">
+                      <a
+                        class="link link-hover stat-title font-normal"
+                        :href="logUrl(item)"
+                        :title="$t('home.table.tips.view_log')"
+                        target="_blank"
+                        >{{ formatRefreshDate(item) }}</a
+                      >
+                    </div>
                     <div class="flex flex-wrap items-center gap-1 atv-source-line">
                       <span class="badge badge-info badge-sm max-w-full" v-if="item.source.latest_build_id">
                         <span class="truncate">{{
@@ -227,15 +236,6 @@
                           $t("home.source.auto")
                         }}</span>
                       </button>
-                    </div>
-                    <div class="stat-title text-sm">
-                      <a
-                        class="link link-hover stat-title font-normal"
-                        :href="logUrl(item)"
-                        :title="$t('home.table.tips.view_log')"
-                        target="_blank"
-                        >{{ formatRefreshDate(item) }}</a
-                      >
                     </div>
                   </div>
                 </div>
