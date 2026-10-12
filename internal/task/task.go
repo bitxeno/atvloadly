@@ -28,6 +28,8 @@ type Task struct {
 	InstallingApps  sync.Map
 	InstallAppQueue chan TaskItem
 	chExitQueue     chan bool
+	queueStartOnce  sync.Once
+	queueStopOnce   sync.Once
 	InvalidAccounts map[string]bool
 	// RefreshingDevices prevents concurrent refresh operations for the same device UDID
 	RefreshingDevices sync.Map
@@ -98,7 +100,10 @@ func new() *Task {
 
 func (t *Task) RunSchedule() error {
 	if t.c != nil {
-		t.Stop()
+		// Updating cron settings must not restart the install worker.
+		// That worker can still be in its initial 30-second usbmuxd wait.
+		<-t.c.Stop().Done()
+		t.c = nil
 	}
 
 	if _, err := cron.ParseStandard(app.Settings.Task.CrodTime); err != nil {
@@ -151,13 +156,20 @@ func (t *Task) Start() {
 		}
 	})
 
-	go t.runQueue()
+	// The installation queue belongs to the Task lifetime, not to the
+	// cron schedule. Repeated settings updates must never spawn new workers.
+	t.queueStartOnce.Do(func() { go t.runQueue() })
 }
 
+// Stop shuts down the Task. RunSchedule only replaces the cron schedule.
 func (t *Task) Stop() {
-	t.chExitQueue <- true
-	<-t.c.Stop().Done()
-	t.c = nil
+	// Closing is non-blocking even when runQueue is still waiting for
+	// usbmuxd, and the once guard makes repeated Stop calls safe.
+	t.queueStopOnce.Do(func() { close(t.chExitQueue) })
+	if t.c != nil {
+		<-t.c.Stop().Done()
+		t.c = nil
+	}
 }
 
 // removeStaleTempFiles removes the staged files abandoned in the upload
