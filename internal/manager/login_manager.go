@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
@@ -16,9 +16,14 @@ import (
 )
 
 type LoginManager struct {
+	// Serializes attempts on this WebSocket to protect the shared output buffer.
+	runMu sync.Mutex
+	// Protects the currently active login subprocess and its input pipe.
+	stateMu sync.Mutex
+
 	outputStdout *outputWriter
 
-	stdin io.WriteCloser
+	stdin *os.File
 
 	cancel context.CancelFunc
 	em     *event.Manager
@@ -34,26 +39,43 @@ func NewLoginManager() *LoginManager {
 }
 
 func (t *LoginManager) Start(ctx context.Context, account, password string) error {
+	if !t.runMu.TryLock() {
+		return errors.New("login already in progress")
+	}
+	defer t.runMu.Unlock()
 	t.outputStdout.Reset()
 
 	// set execute timeout 10 minutes
 	timeout := 10 * time.Minute
 	ctx, cancel := context.WithTimeout(ctx, timeout)
-	if t.cancel != nil {
-		t.cancel()
-	}
+	t.stateMu.Lock()
 	t.cancel = cancel
+	t.stateMu.Unlock()
+	defer func() {
+		t.stateMu.Lock()
+		t.cancel = nil
+		t.stateMu.Unlock()
+		cancel()
+	}()
 
 	stdinReader, stdinWriter, err := os.Pipe()
 	if err != nil {
 		log.Err(err).Msg("Error creating stdin pipe: ")
 		return err
 	}
+	t.stateMu.Lock()
 	t.stdin = stdinWriter
+	t.stateMu.Unlock()
 	defer func() {
+		// Remove the active reference before closing the specific pipe for
+		// this attempt. In-flight os.File writes return an error on close.
+		t.stateMu.Lock()
+		if t.stdin == stdinWriter {
+			t.stdin = nil
+		}
+		t.stateMu.Unlock()
+		_ = stdinWriter.Close()
 		_ = stdinReader.Close()
-		_ = t.stdin.Close()
-		t.stdin = nil
 	}()
 
 	err = execx.CommandContext(ctx, "plumesign", "account", "login", "-u", account, "-p", password).
@@ -76,9 +98,12 @@ func (t *LoginManager) Start(ctx context.Context, account, password string) erro
 }
 
 func (t *LoginManager) Close() {
-	if t.cancel != nil {
-		t.cancel()
-		t.cancel = nil
+	t.stateMu.Lock()
+	cancel := t.cancel
+	t.cancel = nil
+	t.stateMu.Unlock()
+	if cancel != nil {
+		cancel()
 	}
 	if t.em != nil {
 		_ = t.em.CloseWait()
@@ -93,7 +118,14 @@ func (t *LoginManager) OnOutput(fn func(string)) {
 }
 
 func (t *LoginManager) Write(p []byte) {
-	_, _ = t.stdin.Write(p)
+	t.stateMu.Lock()
+	writer := t.stdin
+	t.stateMu.Unlock()
+	// A late 2FA reply is harmless after the subprocess exits. Never keep
+	// stateMu across Write: an OS pipe can block until its reader exits.
+	if writer != nil {
+		_, _ = writer.Write(p)
+	}
 }
 
 func (t *LoginManager) ErrorLog() string {
