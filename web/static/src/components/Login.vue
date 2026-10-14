@@ -159,7 +159,11 @@ export default {
             let _this = this;
             let line = e.data;
 
-            if (line.indexOf("Enter 2FA code") !== -1) {
+            // plumesign prompts for a code on every 2FA channel (device push and
+            // SMS fallback). Match any of them rather than a single fixed
+            // string, so a wording change upstream cannot leave the user
+            // waiting on a prompt with no dialog to answer it.
+            if (_this.is2FAPrompt(line)) {
                 _this.authForm.authcode = "";
                 _this.authDialogVisible = true;
                 return;
@@ -205,6 +209,14 @@ export default {
             console.log("Login WebSocket connect failed.");
             this.loginLoading = false;
             toast.error("WebSocket connection failed");
+        },
+        is2FAPrompt(line) {
+            if (typeof line !== "string") return false;
+            const text = line.toLowerCase();
+            return (
+                text.indexOf("enter 2fa code") !== -1 ||
+                text.indexOf("enter the code sent") !== -1
+            );
         },
         onSubmit2FA() {
             let _this = this;
