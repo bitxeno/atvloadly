@@ -479,6 +479,8 @@
       "title": "Napredno",
       "update_coreadi": "Ažuriraj CoreADI",
       "update_coreadi_confirm": "Da li ste sigurni da želite da ažurirate CoreADI biblioteke?",
+      "reset_anisette": "Resetuj Anisette podatke",
+      "reset_anisette_confirm": "Da li ste sigurni da želite da resetujete Anisette podatke? Biće ponovo kreirani pri sledećem prijavljivanju ili instalaciji.",
       "cancel": "Otkaži",
       "confirm": "Potvrdi",
       "toast": {
@@ -624,7 +626,8 @@
       "step2": "Preuzmite <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a>, povežite iPhone i izvezite datoteku za uparivanje u režimu <b>RPPairing</b>.",
       "step3": "Pomoću alata idevice_pair omogućite bežično otklanjanje grešaka.",
       "step4": "Proverite da li je vaš iPhone vidljiv u odeljku <a href=\"/#/tools\" class=\"link\">Alatke</a>.",
-      "step5": "Pouzdan rad automatskog osvežavanja na iPhone-u nije zagarantovan; iPhone mora biti otključan da bi udaljeno osvežavanje pravilno radilo."
+      "step5": "Pouzdan rad automatskog osvežavanja na iPhone-u nije zagarantovan; iPhone mora biti otključan da bi udaljeno osvežavanje pravilno radilo.",
+      "step6": "Osvežavanje radi samo na lokalnoj mreži: preko VPN-a ili Tailscale-a ne može pravilno da se osveži."
     },
     "form": {
       "device_label": "Izaberite odgovarajući uređaj",

@@ -482,6 +482,8 @@
                 "title": "Advanced",
                 "update_coreadi": "Update CoreADI",
                 "update_coreadi_confirm": "Are you sure you want update the CoreADI libraries?",
+                "reset_anisette": "Reset Anisette Data",
+                "reset_anisette_confirm": "Are you sure you want to reset the Anisette data? It will be provisioned again on the next login or install.",
                 "cancel": "Cancel",
                 "confirm": "Confirm",
                 "toast": {
@@ -625,7 +627,8 @@
             "step2": "Please download <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a>, connect your iPhone, and export the <b>RPPairing</b> mode Pairing File.",
             "step3": "Please use idevice_pair to enable Wireless Debugging functionality.",
             "step4": "Please ensure that your iPhone device is discoverable in the <a href=\"/#/tools\" class=\"link\">Tools</a>.",
-            "step5": "Automatic refresh on iPhone is not guaranteed to be reliable; the iPhone must be unlocked for remote refresh to work properly."
+            "step5": "Automatic refresh on iPhone is not guaranteed to be reliable; the iPhone must be unlocked for remote refresh to work properly.",
+            "step6": "Refresh works on the local network only: it cannot refresh properly over VPN or Tailscale."
         },
         "form": {
             "device_label": "Select Corresponding Device",

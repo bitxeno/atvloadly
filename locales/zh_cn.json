@@ -482,6 +482,8 @@
                 "title": "高级",
                 "update_coreadi": "更新 CoreADI",
                 "update_coreadi_confirm": "确认要下载并更新 CoreADI 库文件吗？",
+                "reset_anisette": "重置 Anisette 数据",
+                "reset_anisette_confirm": "确认要重置 Anisette 数据吗？下次登录或安装时将重新生成。",
                 "cancel": "取消",
                 "confirm": "确认",
                 "toast": {
@@ -625,7 +627,8 @@
             "step2": "请下载 <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a> 并连接 iPhone，导出 <b>RPPairing</b> 模式的 Pairing File",
             "step3": "请使用 idevice_pair 开启 Wireless Debugging 功能",
             "step4": "请确保 <a href=\"/#/tools\" class=\"link\">工具</a> 中能发现您的 iPhone 设备",
-            "step5": "iPhone 自动刷新不保证稳定性，iPhone 需要解锁后才能正常远程刷新"
+            "step5": "iPhone 自动刷新不保证稳定性，iPhone 需要解锁后才能正常远程刷新",
+            "step6": "刷新仅支持局域网，通过 VPN/Tailscale 无法正常刷新"
         },
         "form": {
             "device_label": "选择对应设备",
