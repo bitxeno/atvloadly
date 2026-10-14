@@ -479,6 +479,8 @@
       "title": "Avancerat",
       "update_coreadi": "Uppdatera CoreADI",
       "update_coreadi_confirm": "Vill du verkligen uppdatera CoreADI-biblioteken?",
+      "reset_anisette": "Återställ Anisette-data",
+      "reset_anisette_confirm": "Vill du verkligen återställa Anisette-data? Den skapas på nytt vid nästa inloggning eller installation.",
       "cancel": "Avbryt",
       "confirm": "Bekräfta",
       "toast": {
@@ -621,7 +623,8 @@
       "step2": "Ladda ned <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a>, anslut din iPhone och exportera en parkopplingsfil i läget <b>RPPairing</b>.",
       "step3": "Använd idevice_pair för att aktivera trådlös felsökning.",
       "step4": "Kontrollera att din iPhone går att hitta under <a href=\"/#/tools\" class=\"link\">Verktyg</a>.",
-      "step5": "Automatisk uppdatering på iPhone är inte garanterat tillförlitlig. Enheten måste vara upplåst för att fjärruppdatering ska fungera korrekt."
+      "step5": "Automatisk uppdatering på iPhone är inte garanterat tillförlitlig. Enheten måste vara upplåst för att fjärruppdatering ska fungera korrekt.",
+      "step6": "Uppdatering fungerar bara i det lokala nätverket: den kan inte uppdateras korrekt via VPN eller Tailscale."
     },
     "form": {
       "device_label": "Välj motsvarande enhet",

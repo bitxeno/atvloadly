@@ -11,6 +11,7 @@
           <li class="text-sm">{{ $t("laboratory.tips.step3") }}</li>
           <li class="text-sm hidden" v-html="$t('laboratory.tips.step4')"></li>
           <li class="text-sm">{{ $t("laboratory.tips.step5") }}</li>
+          <li class="text-sm">{{ $t("laboratory.tips.step6") }}</li>
         </ul>
       </div>
     </div>

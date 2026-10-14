@@ -465,7 +465,7 @@
     <section class="section bg-base-100">
       <h2 class="atv-section-heading">{{ $t('settings.advanced.title') }}</h2>
       <form>
-        <div class="form-item">
+        <div class="form-item" style="display: none">
           <label class="form-item-label">
             <span class="label-text">{{ $t('settings.advanced.update_coreadi') }}</span>
           </label>
@@ -482,6 +482,27 @@
               </template>
               <button type="button" class="btn btn-error w-48" :disabled="advanced.adiLoading">
                 <span class="loading loading-spinner" v-show="advanced.adiLoading"></span>{{ $t('settings.advanced.update_coreadi') }}
+              </button>
+            </Popper>
+          </div>
+        </div>
+        <div class="form-item">
+          <label class="form-item-label">
+            <span class="label-text">{{ $t('settings.advanced.reset_anisette') }}</span>
+          </label>
+          <div class="form-item-content">
+            <Popper placement="top" arrow="true">
+              <template #content="{ close }">
+                <div class="flex flex-col gap-y-2">
+                  <div class="py-2">{{ $t('settings.advanced.reset_anisette_confirm') }}</div>
+                  <div class="flex gap-x-2 justify-end items-center">
+                    <a class="link link-primary link-hover" @click="close">{{ $t('settings.advanced.cancel') }}</a>
+                    <button class="btn btn-primary" @click.prevent="confirmResetAnisette(close)">{{ $t('settings.advanced.confirm') }}</button>
+                  </div>
+                </div>
+              </template>
+              <button type="button" class="btn btn-error w-48" :disabled="advanced.anisetteLoading">
+                <span class="loading loading-spinner" v-show="advanced.anisetteLoading"></span>{{ $t('settings.advanced.reset_anisette') }}
               </button>
             </Popper>
           </div>
@@ -533,6 +554,7 @@ export default {
       },
       advanced: {
         adiLoading: false,
+        anisetteLoading: false,
       },
       savedSources: [],
       newSourceUrl: "",
@@ -697,6 +719,28 @@ export default {
         })
         .finally(() => {
           _this.advanced.adiLoading = false;
+        });
+    },
+
+    confirmResetAnisette(close) {
+      let _this = this;
+      close && close();
+
+      _this.advanced.anisetteLoading = true;
+      api.resetAnisette()
+        .then((res) => {
+          if (res.data) {
+            toast.success(this.$t('settings.advanced.toast.success'));
+          } else {
+            toast.error(this.$t('settings.advanced.toast.failed'));
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+          toast.error(this.$t('settings.advanced.toast.failed'));
+        })
+        .finally(() => {
+          _this.advanced.anisetteLoading = false;
         });
     },
 
