@@ -133,7 +133,7 @@ func Parse(readerAt io.ReaderAt, size int64) (*IPA, error) {
 	for _, f := range iconFiles {
 		size, err := iconSize(f.Name)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		if size > maxSize {
 			maxSize = size
