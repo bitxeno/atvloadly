@@ -307,11 +307,17 @@ func (dm *DeviceManager) GetDeviceInfo(dev *model.Device) (*model.DeviceInfo, er
 		log.Err(err).Msgf("Error getting device info for %s (%s): %s", dev.Name, dev.UDID, string(data))
 		return nil, fmt.Errorf("%s%s", string(data), err.Error())
 	}
-	output := string(data)
-	lines := strings.Split(string(output), "\n")
 
-	devInfo := &model.DeviceInfo{UniqueDeviceID: dev.UDID}
-	for _, line := range lines {
+	devInfo := parseDeviceInfoOutput(string(data), dev.UDID)
+	return devInfo, nil
+}
+
+// parseDeviceInfoOutput parses the key: value lines printed by
+// plumesign device-info. When udid is impossible to read from the output,
+// it is kept as the fallback UniqueDeviceID.
+func parseDeviceInfoOutput(output string, fallbackUDID string) *model.DeviceInfo {
+	devInfo := &model.DeviceInfo{UniqueDeviceID: fallbackUDID}
+	for _, line := range strings.Split(output, "\n") {
 		var parts = strings.Split(line, ":")
 		if len(parts) != 2 {
 			continue
@@ -341,7 +347,7 @@ func (dm *DeviceManager) GetDeviceInfo(dev *model.Device) (*model.DeviceInfo, er
 			devInfo.DeveloperModeStatus = value == "true"
 		}
 	}
-	return devInfo, nil
+	return devInfo
 }
 
 func (dm *DeviceManager) AppendProductInfo(dev *model.Device, devInfo model.DeviceInfo) {

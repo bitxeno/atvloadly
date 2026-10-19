@@ -277,6 +277,40 @@ func route(fi *fiber.App) {
 		}
 	})
 
+	// Manually add a device that avahi cannot discover, typically one
+	// reached through a mesh VPN (Tailscale). The device is probed over
+	// the network with plumesign device-info; the pairing flow then runs
+	// normally over the supplied address.
+	api.Post("/devices/manual", func(c *fiber.Ctx) error {
+		var req struct {
+			Name string `json:"name"`
+			IP   string `json:"ip"`
+			Port uint16 `json:"port"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument. error: " + err.Error()))
+		}
+
+		device, err := manager.AddManualDevice(req.IP, req.Port, req.Name)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(device))
+	})
+
+	api.Post("/devices/manual/:id/delete", func(c *fiber.Ctx) error {
+		id := c.Params("id")
+
+		found, err := manager.DeleteManualDevice(id)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		if !found {
+			return c.Status(http.StatusOK).JSON(apiError("device not found"))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
 	api.Get("/devices/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		if device, ok := manager.GetDeviceDetail(id); ok {

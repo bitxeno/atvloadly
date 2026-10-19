@@ -38,6 +38,10 @@ func (dm *DeviceManager) Start() {
 	ctx := dm.ctx
 	dm.mu.Unlock()
 
+	// Manual devices have no discovery mechanism to recreate them, so they
+	// are restored from the persistence file at every startup.
+	dm.LoadManualDevices()
+
 	client, err := zeroconf.New().
 		Browse(dm.handleMDNSEvent,
 			zeroconf.NewType(mdnsServiceAppleMobdev2),

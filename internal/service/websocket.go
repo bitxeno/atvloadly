@@ -508,6 +508,11 @@ func runPairMessage(mgr *manager.WebsocketManager, pairMgr *manager.PairManager,
 		mgr.WriteMessage(msg)
 		return
 	}
+
+	// The pair succeeded. Mark the device Paired: manual devices have no
+	// mDNS re-announcement to upgrade their status, so this is required
+	// before the device becomes installable.
+	manager.PairCompleted(device.ID)
 }
 
 // HandleScreenshotMessage removed — the screenshot flow now uses the
