@@ -80,7 +80,10 @@
           "port_label": "Parkopplingsport:",
           "port_hint": "Porten till tjänsten för manuell parkoppling, alltså den som tar emot PIN-flödet; hitta den med dns-sd (dns-sd -L \"Enhetsnamn\" _remotepairing-manual-pairing._tcp local)",
           "install_port_label": "Installationsport:",
-          "install_port_hint": "Porten till fjärrparkopplingstjänsten som installationer och nätverkskontroller körs via; 0 behåller installationer på parkopplingsporten, vilket bara fungerar när en tjänst hanterar båda"
+          "install_port_hint": "Porten till fjärrparkopplingstjänsten som installationer och nätverkskontroller körs via; 0 behåller installationer på parkopplingsporten, vilket bara fungerar när en tjänst hanterar båda",
+          "install_port_scan": "Sök port",
+          "install_port_scan_success": "Installationsport {port} hittades",
+          "install_port_scan_failed": "Ingen installationsport hittades; kontrollera att enheten kan nås"
         },
         "import": {
           "file_label": "Parkopplingspost (.plist):",
@@ -249,7 +252,10 @@
       "install_port": {
         "label": "Installationsport:",
         "placeholder": "49152",
-        "hint": "Porten till tjänsten som installationer körs via; den kan skilja sig från parkopplingsporten. Lämna tomt för att behålla den registrerade porten."
+        "hint": "Porten till tjänsten som installationer körs via; den kan skilja sig från parkopplingsporten. Lämna tomt för att behålla den registrerade porten.",
+        "scan": "Sök port",
+        "scan_success": "Installationsport {port} hittades",
+        "scan_failed": "Ingen installationsport hittades; kontrollera att enheten kan nås"
       },
       "mode": {
         "file": "IPA-fil",

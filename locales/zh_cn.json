@@ -80,7 +80,10 @@
                     "port_label": "配对端口：",
                     "port_hint": "手动配对服务的端口，即接受 PIN 码流程的端口；可用 dns-sd 查询（dns-sd -L \"设备名称\" _remotepairing-manual-pairing._tcp local）",
                     "install_port_label": "安装服务端口：",
-                    "install_port_hint": "安装和网络探测所经由的远程配对服务的端口；填 0 则安装也走配对端口，仅当同一服务同时支持两者时才有效"
+                    "install_port_hint": "安装和网络探测所经由的远程配对服务的端口；填 0 则安装也走配对端口，仅当同一服务同时支持两者时才有效",
+                    "install_port_scan": "扫描端口",
+                    "install_port_scan_success": "检测到安装端口 {port}",
+                    "install_port_scan_failed": "未找到安装端口；请检查设备是否可达"
                 },
                 "import": {
                     "file_label": "配对记录文件（.plist）：",
@@ -250,7 +253,10 @@
             "install_port": {
                 "label": "安装服务端口：",
                 "placeholder": "49152",
-                "hint": "安装所经由的服务的端口，可能与配对端口不同。留空则使用已登记的端口。"
+                "hint": "安装所经由的服务的端口，可能与配对端口不同。留空则使用已登记的端口。",
+                "scan": "扫描端口",
+                "scan_success": "检测到安装端口 {port}",
+                "scan_failed": "未找到安装端口；请检查设备是否可达"
             },
             "mode": {
                 "file": "IPA 文件",

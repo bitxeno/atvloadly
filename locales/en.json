@@ -80,7 +80,10 @@
                     "port_label": "Pairing port:",
                     "port_hint": "Port of the manual-pairing service, the one that accepts the PIN flow; find it with dns-sd (dns-sd -L \"Device Name\" _remotepairing-manual-pairing._tcp local)",
                     "install_port_label": "Install service port:",
-                    "install_port_hint": "Port of the remote-pairing service that installs and network probes run over; 0 keeps installs on the pairing port, which only works when one service serves both"
+                    "install_port_hint": "Port of the remote-pairing service that installs and network probes run over; 0 keeps installs on the pairing port, which only works when one service serves both",
+                    "install_port_scan": "Scan port",
+                    "install_port_scan_success": "Install port {port} detected",
+                    "install_port_scan_failed": "No install port found; check that the device is reachable"
                 },
                 "import": {
                     "file_label": "Pairing record (.plist):",
@@ -250,7 +253,10 @@
             "install_port": {
                 "label": "Install service port:",
                 "placeholder": "49152",
-                "hint": "Port of the service installs run over; it can differ from the pairing port. Leave empty to keep the registered port."
+                "hint": "Port of the service installs run over; it can differ from the pairing port. Leave empty to keep the registered port.",
+                "scan": "Scan port",
+                "scan_success": "Install port {port} detected",
+                "scan_failed": "No install port found; check that the device is reachable"
             },
             "mode": {
                 "file": "IPA file",

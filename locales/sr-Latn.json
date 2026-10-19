@@ -80,7 +80,10 @@
           "port_label": "Port uparivanja:",
           "port_hint": "Port usluge ručnog uparivanja, one koja prihvata tok sa PIN kodom; pronađite ga pomoću dns-sd (dns-sd -L „Ime uređaja“ _remotepairing-manual-pairing._tcp local)",
           "install_port_label": "Port usluge instalacije:",
-          "install_port_hint": "Port usluge daljinskog uparivanja preko koje idu instalacije i mrežne provere; 0 zadržava instalacije na portu uparivanja, što radi samo ako obe koriste istu uslugu"
+          "install_port_hint": "Port usluge daljinskog uparivanja preko koje idu instalacije i mrežne provere; 0 zadržava instalacije na portu uparivanja, što radi samo ako obe koriste istu uslugu",
+          "install_port_scan": "Skeniraj port",
+          "install_port_scan_success": "Pronađen port za instalisanje: {port}",
+          "install_port_scan_failed": "Port za instalisanje nije pronađen; proverite da li je uređaj dostupan"
         },
         "import": {
           "file_label": "Zapis uparivanja (.plist):",
@@ -249,7 +252,10 @@
       "install_port": {
         "label": "Port usluge instalacije:",
         "placeholder": "49152",
-        "hint": "Port usluge preko koje idu instalacije; može se razlikovati od porta uparivanja. Ostavite prazno za registrovani port."
+        "hint": "Port usluge preko koje idu instalacije; može se razlikovati od porta uparivanja. Ostavite prazno za registrovani port.",
+        "scan": "Skeniraj port",
+        "scan_success": "Pronađen port za instalisanje: {port}",
+        "scan_failed": "Port za instalisanje nije pronađen; proverite da li je uređaj dostupan"
       },
       "mode": {
         "file": "IPA datoteka",

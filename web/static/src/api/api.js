@@ -453,6 +453,14 @@ export default {
       method: "post",
     });
   },
+  scanInstallPort: (ip) => {
+    return request({
+      url: "/api/devices/scan/install-port",
+      method: "post",
+      data: { ip },
+      timeout: 120000,
+    });
+  },
   scanWireless: () => {
     return request({
       url: "/api/scan/wireless",

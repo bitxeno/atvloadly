@@ -48,6 +48,17 @@
                 v-model="installPortInput"
                 :placeholder="$t('install.form.install_port.placeholder')"
               />
+              <button
+                type="button"
+                class="btn btn-xs btn-outline mt-1"
+                :disabled="installPortScan.busy"
+                @click="scanInstallPort"
+                :title="$t('install.form.install_port.scan')"
+                :aria-label="$t('install.form.install_port.scan')"
+              >
+                <span class="loading loading-spinner loading-xs" v-show="installPortScan.busy"></span>
+                {{ $t("install.form.install_port.scan") }}
+              </button>
               <label class="label py-1 pt-0">
                 <span class="label-text-alt text-center">{{ $t("install.form.install_port.hint") }}</span>
               </label>
@@ -606,6 +617,10 @@ export default {
       // can tell which port the device currently announces. Empty keeps the
       // device's registered install port.
       installPortInput: "",
+      // State of the install-port scan launched from the port field. The
+      // sweep can take up to two minutes behind slow connections, so the
+      // button carries its own spinner and stays disabled while running.
+      installPortScan: { busy: false },
       loading: false,
       websock: null,
       // Generation of the current install attempt. Every release of the
@@ -854,6 +869,28 @@ export default {
             _this.form.account = _this.accounts[0].email;
           }
         }
+      });
+    },
+    scanInstallPort() {
+      const _this = this;
+      if (!_this.device.ip || _this.installPortScan.busy) {
+        return;
+      }
+      _this.installPortScan.busy = true;
+      api.scanInstallPort(_this.device.ip).then((res) => {
+        const port = res.data && res.data.install_port ? res.data.install_port : null;
+        if (port) {
+          _this.installPortInput = String(port);
+          toast.success(_this.$t("install.form.install_port.scan_success", { port }));
+        } else {
+          toast.error(_this.$t("install.form.install_port.scan_failed"));
+        }
+      }).catch(() => {
+        // request.js already shows the response error; add a short message
+        // since the scan may end silently for the user waiting two minutes.
+        toast.error(_this.$t("install.form.install_port.scan_failed"));
+      }).finally(() => {
+        _this.installPortScan.busy = false;
       });
     },
     setSigningMode(mode) {
