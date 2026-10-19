@@ -429,22 +429,23 @@ func route(fi *fiber.App) {
 	})
 
 	api.Post("/pair/import", func(c *fiber.Ctx) error {
-		// The record is optional: when it is already saved on this server,
-		// the device is validated with the saved pairing files instead.
-		var data []byte
-		if file, err := c.FormFile("file"); err == nil {
-			src, err := file.Open()
-			if err != nil {
-				return c.Status(http.StatusOK).JSON(apiError("Failed to open uploaded file"))
-			}
-			defer func() {
-				_ = src.Close()
-			}()
+		file, err := c.FormFile("file")
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("No file uploaded"))
+		}
 
-			data, err = io.ReadAll(src)
-			if err != nil {
-				return c.Status(http.StatusOK).JSON(apiError("Failed to read file content"))
-			}
+		// Read file contents
+		src, err := file.Open()
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Failed to open uploaded file"))
+		}
+		defer func() {
+			_ = src.Close()
+		}()
+
+		data, err := io.ReadAll(src)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Failed to read file content"))
 		}
 
 		ip := c.FormValue("ip")

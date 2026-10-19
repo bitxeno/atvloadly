@@ -285,14 +285,9 @@ func ResetAnisette() error {
 }
 
 func ImportPairingFile(ip string, port string, deviceID string, data []byte) error {
-	// A provided record is validated against the device and saved for later
-	// installs. Without one, the request proves the device with the pairing
-	// files already saved on this server: the network probe below completes
-	// the tunnel handshake only when one of them matches.
-	if len(data) > 0 {
-		if err := manager.ImportPairingFile(ip, port, data); err != nil {
-			return err
-		}
+	// Call manager to process the file
+	if err := manager.ImportPairingFile(ip, port, data); err != nil {
+		return err
 	}
 
 	// The imported record makes the device queryable, which upgrades it to

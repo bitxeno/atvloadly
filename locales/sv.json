@@ -84,8 +84,7 @@
         },
         "import": {
           "file_label": "Parkopplingspost (.plist):",
-          "file_optional": "(valfri)",
-          "tips": "Posten valideras mot enheten över installationsporten, sparas här för kommande installationer, och enheten skapas eller uppgraderas till parkopplad. Ingen parkopplingsport behövs. Lämna filen tom när en parkopplingspost för enheten redan finns sparad på den här servern: IP och installationsport räcker.",
+          "tips": "Posten valideras mot enheten över installationsporten, sparas här för kommande installationer, och enheten skapas eller uppgraderas till parkopplad. Ingen parkopplingsport behövs.",
           "instructions": {
             "title": "Var posten kommer ifrån",
             "step1": "Parkoppla enheten där posten skapas: en Apple TV parkopples med Apple Configurator (meny → Paired Devices → Pair; ange den sexsiffriga PIN-koden som visas på TV:n) och en iPhone parkopples i Finder (anslut, lita sedan på datorn).",

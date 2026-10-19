@@ -92,10 +92,7 @@
 
       <div class="mt-4 flex flex-col gap-y-2">
         <div class="form-control">
-          <label class="label pb-1">
-            <span>{{ $t("home.dialog.manual.import.file_label") }}</span>
-            <span class="text-base-content/60">{{ $t("home.dialog.manual.import.file_optional") }}</span>
-          </label>
+          <label class="label pb-1">{{ $t("home.dialog.manual.import.file_label") }}</label>
           <input
             type="file"
             class="file-input file-input-bordered w-full"
@@ -150,7 +147,7 @@
         <button
           type="button"
           class="btn btn-primary"
-          :disabled="importBusy || !importForm.ip || !importForm.port"
+          :disabled="importBusy || !importForm.file || !importForm.ip || !importForm.port"
           @click="submitImport"
         >
           <span class="loading loading-spinner loading-xs" v-show="importBusy"></span>
@@ -234,9 +231,7 @@ export default {
     },
     async submitImport() {
       const data = new FormData();
-      if (this.importForm.file) {
-        data.append("file", this.importForm.file);
-      }
+      data.append("file", this.importForm.file);
       data.append("ip", this.importForm.ip);
       data.append("port", String(Number(this.importForm.port)));
       if (this.importForm.deviceId) {
