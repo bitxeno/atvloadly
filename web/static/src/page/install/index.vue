@@ -33,6 +33,25 @@
           <div class="flex flex-col gap-y-2 items-center justify-center">
             <span>{{ device.name }}</span>
             <span>({{ truncateIP(device.ip) }})</span>
+            <div
+              v-if="device.connection === 'RPPairing'"
+              class="w-full max-w-[12rem] form-control items-center"
+            >
+              <label class="label py-1 pb-0">
+                <span class="label-text-alt text-center">{{ $t("install.form.install_port.label") }}</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="65535"
+                class="input input-bordered input-sm w-full"
+                v-model="installPortInput"
+                :placeholder="$t('install.form.install_port.placeholder')"
+              />
+              <label class="label py-1 pt-0">
+                <span class="label-text-alt text-center">{{ $t("install.form.install_port.hint") }}</span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -582,6 +601,11 @@ export default {
       sourceSelection: null,
       ipa: {},
       device: {},
+      // Install service port override, shown for remote-pairing devices:
+      // pairing and installs can run on different ports, and only the user
+      // can tell which port the device currently announces. Empty keeps the
+      // device's registered install port.
+      installPortInput: "",
       loading: false,
       websock: null,
       // Generation of the current install attempt. Every release of the
@@ -797,6 +821,9 @@ export default {
       let _this = this;
       api.getDevice(_this.id).then((res) => {
         _this.device = res.data;
+        if (!_this.installPortInput && res.data && res.data.install_port) {
+          _this.installPortInput = String(res.data.install_port);
+        }
       });
       const accounts = api.getAccounts().then((res) => {
         const m = res.data || {};
@@ -1152,6 +1179,7 @@ export default {
             signing_identity_id: external ? Number(_this.signing.identityId) : 0,
             allow_missing_entitlements: external && _this.signing.allowMissingEntitlements,
             revoke_certificate_serial: "",
+            install_port: _this.device.connection === "RPPairing" ? Number(_this.installPortInput) || 0 : 0,
             source,
         };
         // Kept so the certificate dialog can resend this same install with the

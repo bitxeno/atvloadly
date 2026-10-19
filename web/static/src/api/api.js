@@ -440,6 +440,19 @@ export default {
       data,
     });
   },
+  addManualDevice: (data) => {
+    return request({
+      url: "/api/devices/manual",
+      method: "post",
+      data,
+    });
+  },
+  deleteManualDevice: (id) => {
+    return request({
+      url: `/api/devices/manual/${id}/delete`,
+      method: "post",
+    });
+  },
   scanWireless: () => {
     return request({
       url: "/api/scan/wireless",

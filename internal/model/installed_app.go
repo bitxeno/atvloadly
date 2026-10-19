@@ -56,6 +56,11 @@ type InstalledApp struct {
 	// page sends it only on the retry after a certificate_reset_required failure,
 	// and the signing engine applies it only if its account currently lists it.
 	RevokeCertificateSerial string `gorm:"-" json:"revoke_certificate_serial,omitempty"`
+	// InstallPort overrides the device's install service port for this one
+	// installation: the regular remote-pairing service that createListener
+	// runs over can use a different port than the pairing service. Never
+	// persisted: the install page sends it alongside the install request.
+	InstallPort uint16 `gorm:"-" json:"install_port,omitempty"`
 }
 
 type RefreshedError int

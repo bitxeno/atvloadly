@@ -53,7 +53,9 @@
       "pairable_devices": "Enheter som kan parkopplas",
       "paired_devices": "Parkopplade enheter",
       "service_status": "Tjänststatus",
-      "installed_app": "Installerade appar"
+      "installed_app": "Installerade appar",
+          "add_device": "Lägg till enhet",
+          "import_pairing": "Importera parkopplingsfil"
     },
     "dialog": {
       "delete_confirm": {
@@ -61,6 +63,46 @@
         "button": {
           "cancel": "Avbryt",
           "confirm": "Bekräfta"
+        }
+      },
+      "manual": {
+        "add_title": "Lägg till enhet",
+        "import_title": "Importera parkopplingsfil",
+        "button": {
+          "add": "Lägg till",
+          "import": "Importera"
+        },
+        "form": {
+          "name_label": "Enhetens namn:",
+          "name_placeholder": "Valfritt, t.ex. Apple TV i vardagsrummet",
+          "ip_label": "Enhetens IP:",
+          "ip_placeholder": "LAN-IP eller 100.x.y.z över Tailscale",
+          "port_label": "Parkopplingsport:",
+          "port_hint": "Porten till tjänsten för manuell parkoppling, alltså den som tar emot PIN-flödet; hitta den med dns-sd (dns-sd -L \"Enhetsnamn\" _remotepairing-manual-pairing._tcp local)",
+          "install_port_label": "Installationsport:",
+          "install_port_hint": "Porten till fjärrparkopplingstjänsten som installationer och nätverkskontroller körs via; 0 behåller installationer på parkopplingsporten, vilket bara fungerar när en tjänst hanterar båda"
+        },
+        "import": {
+          "file_label": "Parkopplingspost (.plist):",
+          "file_optional": "(valfri)",
+          "tips": "Posten valideras mot enheten över installationsporten, sparas här för kommande installationer, och enheten skapas eller uppgraderas till parkopplad. Ingen parkopplingsport behövs. Lämna filen tom när en parkopplingspost för enheten redan finns sparad på den här servern: IP och installationsport räcker.",
+          "instructions": {
+            "title": "Var posten kommer ifrån",
+            "step1": "Parkoppla enheten där posten skapas: en Apple TV parkopples med Apple Configurator (meny → Paired Devices → Pair; ange den sexsiffriga PIN-koden som visas på TV:n) och en iPhone parkopples i Finder (anslut, lita sedan på datorn).",
+            "step2": "Kopiera posten till en fil: macOS sparar en .plist per enhet under /var/db/lockdown (kräver sudo).",
+            "step3": "Importera den ovan med enhetens IP och installationsporten (porten till _remotepairing._tcp från dns-sd; ingen parkopplingsport behövs)."
+          }
+        },
+        "instructions": {
+          "title": "Lägga till och parkoppla över nätverket",
+          "step1": "Hitta enhetens LAN-IP: Apple TV visar adressen under Inställningar → Nätverk; på iPhone och iPad: Inställningar → Wi-Fi → tryck på (i).",
+          "step2": "Lista enheterna och slå upp portarna med dns-sd från en dator i enhetens nätverk: först <code>dns-sd -B _remotepairing-manual-pairing._tcp local</code> och sedan <code>dns-sd -L \"Enhetsnamn\" _remotepairing-manual-pairing._tcp local</code> — porten som visas går i fältet Parkopplingsport, och samma lookup för <code>_remotepairing._tcp</code> ger installationsporten.",
+          "step3": "Klicka efter tillägget på enheten under Parkopplingsbara och ange PIN-koden som enheten visar.",
+          "step4": "Enhetens IP för den här servern är den adress som servern når enheten på — en Tailscale-adress, inte enhetens LAN-adress."
+        },
+        "toast": {
+          "added": "Enheten har lagts till",
+          "imported": "Parkopplingsfilen har importerats"
         }
       }
     },
@@ -205,6 +247,11 @@
       "login_success": "Inloggningen lyckades"
     },
     "form": {
+      "install_port": {
+        "label": "Installationsport:",
+        "placeholder": "49152",
+        "hint": "Porten till tjänsten som installationer körs via; den kan skilja sig från parkopplingsporten. Lämna tomt för att behålla den registrerade porten."
+      },
       "mode": {
         "file": "IPA-fil",
         "link": "IPA-URL",

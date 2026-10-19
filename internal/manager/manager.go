@@ -53,8 +53,8 @@ func GetDeviceByUDID(udid string) (*model.Device, bool) {
 
 // AddManualDevice registers a device that avahi cannot discover; see
 // DeviceManager.AddManualDevice.
-func AddManualDevice(ip string, port uint16, name string) (*model.Device, error) {
-	return deviceManager.AddManualDevice(ip, port, name)
+func AddManualDevice(ip string, port uint16, installPort uint16, name string) (*model.Device, error) {
+	return deviceManager.AddManualDevice(ip, port, installPort, name)
 }
 
 func DeleteManualDevice(id string) (bool, error) {
@@ -64,6 +64,20 @@ func DeleteManualDevice(id string) (bool, error) {
 // PairCompleted marks a device Paired after a successful pairing flow.
 func PairCompleted(id string) {
 	deviceManager.PairCompleted(id)
+}
+
+// ApplyInstallPort records the install page's chosen install service port on
+// the device. Manual devices persist the value; discovered devices keep it
+// in memory until their next announcement refresh.
+func ApplyInstallPort(dev *model.Device, port uint16) {
+	deviceManager.UpdateManualInstallPort(dev, port)
+}
+
+// ImportPairedDevice adds or upgrades a device from an imported pairing
+// record that already validated against it; see DeviceManager.
+// ImportPairedDevice.
+func ImportPairedDevice(ip string, port uint16) error {
+	return deviceManager.ImportPairedDevice(ip, port)
 }
 
 // GetDeviceInfo queries the device for its lockdown values, including the

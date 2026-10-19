@@ -53,7 +53,9 @@
             "pairable_devices": "Pairable Devices",
             "paired_devices": "Paired Devices",
             "service_status": "Service Status",
-            "installed_app": "Installed Apps"
+            "installed_app": "Installed Apps",
+            "add_device": "Add Device",
+            "import_pairing": "Import Pairing File"
         },
         "dialog": {
             "delete_confirm": {
@@ -61,6 +63,46 @@
                 "button": {
                     "cancel": "Cancel",
                     "confirm": "Confirm"
+                }
+            },
+            "manual": {
+                "add_title": "Add Device",
+                "import_title": "Import Pairing File",
+                "button": {
+                    "add": "Add",
+                    "import": "Import"
+                },
+                "form": {
+                    "name_label": "Device name:",
+                    "name_placeholder": "Optional, e.g. Living room Apple TV",
+                    "ip_label": "Device IP:",
+                    "ip_placeholder": "LAN IP or 100.x.y.z over Tailscale",
+                    "port_label": "Pairing port:",
+                    "port_hint": "Port of the manual-pairing service, the one that accepts the PIN flow; find it with dns-sd (dns-sd -L \"Device Name\" _remotepairing-manual-pairing._tcp local)",
+                    "install_port_label": "Install service port:",
+                    "install_port_hint": "Port of the remote-pairing service that installs and network probes run over; 0 keeps installs on the pairing port, which only works when one service serves both"
+                },
+                "import": {
+                    "file_label": "Pairing record (.plist):",
+                    "file_optional": "(optional)",
+                    "tips": "The record is validated against the device over the install service port, saved here for later installs, and the device is created or upgraded to paired. No pairing port is needed. Leave the file empty when a pairing record for this device is already saved on this server: IP and the install service port are enough.",
+                    "instructions": {
+                        "title": "Where the record comes from",
+                        "step1": "Pair the device where the record is created: an Apple TV pairs with Apple Configurator (menu → Paired Devices → Pair; enter the six-digit PIN shown on the TV) and an iPhone pairs in Finder (connect, then Trust).",
+                        "step2": "Copy the record to a file: macOS keeps one .plist per device under /var/db/lockdown (needs sudo).",
+                        "step3": "Import it above with the device IP and the install service port (the _remotepairing._tcp port from dns-sd; no pairing port is needed)."
+                    }
+                },
+                "instructions": {
+                    "title": "Adding and pairing over the network",
+                    "step1": "Find the device's LAN IP: Apple TV Settings → Network shows the address; on iPhone and iPad, Settings → Wi-Fi → tap the (i) button.",
+                    "step2": "From a computer in the device's network, list the devices and resolve the ports with dns-sd: <code>dns-sd -B _remotepairing-manual-pairing._tcp local</code> then <code>dns-sd -L \"Device Name\" _remotepairing-manual-pairing._tcp local</code> — the pairing port goes in the Pairing port field, and the same lookup for <code>_remotepairing._tcp</code> gives the install port.",
+                    "step3": "After adding, click the device under Pairable and enter the PIN the device shows.",
+                    "step4": "The device IP for this server is the address it can reach the device at — a Tailscale address, not the device's LAN address."
+                },
+                "toast": {
+                    "added": "Device added",
+                    "imported": "Pairing file imported"
                 }
             }
         },
@@ -206,6 +248,11 @@
             "login_success": "Login Success"
         },
         "form": {
+            "install_port": {
+                "label": "Install service port:",
+                "placeholder": "49152",
+                "hint": "Port of the service installs run over; it can differ from the pairing port. Leave empty to keep the registered port."
+            },
             "mode": {
                 "file": "IPA file",
                 "link": "IPA URL",

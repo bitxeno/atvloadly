@@ -1,10 +1,24 @@
 <template>
   <div class="xl:flex xl:flex-row xl:gap-x-12">
     <div class="xl:basis-3/12 min-w-0 flex gap-x-16 flex-col gap-y-8 mb-8 xl:mb-0">
-      <div v-show="pairableDevices.length > 0">
-        <h4 class="mb-2">{{ $t("home.heading.pairable_devices") }}</h4>
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h4>{{ $t("home.heading.pairable_devices") }}</h4>
+          <div class="flex gap-x-1">
+            <button
+              type="button"
+              class="btn btn-xs btn-ghost"
+              @click="openManualDeviceAdd"
+            >{{ $t("home.heading.add_device") }}</button>
+            <button
+              type="button"
+              class="btn btn-xs btn-ghost"
+              @click="openPairedFileImport"
+            >{{ $t("home.heading.import_pairing") }}</button>
+          </div>
+        </div>
         <div class="flex flex-col w-full border-opacity-50">
-          <div class="grid card atv-device-panel">
+          <div class="grid card atv-device-panel" v-show="pairableDevices.length > 0">
             <a
               class="atv-device-row flex flex-row gap-x-3 cursor-pointer"
               v-for="item in pairableDevices"
@@ -23,6 +37,11 @@
               <div class="flex flex-col justify-top">
                 <h4>{{ item.name }} ({{ truncateIP(item.ip) }})</h4>
                 <p>{{ formatDeviceStatus(item) }}</p>
+                <p
+                  class="text-xs link link-hover underline"
+                  v-if="item.connection == 'RPPairing'"
+                  @click.stop="openManualDeviceImport(item)"
+                >{{ $t("home.dialog.manual.import_title") }}</p>
               </div>
             </a>
           </div>
@@ -395,6 +414,7 @@
       @saved="fetchAppList"
       @update-started="onUpdateStarted"
     />
+    <ManualDeviceDialog ref="manualDeviceDialog" @saved="fetchData" />
   </div>
 </template>
   
@@ -405,11 +425,12 @@ import api from "@/api/api";
 import { toast } from "vue3-toastify";
 import { truncateIP } from "@/utils/utils";
 import SourceDialog from "@/components/SourceDialog.vue";
+import ManualDeviceDialog from "@/components/ManualDeviceDialog.vue";
 import { updateFailed } from "@/utils/source.mjs";
 
 export default {
   name: "Home",
-  components: { SourceDialog },
+  components: { SourceDialog, ManualDeviceDialog },
   data() {
     return {
       devices: [],
@@ -733,6 +754,17 @@ export default {
     },
     startPair(device) {
       this.$router.push({ name: "pair", params: { id: device.id } });
+    },
+    openManualDeviceAdd() {
+      this.$refs.manualDeviceDialog.showAdd();
+    },
+    openPairedFileImport() {
+      // Standalone import: a pairing record recorded elsewhere pairs the
+      // device without a pair port, only install port + IP.
+      this.$refs.manualDeviceDialog.showImport(null);
+    },
+    openManualDeviceImport(device) {
+      this.$refs.manualDeviceDialog.showImport(device);
     },
     installIpa(device) {
       this.$router.push({ name: "install", params: { id: device.id } });

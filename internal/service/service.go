@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -268,10 +269,48 @@ func UpdateCoreADI() error {
 	return nil
 }
 
-func ImportPairingFile(ip string, port string, data []byte) error {
-	// Call manager to process the file
-	if err := manager.ImportPairingFile(ip, port, data); err != nil {
-		return err
+// ResetAnisette removes the Anisette provisioning state so the next login or
+// install provisions it again. It mirrors upstream impactor ResetAnisetteData
+// which deletes the provisioning files under <data_path>
+// (see claration/impactor@321eac4).
+func ResetAnisette() error {
+	for _, name := range []string{"state.plist", "identifier", "adb.pb"} {
+		path := filepath.Join(app.SideloadDataDir(), name)
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	log.Infof("Reset Anisette data. dir: %s", app.SideloadDataDir())
+	return nil
+}
+
+func ImportPairingFile(ip string, port string, deviceID string, data []byte) error {
+	// A provided record is validated against the device and saved for later
+	// installs. Without one, the request proves the device with the pairing
+	// files already saved on this server: the network probe below completes
+	// the tunnel handshake only when one of them matches.
+	if len(data) > 0 {
+		if err := manager.ImportPairingFile(ip, port, data); err != nil {
+			return err
+		}
+	}
+
+	// The imported record makes the device queryable, which upgrades it to
+	// Paired. A dialog opened on a device row passes its ID; without one,
+	// the device is added or upgraded from the record itself.
+	if deviceID != "" {
+		// The dialog validates the record over the install service port the
+		// user entered; keep that port on the device so later tunnels use it.
+		if p, err := strconv.ParseUint(port, 10, 16); err == nil {
+			if dev, ok := manager.GetDeviceByID(deviceID); ok && dev.ServicePort() != uint16(p) {
+				manager.ApplyInstallPort(dev, uint16(p))
+			}
+		}
+		manager.PairCompleted(deviceID)
+	} else if p, err := strconv.ParseUint(port, 10, 16); err == nil {
+		if err := manager.ImportPairedDevice(ip, uint16(p)); err != nil {
+			return err
+		}
 	}
 
 	// force reload devices

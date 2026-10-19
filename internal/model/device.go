@@ -10,7 +10,16 @@ type Device struct {
 	Name                     string           `json:"name"`
 	ServiceName              string           `json:"service_name"`
 	IP                       string           `json:"ip"`
-	Port                     uint16           `json:"port,omitempty"`
+	// Port is the port the pairing flow connects to. Devices on the network
+	// advertise two services: the manual-pairing service that accepts the
+	// PIN flow, and the regular remote-pairing service that createListener
+	// installs run over. The two live on different ports.
+	Port uint16 `json:"port,omitempty"`
+	// InstallPort is the port of the regular remote-pairing service
+	// (_remotepairing._tcp), used by installs, probes and screenshots. A
+	// device added through an imported pairing record has no pair port and
+	// keeps Port set to the same value as InstallPort.
+	InstallPort uint16 `json:"install_port,omitempty"`
 	MacAddr                  string           `json:"mac_addr"`
 	UDID                     string           `json:"udid"`
 	Connection               DeviceConnection `json:"connection"`
@@ -23,6 +32,18 @@ type Device struct {
 	DeveloperModeStatus      bool             `json:"developer_mode_status"`
 	PersonalizedImageMounted bool             `json:"personalized_image_mounted"`
 	DiscoveryAt              time.Time        `json:"-"`
+}
+
+// ServicePort returns the port the tunnel-capable remote-pairing service
+// listens on: installs, network probes and screenshots open a tunnel through
+// createListener, which only that service accepts. Manual devices pair on a
+// separate manual-pairing port and carry an explicit InstallPort; when unset,
+// everything shares Port.
+func (d *Device) ServicePort() uint16 {
+	if d.InstallPort != 0 {
+		return d.InstallPort
+	}
+	return d.Port
 }
 
 func (d *Device) ParseDeviceClass() {

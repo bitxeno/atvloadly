@@ -283,15 +283,16 @@ func route(fi *fiber.App) {
 	// normally over the supplied address.
 	api.Post("/devices/manual", func(c *fiber.Ctx) error {
 		var req struct {
-			Name string `json:"name"`
-			IP   string `json:"ip"`
-			Port uint16 `json:"port"`
+			Name        string `json:"name"`
+			IP          string `json:"ip"`
+			Port        uint16 `json:"port"`
+			InstallPort uint16 `json:"install_port"`
 		}
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError("Invalid argument. error: " + err.Error()))
 		}
 
-		device, err := manager.AddManualDevice(req.IP, req.Port, req.Name)
+		device, err := manager.AddManualDevice(req.IP, req.Port, req.InstallPort, req.Name)
 		if err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
@@ -428,30 +429,30 @@ func route(fi *fiber.App) {
 	})
 
 	api.Post("/pair/import", func(c *fiber.Ctx) error {
-		file, err := c.FormFile("file")
-		if err != nil {
-			return c.Status(http.StatusOK).JSON(apiError("No file uploaded"))
-		}
+		// The record is optional: when it is already saved on this server,
+		// the device is validated with the saved pairing files instead.
+		var data []byte
+		if file, err := c.FormFile("file"); err == nil {
+			src, err := file.Open()
+			if err != nil {
+				return c.Status(http.StatusOK).JSON(apiError("Failed to open uploaded file"))
+			}
+			defer func() {
+				_ = src.Close()
+			}()
 
-		// Read file contents
-		src, err := file.Open()
-		if err != nil {
-			return c.Status(http.StatusOK).JSON(apiError("Failed to open uploaded file"))
-		}
-		defer func() {
-			_ = src.Close()
-		}()
-
-		data, err := io.ReadAll(src)
-		if err != nil {
-			return c.Status(http.StatusOK).JSON(apiError("Failed to read file content"))
+			data, err = io.ReadAll(src)
+			if err != nil {
+				return c.Status(http.StatusOK).JSON(apiError("Failed to read file content"))
+			}
 		}
 
 		ip := c.FormValue("ip")
 		port := c.FormValue("port")
+		deviceID := c.FormValue("device_id")
 
 		// Call manager to process the file
-		if err := service.ImportPairingFile(ip, port, data); err != nil {
+		if err := service.ImportPairingFile(ip, port, deviceID, data); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 

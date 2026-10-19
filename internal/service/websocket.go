@@ -67,6 +67,13 @@ func HandleInstallMessage(c *websocket.Conn) {
 				continue
 			}
 
+			// The install page lets the user pick the install service port:
+			// remote-pairing devices pair on one port and install on another,
+			// and only the user knows the current announced one.
+			if v.InstallPort > 0 {
+				manager.ApplyInstallPort(dev, v.InstallPort)
+			}
+
 			go runInstallMessage(websocketMgr, installMgr, v, dev)
 		case model.MessageType2FA:
 			code := msg.Data
@@ -238,7 +245,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		UDID:                    v.UDID,
 		Account:                 v.Account,
 		IP:                      dev.IP,
-		Port:                    dev.Port,
+		Port:                    dev.ServicePort(),
 		IpaPath:                 ipaPath,
 		CustomName:              v.CustomName,
 		CustomIdentifier:        v.CustomIdentifier,

@@ -58,7 +58,7 @@ func addManualDevice(t *testing.T, ip string) (*DeviceManager, *model.Device) {
 	t.Helper()
 
 	dm := newDeviceManager()
-	dev, err := dm.AddManualDevice(ip, 62078, "")
+	dev, err := dm.AddManualDevice(ip, 62078, 0, "")
 	if err != nil {
 		t.Fatalf("AddManualDevice failed: %v", err)
 	}
@@ -108,7 +108,7 @@ func TestAddManualDeviceUsesSuppliedName(t *testing.T) {
 	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
 
 	dm := newDeviceManager()
-	named, err := dm.AddManualDevice("100.64.0.13", 62078, "My Apple TV")
+	named, err := dm.AddManualDevice("100.64.0.13", 62078, 0, "My Apple TV")
 	if err != nil {
 		t.Fatalf("AddManualDevice failed: %v", err)
 	}
@@ -122,11 +122,11 @@ func TestAddManualDeviceRejectsBadInput(t *testing.T) {
 	dm := newDeviceManager()
 
 	// Public address.
-	if _, err := dm.AddManualDevice("8.8.8.8", 62078, ""); err == nil {
+	if _, err := dm.AddManualDevice("8.8.8.8", 62078, 0, ""); err == nil {
 		t.Error("public address should be rejected")
 	}
 	// Port 0.
-	if _, err := dm.AddManualDevice("100.64.0.12", 0, ""); err == nil {
+	if _, err := dm.AddManualDevice("100.64.0.12", 0, 0, ""); err == nil {
 		t.Error("port 0 should be rejected")
 	}
 
@@ -159,7 +159,7 @@ func TestAddManualDeviceReplacesStaleEntry(t *testing.T) {
 	addManualDevice(t, "100.64.0.12")
 
 	// Same device moves to a new address: only one entry may remain.
-	replaced, err := newDeviceManager().AddManualDevice("100.113.5.5", 62078, "")
+	replaced, err := newDeviceManager().AddManualDevice("100.113.5.5", 62078, 0, "")
 	if err != nil {
 		t.Fatalf("second add failed: %v", err)
 	}
@@ -177,7 +177,7 @@ func TestDeleteManualDevice(t *testing.T) {
 	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
 
 	_, dev := addManualDevice(t, "100.64.0.12")
-	if _, err := newDeviceManager().AddManualDevice("100.64.0.9", 62078, "second"); err != nil {
+	if _, err := newDeviceManager().AddManualDevice("100.64.0.9", 62078, 0, "second"); err != nil {
 		t.Fatalf("second add failed: %v", err)
 	}
 
@@ -313,5 +313,158 @@ func TestParseDeviceInfoOutput(t *testing.T) {
 	info = parseDeviceInfoOutput("", "fallback")
 	if info.UniqueDeviceID != "fallback" {
 		t.Errorf("UniqueDeviceID = %q, want fallback", info.UniqueDeviceID)
+	}
+}
+
+// TestPairCompletedFallsBackToPeerRecord covers tvOS 26 devices whose
+// device-info listener handshake fails over the routed address: the UDID
+// comes from the newest peer record instead.
+func TestPairCompletedFallsBackToPeerRecord(t *testing.T) {
+	// The fake probe always fails: the tvOS 26 case the fallback covers.
+	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
+	dm, dev := addManualDevice(t, "100.64.0.12")
+
+	writePairingFiles(t, "A.plist", "A.json")
+	peer := `{"account_id":"id","alt_irk":[1],"model":"AppleTV11,1","name":"Efrain's room TV","remotepairing_udid":"882fd889f04dfd3973f4e61cd3b0e950a73ba1b1"}`
+	if err := os.WriteFile(filepath.Join(app.RemotePairingDir(), "A.json"), []byte(peer), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	dm.PairCompleted(dev.ID)
+
+	left, ok := dm.GetDeviceByID(dev.ID)
+	if !ok {
+		t.Fatal("device vanished after failed pairing")
+	}
+	if left.Status != model.Paired {
+		t.Errorf("Status = %q, want Paired when the peer record identifies the device", left.Status)
+	}
+	if left.UDID != "882fd889f04dfd3973f4e61cd3b0e950a73ba1b1" {
+		t.Errorf("UDID = %q, want the peer record UDID", left.UDID)
+	}
+	if left.DeviceClass != string(model.DeviceClassAppleTV) {
+		t.Errorf("DeviceClass = %q, want AppleTV", left.DeviceClass)
+	}
+	if left.ProductType != "AppleTV11,1" {
+		t.Errorf("ProductType = %q, want the peer record model", left.ProductType)
+	}
+
+	entries := readManualDevices()
+	if len(entries) != 1 || entries[0].Status != model.Paired || entries[0].UDID != left.UDID {
+		t.Errorf("persisted record not upgraded: %+v", entries)
+	}
+}
+
+// TestServicePortFallsBackToPairPort verifies the fallback behavior of
+// ServicePort: manual devices carry an install port for the tunnel-capable
+// remote-pairing service, everything else shares the pairing port.
+func TestServicePortFallsBackToPairPort(t *testing.T) {
+	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
+
+	dm := newDeviceManager()
+	dev, err := dm.AddManualDevice("100.64.0.12", 62078, 49152, "split")
+	if err != nil {
+		t.Fatalf("AddManualDevice failed: %v", err)
+	}
+	if dev.ServicePort() != 49152 {
+		t.Errorf("ServicePort() = %d, want the install port 49152", dev.ServicePort())
+	}
+
+	dev.InstallPort = 0
+	if dev.ServicePort() != 62078 {
+		t.Errorf("ServicePort() = %d, want the pairing port 62078 when no install port is set", dev.ServicePort())
+	}
+}
+
+// TestUpdateManualInstallPortPersists verifies that the install page's
+// chosen service port reaches both the live registry and the persistence
+// file, so a restart keeps it.
+func TestUpdateManualInstallPortPersists(t *testing.T) {
+	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
+
+	dm, dev := addManualDevice(t, "100.64.0.12")
+	if dev.ServicePort() != 62078 {
+		t.Fatalf("ServicePort() = %d, want the pairing port 62078 before the override", dev.ServicePort())
+	}
+
+	dm.UpdateManualInstallPort(dev, 49152)
+
+	if dev.InstallPort != 49152 {
+		t.Errorf("InstallPort = %d, want 49152", dev.InstallPort)
+	}
+	if dev.ServicePort() != 49152 {
+		t.Errorf("ServicePort() = %d, want 49152 after the override", dev.ServicePort())
+	}
+
+	entries := readManualDevices()
+	if len(entries) != 1 || entries[0].InstallPort != 49152 {
+		t.Errorf("persistence does not carry the install port: %+v", entries)
+	}
+}
+
+// TestImportPairedDeviceCreatesPairedEntry verifies the record-import flow:
+// a pairing record validated elsewhere adds the device without any portal
+// pairing, using the tunnel-capable install port only.
+func TestImportPairedDeviceCreatesPairedEntry(t *testing.T) {
+	setupManualDeviceTest(t, []string{"fake.plist"}, completeDeviceInfo(), nil)
+	writePairingFiles(t, "fake.plist")
+
+	dm := newDeviceManager()
+	if err := dm.ImportPairedDevice("100.64.0.12", 49152); err != nil {
+		t.Fatalf("ImportPairedDevice failed: %v", err)
+	}
+
+	dev, ok := dm.GetDeviceByID(ManualDeviceID("100.64.0.12", 49152))
+	if !ok {
+		t.Fatal("import did not create a device")
+	}
+	if dev.Status != model.Paired {
+		t.Errorf("Status = %q, want Paired", dev.Status)
+	}
+	if dev.UDID != completeDeviceInfo().UniqueDeviceID {
+		t.Errorf("UDID = %q, want %q", dev.UDID, completeDeviceInfo().UniqueDeviceID)
+	}
+	if dev.Port != 49152 || dev.InstallPort != 49152 {
+		t.Errorf("Port = %d, InstallPort = %d; want both 49152", dev.Port, dev.InstallPort)
+	}
+	if dev.DeviceClass != string(model.DeviceClassAppleTV) {
+		t.Errorf("DeviceClass = %q, want AppleTV", dev.DeviceClass)
+	}
+
+	entries := readManualDevices()
+	if len(entries) != 1 || entries[0].Status != model.Paired || entries[0].UDID != dev.UDID {
+		t.Errorf("persistence does not carry the imported device: %+v", entries)
+	}
+}
+
+// TestImportPairedDeviceUsesPeerRecordFallback mirrors PairCompleted: when
+// tvOS refuses the device-info handshake, the peer record written next to
+// the imported pairing record still identifies the device.
+func TestImportPairedDeviceUsesPeerRecordFallback(t *testing.T) {
+	// The fake probe always fails: the tvOS 26 case the fallback covers.
+	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
+	writePairingFiles(t, "fake.plist")
+	peer := `{"account_id":"id","alt_irk":[1],"model":"AppleTV11,1","name":"Imported TV","remotepairing_udid":"aabbccddeeff0011223344556677aabb"}`
+	if err := os.WriteFile(filepath.Join(app.RemotePairingDir(), "fake.json"), []byte(peer), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	dm := newDeviceManager()
+	if err := dm.ImportPairedDevice("100.64.0.12", 49152); err != nil {
+		t.Fatalf("ImportPairedDevice failed despite the peer record: %v", err)
+	}
+
+	dev, ok := dm.GetDeviceByID(ManualDeviceID("100.64.0.12", 49152))
+	if !ok {
+		t.Fatal("import did not create a device")
+	}
+	if dev.Status != model.Paired {
+		t.Errorf("Status = %q, want Paired when the peer record identifies the device", dev.Status)
+	}
+	if dev.UDID != "aabbccddeeff0011223344556677aabb" {
+		t.Errorf("UDID = %q, want the peer record UDID", dev.UDID)
+	}
+	if dev.ProductType != "AppleTV11,1" {
+		t.Errorf("ProductType = %q, want the peer record model", dev.ProductType)
 	}
 }
