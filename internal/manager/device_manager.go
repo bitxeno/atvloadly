@@ -29,12 +29,22 @@ var deviceManager = newDeviceManager()
 // backs up, and godbus leaks one goroutine per undelivered signal.
 const pairingCheckInterval = 60 * time.Second
 
+// cgnatPrefix is the RFC 6598 shared address space (100.64.0.0/10) used by
+// Tailscale and other mesh-VPN overlays. Devices reachable only through a
+// mesh VPN announce themselves from this range; plumesign connects over it
+// fine, so it is accepted alongside RFC 1918 LAN space.
+var cgnatPrefix = netip.MustParsePrefix("100.64.0.0/10")
+
 // isLanAddr reports whether addr is a private IPv4 address that the
 // plumesign tooling can connect to. Global IPv6 addresses (e.g. an
 // ISP-delegated prefix announced via AAAA) and public addresses are
-// rejected: LAN devices are reached over private IPv4 only.
+// rejected: LAN devices are reached over private IPv4, or over overlay
+// networks such as Tailscale (CGNAT 100.64.0.0/10).
 func isLanAddr(addr netip.Addr) bool {
-	return addr.IsValid() && addr.Is4() && addr.IsPrivate()
+	if !addr.IsValid() || !addr.Is4() {
+		return false
+	}
+	return addr.IsPrivate() || cgnatPrefix.Contains(addr)
 }
 
 // pairingCheck identifies one in-flight check so an older check cannot
