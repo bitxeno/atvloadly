@@ -56,10 +56,11 @@ func writeManualDevices(devices []model.Device) error {
 
 // defaultProbeDeviceInfo queries the device over the network with
 // plumesign device-info. The device reports its UDID unauthenticated, so
-// the returned info carries enough data to register the device without
-// mDNS discovery.
-func defaultProbeDeviceInfo(ip string, port uint16) (*model.DeviceInfo, error) {
-	cmd := exec.Command("plumesign", "device-info", "--ip", ip, "--port", fmt.Sprintf("%d", port)).
+// defaultProbeDeviceInfo queries the device information with the pairing
+// file produced by the pairing flow: plumesign device-info over the network
+// is refused without one.
+func defaultProbeDeviceInfo(ip string, port uint16, pairingFile string) (*model.DeviceInfo, error) {
+	cmd := exec.Command("plumesign", "device-info", "--ip", ip, "--port", fmt.Sprintf("%d", port), "-f", pairingFile).
 		WithTimeout(10 * time.Second)
 
 	data, err := cmd.CombinedOutput()
@@ -74,11 +75,12 @@ func defaultProbeDeviceInfo(ip string, port uint16) (*model.DeviceInfo, error) {
 	return info, nil
 }
 
-// AddManualDevice registers a device that avahi cannot discover, typically
-// reached over a mesh VPN such as Tailscale. The device is probed over the
-// network first: an unreachable or unrecognized address is rejected and
-// never registered. The device starts Pairable, so the normal pairing flow
-// upgrades it to Paired.
+// AddManualDevice registers a device address that avahi cannot discover,
+// typically reached over a mesh VPN such as Tailscale. No network probe
+// runs: plumesign device-info over the network requires a pairing file,
+// which only exists after the pairing flow succeeds for this host. The
+// device therefore starts Pairable with an empty UDID; PairCompleted fills
+// in the rest once the pairing flow succeeds.
 func (dm *DeviceManager) AddManualDevice(ip string, port uint16, name string) (*model.Device, error) {
 	if ip == "" || port == 0 {
 		return nil, fmt.Errorf("ip and port are required")
@@ -88,58 +90,38 @@ func (dm *DeviceManager) AddManualDevice(ip string, port uint16, name string) (*
 		return nil, fmt.Errorf("ip %s is not a private LAN or CGNAT address", ip)
 	}
 
-	info, err := probeDeviceInfo(ip, port)
-	if err != nil {
-		return nil, err
-	}
-
-	udid := info.UniqueDeviceID
 	if name == "" {
-		if info.DeviceName == "" {
-			name = fmt.Sprintf("Manual device (%s)", ip)
-		} else {
-			name = info.DeviceName
-		}
+		name = fmt.Sprintf("Manual device (%s)", ip)
 	}
 
 	device := model.Device{
-		ID:          utils.Md5(udid),
+		ID:          utils.Md5(fmt.Sprintf("%s:%d", ip, port)),
 		Name:        name,
 		IP:          ip,
 		Port:        port,
-		UDID:        udid,
 		Connection:  model.DeviceConnectionRemote,
 		Status:      model.Pairable,
 		DiscoveryAt: time.Now(),
 	}
-	if info.DeviceClass != "" {
-		device.DeviceClass = info.DeviceClass
-	} else {
-		device.ParseDeviceClass()
-	}
-	device.ProductType = info.ProductType
-	device.ProductVersion = info.ProductVersion
-	device.DeveloperModeStatus = info.DeveloperModeStatus
-	device.PersonalizedImageMounted = info.PersonalizedImageMounted
+	device.ParseDeviceClass()
 
-	dm.DeleteDeviceByUDID(udid)
 	dm.SaveDevice(device)
 
 	manualMu.Lock()
 	entries := readManualDevices()
 	kept := entries[:0]
 	for _, entry := range entries {
-		if entry.UDID != udid {
+		if entry.ID != device.ID {
 			kept = append(kept, entry)
 		}
 	}
 	kept = append(kept, device)
 	if err := writeManualDevices(kept); err != nil {
-		log.Err(err).Msgf("Failed to persist manual device %s:", udid)
+		log.Err(err).Msgf("Failed to persist manual device %s:", device.ID)
 	}
 	manualMu.Unlock()
 
-	log.Infof("Manual device added: %s (%s) at %s:%d", device.Name, udid, ip, port)
+	log.Infof("Manual device added: %s at %s:%d", device.Name, ip, port)
 	dm.onDeviceConnected(device)
 	return &device, nil
 }
@@ -153,7 +135,9 @@ func (dm *DeviceManager) LoadManualDevices() {
 	manualMu.Unlock()
 
 	for _, device := range entries {
-		if device.ID == "" || device.UDID == "" || device.IP == "" {
+		// The UDID stays empty until the pairing flow succeeds, so devices
+		// may be restored before they are Paired.
+		if device.ID == "" || device.IP == "" {
 			continue
 		}
 		dm.SaveDevice(device)
@@ -193,24 +177,44 @@ func (dm *DeviceManager) DeleteManualDevice(id string) (bool, error) {
 // PairCompleted marks a device Paired after the pairing flow succeeded.
 // Over mDNS the device's own announcement re-registers it faster than this
 // function reads the success output; for manual devices there is no
-// announcement, so this is the only path that upgrades the status.
+// announcement, so this is the only path that upgrades the status. The
+// freshly written pairing files supply the network probe, which fills the
+// UDID and product details the manual registration could not know.
 func (dm *DeviceManager) PairCompleted(id string) {
 	device, ok := dm.GetDeviceByID(id)
 	if !ok {
 		return
 	}
 
-	device.Status = model.Paired
-	if info, err := GetDeviceInfo(device); err == nil {
-		dm.AppendProductInfo(device, *info)
+	pairingFile, info, err := pairFileDeviceInfo(*device)
+	if err != nil {
+		// Pairing succeeded but the records are not usable: leave the
+		// device Pairable so the pairing flow can run again.
+		log.Err(err).Msgf("Pairing completed for %s, but the device could not be queried:", device.Name)
+		return
 	}
+	log.Infof("Pairing record for %s: %s", device.Name, pairingFile)
+
+	if device.UDID == "" {
+		device.UDID = info.UniqueDeviceID
+	}
+	if info.DeviceClass != "" {
+		device.DeviceClass = info.DeviceClass
+	} else {
+		device.ParseDeviceClass()
+	}
+	device.ProductType = info.ProductType
+	device.ProductVersion = info.ProductVersion
+	device.DeveloperModeStatus = info.DeveloperModeStatus
+	device.PersonalizedImageMounted = info.PersonalizedImageMounted
+	device.Status = model.Paired
 	dm.SaveDevice(*device)
 
 	manualMu.Lock()
 	entries := readManualDevices()
 	updated := false
 	for i, entry := range entries {
-		if entry.UDID == device.UDID {
+		if entry.ID == device.ID {
 			entries[i] = *device
 			updated = true
 			break
@@ -222,4 +226,31 @@ func (dm *DeviceManager) PairCompleted(id string) {
 	manualMu.Unlock()
 
 	dm.onDeviceConnected(*device)
+}
+
+// pairFileDeviceInfo probes the device over the network with the pairing
+// files written by the pairing flow. The plumesign store keeps records for
+// every device this host has paired with, so each candidate file is tried
+// until one identifies the device.
+func pairFileDeviceInfo(device model.Device) (string, *model.DeviceInfo, error) {
+	candidates, err := filepath.Glob(filepath.Join(app.RemotePairingDir(), "*.plist"))
+	if err != nil {
+		return "", nil, fmt.Errorf("pairing files unavailable: %v", err)
+	}
+	if len(candidates) == 0 {
+		return "", nil, fmt.Errorf("no pairing files in %s", app.RemotePairingDir())
+	}
+
+	var lastErr error
+	for _, file := range candidates {
+		info, err := probeDeviceInfo(device.IP, device.Port, file)
+		if err == nil && info != nil && info.UniqueDeviceID != "" {
+			return file, info, nil
+		}
+		if err == nil {
+			err = fmt.Errorf("pairing file %s did not yield a UDID", filepath.Base(file))
+		}
+		lastErr = err
+	}
+	return "", nil, lastErr
 }

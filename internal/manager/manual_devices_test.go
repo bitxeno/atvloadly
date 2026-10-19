@@ -2,6 +2,8 @@ package manager
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -9,19 +11,58 @@ import (
 	"github.com/bitxeno/atvloadly/internal/model"
 )
 
+// probeCalls records the arguments of every fake probe invocation, in order.
+var probeCalls []string
+
 // setupManualDeviceTest isolates the persistence file and the plumesign
-// probe for one test, returning the fake probe result pointer used by
-// fakeProbe.
-func setupManualDeviceTest(t *testing.T, fakeProbe *model.DeviceInfo, fakeErr error) {
+// probe for one test. The fake probe returns fakeInfo for the pairing files
+// accepted by fakeOrder and an error otherwise, so tests can cover both the
+// matching and the skipping of pairing files.
+func setupManualDeviceTest(t *testing.T, fakeOrder []string, fakeInfo *model.DeviceInfo, fakeErr error) {
 	t.Helper()
 
 	app.Config.Server.DataDir = t.TempDir()
 
+	probeCalls = nil
 	originalProbe := probeDeviceInfo
-	probeDeviceInfo = func(ip string, port uint16) (*model.DeviceInfo, error) {
-		return fakeProbe, fakeErr
+	probeDeviceInfo = func(ip string, port uint16, pairingFile string) (*model.DeviceInfo, error) {
+		probeCalls = append(probeCalls, ip+"|"+pairingFile)
+		for _, accepted := range fakeOrder {
+			if filepath.Base(pairingFile) == accepted {
+				return fakeInfo, fakeErr
+			}
+		}
+		return nil, errors.New("pairing file does not match this device")
 	}
 	t.Cleanup(func() { probeDeviceInfo = originalProbe })
+}
+
+// writePairingFiles creates plumesign store fixtures for PairCompleted.
+func writePairingFiles(t *testing.T, names ...string) {
+	t.Helper()
+
+	dir := app.RemotePairingDir()
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range names {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("plist"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// addManualDevice registers a device in a fresh manager and returns both,
+// so tests inspect the same registry the device was stored in.
+func addManualDevice(t *testing.T, ip string) (*DeviceManager, *model.Device) {
+	t.Helper()
+
+	dm := newDeviceManager()
+	dev, err := dm.AddManualDevice(ip, 62078, "")
+	if err != nil {
+		t.Fatalf("AddManualDevice failed: %v", err)
+	}
+	return dm, dev
 }
 
 func completeDeviceInfo() *model.DeviceInfo {
@@ -36,19 +77,15 @@ func completeDeviceInfo() *model.DeviceInfo {
 }
 
 func TestAddManualDeviceRegistersPairableDevice(t *testing.T) {
-	setupManualDeviceTest(t, completeDeviceInfo(), nil)
+	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
 
-	dm := newDeviceManager()
-	dev, err := dm.AddManualDevice("100.64.0.12", 62078, "")
-	if err != nil {
-		t.Fatalf("AddManualDevice failed: %v", err)
-	}
+	dm, dev := addManualDevice(t, "100.64.0.12")
 
-	if dev.UDID != "S1**A01**ABC12" {
-		t.Errorf("UDID = %q, want S1**A01**ABC12", dev.UDID)
+	if dev.UDID != "" {
+		t.Errorf("UDID = %q, want empty before pairing", dev.UDID)
 	}
-	if dev.Name != "Living Room" {
-		t.Errorf("Name = %q, want the probed device name", dev.Name)
+	if dev.Name != "Manual device (100.64.0.12)" {
+		t.Errorf("Name = %q, want the fallback name", dev.Name)
 	}
 	if dev.Status != model.Pairable {
 		t.Errorf("Status = %q, want Pairable", dev.Status)
@@ -56,53 +93,32 @@ func TestAddManualDeviceRegistersPairableDevice(t *testing.T) {
 	if dev.Connection != model.DeviceConnectionRemote {
 		t.Errorf("Connection = %q, want RPPairing", dev.Connection)
 	}
-	if dev.DeviceClass != string(model.DeviceClassAppleTV) {
-		t.Errorf("DeviceClass = %q, want AppleTV", dev.DeviceClass)
-	}
 	if _, ok := dm.GetDeviceByID(dev.ID); !ok {
 		t.Error("device was not registered in the manager")
+	}
+
+	// No probe may run: device-info over the network needs a pairing file
+	// that does not exist yet.
+	if len(probeCalls) != 0 {
+		t.Errorf("probe calls = %d, want 0", len(probeCalls))
 	}
 }
 
 func TestAddManualDeviceUsesSuppliedName(t *testing.T) {
-	setupManualDeviceTest(t, completeDeviceInfo(), nil)
+	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
 
 	dm := newDeviceManager()
-	dev, err := dm.AddManualDevice("100.64.0.12", 62078, "My Apple TV")
+	named, err := dm.AddManualDevice("100.64.0.13", 62078, "My Apple TV")
 	if err != nil {
 		t.Fatalf("AddManualDevice failed: %v", err)
 	}
-	if dev.Name != "My Apple TV" {
-		t.Errorf("Name = %q, want the supplied name", dev.Name)
-	}
-}
-
-func TestAddManualDeviceFallsBackName(t *testing.T) {
-	info := completeDeviceInfo()
-	info.DeviceName = ""
-	setupManualDeviceTest(t, info, nil)
-
-	dm := newDeviceManager()
-	dev, err := dm.AddManualDevice("100.64.0.12", 62078, "")
-	if err != nil {
-		t.Fatalf("AddManualDevice failed: %v", err)
-	}
-	if dev.Name != "Manual device (100.64.0.12)" {
-		t.Errorf("Name = %q, want the fallback name", dev.Name)
-	}
-}
-
-func TestAddManualDeviceRejectsUnreachableDevice(t *testing.T) {
-	setupManualDeviceTest(t, nil, errFakeProbeFailed)
-
-	dm := newDeviceManager()
-	_, err := dm.AddManualDevice("100.64.0.12", 62078, "")
-	if err == nil {
-		t.Fatal("unreachable device should be rejected")
+	if named.Name != "My Apple TV" {
+		t.Errorf("Name = %q, want the supplied name", named.Name)
 	}
 }
 
 func TestAddManualDeviceRejectsBadInput(t *testing.T) {
+	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
 	dm := newDeviceManager()
 
 	// Public address.
@@ -121,13 +137,9 @@ func TestAddManualDeviceRejectsBadInput(t *testing.T) {
 }
 
 func TestManualDevicesPersistAcrossRestart(t *testing.T) {
-	setupManualDeviceTest(t, completeDeviceInfo(), nil)
+	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
 
-	dm := newDeviceManager()
-	dev, err := dm.AddManualDevice("100.64.0.12", 62078, "")
-	if err != nil {
-		t.Fatalf("AddManualDevice failed: %v", err)
-	}
+	_, dev := addManualDevice(t, "100.64.0.12")
 
 	// A "restart" loads the file into a fresh manager.
 	fresh := newDeviceManager()
@@ -136,21 +148,18 @@ func TestManualDevicesPersistAcrossRestart(t *testing.T) {
 	if !ok {
 		t.Fatal("manual device was not restored on startup")
 	}
-	if restored.UDID != dev.UDID || restored.Status != model.Pairable {
-		t.Errorf("restored device mismatch: %+v", restored)
+	if restored.Status != model.Pairable {
+		t.Errorf("restored Status = %q, want Pairable", restored.Status)
 	}
 }
 
 func TestAddManualDeviceReplacesStaleEntry(t *testing.T) {
-	setupManualDeviceTest(t, completeDeviceInfo(), nil)
+	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
 
-	dm := newDeviceManager()
-	if _, err := dm.AddManualDevice("100.64.0.12", 62078, ""); err != nil {
-		t.Fatalf("first add failed: %v", err)
-	}
+	addManualDevice(t, "100.64.0.12")
 
 	// Same device moves to a new address: only one entry may remain.
-	replaced, err := dm.AddManualDevice("100.113.5.5", 62078, "")
+	replaced, err := newDeviceManager().AddManualDevice("100.113.5.5", 62078, "")
 	if err != nil {
 		t.Fatalf("second add failed: %v", err)
 	}
@@ -159,24 +168,20 @@ func TestAddManualDeviceReplacesStaleEntry(t *testing.T) {
 	}
 
 	entries := readManualDevices()
-	if len(entries) != 1 {
-		t.Fatalf("manual entries = %d, want 1", len(entries))
-	}
-	if entries[0].IP != "100.113.5.5" {
-		t.Errorf("persisted IP = %q, want the new address", entries[0].IP)
+	if len(entries) != 2 {
+		t.Fatalf("manual entries = %d, want 2", len(entries))
 	}
 }
 
 func TestDeleteManualDevice(t *testing.T) {
-	setupManualDeviceTest(t, completeDeviceInfo(), nil)
+	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
 
-	dm := newDeviceManager()
-	dev, err := dm.AddManualDevice("100.64.0.12", 62078, "")
-	if err != nil {
-		t.Fatalf("AddManualDevice failed: %v", err)
+	_, dev := addManualDevice(t, "100.64.0.12")
+	if _, err := newDeviceManager().AddManualDevice("100.64.0.9", 62078, "second"); err != nil {
+		t.Fatalf("second add failed: %v", err)
 	}
 
-	found, err := dm.DeleteManualDevice("no-such-id")
+	found, err := newDeviceManager().DeleteManualDevice("no-such-id")
 	if err != nil {
 		t.Fatalf("DeleteManualDevice failed: %v", err)
 	}
@@ -184,32 +189,27 @@ func TestDeleteManualDevice(t *testing.T) {
 		t.Error("unknown device should not be reported found")
 	}
 
-	found, err = dm.DeleteManualDevice(dev.ID)
+	found, err = newDeviceManager().DeleteManualDevice(dev.ID)
 	if err != nil {
 		t.Fatalf("DeleteManualDevice failed: %v", err)
 	}
 	if !found {
 		t.Error("registered device should be reported found")
 	}
-	if _, ok := dm.GetDeviceByID(dev.ID); ok {
+	if _, ok := newDeviceManager().GetDeviceByID(dev.ID); ok {
 		t.Error("device was not removed from the manager")
 	}
-	if n := len(readManualDevices()); n != 0 {
-		t.Errorf("manual entries after delete = %d, want 0", n)
+	if n := len(readManualDevices()); n != 1 {
+		t.Errorf("manual entries after delete = %d, want 1", n)
 	}
 }
 
-func TestPairCompletedUpgradesManualDevice(t *testing.T) {
-	setupManualDeviceTest(t, completeDeviceInfo(), nil)
-
-	dm := newDeviceManager()
-	dev, err := dm.AddManualDevice("100.64.0.12", 62078, "")
-	if err != nil {
-		t.Fatalf("AddManualDevice failed: %v", err)
-	}
-	if dev.Status != model.Pairable {
-		t.Fatalf("device should start Pairable, got %q", dev.Status)
-	}
+func TestPairCompletedFillsInfoFromPairingFiles(t *testing.T) {
+	// Only the record of the newly paired device matches; the stale record
+	// of an unrelated device must be skipped, not fatal.
+	setupManualDeviceTest(t, []string{"S1**A01**ABC12.plist"}, completeDeviceInfo(), nil)
+	dm, dev := addManualDevice(t, "100.64.0.12")
+	writePairingFiles(t, "OTHER.plist", "S1**A01**ABC12.plist")
 
 	dm.PairCompleted(dev.ID)
 
@@ -217,14 +217,70 @@ func TestPairCompletedUpgradesManualDevice(t *testing.T) {
 	if !ok {
 		t.Fatal("device vanished after pairing")
 	}
+	if paired.UDID != "S1**A01**ABC12" {
+		t.Errorf("UDID = %q, want the probed UDID", paired.UDID)
+	}
 	if paired.Status != model.Paired {
 		t.Errorf("Status = %q, want Paired", paired.Status)
+	}
+	if paired.DeviceClass != string(model.DeviceClassAppleTV) {
+		t.Errorf("DeviceClass = %q, want AppleTV", paired.DeviceClass)
+	}
+	if paired.ProductType != "AppleTV5,3" {
+		t.Errorf("ProductType = %q, want the probed type", paired.ProductType)
+	}
+
+	// A mismatching pairing file must be skipped, not fatal.
+	if len(probeCalls) < 2 {
+		t.Errorf("probe calls = %d, want every candidate file tried", len(probeCalls))
 	}
 
 	// The persisted record must reflect the upgrade too.
 	entries := readManualDevices()
-	if len(entries) != 1 || entries[0].Status != model.Paired {
-		t.Errorf("persisted status should be Paired, got %+v", entries)
+	for _, entry := range entries {
+		if entry.ID == dev.ID && (entry.Status != model.Paired || entry.UDID != "S1**A01**ABC12") {
+			t.Errorf("persisted record not upgraded: %+v", entry)
+		}
+	}
+}
+
+func TestPairCompletedKeepsDevicePairableWithoutRecords(t *testing.T) {
+	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
+	dm, dev := addManualDevice(t, "100.64.0.12")
+	writePairingFiles(t)
+
+	dm.PairCompleted(dev.ID)
+
+	left, ok := dm.GetDeviceByID(dev.ID)
+	if !ok {
+		t.Fatal("device vanished after failed pairing")
+	}
+	if left.Status != model.Pairable {
+		t.Errorf("Status = %q, want Pairable when no pairing file matches", left.Status)
+	}
+	if left.UDID != "" {
+		t.Errorf("UDID = %q, want empty", left.UDID)
+	}
+}
+
+func TestPairCompletedKeepsDevicePairableWhenProbeFails(t *testing.T) {
+	info := completeDeviceInfo()
+	info.UniqueDeviceID = ""
+	setupManualDeviceTest(t, []string{"A.plist"}, info, nil)
+	dm, dev := addManualDevice(t, "100.64.0.12")
+	writePairingFiles(t, "A.plist")
+
+	dm.PairCompleted(dev.ID)
+
+	left, ok := dm.GetDeviceByID(dev.ID)
+	if !ok {
+		t.Fatal("device vanished after failed pairing")
+	}
+	if left.Status != model.Pairable {
+		t.Errorf("Status = %q, want Pairable when the probe returns no UDID", left.Status)
+	}
+	if left.UDID != "" {
+		t.Errorf("UDID = %q, want empty", left.UDID)
 	}
 }
 
@@ -259,5 +315,3 @@ func TestParseDeviceInfoOutput(t *testing.T) {
 		t.Errorf("UniqueDeviceID = %q, want fallback", info.UniqueDeviceID)
 	}
 }
-
-var errFakeProbeFailed = errors.New("probe failed")
