@@ -41,7 +41,7 @@
                   class="text-xs link link-hover text-error"
                   v-if="item.manual"
                   @click.stop="deleteDevice(item)"
-                >{{ confirmDeleteId === item.ID ? $t("home.table.button.confirm_delete") : $t("home.table.button.delete") }}</p>
+                >{{ confirmDeleteId === item.id ? $t("home.table.button.confirm_delete") : $t("home.table.button.delete") }}</p>
               </div>
             </a>
           </div>
@@ -77,7 +77,7 @@
                   class="text-xs link link-hover text-error"
                   v-if="item.manual"
                   @click.stop="deleteDevice(item)"
-                >{{ confirmDeleteId === item.ID ? $t("home.table.button.confirm_delete") : $t("home.table.button.delete") }}</p>
+                >{{ confirmDeleteId === item.id ? $t("home.table.button.confirm_delete") : $t("home.table.button.delete") }}</p>
               </div>
             </a>
           </div>
@@ -609,13 +609,13 @@ export default {
       closePopper?.();
     },
     deleteDevice(item) {
-      if (this.confirmDeleteId !== item.ID) {
-        this.confirmDeleteId = item.ID;
+      if (this.confirmDeleteId !== item.id) {
+        this.confirmDeleteId = item.id;
         return;
       }
       this.confirmDeleteId = null;
       const _this = this;
-      api.deleteManualDevice(item.ID).then(() => {
+      api.deleteManualDevice(item.id).then(() => {
         _this.fetchData();
       });
     },
