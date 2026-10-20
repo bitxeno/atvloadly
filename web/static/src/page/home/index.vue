@@ -12,7 +12,7 @@
             >{{ $t("home.heading.add_device") }}</button>
           </div>
         </div>
-        <div class="flex flex-col w-full border-opacity-50">
+        <div class="flex flex-col w-full border-opacity-50" @mouseleave="resetConfirmDelete">
           <div class="grid card atv-device-panel" v-show="pairableDevices.length > 0">
             <a
               class="atv-device-row flex flex-row gap-x-3 cursor-pointer"
@@ -37,6 +37,11 @@
                   v-if="item.connection == 'RPPairing'"
                   @click.stop="openManualDeviceImport(item)"
                 >{{ $t("home.dialog.manual.import_title") }}</p>
+                <p
+                  class="text-xs link link-hover text-error"
+                  v-if="item.manual"
+                  @click.stop="deleteDevice(item)"
+                >{{ confirmDeleteId === item.ID ? $t("home.table.button.confirm_delete") : $t("home.table.button.delete") }}</p>
               </div>
             </a>
           </div>
@@ -45,7 +50,7 @@
 
       <div>
         <h4 class="mb-2">{{ $t("home.heading.paired_devices") }}</h4>
-        <div class="flex flex-col w-full border-opacity-50">
+        <div class="flex flex-col w-full border-opacity-50" @mouseleave="resetConfirmDelete">
           <div
             class="grid card atv-device-panel"
             v-show="pairedDevices.length > 0"
@@ -68,6 +73,11 @@
               <div class="flex flex-col justify-top">
                 <h4>{{ item.name }} ({{ truncateIP(item.ip) }})</h4>
                 <p>{{ formatDeviceStatus(item) }}</p>
+                <p
+                  class="text-xs link link-hover text-error"
+                  v-if="item.manual"
+                  @click.stop="deleteDevice(item)"
+                >{{ confirmDeleteId === item.ID ? $t("home.table.button.confirm_delete") : $t("home.table.button.delete") }}</p>
               </div>
             </a>
           </div>
@@ -597,6 +607,17 @@ export default {
       });
 
       closePopper?.();
+    },
+    deleteDevice(item) {
+      if (this.confirmDeleteId !== item.ID) {
+        this.confirmDeleteId = item.ID;
+        return;
+      }
+      this.confirmDeleteId = null;
+      const _this = this;
+      api.deleteManualDevice(item.ID).then(() => {
+        _this.fetchData();
+      });
     },
     refreshApp(item) {
       let _this = this;

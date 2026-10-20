@@ -32,6 +32,10 @@ type Device struct {
 	DeveloperModeStatus      bool             `json:"developer_mode_status"`
 	PersonalizedImageMounted bool             `json:"personalized_image_mounted"`
 	DiscoveryAt              time.Time        `json:"-"`
+	// Manual marks devices registered by hand (Add Device dialog or a
+	// pairing-record import) that no discovery service announces; only
+	// manual devices are deletable from the portal.
+	Manual bool `json:"manual,omitempty"`
 }
 
 // ServicePort returns the port the tunnel-capable remote-pairing service

@@ -149,6 +149,9 @@ func TestAddManualDeviceDefaultsPairPort(t *testing.T) {
 	if dev.Port != pairPortFixed {
 		t.Errorf("Port = %d, want the fixed pairing port %d", dev.Port, pairPortFixed)
 	}
+	if !dev.Manual {
+		t.Error("manually added device must carry Manual = true")
+	}
 }
 
 func TestManualDevicesPersistAcrossRestart(t *testing.T) {
@@ -165,6 +168,9 @@ func TestManualDevicesPersistAcrossRestart(t *testing.T) {
 	}
 	if restored.Status != model.Pairable {
 		t.Errorf("restored Status = %q, want Pairable", restored.Status)
+	}
+	if !restored.Manual {
+		t.Error("restored device must carry Manual = true")
 	}
 }
 
@@ -483,6 +489,9 @@ func TestImportPairedDeviceCreatesPairedEntry(t *testing.T) {
 	}
 	if dev.Status != model.Paired {
 		t.Errorf("Status = %q, want Paired", dev.Status)
+	}
+	if !dev.Manual {
+		t.Error("imported device must carry Manual = true")
 	}
 	if dev.UDID != completeDeviceInfo().UniqueDeviceID {
 		t.Errorf("UDID = %q, want %q", dev.UDID, completeDeviceInfo().UniqueDeviceID)

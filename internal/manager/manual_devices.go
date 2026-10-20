@@ -115,6 +115,7 @@ func (dm *DeviceManager) AddManualDevice(ip string, port uint16, name string) (*
 		Connection:  model.DeviceConnectionRemote,
 		Status:      model.Pairable,
 		DiscoveryAt: time.Now(),
+		Manual:      true,
 	}
 	device.ParseDeviceClass()
 
@@ -153,6 +154,9 @@ func (dm *DeviceManager) LoadManualDevices() {
 		if device.ID == "" || device.IP == "" {
 			continue
 		}
+		// Anything recorded in the manual registry is a manual device,
+		// including entries saved before this flag was introduced.
+		device.Manual = true
 		dm.SaveDevice(device)
 		log.Debugf("Manual device restored: %s (%s)", device.Name, device.UDID)
 	}
@@ -374,6 +378,7 @@ func (dm *DeviceManager) ImportPairedDevice(ip string, port uint16) error {
 		ProductVersion:            productVersion,
 		DeveloperModeStatus:       developerModeStatus,
 		PersonalizedImageMounted:  personalizedImageMounted,
+		Manual:                    true,
 	}
 	device.ParseDeviceClass()
 	if name != "" {
