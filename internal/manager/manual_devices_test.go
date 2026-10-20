@@ -21,6 +21,9 @@ var probeCalls []string
 func setupManualDeviceTest(t *testing.T, fakeOrder []string, fakeInfo *model.DeviceInfo, fakeErr error) {
 	t.Helper()
 
+	if app.Config == nil {
+		app.Config = &app.Configuration{}
+	}
 	app.Config.Server.DataDir = t.TempDir()
 
 	probeCalls = nil
@@ -58,7 +61,7 @@ func addManualDevice(t *testing.T, ip string) (*DeviceManager, *model.Device) {
 	t.Helper()
 
 	dm := newDeviceManager()
-	dev, err := dm.AddManualDevice(ip, 62078, 0, "")
+	dev, err := dm.AddManualDevice(ip, 62078, "")
 	if err != nil {
 		t.Fatalf("AddManualDevice failed: %v", err)
 	}
@@ -108,7 +111,7 @@ func TestAddManualDeviceUsesSuppliedName(t *testing.T) {
 	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
 
 	dm := newDeviceManager()
-	named, err := dm.AddManualDevice("100.64.0.13", 62078, 0, "My Apple TV")
+	named, err := dm.AddManualDevice("100.64.0.13", 62078, "My Apple TV")
 	if err != nil {
 		t.Fatalf("AddManualDevice failed: %v", err)
 	}
@@ -122,11 +125,11 @@ func TestAddManualDeviceRejectsBadInput(t *testing.T) {
 	dm := newDeviceManager()
 
 	// Public address.
-	if _, err := dm.AddManualDevice("8.8.8.8", 62078, 0, ""); err == nil {
+	if _, err := dm.AddManualDevice("8.8.8.8", 62078, ""); err == nil {
 		t.Error("public address should be rejected")
 	}
 	// Port 0.
-	if _, err := dm.AddManualDevice("100.64.0.12", 0, 0, ""); err == nil {
+	if _, err := dm.AddManualDevice("100.64.0.12", 0, ""); err == nil {
 		t.Error("port 0 should be rejected")
 	}
 
@@ -159,7 +162,7 @@ func TestAddManualDeviceReplacesStaleEntry(t *testing.T) {
 	addManualDevice(t, "100.64.0.12")
 
 	// Same device moves to a new address: only one entry may remain.
-	replaced, err := newDeviceManager().AddManualDevice("100.113.5.5", 62078, 0, "")
+	replaced, err := newDeviceManager().AddManualDevice("100.113.5.5", 62078, "")
 	if err != nil {
 		t.Fatalf("second add failed: %v", err)
 	}
@@ -177,7 +180,7 @@ func TestDeleteManualDevice(t *testing.T) {
 	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
 
 	_, dev := addManualDevice(t, "100.64.0.12")
-	if _, err := newDeviceManager().AddManualDevice("100.64.0.9", 62078, 0, "second"); err != nil {
+	if _, err := newDeviceManager().AddManualDevice("100.64.0.9", 62078, "second"); err != nil {
 		t.Fatalf("second add failed: %v", err)
 	}
 
@@ -356,23 +359,23 @@ func TestPairCompletedFallsBackToPeerRecord(t *testing.T) {
 }
 
 // TestServicePortFallsBackToPairPort verifies the fallback behavior of
-// ServicePort: manual devices carry an install port for the tunnel-capable
-// remote-pairing service, everything else shares the pairing port.
+// ServicePort: manual devices start with only the pairing port, and installs
+// move to the separately scanned install port once it is known.
 func TestServicePortFallsBackToPairPort(t *testing.T) {
 	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
 
 	dm := newDeviceManager()
-	dev, err := dm.AddManualDevice("100.64.0.12", 62078, 49152, "split")
+	dev, err := dm.AddManualDevice("100.64.0.12", 62078, "split")
 	if err != nil {
 		t.Fatalf("AddManualDevice failed: %v", err)
 	}
-	if dev.ServicePort() != 49152 {
-		t.Errorf("ServicePort() = %d, want the install port 49152", dev.ServicePort())
+	if dev.ServicePort() != 62078 {
+		t.Errorf("ServicePort() = %d, want the pairing port 62078 when the install port is not known yet", dev.ServicePort())
 	}
 
-	dev.InstallPort = 0
-	if dev.ServicePort() != 62078 {
-		t.Errorf("ServicePort() = %d, want the pairing port 62078 when no install port is set", dev.ServicePort())
+	dm.UpdateManualInstallPort(dev, 49152)
+	if dev.ServicePort() != 49152 {
+		t.Errorf("ServicePort() = %d, want the install port 49152 after the override", dev.ServicePort())
 	}
 }
 
@@ -399,6 +402,54 @@ func TestUpdateManualInstallPortPersists(t *testing.T) {
 	entries := readManualDevices()
 	if len(entries) != 1 || entries[0].InstallPort != 49152 {
 		t.Errorf("persistence does not carry the install port: %+v", entries)
+	}
+}
+
+// TestScanAndStoreInstallPort verifies the post-pairing auto-scan: with the
+// freshly written pairing record, the handshake-validated scan records the
+// device's install port without any manual port entry.
+func TestScanAndStoreInstallPort(t *testing.T) {
+	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
+
+	dm, dev := addManualDevice(t, "100.64.0.12")
+	if dev.InstallPort != 0 {
+		t.Fatalf("fresh manual device carries install port %d", dev.InstallPort)
+	}
+
+	probed := stubScan(t, []uint16{65300, 49152}, 49152)
+	dm.scanAndStoreInstallPort(dev.ID, dev.IP)
+
+	scanned, ok := dm.GetDeviceByID(dev.ID)
+	if !ok {
+		t.Fatal("device vanished from the registry")
+	}
+	if scanned.InstallPort != 49152 {
+		t.Errorf("InstallPort = %d, want the scanned 49152", scanned.InstallPort)
+	}
+	entries := readManualDevices()
+	if len(entries) != 1 || entries[0].InstallPort != 49152 {
+		t.Errorf("persistence does not carry the scanned install port: %+v", entries)
+	}
+	if probed[65300] != 0 {
+		t.Errorf("pairing port must not be probed: %v", probed)
+	}
+}
+
+// TestScanAndStoreInstallPortNoCandidate verifies a device whose handshake
+// cannot identify an install port keeps its registration untouched.
+func TestScanAndStoreInstallPortNoCandidate(t *testing.T) {
+	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
+
+	dm, dev := addManualDevice(t, "100.64.0.12")
+
+	stubScan(t, []uint16{65300}, 0)
+	dm.scanAndStoreInstallPort(dev.ID, dev.IP)
+
+	if dev.InstallPort != 0 {
+		t.Errorf("InstallPort = %d, want unchanged after a failed scan", dev.InstallPort)
+	}
+	if entries := readManualDevices(); len(entries) != 1 || entries[0].InstallPort != 0 {
+		t.Errorf("persistence must stay untouched: %+v", entries)
 	}
 }
 

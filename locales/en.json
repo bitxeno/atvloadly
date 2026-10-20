@@ -80,7 +80,6 @@
                     "port_label": "Pairing port:",
                     "port_hint": "Port of the manual-pairing service, the one that accepts the PIN flow; find it with dns-sd (dns-sd -L \"Device Name\" _remotepairing-manual-pairing._tcp local)",
                     "install_port_label": "Install service port:",
-                    "install_port_hint": "Port of the remote-pairing service that installs and network probes run over; 0 keeps installs on the pairing port, which only works when one service serves both",
                     "install_port_scan": "Scan port",
                     "install_port_scan_success": "Install port {port} detected",
                     "install_port_scan_failed": "No install port found; check that the device is reachable"
@@ -98,7 +97,7 @@
                 "instructions": {
                     "title": "Adding and pairing over the network",
                     "step1": "Find the device's LAN IP: Apple TV Settings → Network shows the address; on iPhone and iPad, Settings → Wi-Fi → tap the (i) button.",
-                    "step2": "From a computer in the device's network, list the devices and resolve the ports with dns-sd: <code>dns-sd -B _remotepairing-manual-pairing._tcp local</code> then <code>dns-sd -L \"Device Name\" _remotepairing-manual-pairing._tcp local</code> — the pairing port goes in the Pairing port field, and the same lookup for <code>_remotepairing._tcp</code> gives the install port.",
+                    "step2": "From a computer in the device's network, list the devices and resolve the port with dns-sd: <code>dns-sd -B _remotepairing-manual-pairing._tcp local</code> then <code>dns-sd -L \"Device Name\" _remotepairing-manual-pairing._tcp local</code> — the resolved port goes in the Pairing port field. The install service port is detected automatically after pairing.",
                     "step3": "After adding, click the device under Pairable and enter the PIN the device shows.",
                     "step4": "The device IP for this server is the address it can reach the device at — a Tailscale address, not the device's LAN address."
                 },

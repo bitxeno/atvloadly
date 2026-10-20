@@ -283,16 +283,15 @@ func route(fi *fiber.App) {
 	// normally over the supplied address.
 	api.Post("/devices/manual", func(c *fiber.Ctx) error {
 		var req struct {
-			Name        string `json:"name"`
-			IP          string `json:"ip"`
-			Port        uint16 `json:"port"`
-			InstallPort uint16 `json:"install_port"`
+			Name string `json:"name"`
+			IP   string `json:"ip"`
+			Port uint16 `json:"port"`
 		}
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError("Invalid argument. error: " + err.Error()))
 		}
 
-		device, err := manager.AddManualDevice(req.IP, req.Port, req.InstallPort, req.Name)
+		device, err := manager.AddManualDevice(req.IP, req.Port, req.Name)
 		if err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}

@@ -80,7 +80,6 @@
                     "port_label": "配对端口：",
                     "port_hint": "手动配对服务的端口，即接受 PIN 码流程的端口；可用 dns-sd 查询（dns-sd -L \"设备名称\" _remotepairing-manual-pairing._tcp local）",
                     "install_port_label": "安装服务端口：",
-                    "install_port_hint": "安装和网络探测所经由的远程配对服务的端口；填 0 则安装也走配对端口，仅当同一服务同时支持两者时才有效",
                     "install_port_scan": "扫描端口",
                     "install_port_scan_success": "检测到安装端口 {port}",
                     "install_port_scan_failed": "未找到安装端口；请检查设备是否可达"
@@ -98,7 +97,7 @@
                 "instructions": {
                     "title": "在网络上添加并配对设备",
                     "step1": "查找设备的局域网 IP：Apple TV 在 设置 → 网络 中显示地址；iPhone/iPad 在 设置 → Wi-Fi → 点击 (i)。",
-                    "step2": "在同一网络中的电脑上用 dns-sd 列出设备并解析端口：先 <code>dns-sd -B _remotepairing-manual-pairing._tcp local</code>，再 <code>dns-sd -L \"设备名称\" _remotepairing-manual-pairing._tcp local</code> —— 括出的端口填入配对端口字段；对 <code>_remotepairing._tcp</code> 做同样的查询可得到安装端口。",
+                    "step2": "在同一网络中的电脑上用 dns-sd 查出端口：先 <code>dns-sd -B _remotepairing-manual-pairing._tcp local</code>，再 <code>dns-sd -L \"设备名称\" _remotepairing-manual-pairing._tcp local</code> —— 查出的端口填入配对端口字段。安装服务端口会在配对完成后自动检测。",
                     "step3": "添加完成后，点击“待配对”列表中的设备，并输入电视屏幕上显示的 PIN 码。",
                     "step4": "填写给本服务器的设备 IP 必须是它能访问设备的地址——即 Tailscale 地址，而不是设备的局域网地址。"
                 },

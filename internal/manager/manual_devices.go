@@ -87,11 +87,9 @@ func ManualDeviceID(ip string, port uint16) string {
 // runs: plumesign device-info over the network requires a pairing file,
 // which only exists after the pairing flow succeeds for this host. The
 // device therefore starts Pairable with an empty UDID; PairCompleted fills
-// in the rest once the pairing flow succeeds. installPort is the port of
-// the tunnel-capable regular remote-pairing service (`_remotepairing._tcp`);
-// zero keeps installs on the pairing port, which only works when one service
-// serves both.
-func (dm *DeviceManager) AddManualDevice(ip string, port uint16, installPort uint16, name string) (*model.Device, error) {
+// in the rest once the pairing flow succeeds, including the install-port
+// scan that needs the freshly written pairing record.
+func (dm *DeviceManager) AddManualDevice(ip string, port uint16, name string) (*model.Device, error) {
 	if ip == "" || port == 0 {
 		return nil, fmt.Errorf("ip and port are required")
 	}
@@ -109,7 +107,6 @@ func (dm *DeviceManager) AddManualDevice(ip string, port uint16, installPort uin
 		Name:        name,
 		IP:          ip,
 		Port:        port,
-		InstallPort: installPort,
 		Connection:  model.DeviceConnectionRemote,
 		Status:      model.Pairable,
 		DiscoveryAt: time.Now(),
@@ -286,6 +283,29 @@ func (dm *DeviceManager) PairCompleted(id string) {
 	manualMu.Unlock()
 
 	dm.onDeviceConnected(*device)
+
+	// The pairing record just written makes the install-service handshake
+	// possible; let it find the install port while the user heads to the
+	// install page, so manual devices need no repeated port entry there.
+	if updated && device.InstallPort == 0 {
+		go dm.scanAndStoreInstallPort(device.ID, device.IP)
+	}
+}
+
+// scanAndStoreInstallPort detects the device's install-service port with the
+// handshake-validated port scan and records it for the device. Runs as a
+// background step after pairing completes; failure is non-fatal because the
+// install page offers the same scan manually.
+func (dm *DeviceManager) scanAndStoreInstallPort(id string, ip string) {
+	port, _, err := ScanInstallPort(ip)
+	if err != nil || port == 0 {
+		log.Warnf("Install port scan for %s found nothing usable: %v", ip, err)
+		return
+	}
+	if device, ok := dm.GetDeviceByID(id); ok {
+		dm.UpdateManualInstallPort(device, port)
+		log.Infof("Install port scan for %s: %d recorded", ip, port)
+	}
 }
 
 // ImportPairedDevice marks a device Paired from an imported pairing record,

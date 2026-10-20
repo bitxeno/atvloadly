@@ -39,20 +39,6 @@
           </label>
         </div>
 
-        <div class="form-control">
-          <label class="label pb-1">{{ $t("home.dialog.manual.form.install_port_label") }}</label>
-          <input
-            type="number"
-            min="0"
-            max="65535"
-            class="input input-bordered w-full"
-            v-model="addForm.installPort"
-          />
-          <label class="label pt-1 pb-0">
-            <span class="label-text-alt">{{ $t("home.dialog.manual.form.install_port_hint") }}</span>
-          </label>
-        </div>
-
         <details class="collapse collapse-arrow bg-base-200 rounded-box mt-2">
           <summary class="collapse-title text-sm min-h-0 py-3">
             {{ $t("home.dialog.manual.instructions.title") }}
@@ -187,7 +173,6 @@ export default {
         name: "",
         ip: "",
         port: 62078,
-        installPort: 49152,
       },
       importForm: {
         file: null,
@@ -199,7 +184,7 @@ export default {
   },
   methods: {
     showAdd() {
-      this.addForm = { name: "", ip: "", port: 62078, installPort: 49152 };
+      this.addForm = { name: "", ip: "", port: 62078 };
       this.visibleAdd = true;
     },
     showImport(device) {
@@ -251,7 +236,6 @@ export default {
           name: this.addForm.name,
           ip: this.addForm.ip,
           port: Number(this.addForm.port),
-          install_port: Number(this.addForm.installPort) || 0,
         });
         toast.success(this.$t("home.dialog.manual.toast.added"));
         this.visibleAdd = false;

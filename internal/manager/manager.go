@@ -53,8 +53,8 @@ func GetDeviceByUDID(udid string) (*model.Device, bool) {
 
 // AddManualDevice registers a device that avahi cannot discover; see
 // DeviceManager.AddManualDevice.
-func AddManualDevice(ip string, port uint16, installPort uint16, name string) (*model.Device, error) {
-	return deviceManager.AddManualDevice(ip, port, installPort, name)
+func AddManualDevice(ip string, port uint16, name string) (*model.Device, error) {
+	return deviceManager.AddManualDevice(ip, port, name)
 }
 
 func DeleteManualDevice(id string) (bool, error) {

@@ -80,7 +80,6 @@
           "port_label": "Parkopplingsport:",
           "port_hint": "Porten till tjänsten för manuell parkoppling, alltså den som tar emot PIN-flödet; hitta den med dns-sd (dns-sd -L \"Enhetsnamn\" _remotepairing-manual-pairing._tcp local)",
           "install_port_label": "Installationsport:",
-          "install_port_hint": "Porten till fjärrparkopplingstjänsten som installationer och nätverkskontroller körs via; 0 behåller installationer på parkopplingsporten, vilket bara fungerar när en tjänst hanterar båda",
           "install_port_scan": "Sök port",
           "install_port_scan_success": "Installationsport {port} hittades",
           "install_port_scan_failed": "Ingen installationsport hittades; kontrollera att enheten kan nås"
@@ -98,7 +97,7 @@
         "instructions": {
           "title": "Lägga till och parkoppla över nätverket",
           "step1": "Hitta enhetens LAN-IP: Apple TV visar adressen under Inställningar → Nätverk; på iPhone och iPad: Inställningar → Wi-Fi → tryck på (i).",
-          "step2": "Lista enheterna och slå upp portarna med dns-sd från en dator i enhetens nätverk: först <code>dns-sd -B _remotepairing-manual-pairing._tcp local</code> och sedan <code>dns-sd -L \"Enhetsnamn\" _remotepairing-manual-pairing._tcp local</code> — porten som visas går i fältet Parkopplingsport, och samma lookup för <code>_remotepairing._tcp</code> ger installationsporten.",
+          "step2": "Lista enheterna och slå upp porten med dns-sd från en dator i enhetens nätverk: först <code>dns-sd -B _remotepairing-manual-pairing._tcp local</code> och sedan <code>dns-sd -L \"Enhetsnamn\" _remotepairing-manual-pairing._tcp local</code> — porten som visas går i fältet Parkopplingsport. Installationsporten detekteras automatiskt efter parkopplingen.",
           "step3": "Klicka efter tillägget på enheten under Parkopplingsbara och ange PIN-koden som enheten visar.",
           "step4": "Enhetens IP för den här servern är den adress som servern når enheten på — en Tailscale-adress, inte enhetens LAN-adress."
         },

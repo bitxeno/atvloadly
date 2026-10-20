@@ -80,7 +80,6 @@
           "port_label": "Port uparivanja:",
           "port_hint": "Port usluge ručnog uparivanja, one koja prihvata tok sa PIN kodom; pronađite ga pomoću dns-sd (dns-sd -L „Ime uređaja“ _remotepairing-manual-pairing._tcp local)",
           "install_port_label": "Port usluge instalacije:",
-          "install_port_hint": "Port usluge daljinskog uparivanja preko koje idu instalacije i mrežne provere; 0 zadržava instalacije na portu uparivanja, što radi samo ako obe koriste istu uslugu",
           "install_port_scan": "Skeniraj port",
           "install_port_scan_success": "Pronađen port za instalisanje: {port}",
           "install_port_scan_failed": "Port za instalisanje nije pronađen; proverite da li je uređaj dostupan"
@@ -98,7 +97,7 @@
         "instructions": {
           "title": "Dodavanje i uparivanje preko mreže",
           "step1": "Pronađite LAN IP uređaja: Apple TV — Podešavanja → Mreža; iPhone i iPad — Podešavanja → Wi-Fi → dodirnite (i).",
-          "step2": "Iz liste uređaja i portova pomoću dns-sd sa računara u mreži uređaja: prvo <code>dns-sd -B _remotepairing-manual-pairing._tcp local</code>, pa <code>dns-sd -L „Ime uređaja“ _remotepairing-manual-pairing._tcp local</code> — navedeni port ide u polje Port uparivanja, a isti upit za <code>_remotepairing._tcp</code> daje port instalacije.",
+          "step2": "Iz liste uređaja i portova pomoću dns-sd sa računara u mreži uređaja: prvo <code>dns-sd -B _remotepairing-manual-pairing._tcp local</code>, pa <code>dns-sd -L „Ime uređaja“ _remotepairing-manual-pairing._tcp local</code> — navedeni port ide u polje Port uparivanja. Port usluge instalacije se detektuje automatski nakon uparivanja.",
           "step3": "Nakon dodavanja kliknite na uređaj pod Uparivim i unesite PIN koji uređaj prikazuje.",
           "step4": "IP uređaja za ovaj server je adresa na kojoj server može da dođe do uređaja — Tailscale adresa, ne LAN adresa uređaja."
         },
