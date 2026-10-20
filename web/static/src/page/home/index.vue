@@ -10,11 +10,6 @@
               class="btn btn-xs btn-ghost"
               @click="openManualDeviceAdd"
             >{{ $t("home.heading.add_device") }}</button>
-            <button
-              type="button"
-              class="btn btn-xs btn-ghost"
-              @click="openPairedFileImport"
-            >{{ $t("home.heading.import_pairing") }}</button>
           </div>
         </div>
         <div class="flex flex-col w-full border-opacity-50">
@@ -757,11 +752,6 @@ export default {
     },
     openManualDeviceAdd() {
       this.$refs.manualDeviceDialog.showAdd();
-    },
-    openPairedFileImport() {
-      // Standalone import: a pairing record recorded elsewhere pairs the
-      // device without a pair port, only install port + IP.
-      this.$refs.manualDeviceDialog.showImport(null);
     },
     openManualDeviceImport(device) {
       this.$refs.manualDeviceDialog.showImport(device);

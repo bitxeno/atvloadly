@@ -54,8 +54,7 @@
       "paired_devices": "Parkopplade enheter",
       "service_status": "Tjänststatus",
       "installed_app": "Installerade appar",
-          "add_device": "Lägg till enhet",
-          "import_pairing": "Importera parkopplingsfil"
+          "add_device": "Lägg till enhet"
     },
     "dialog": {
       "delete_confirm": {
@@ -87,17 +86,15 @@
           "tips": "Posten valideras mot enheten över installationsporten, sparas här för kommande installationer, och enheten skapas eller uppgraderas till parkopplad. Ingen parkopplingsport behövs.",
           "instructions": {
             "title": "Var posten kommer ifrån",
-            "step1": "Parkoppla enheten där posten skapas: en Apple TV parkopples med Apple Configurator (meny → Paired Devices → Pair; ange den sexsiffriga PIN-koden som visas på TV:n) och en iPhone parkopples i Finder (anslut, lita sedan på datorn).",
-            "step2": "Kopiera posten till en fil: macOS sparar en .plist per enhet under /var/db/lockdown (kräver sudo).",
+            "step1": "Du behöver ladda ner „idevice_pair“. En iPhone måste anslutas via USB, men en Apple TV kan anslutas via Wi-Fi.",
+            "step2": "När programmet ser din enhet: klicka på „Create“ under „Remote Pairing“. Det skapar plist-filen som vi behöver.",
             "step3": "Importera den ovan med enhetens IP och installationsporten (porten till _remotepairing._tcp från dns-sd; ingen parkopplingsport behövs)."
           }
         },
         "instructions": {
           "title": "Lägga till och parkoppla över nätverket",
-          "step1": "Hitta enhetens LAN-IP: Apple TV visar adressen under Inställningar → Nätverk; på iPhone och iPad: Inställningar → Wi-Fi → tryck på (i).",
-          "step2": "Inga ytterligare inställningar behövs: parkopplingsporten är fast hos Apple, och installationsporten detekteras automatiskt efter parkopplingen.",
-          "step3": "Klicka efter tillägget på enheten under Parkopplingsbara och ange PIN-koden som enheten visar.",
-          "step4": "Enhetens IP för den här servern är den adress som servern når enheten på — en Tailscale-adress, inte enhetens LAN-adress."
+          "step1": "Om enheten är på LAN: Hitta enhetens LAN-IP: Apple TV visar adressen under Inställningar → Nätverk; på iPhone och iPad: Inställningar → Wi-Fi → tryck på (i).",
+          "step2": "Om ansluten via VPN: Apple TV: öppna din VPN-app; på iPhone och iPad: Inställningar → VPN → tryck på (i) vid VPN → Adress."
         },
         "toast": {
           "added": "Enheten har lagts till",

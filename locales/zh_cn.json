@@ -54,8 +54,7 @@
             "paired_devices": "已连接设备",
             "service_status": "服务状态",
             "installed_app": "已安装 Apps",
-            "add_device": "添加设备",
-            "import_pairing": "导入配对记录"
+            "add_device": "添加设备"
         },
         "dialog": {
             "delete_confirm": {
@@ -87,17 +86,15 @@
                     "tips": "记录文件会通过安装服务端口对设备进行验证，验证通过后保存到本服务器供后续安装使用，设备随之自动创建或升级为已连接。不需要配对端口。",
                     "instructions": {
                         "title": "配对记录从哪里来",
-                        "step1": "在生成记录的地方完成配对：Apple TV 通过 Apple Configurator 配对（菜单 → 已配对设备 → 配对，输入电视屏幕上的六位 PIN 码）；iPhone 在 Finder 中连接并信任。",
-                        "step2": "将记录复制为文件：macOS 在 /var/db/lockdown 下为每台设备保存一个 .plist（需要 sudo）。",
+                        "step1": "你需要下载 “idevice_pair”。iPhone 需要通过 USB 连接，而 Apple TV 可以通过 Wi-Fi 连接。",
+                        "step2": "当程序能看到你的设备后，点击 “Remote Pairing” 下的 “Create”。这会生成我们需要的 plist 文件。",
                         "step3": "在上方用设备 IP 和安装服务端口（dns-sd 查询到的 _remotepairing._tcp 端口；不需要配对端口）导入。"
                     }
                 },
                 "instructions": {
                     "title": "在网络上添加并配对设备",
-                    "step1": "查找设备的局域网 IP：Apple TV 在 设置 → 网络 中显示地址；iPhone/iPad 在 设置 → Wi-Fi → 点击 (i)。",
-                    "step2": "无需其他设置：配对端口由 Apple 固定，安装服务端口会在配对后自动检测。",
-                    "step3": "添加完成后，点击“待配对”列表中的设备，并输入电视屏幕上显示的 PIN 码。",
-                    "step4": "填写给本服务器的设备 IP 必须是它能访问设备的地址——即 Tailscale 地址，而不是设备的局域网地址。"
+                    "step1": "若在局域网内：查找设备的局域网 IP：Apple TV 在 设置 → 网络 中显示地址；iPhone/iPad 在 设置 → Wi-Fi → 点击 (i)。",
+                    "step2": "若通过 VPN 连接：Apple TV：打开你的 VPN 应用；iPhone/iPad：“设置” → “VPN” → 点击 VPN 条目的 (i) → 查看地址。"
                 },
                 "toast": {
                     "added": "设备已添加",

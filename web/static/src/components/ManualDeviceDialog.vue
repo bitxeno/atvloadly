@@ -33,8 +33,6 @@
             <ol class="list-decimal list-inside flex flex-col gap-y-2">
               <li v-html="$t('home.dialog.manual.instructions.step1')"></li>
               <li v-html="$t('home.dialog.manual.instructions.step2')"></li>
-              <li v-html="$t('home.dialog.manual.instructions.step3')"></li>
-              <li v-html="$t('home.dialog.manual.instructions.step4')"></li>
             </ol>
           </div>
         </details>
@@ -95,7 +93,7 @@
           <button
             type="button"
             class="btn btn-xs btn-outline mt-1"
-            :disabled="scanBusy || !importForm.ip"
+            :disabled="scanBusy || !importForm.ip || !importForm.file"
             @click="scanImportPort"
             :title="$t('home.dialog.manual.form.install_port_scan')"
             :aria-label="$t('home.dialog.manual.form.install_port_scan')"

@@ -54,8 +54,7 @@
       "paired_devices": "Upareni uređaji",
       "service_status": "Status usluge",
       "installed_app": "Instalirane aplikacije",
-      "add_device": "Dodaj uređaj",
-      "import_pairing": "Uvezi zapis uparivanja"
+      "add_device": "Dodaj uređaj"
     },
     "dialog": {
       "delete_confirm": {
@@ -87,17 +86,15 @@
           "tips": "Zapis se proverava na uređaju preko porta usluge instalacije, čuva se na ovom serveru za kasnije instalacije, a uređaj se samostalno pravi ili nadograđuje na uparen. Port uparivanja nije potreban.",
           "instructions": {
             "title": "Odakle zapis potiče",
-            "step1": "Uparite uređaj tamo gde nastaje zapis: Apple TV se uparuje preko Apple Configurator (meni → Paired Devices → Pair; unesite šestocifreni PIN sa ekrana TV-a), a iPhone u Finder-u (povežite i poverite računaru).",
-            "step2": "Kopirajte zapis u datoteku: macOS čuva po jedan .plist za svaki uređaj u /var/db/lockdown (treba sudo).",
+            "step1": "Trebaće vam „idevice_pair“. iPhone se mora povezati preko USB-a, ali Apple TV može preko Wi-Fi-ja.",
+            "step2": "Kada program vidi vaš uređaj, kliknite „Create“ pod „Remote Pairing“. Time će nastati plist datoteka koja nam je potrebna.",
             "step3": "Uvezite ga gore sa IP uređaja i portom usluge instalacije (port _remotepairing._tcp iz dns-sd; port uparivanja nije potreban)."
           }
         },
         "instructions": {
           "title": "Dodavanje i uparivanje preko mreže",
-          "step1": "Pronađite LAN IP uređaja: Apple TV — Podešavanja → Mreža; iPhone i iPad — Podešavanja → Wi-Fi → dodirnite (i).",
-          "step2": "Dalja podešavanja nisu potrebna: port uparivanja je fiksiran kod Apple-a, a port usluge instalacije se detektuje automatski nakon uparivanja.",
-          "step3": "Nakon dodavanja kliknite na uređaj pod Uparivim i unesite PIN koji uređaj prikazuje.",
-          "step4": "IP uređaja za ovaj server je adresa na kojoj server može da dođe do uređaja — Tailscale adresa, ne LAN adresa uređaja."
+          "step1": "Ako je u lokalnoj mreži: Pronađite LAN IP uređaja: Apple TV — Podešavanja → Mreža; iPhone i iPad — Podešavanja → Wi-Fi → dodirnite (i).",
+          "step2": "Ako je povezan preko VPN-a: Apple TV: otvorite svoju VPN aplikaciju; na iPhone-u i iPad-u: Podešavanja → VPN → dodirnite (i) na VPN → Adresa."
         },
         "toast": {
           "added": "Uređaj je dodat",

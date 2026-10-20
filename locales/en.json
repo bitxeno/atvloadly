@@ -54,8 +54,7 @@
             "paired_devices": "Paired Devices",
             "service_status": "Service Status",
             "installed_app": "Installed Apps",
-            "add_device": "Add Device",
-            "import_pairing": "Import Pairing File"
+            "add_device": "Add Device"
         },
         "dialog": {
             "delete_confirm": {
@@ -87,17 +86,15 @@
                     "tips": "The record is validated against the device over the install service port, saved here for later installs, and the device is created or upgraded to paired. No pairing port is needed. ",
                     "instructions": {
                         "title": "Where the record comes from",
-                        "step1": "Pair the device where the record is created: an Apple TV pairs with Apple Configurator (menu → Paired Devices → Pair; enter the six-digit PIN shown on the TV) and an iPhone pairs in Finder (connect, then Trust).",
-                        "step2": "Copy the record to a file: macOS keeps one .plist per device under /var/db/lockdown (needs sudo).",
-                        "step3": "Import it above with the device IP and the install service port (the _remotepairing._tcp port from dns-sd; no pairing port is needed)."
+                        "step1": "You will need to download 'idevice pair'. For iPhone you will have to connect over USB, but Apple TV can connect over Wi-fi.",
+                        "step2": "Once the program can see your device, click 'Create' under 'Remote Pairing'. This will create the plist file that we need.",
+                        "step3": "Import it above with the device IP and the install service port (the _remotepairing._tcp port from dns-sd; no pairing port is needed). You can use the button to automatically scan for the install port."
                     }
                 },
                 "instructions": {
-                    "title": "Adding and pairing over the network",
-                    "step1": "Find the device's LAN IP: Apple TV Settings → Network shows the address; on iPhone and iPad, Settings → Wi-Fi → tap the (i) button.",
-                    "step2": "No further settings are needed: the pair port is fixed by Apple, and the install service port is detected automatically after pairing.",
-                    "step3": "After adding, click the device under Pairable and enter the PIN the device shows.",
-                    "step4": "The device IP for this server is the address it can reach the device at — a Tailscale address, not the device's LAN address."
+                    "title": "Adding and finding the device IP",
+                    "step1": "If in LAN: Find the device's LAN IP: Apple TV Settings → Network shows the address; on iPhone and iPad, Settings → Wi-Fi → tap the (i) button.",
+                    "step2": "If connected over VPN: Apple TV > Open your VPN App; on Iphone and iPad, Settings → VPN → tap the (i) button on VPN → Address."
                 },
                 "toast": {
                     "added": "Device added",
