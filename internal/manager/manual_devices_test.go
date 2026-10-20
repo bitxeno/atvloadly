@@ -128,14 +128,26 @@ func TestAddManualDeviceRejectsBadInput(t *testing.T) {
 	if _, err := dm.AddManualDevice("8.8.8.8", 62078, ""); err == nil {
 		t.Error("public address should be rejected")
 	}
-	// Port 0.
-	if _, err := dm.AddManualDevice("100.64.0.12", 0, ""); err == nil {
-		t.Error("port 0 should be rejected")
-	}
 
 	// Nothing must be registered after the rejections.
 	if n := len(dm.GetDevices()); n != 0 {
 		t.Errorf("devices registered = %d, want 0", n)
+	}
+}
+
+// TestAddManualDeviceDefaultsPairPort verifies the hardcoded pairing port:
+// omitting it stores Apple's fixed lockdown port, which is what lets the
+// Add Device flow ask for nothing but an address.
+func TestAddManualDeviceDefaultsPairPort(t *testing.T) {
+	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
+	dm := newDeviceManager()
+
+	dev, err := dm.AddManualDevice("100.64.0.12", 0, "")
+	if err != nil {
+		t.Fatalf("AddManualDevice failed: %v", err)
+	}
+	if dev.Port != pairPortFixed {
+		t.Errorf("Port = %d, want the fixed pairing port %d", dev.Port, pairPortFixed)
 	}
 }
 
@@ -416,7 +428,7 @@ func TestScanAndStoreInstallPort(t *testing.T) {
 		t.Fatalf("fresh manual device carries install port %d", dev.InstallPort)
 	}
 
-	probed := stubScan(t, []uint16{65300, 49152}, 49152)
+	_, probed := stubScan(t, []uint16{49152}, 49152)
 	dm.scanAndStoreInstallPort(dev.ID, dev.IP)
 
 	scanned, ok := dm.GetDeviceByID(dev.ID)
@@ -426,12 +438,12 @@ func TestScanAndStoreInstallPort(t *testing.T) {
 	if scanned.InstallPort != 49152 {
 		t.Errorf("InstallPort = %d, want the scanned 49152", scanned.InstallPort)
 	}
+	if probed[49152] == 0 {
+		t.Errorf("the open port must be probed: %v", probed)
+	}
 	entries := readManualDevices()
 	if len(entries) != 1 || entries[0].InstallPort != 49152 {
 		t.Errorf("persistence does not carry the scanned install port: %+v", entries)
-	}
-	if probed[65300] != 0 {
-		t.Errorf("pairing port must not be probed: %v", probed)
 	}
 }
 
@@ -442,7 +454,7 @@ func TestScanAndStoreInstallPortNoCandidate(t *testing.T) {
 
 	dm, dev := addManualDevice(t, "100.64.0.12")
 
-	stubScan(t, []uint16{65300}, 0)
+	_, _ = stubScan(t, []uint16{62078}, 0)
 	dm.scanAndStoreInstallPort(dev.ID, dev.IP)
 
 	if dev.InstallPort != 0 {

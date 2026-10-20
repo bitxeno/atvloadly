@@ -25,20 +25,6 @@
           />
         </div>
 
-        <div class="form-control">
-          <label class="label pb-1">{{ $t("home.dialog.manual.form.port_label") }}</label>
-          <input
-            type="number"
-            min="1"
-            max="65535"
-            class="input input-bordered w-full"
-            v-model="addForm.port"
-          />
-          <label class="label pt-1 pb-0">
-            <span class="label-text-alt">{{ $t("home.dialog.manual.form.port_hint") }}</span>
-          </label>
-        </div>
-
         <details class="collapse collapse-arrow bg-base-200 rounded-box mt-2">
           <summary class="collapse-title text-sm min-h-0 py-3">
             {{ $t("home.dialog.manual.instructions.title") }}
@@ -61,7 +47,7 @@
         <button
           type="button"
           class="btn btn-primary"
-          :disabled="addBusy || !addForm.ip || !addForm.port"
+          :disabled="addBusy || !addForm.ip"
           @click="submitAdd"
         >
           <span class="loading loading-spinner loading-xs" v-show="addBusy"></span>
@@ -172,7 +158,6 @@ export default {
       addForm: {
         name: "",
         ip: "",
-        port: 62078,
       },
       importForm: {
         file: null,
@@ -184,7 +169,7 @@ export default {
   },
   methods: {
     showAdd() {
-      this.addForm = { name: "", ip: "", port: 62078 };
+      this.addForm = { name: "", ip: "" };
       this.visibleAdd = true;
     },
     showImport(device) {
@@ -235,7 +220,6 @@ export default {
         await api.addManualDevice({
           name: this.addForm.name,
           ip: this.addForm.ip,
-          port: Number(this.addForm.port),
         });
         toast.success(this.$t("home.dialog.manual.toast.added"));
         this.visibleAdd = false;

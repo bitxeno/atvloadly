@@ -2,6 +2,7 @@ package manager
 
 import (
 	"errors"
+	"sync"
 	"testing"
 	"time"
 )
@@ -10,25 +11,32 @@ import (
 // in openPorts answer dials, and answeredProbe is the one port whose
 // handshake succeeds. When answeredProbe is set, the device has a saved
 // pairing record; otherwise scanning cannot validate any port. The returned
-// map counts, per probed port, how many handshakes ran.
-func stubScan(t *testing.T, openPorts []uint16, answeredProbe uint16) map[uint16]int {
+// maps count, per port, the dials attempted and the handshakes probed.
+func stubScan(t *testing.T, openPorts []uint16, answeredProbe uint16) (map[uint16]int, map[uint16]int) {
 	t.Helper()
 	open := make(map[uint16]bool, len(openPorts))
 	for _, port := range openPorts {
 		open[port] = true
 	}
+	dialed := map[uint16]int{}
 	probed := map[uint16]int{}
+	var mu sync.Mutex
 	prevDial := netDial
 	prevProbe := probeInstallPort
 	prevRecords := pairingRecordPaths
 	netDial = func(ip string, port uint16, timeout time.Duration) error {
+		mu.Lock()
+		dialed[port]++
+		mu.Unlock()
 		if open[port] {
 			return nil
 		}
 		return errors.New("refused")
 	}
 	probeInstallPort = func(ip string, port uint16, records []string) error {
+		mu.Lock()
 		probed[port]++
+		mu.Unlock()
 		if port == answeredProbe {
 			return nil
 		}
@@ -45,13 +53,13 @@ func stubScan(t *testing.T, openPorts []uint16, answeredProbe uint16) map[uint16
 		probeInstallPort = prevProbe
 		pairingRecordPaths = prevRecords
 	})
-	return probed
+	return dialed, probed
 }
 
-// A handshake-validated port wins over every other open port, regardless of
-// where it sits in the range.
+// A handshake-validated port wins over every other open port, and the fixed
+// pairing port inside the swept range is never probed.
 func TestScanInstallPortValidatesTunnelPort(t *testing.T) {
-	probed := stubScan(t, []uint16{65300, 49152, 51000, 60001}, 60001)
+	_, probed := stubScan(t, []uint16{62078, 49152, 51000, 60001}, 60001)
 
 	port, open, err := ScanInstallPort("100.99.166.81")
 	if err != nil {
@@ -66,12 +74,15 @@ func TestScanInstallPortValidatesTunnelPort(t *testing.T) {
 	if probed[49152] == 0 || probed[51000] == 0 {
 		t.Fatalf("lower open ports must be probed before the winner: %v", probed)
 	}
+	if probed[pairPortFixed] != 0 {
+		t.Fatalf("pairing port must not be probed: %v", probed)
+	}
 }
 
-// The known pairing port inside the dynamic range is never probed as an
-// install candidate.
-func TestScanInstallPortNeverProbesPairingPort(t *testing.T) {
-	probed := stubScan(t, []uint16{65300, 49152}, 49152)
+// The pairing port is dialed by the sweep but must never be offered or
+// probed as the install port.
+func TestScanInstallPortNeverOffersPairingPort(t *testing.T) {
+	dialed, probed := stubScan(t, []uint16{62078, 49152}, 49152)
 
 	port, _, err := ScanInstallPort("100.99.166.81")
 	if err != nil {
@@ -80,15 +91,18 @@ func TestScanInstallPortNeverProbesPairingPort(t *testing.T) {
 	if port != 49152 {
 		t.Fatalf("expected 49152, got %d", port)
 	}
-	if probed[65300] != 0 {
+	if dialed[62078] == 0 {
+		t.Fatalf("the fixed pairing port sits inside the swept range and must be dialed: %v", dialed)
+	}
+	if probed[62078] != 0 {
 		t.Fatalf("pairing port must not be probed: %v", probed)
 	}
 }
 
-// Without a working handshake (no saved records), the first open port in the
-// dynamic range is offered, mirroring plain port-scan heuristics.
+// Without a working handshake (no saved records), the first open port that
+// is not the pairing port is offered, mirroring plain port-scan heuristics.
 func TestScanInstallPortFallsBackToFirstOpenPort(t *testing.T) {
-	stubScan(t, []uint16{51000, 60001}, 0)
+	_, _ = stubScan(t, []uint16{51000, 60001}, 0)
 
 	port, _, err := ScanInstallPort("100.99.166.81")
 	if err != nil {
@@ -102,7 +116,7 @@ func TestScanInstallPortFallsBackToFirstOpenPort(t *testing.T) {
 // Ports must be probed in ascending order and the scan stops after the first
 // validated handshake.
 func TestScanInstallPortStopsAfterHandshake(t *testing.T) {
-	probed := stubScan(t, []uint16{49152, 49153, 49154, 60001}, 49153)
+	_, probed := stubScan(t, []uint16{49152, 49153, 49154, 60001}, 49153)
 
 	port, _, err := ScanInstallPort("100.99.166.81")
 	if err != nil {
@@ -116,10 +130,10 @@ func TestScanInstallPortStopsAfterHandshake(t *testing.T) {
 	}
 }
 
-// The tvOS pairing port sits inside the dynamic range but must never be
-// offered as the install port, with or without records.
+// A device that only exposes the manual-pairing service has no install port
+// yet; the scan must not offer the pairing port as one.
 func TestScanInstallPortIgnoresPairingOnlyPort(t *testing.T) {
-	stubScan(t, []uint16{65300}, 0)
+	_, _ = stubScan(t, []uint16{62078}, 0)
 
 	port, _, err := ScanInstallPort("100.99.166.81")
 	if err == nil {
@@ -127,25 +141,9 @@ func TestScanInstallPortIgnoresPairingOnlyPort(t *testing.T) {
 	}
 }
 
-// A pairing port next to a usable install port must never be picked.
-func TestScanInstallPortSkipsPairingPortInFallback(t *testing.T) {
-	stubScan(t, []uint16{65300, 49152}, 0)
-
-	port, _, err := ScanInstallPort("100.99.166.81")
-	if err != nil {
-		t.Fatalf("ScanInstallPort returned error: %v", err)
-	}
-	if port == 65300 {
-		t.Fatal("pairing port must not be offered as install port")
-	}
-	if port != 49152 {
-		t.Fatalf("expected 49152, got %d", port)
-	}
-}
-
 // An unreadable device must be reported, not silently misread.
 func TestScanInstallPortNoOpenPorts(t *testing.T) {
-	stubScan(t, nil, 0)
+	_, _ = stubScan(t, nil, 0)
 
 	port, open, err := ScanInstallPort("100.99.166.81")
 	if err == nil {

@@ -77,8 +77,6 @@
           "name_placeholder": "Opciono, npr. Apple TV u dnevnoj sobi",
           "ip_label": "IP uređaja:",
           "ip_placeholder": "LAN IP ili 100.x.y.z preko Tailscale",
-          "port_label": "Port uparivanja:",
-          "port_hint": "Port usluge ručnog uparivanja, one koja prihvata tok sa PIN kodom; pronađite ga pomoću dns-sd (dns-sd -L „Ime uređaja“ _remotepairing-manual-pairing._tcp local)",
           "install_port_label": "Port usluge instalacije:",
           "install_port_scan": "Skeniraj port",
           "install_port_scan_success": "Pronađen port za instalisanje: {port}",
@@ -97,7 +95,7 @@
         "instructions": {
           "title": "Dodavanje i uparivanje preko mreže",
           "step1": "Pronađite LAN IP uređaja: Apple TV — Podešavanja → Mreža; iPhone i iPad — Podešavanja → Wi-Fi → dodirnite (i).",
-          "step2": "Iz liste uređaja i portova pomoću dns-sd sa računara u mreži uređaja: prvo <code>dns-sd -B _remotepairing-manual-pairing._tcp local</code>, pa <code>dns-sd -L „Ime uređaja“ _remotepairing-manual-pairing._tcp local</code> — navedeni port ide u polje Port uparivanja. Port usluge instalacije se detektuje automatski nakon uparivanja.",
+          "step2": "Dalja podešavanja nisu potrebna: port uparivanja je fiksiran kod Apple-a, a port usluge instalacije se detektuje automatski nakon uparivanja.",
           "step3": "Nakon dodavanja kliknite na uređaj pod Uparivim i unesite PIN koji uređaj prikazuje.",
           "step4": "IP uređaja za ovaj server je adresa na kojoj server može da dođe do uređaja — Tailscale adresa, ne LAN adresa uređaja."
         },

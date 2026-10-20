@@ -14,14 +14,15 @@ import (
 	"github.com/bitxeno/atvloadly/internal/log"
 )
 
-// Remote devices advertise two services: the manual-pairing service accepts
-// the PIN flow on its own port, and the regular remote-pairing service
-// carries createListener installs. The install port lives somewhere in the
-// dynamic range; the manual-pairing port of tvOS devices historically sits
-// at one fixed value.
+// Remote pairing spans two Apple services: the manual-pairing service runs
+// the PIN flow on Apple's fixed lockdown port 62078, and the regular
+// remote-pairing service carries the install tunnel and the device-info
+// handshake. Darwin allocates the install listener from the ephemeral range
+// 49152-65535, and 62078 sits inside that range, so the sweep dials it too
+// but must never offer it as the install port.
 const (
-	// pairPortTvOS is the manual-pairing service port of Apple TVs.
-	pairPortTvOS uint16 = 65300
+	// pairPortFixed is Apple's fixed manual-pairing (lockdown) port.
+	pairPortFixed uint16 = 62078
 	// scanPortFirst is the first port of the dynamic service range.
 	scanPortFirst uint16 = 49152
 	// scanPortLast is the last port of the dynamic service range.
@@ -50,17 +51,13 @@ func defaultNetDial(ip string, port uint16, timeout time.Duration) error {
 	return nil
 }
 
-// scanOpenPorts sweeps the dynamic service range plus the tvOS pairing port
-// and returns all reachable ports in ascending order.
+// scanOpenPorts sweeps the dynamic service range and returns all reachable
+// ports in ascending order.
 func scanOpenPorts(ip string) ([]uint16, error) {
 	scanJobs := make(chan uint16, int(scanPortLast)-int(scanPortFirst)+1)
 	for port := int(scanPortFirst); port <= int(scanPortLast); port++ {
-		if port == int(pairPortTvOS) {
-			continue
-		}
 		scanJobs <- uint16(port)
 	}
-	scanJobs <- pairPortTvOS
 	close(scanJobs)
 
 	open := make(chan uint16, cap(scanJobs))
@@ -135,9 +132,8 @@ func ScanInstallPort(ip string) (uint16, []uint16, error) {
 	records := pairingRecordPaths()
 	if len(records) > 0 {
 		for _, port := range open {
-			// The tvOS pairing port sits inside the dynamic range but is
-			// never the install port.
-			if port == pairPortTvOS {
+			// The manual-pairing service never carries the install tunnel.
+			if port == pairPortFixed {
 				continue
 			}
 			if probeErr := probeInstallPort(ip, port, records); probeErr == nil {
@@ -156,9 +152,10 @@ func ScanInstallPort(ip string) (uint16, []uint16, error) {
 		return installPorts[0], open, nil
 	}
 	// Without a validated handshake (no records, or validation refused),
-	// offer the first open port in the dynamic range.
+	// offer the first open port that is not the pairing port, mirroring
+	// plain port-scan heuristics.
 	for _, port := range open {
-		if port >= scanPortFirst && port != pairPortTvOS {
+		if port != pairPortFixed {
 			return port, open, nil
 		}
 	}

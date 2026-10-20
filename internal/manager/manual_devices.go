@@ -83,15 +83,20 @@ func ManualDeviceID(ip string, port uint16) string {
 }
 
 // AddManualDevice registers a device address that avahi cannot discover,
-// typically reached over a mesh VPN such as Tailscale. No network probe
-// runs: plumesign device-info over the network requires a pairing file,
-// which only exists after the pairing flow succeeds for this host. The
-// device therefore starts Pairable with an empty UDID; PairCompleted fills
-// in the rest once the pairing flow succeeds, including the install-port
-// scan that needs the freshly written pairing record.
+// typically reached over a mesh VPN such as Tailscale. The pairing port is
+// Apple's fixed lockdown port, so port 0 means "use the fixed value" and the
+// Add Device flow needs no port input at all. No network probe runs:
+// plumesign device-info over the network requires a pairing file, which only
+// exists after the pairing flow succeeds for this host. The device therefore
+// starts Pairable with an empty UDID; PairCompleted fills in the rest once
+// the pairing flow succeeds, including the install-port scan that needs the
+// freshly written pairing record.
 func (dm *DeviceManager) AddManualDevice(ip string, port uint16, name string) (*model.Device, error) {
-	if ip == "" || port == 0 {
-		return nil, fmt.Errorf("ip and port are required")
+	if ip == "" {
+		return nil, fmt.Errorf("ip is required")
+	}
+	if port == 0 {
+		port = pairPortFixed
 	}
 	addr, err := netip.ParseAddr(ip)
 	if err != nil || !isLanAddr(addr) {
