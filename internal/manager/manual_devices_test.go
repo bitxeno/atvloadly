@@ -423,6 +423,51 @@ func TestUpdateManualInstallPortPersists(t *testing.T) {
 	}
 }
 
+// TestRefreshManualInstallPort verifies the pre-refresh rescan: a manual
+// device gets its stored install port re-detected, a non-manual device is
+// left untouched.
+func TestRefreshManualInstallPort(t *testing.T) {
+	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
+
+	dm, dev := addManualDevice(t, "100.64.0.12")
+	dm.UpdateManualInstallPort(dev, 51000)
+
+	_, probed := stubScan(t, []uint16{49152}, 49152)
+	dm.RefreshManualInstallPort(dev.ID)
+
+	scanned, ok := dm.GetDeviceByID(dev.ID)
+	if !ok {
+		t.Fatal("device vanished from the registry")
+	}
+	if scanned.InstallPort != 49152 {
+		t.Errorf("InstallPort = %d, want the freshly scanned 49152", scanned.InstallPort)
+	}
+	if probed[49152] == 0 {
+		t.Errorf("the new port must have been probed: %v", probed)
+	}
+	if entries := readManualDevices(); len(entries) != 1 || entries[0].InstallPort != 49152 {
+		t.Errorf("persistence does not carry the freshly scanned port: %+v", entries)
+	}
+
+	// A discovered device is re-announced by avahi, so refresh skips it.
+	discovered := model.Device{
+		ID:         "discovered-id",
+		IP:         "192.168.1.6",
+		Port:       49152,
+		Connection: model.DeviceConnectionLockdown,
+		Status:     model.Paired,
+	}
+	dm.SaveDevice(discovered)
+	dm.RefreshManualInstallPort(discovered.ID)
+	if _, probed2 := stubScan(t, []uint16{49153}, 49153); probed2[49153] != 0 {
+		t.Errorf("refresh must not scan a non-manual device: %v", probed2)
+	}
+	discovered2, _ := dm.GetDeviceByID(discovered.ID)
+	if discovered2.InstallPort != 0 {
+		t.Errorf("InstallPort = %d on a discovered device, want untouched", discovered2.InstallPort)
+	}
+}
+
 // TestScanAndStoreInstallPort verifies the post-pairing auto-scan: with the
 // freshly written pairing record, the handshake-validated scan records the
 // device's install port without any manual port entry.

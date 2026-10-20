@@ -248,6 +248,7 @@
         "placeholder": "49152",
         "hint": "Porten till tjänsten som installationer körs via; den kan skilja sig från parkopplingsporten. Lämna tomt för att behålla den registrerade porten.",
         "scan": "Sök port",
+        "manual_hint": "Enheten lades till manuellt och uppdateras inte automatiskt: installationsporten kan ändras efter en omstart. Klicka på Sök port för att uppdatera den automatiskt.",
         "scan_success": "Installationsport {port} hittades",
         "scan_failed": "Ingen installationsport hittades; kontrollera att enheten kan nås"
       },

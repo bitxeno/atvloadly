@@ -59,6 +59,9 @@
                 <span class="loading loading-spinner loading-xs" v-show="installPortScan.busy"></span>
                 {{ $t("install.form.install_port.scan") }}
               </button>
+              <label class="label py-1" v-if="device.manual">
+                <span class="label-text-alt text-center" v-html="$t('install.form.install_port.manual_hint')"></span>
+              </label>
               <label class="label py-1 pt-0">
                 <span class="label-text-alt text-center">{{ $t("install.form.install_port.hint") }}</span>
               </label>

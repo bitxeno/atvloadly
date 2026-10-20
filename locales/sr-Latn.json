@@ -248,6 +248,7 @@
         "placeholder": "49152",
         "hint": "Port usluge preko koje idu instalacije; može se razlikovati od porta uparivanja. Ostavite prazno za registrovani port.",
         "scan": "Skeniraj port",
+        "manual_hint": "Uređaj je dodat ručno i ne osvežava se automatski: port usluge instalacije može da se promeni nakon ponovnog pokretanja. Kliknite Skeniraj port za automatsko osvežavanje.",
         "scan_success": "Pronađen port za instalisanje: {port}",
         "scan_failed": "Port za instalisanje nije pronađen; proverite da li je uređaj dostupan"
       },

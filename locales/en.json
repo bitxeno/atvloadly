@@ -249,6 +249,7 @@
                 "placeholder": "49152",
                 "hint": "Port of the service installs run over; it can differ from the pairing port. Leave empty to keep the registered port.",
                 "scan": "Scan port",
+                "manual_hint": "This device was added manually and nothing re-announces it: the install service port may change after a restart. Click Scan port to refresh it automatically.",
                 "scan_success": "Install port {port} detected",
                 "scan_failed": "No install port found; check that the device is reachable"
             },

@@ -66,6 +66,12 @@ func PairCompleted(id string) {
 	deviceManager.PairCompleted(id)
 }
 
+// RefreshManualInstallPort re-detects the install service port of a manual
+// device; see DeviceManager.
+func RefreshManualInstallPort(id string) {
+	deviceManager.RefreshManualInstallPort(id)
+}
+
 // ApplyInstallPort records the install page's chosen install service port on
 // the device. Manual devices persist the value; discovered devices keep it
 // in memory until their next announcement refresh.

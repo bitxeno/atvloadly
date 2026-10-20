@@ -317,6 +317,20 @@ func (dm *DeviceManager) scanAndStoreInstallPort(id string, ip string) {
 	}
 }
 
+// RefreshManualInstallPort re-detects the install-service port of a manual
+// device before time-scheduled or discovery-driven work uses it: the device
+// repicks the listener port whenever its services restart and nothing
+// re-announces the address, so a stored port can go stale between runs.
+// Non-manual devices are skipped, they are re-announced at their current
+// port; scan failures keep the stored port and only log.
+func (dm *DeviceManager) RefreshManualInstallPort(id string) {
+	device, ok := dm.GetDeviceByID(id)
+	if !ok || !device.Manual {
+		return
+	}
+	dm.scanAndStoreInstallPort(device.ID, device.IP)
+}
+
 // ImportPairedDevice marks a device Paired from an imported pairing record,
 // which plumesign check pairing has already validated over the given port
 // and saved into its store. The record import is the way to add a device

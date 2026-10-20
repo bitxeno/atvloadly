@@ -222,6 +222,27 @@ func (t *Task) Run() {
 		return
 	}
 
+	// Manual devices repick the install-service port whenever their
+	// services restart and nothing re-announces the address, so the stored
+	// port can go stale between scheduled runs. Rescan them and wait:
+	// the installs below dial the fresh value.
+	scanned := make(map[string]bool)
+	var scans sync.WaitGroup
+	for _, v := range appsNeedRefresh {
+		if v.UDID == "" || scanned[v.UDID] {
+			continue
+		}
+		scanned[v.UDID] = true
+		if dev, found := manager.GetDeviceByUDID(v.UDID); found && dev.Manual {
+			scans.Add(1)
+			go func(id string) {
+				defer scans.Done()
+				manager.RefreshManualInstallPort(id)
+			}(dev.ID)
+		}
+	}
+	scans.Wait()
+
 	log.Infof("Start executing installation task (%d need refresh, %d need update)...", len(appsNeedRefresh)-updateCount, updateCount)
 	t.StartInstallApps(appsNeedRefresh, true)
 }
@@ -601,7 +622,7 @@ func (t *Task) runInternal(v model.InstalledApp, refresh bool, installMgr *manag
 		UDID:             v.UDID,
 		Account:          v.Account,
 		IP:               dev.IP,
-		Port:             dev.Port,
+		Port:             dev.ServicePort(),
 		IpaPath:          v.IpaPath,
 		CustomName:       v.CustomName,
 		CustomIdentifier: v.CustomIdentifier,
@@ -751,10 +772,16 @@ func (t *Task) refreshDeviceApps(device model.Device) error {
 		// The iPhone may connect and disconnect instantly (for example, briefly lighting up the screen when receiving a message).
 		// Check to ensure the device can connect truly.
 		time.Sleep(30 * time.Second)
-		if _, found := manager.GetDeviceByUDID(udid); !found {
+		dev, found := manager.GetDeviceByUDID(udid)
+		if !found {
 			return
 		}
-		if err := manager.CheckAfcServiceStatus(udid); err != nil {
+		// The manual device is not re-announced: refresh the install port
+		// it stores before the AFC check and the installs dial it.
+		if dev.Manual {
+			manager.RefreshManualInstallPort(dev.ID)
+		}
+		if err := manager.CheckAfcServiceStatus(dev.UDID); err != nil {
 			log.Err(err).Msgf("Check AFC service status failed, skip refresh device: %s.", udid)
 			return
 		}
