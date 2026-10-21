@@ -157,6 +157,10 @@ func (dm *DeviceManager) LoadManualDevices() {
 		// Anything recorded in the manual registry is a manual device,
 		// including entries saved before this flag was introduced.
 		device.Manual = true
+		// Re-derive the class from the product type: older entries may
+		// carry the add-flow placeholder guess although the paired probe
+		// recorded an iPhone or iPad product type.
+		device.ParseDeviceClass()
 		dm.SaveDevice(device)
 		log.Debugf("Manual device restored: %s (%s)", device.Name, device.UDID)
 	}
@@ -232,11 +236,6 @@ func (dm *DeviceManager) PairCompleted(id string) {
 		log.Infof("Pairing record for %s: %s", device.Name, pairingFile)
 
 		udid = info.UniqueDeviceID
-		if info.DeviceClass != "" {
-			device.DeviceClass = info.DeviceClass
-		} else {
-			device.ParseDeviceClass()
-		}
 		productType = info.ProductType
 		productVersion = info.ProductVersion
 		developerModeStatus = info.DeveloperModeStatus
@@ -259,11 +258,6 @@ func (dm *DeviceManager) PairCompleted(id string) {
 
 		udid = peer.RemotePairingUDID
 		productType = peer.Model
-		if class := peer.GetDeviceClass(); class != "" {
-			device.DeviceClass = class
-		} else {
-			device.ParseDeviceClass()
-		}
 	}
 
 	if device.UDID == "" {
@@ -274,6 +268,9 @@ func (dm *DeviceManager) PairCompleted(id string) {
 	device.DeveloperModeStatus = developerModeStatus
 	device.PersonalizedImageMounted = personalizedImageMounted
 	device.Status = model.Paired
+	// The class follows the probe's product type, overriding the possible
+	// add-flow guess made before the identity was known.
+	device.ParseDeviceClass()
 	dm.SaveDevice(*device)
 
 	manualMu.Lock()

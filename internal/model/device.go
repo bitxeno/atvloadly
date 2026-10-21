@@ -34,17 +34,32 @@ type Device struct {
 	Manual bool `json:"manual,omitempty"`
 }
 
+// ParseDeviceClass classifies the device: the product type is authoritative
+// (iPhone12,1, iPad13,1, AppleTV11,1), the name suffix is the fallback, and
+// anything unknown is treated as an Apple TV. It is safe to run over a
+// previously guessed value: the manual add flow classifies a placeholder
+// name, and the product type observed after pairing overrides it.
 func (d *Device) ParseDeviceClass() {
-	if d.DeviceClass == "" {
-		if strings.HasSuffix(d.Name, "AppleTV") {
-			d.DeviceClass = string(DeviceClassAppleTV)
-		} else if strings.HasSuffix(d.Name, "iPad") {
-			d.DeviceClass = string(DeviceClassiPad)
-		} else if strings.HasSuffix(d.Name, "iPhone") {
-			d.DeviceClass = string(DeviceClassiPhone)
-		} else {
-			d.DeviceClass = string(DeviceClassAppleTV)
-		}
+	switch {
+	case strings.HasPrefix(d.ProductType, string(DeviceClassiPhone)):
+		d.DeviceClass = string(DeviceClassiPhone)
+		return
+	case strings.HasPrefix(d.ProductType, string(DeviceClassiPad)):
+		d.DeviceClass = string(DeviceClassiPad)
+		return
+	case strings.HasPrefix(d.ProductType, string(DeviceClassAppleTV)):
+		d.DeviceClass = string(DeviceClassAppleTV)
+		return
+	}
+
+	if strings.HasSuffix(d.Name, string(DeviceClassAppleTV)) {
+		d.DeviceClass = string(DeviceClassAppleTV)
+	} else if strings.HasSuffix(d.Name, string(DeviceClassiPad)) {
+		d.DeviceClass = string(DeviceClassiPad)
+	} else if strings.HasSuffix(d.Name, string(DeviceClassiPhone)) {
+		d.DeviceClass = string(DeviceClassiPhone)
+	} else {
+		d.DeviceClass = string(DeviceClassAppleTV)
 	}
 }
 
