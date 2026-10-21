@@ -7,6 +7,11 @@
     >
       <div class="modal-box">
         <h3 class="font-bold text-lg">{{ $t("install.login_modal.title") }}</h3>
+        <div class="alert alert-warning atv-warning text-sm mt-3">
+          <span class="whitespace-normal break-words">{{
+            $t("install.login_modal.2fa_warning")
+          }}</span>
+        </div>
         <form ref="loginForm" class="flex flex-col gap-y-4 mt-4" @submit.prevent>
           <div class="form-control w-full">
             <label class="label">

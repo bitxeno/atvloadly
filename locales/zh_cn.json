@@ -317,6 +317,7 @@
         ,
         "login_modal": {
             "title": "登录 Apple 帐号",
+            "2fa_warning": "只支持受信任的设备接收 2FA，不支持短信接收",
             "button": {
                 "close": "关闭",
                 "login": "登录",

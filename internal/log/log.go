@@ -4,12 +4,21 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/fatih/color"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/natefinch/lumberjack.v2"
+)
+
+const (
+	// maxLogSizeMB is the size at which the active log file is rotated.
+	maxLogSizeMB = 10
+	// maxLogBackups is the number of rotated log files kept on disk.
+	maxLogBackups = 3
+	// maxLogAgeDays is the maximum age of a rotated log file.
+	maxLogAgeDays = 7
 )
 
 func init() {
@@ -123,7 +132,7 @@ func CreateRollingLogFile(logPath string) io.Writer {
 		return nil
 	}
 
-	logDir := path.Dir(logPath)
+	logDir := filepath.Dir(logPath)
 	if err := os.MkdirAll(logDir, os.ModePerm); err != nil {
 		log.Err(err).Msgf("Can't create log directory. path: %s, err: %s", logPath, err)
 		return nil
@@ -132,8 +141,9 @@ func CreateRollingLogFile(logPath string) io.Writer {
 	log.Info().Msgf("Log file: %s", logPath)
 	return &lumberjack.Logger{
 		Filename:   logPath,
-		MaxSize:    100, // megabytes
-		MaxBackups: 3,
-		MaxAge:     7, //daysdays
+		MaxSize:    maxLogSizeMB,
+		MaxBackups: maxLogBackups,
+		MaxAge:     maxLogAgeDays,
+		Compress:   true,
 	}
 }

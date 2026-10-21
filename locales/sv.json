@@ -315,6 +315,7 @@
     },
     "login_modal": {
       "title": "Logga in på ett Apple-konto",
+      "2fa_warning": "Endast betrodda enheter kan ta emot 2FA-koden. Att ta emot den via SMS stöds inte.",
       "button": {
         "close": "Stäng",
         "login": "Logga in",
