@@ -26,6 +26,7 @@ var reachCalls []string
 // tests that need an unreachable address swap the dialer again locally.
 func setupManualDeviceTest(t *testing.T, fakeOrder []string, fakeInfo *model.DeviceInfo, fakeErr error) {
 	t.Helper()
+	t.Setenv("HOME", t.TempDir())
 
 	if app.Config == nil {
 		app.Config = &app.Configuration{}
