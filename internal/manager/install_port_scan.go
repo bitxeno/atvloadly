@@ -128,36 +128,68 @@ func ScanInstallPort(ip string) (uint16, []uint16, error) {
 		return 0, nil, fmt.Errorf("no open developer ports found; check that the device is reachable and that Remote Access is enabled")
 	}
 
-	var installPorts []uint16
 	records := pairingRecordPaths()
 	if len(records) > 0 {
+		attempts := 0
 		for _, port := range open {
 			// The manual-pairing service never carries the install tunnel.
 			if port == pairPortFixed {
 				continue
 			}
-			if probeErr := probeInstallPort(ip, port, records); probeErr == nil {
-				installPorts = append(installPorts, port)
+			if attempts >= maxValidatedPorts {
 				break
+			}
+			attempts++
+			if probeErr := probeInstallPort(ip, port, records); probeErr == nil {
+				return port, open, nil
 			} else {
 				log.Warnf("install port scan: %s:%d did not validate: %v", ip, port, probeErr)
 			}
-			if len(installPorts) >= maxValidatedPorts {
-				break
-			}
 		}
+		return 0, open, fmt.Errorf("no install port passed the pairing-record handshake for %s", ip)
 	}
 
-	if len(installPorts) > 0 {
-		return installPorts[0], open, nil
-	}
-	// Without a validated handshake (no records, or validation refused),
-	// offer the first open port that is not the pairing port, mirroring
-	// plain port-scan heuristics.
+	// Without saved records, preserve the candidate-port heuristic for
+	// the initial pairing-record import/bootstrap flow.
 	for _, port := range open {
 		if port != pairPortFixed {
 			return port, open, nil
 		}
 	}
 	return 0, open, fmt.Errorf("only the manual-pairing port is open; run the pairing flow first")
+}
+
+// ScanAndImportPairingFile selects an install port by checking the uploaded
+// pairing record itself. Saved records may be for unrelated devices and must
+// not determine which port is selected during the first import.
+// A successful check also imports the record into the plumesign store.
+func ScanAndImportPairingFile(ip string, record []byte) (uint16, error) {
+	return scanAndImportPairingFile(ip, record, ImportPairingFile)
+}
+
+// The check function is injected so candidate selection can be tested
+// without invoking plumesign or writing pairing credentials.
+func scanAndImportPairingFile(ip string, record []byte, check func(string, string, []byte) error) (uint16, error) {
+	open, err := scanOpenPorts(ip)
+	if err != nil {
+		return 0, fmt.Errorf("port scan of %s failed: %w", ip, err)
+	}
+
+	attempts := 0
+	for _, port := range open {
+		if port == pairPortFixed {
+			continue
+		}
+		if attempts >= maxValidatedPorts {
+			break
+		}
+		attempts++
+		if err := check(ip, strconv.Itoa(int(port)), record); err == nil {
+			return port, nil
+		}
+	}
+	if attempts == 0 {
+		return 0, fmt.Errorf("no install-port candidates reachable at %s", ip)
+	}
+	return 0, fmt.Errorf("uploaded pairing record did not validate against any of %d candidate ports at %s", attempts, ip)
 }

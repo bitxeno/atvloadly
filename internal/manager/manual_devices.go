@@ -418,23 +418,23 @@ func (dm *DeviceManager) ImportPairedDevice(ip string, port uint16) error {
 	entries := readManualDevices()
 	idx := -1
 	for i, entry := range entries {
-		if entry.IP == ip && entry.Port == port {
+		if entry.IP == ip {
 			idx = i
 			break
 		}
 	}
 
 	device := model.Device{
-		IP:                        ip,
-		Port:                      port,
-		Connection:                model.DeviceConnectionRemote,
-		Status:                    model.Paired,
-		UDID:                      udid,
-		ProductType:               productType,
-		ProductVersion:            productVersion,
-		DeveloperModeStatus:       developerModeStatus,
-		PersonalizedImageMounted:  personalizedImageMounted,
-		Manual:                    true,
+		IP:                       ip,
+		Port:                     port,
+		Connection:               model.DeviceConnectionRemote,
+		Status:                   model.Paired,
+		UDID:                     udid,
+		ProductType:              productType,
+		ProductVersion:           productVersion,
+		DeveloperModeStatus:      developerModeStatus,
+		PersonalizedImageMounted: personalizedImageMounted,
+		Manual:                   true,
 	}
 	device.ParseDeviceClass()
 	if name != "" {

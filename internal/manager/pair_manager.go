@@ -190,6 +190,7 @@ func ImportPairingFile(ip string, port string, data []byte) error {
 
 	// Execute the check command
 	_, err = exec.NewCommand("plumesign", "check", "pairing", "--ip", ip, "--port", port, "-f", tmpFilePath).
+		WithTimeout(installProbeWait).
 		WithDir(app.Config.Server.DataDir).
 		WithEnv(GetRunEnvs()).
 		CombinedOutput()

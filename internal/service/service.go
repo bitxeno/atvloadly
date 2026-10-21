@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -285,16 +284,11 @@ func ResetAnisette() error {
 }
 
 func ImportPairingFile(ip string, deviceID string, data []byte) error {
-	// The record is validated over the device's install service port, which
-	// no dialog collects anymore: find it by scanning, exactly like the
-	// automatic refreshes do. A failed scan is the user's error answer; the
-	// pairing record is never trusted without it.
-	port, _, err := manager.ScanInstallPort(ip)
+	// Discover candidate ports and validate them with the uploaded record.
+	// Previously saved records may belong to other devices, so they cannot
+	// establish the correct port for a first-time import.
+	port, err := manager.ScanAndImportPairingFile(ip, data)
 	if err != nil {
-		return err
-	}
-	portStr := strconv.FormatUint(uint64(port), 10)
-	if err := manager.ImportPairingFile(ip, portStr, data); err != nil {
 		return err
 	}
 
