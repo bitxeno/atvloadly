@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/model"
@@ -14,10 +15,15 @@ import (
 // probeCalls records the arguments of every fake probe invocation, in order.
 var probeCalls []string
 
+// reachCalls records the addresses of every fake reachability probe, in order.
+var reachCalls []string
+
 // setupManualDeviceTest isolates the persistence file and the plumesign
 // probe for one test. The fake probe returns fakeInfo for the pairing files
 // accepted by fakeOrder and an error otherwise, so tests can cover both the
-// matching and the skipping of pairing files.
+// matching and the skipping of pairing files. The fake dial succeeds, so the
+// Add flow's reachability gate does not block tests that register devices;
+// tests that need an unreachable address swap the dialer again locally.
 func setupManualDeviceTest(t *testing.T, fakeOrder []string, fakeInfo *model.DeviceInfo, fakeErr error) {
 	t.Helper()
 
@@ -38,6 +44,17 @@ func setupManualDeviceTest(t *testing.T, fakeOrder []string, fakeInfo *model.Dev
 		return nil, errors.New("pairing file does not match this device")
 	}
 	t.Cleanup(func() { probeDeviceInfo = originalProbe })
+
+	// The default reachability probe opens raw ICMP sockets; every test in
+	// this file addresses hosts that are presumed reachable. Tests that
+	// need an unreachable address swap the probe again locally.
+	reachCalls = nil
+	originalReach := probeHostReachability
+	probeHostReachability = func(ip string, timeout time.Duration) error {
+		reachCalls = append(reachCalls, ip)
+		return nil
+	}
+	t.Cleanup(func() { probeHostReachability = originalReach })
 }
 
 // writePairingFiles creates plumesign store fixtures for PairCompleted.
@@ -101,9 +118,13 @@ func TestAddManualDeviceRegistersPairableDevice(t *testing.T) {
 	}
 
 	// No probe may run: device-info over the network needs a pairing file
-	// that does not exist yet.
+	// that does not exist yet. The reachability check does run: one ICMP
+	// echo request to the address.
 	if len(probeCalls) != 0 {
 		t.Errorf("probe calls = %d, want 0", len(probeCalls))
+	}
+	if len(reachCalls) != 1 || reachCalls[0] != "100.64.0.12" {
+		t.Errorf("reachability calls = %v, want one probe of the new address", reachCalls)
 	}
 }
 
@@ -132,6 +153,50 @@ func TestAddManualDeviceRejectsBadInput(t *testing.T) {
 	// Nothing must be registered after the rejections.
 	if n := len(dm.GetDevices()); n != 0 {
 		t.Errorf("devices registered = %d, want 0", n)
+	}
+}
+
+// TestAddManualDeviceRequiresReachableAddress verifies the Add flow refuses
+// to register an address that does not answer the reachability probe, and
+// that the registration only happens once the probe succeeds.
+func TestAddManualDeviceRequiresReachableAddress(t *testing.T) {
+	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
+
+	up := false
+	original := probeHostReachability
+	probeHostReachability = func(ip string, timeout time.Duration) error {
+		reachCalls = append(reachCalls, ip)
+		if up {
+			return nil
+		}
+		return errors.New("host unreachable")
+	}
+	t.Cleanup(func() { probeHostReachability = original })
+
+	dm := newDeviceManager()
+	if _, err := dm.AddManualDevice("100.64.0.40", 0, ""); err == nil {
+		t.Error("an unreachable address should not be registered")
+	}
+	if len(reachCalls) != 1 {
+		t.Errorf("reachability calls = %d, want 1", len(reachCalls))
+	}
+	if entries := readManualDevices(); len(entries) != 0 {
+		t.Errorf("registry entries after the failed add = %d, want 0", len(entries))
+	}
+	if n := len(dm.GetDevices()); n != 0 {
+		t.Errorf("devices registered after the failed add = %d, want 0", n)
+	}
+
+	up = true
+	dev, err := dm.AddManualDevice("100.64.0.40", 0, "")
+	if err != nil {
+		t.Fatalf("AddManualDevice failed: %v", err)
+	}
+	if len(reachCalls) != 2 {
+		t.Errorf("reachability calls = %d, want 2", len(reachCalls))
+	}
+	if _, ok := dm.GetDeviceByID(dev.ID); !ok {
+		t.Error("device was not registered once the address became reachable")
 	}
 }
 

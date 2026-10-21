@@ -82,12 +82,25 @@ func ManualDeviceID(ip string, port uint16) string {
 	return utils.Md5(fmt.Sprintf("%s:%d", ip, port))
 }
 
+// addReachabilityWait bounds the reachability check the Add flow
+// performs: long enough for a routing hop to answer, short enough not to
+// test the user's patience in the Add dialog.
+const addReachabilityWait = 3 * time.Second
+
+// probeHostReachability is replaceable so tests never need a live host.
+var probeHostReachability = defaultProbeHostReachability
+
 // AddManualDevice registers a device address that avahi cannot discover,
 // typically reached over a mesh VPN such as Tailscale. The pairing port is
 // Apple's fixed lockdown port, so port 0 means "use the fixed value" and the
-// Add Device flow needs no port input at all. No network probe runs:
-// plumesign device-info over the network requires a pairing file, which only
-// exists after the pairing flow succeeds for this host. The device therefore
+// Add Device flow needs no port input at all. Persisting the registration is
+// gated on an ICMP echo request: a mistyped address or an offline device
+// fails right in the dialog instead of leaving a registration behind that
+// fails the pairing flow moments later. The check is deliberately portless
+// (helper in reachability.go) because iPhones never expose the pairing port
+// over the network, and the plumesign probe cannot run here either:
+// device-info over the network needs a pairing file, which only exists
+// after the pairing flow succeeds for this host. The device therefore
 // starts Pairable with an empty UDID; PairCompleted fills in the rest once
 // the pairing flow succeeds, including the install-port scan that needs the
 // freshly written pairing record.
@@ -101,6 +114,10 @@ func (dm *DeviceManager) AddManualDevice(ip string, port uint16, name string) (*
 	addr, err := netip.ParseAddr(ip)
 	if err != nil || !isLanAddr(addr) {
 		return nil, fmt.Errorf("ip %s is not a private LAN or CGNAT address", ip)
+	}
+
+	if err := probeHostReachability(ip, addReachabilityWait); err != nil {
+		return nil, fmt.Errorf("device %s is not reachable; check the address and that the device is awake, underlying error: %s", ip, err)
 	}
 
 	if name == "" {
