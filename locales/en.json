@@ -317,6 +317,7 @@
         ,
         "login_modal": {
             "title": "Login Apple Account",
+            "2fa_warning": "Only trusted devices can receive the 2FA code. Receiving it by SMS is not supported.",
             "button": {
                 "close": "Close",
                 "login": "Login",

@@ -315,6 +315,7 @@
     },
     "login_modal": {
       "title": "Prijava na Apple nalog",
+      "2fa_warning": "Samo pouzdani uređaji mogu da prime 2FA kod. Prijem putem SMS-a nije podržan.",
       "button": {
         "close": "Zatvori",
         "login": "Prijavi se",
