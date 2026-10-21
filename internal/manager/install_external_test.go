@@ -76,7 +76,7 @@ func TestBuildExternalInstallArgs(t *testing.T) {
 }
 
 func TestExternalRunEnvIsolatesHomeAndTempDir(t *testing.T) {
-	base := []string{"HOME=/root", "TMPDIR=/tmp", "HTTPS_PROXY=http://proxy:3128", "PATH=/usr/bin"}
+	base := []string{"HOME=/root", "XDG_CONFIG_HOME=/shared/config", "TMPDIR=/tmp", "HTTPS_PROXY=http://proxy:3128", "PATH=/usr/bin"}
 	env := externalRunEnv(base, *testExternalSigning())
 
 	values := map[string][]string{}
@@ -84,7 +84,7 @@ func TestExternalRunEnvIsolatesHomeAndTempDir(t *testing.T) {
 		k, v, _ := strings.Cut(kv, "=")
 		values[k] = append(values[k], v)
 	}
-	want := map[string]string{"HOME": "/ws/home", "TMPDIR": "/ws/tmp", "HTTPS_PROXY": "http://proxy:3128", "PATH": "/usr/bin"}
+	want := map[string]string{"HOME": "/ws/home", "XDG_CONFIG_HOME": "/ws/home/.config", "TMPDIR": "/ws/tmp", "HTTPS_PROXY": "http://proxy:3128", "PATH": "/usr/bin"}
 	for k, v := range want {
 		if got := values[k]; len(got) != 1 || got[0] != v {
 			t.Errorf("%s = %q, want exactly [%q]", k, got, v)

@@ -151,7 +151,9 @@
     "toast": {
       "pin_incorrect": "PIN kod nije ispravan",
       "pair_error": "Greška pri uparivanju. Više informacija potražite u konzoli.",
-      "no_device_found": "Uređaj nije pronađen. Proverite da li je usluga usbmuxd pokrenuta."
+      "no_device_found": "Uređaj nije pronađen. Proverite da li je usluga usbmuxd pokrenuta.",
+      "timeout": "Uparivanje je isteklo. Proverite Apple TV i pokušajte ponovo.",
+      "connection_lost": "Veza je prekinuta. Vratite se na listu uređaja da proverite uparivanje."
     },
     "step": {
       "start": {

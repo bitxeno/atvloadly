@@ -151,7 +151,9 @@
         "toast": {
             "pin_incorrect": "Incorrect PIN code",
             "pair_error": "Pairing error. Please check the console for more information.",
-            "no_device_found": "Device not found. Please make sure the usbmuxd service is running."
+            "no_device_found": "Device not found. Please make sure the usbmuxd service is running.",
+            "timeout": "Pairing timed out. Check the Apple TV and try again.",
+            "connection_lost": "Connection lost. Return to the device list to check the pairing status."
         },
         "step": {
             "start": {

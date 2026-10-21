@@ -3,18 +3,14 @@
 package cfg
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 )
 
 func DefaultConfigDir() string {
-	execPath, err := os.Executable()
+	dir, err := os.UserConfigDir()
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
-
-	execName := filepath.Base(execPath)
-	dir, _ := os.UserConfigDir()
-	return filepath.Join(dir, execName)
+	return filepath.Join(dir, "atvloadly")
 }

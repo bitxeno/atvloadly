@@ -16,15 +16,15 @@ import (
 )
 
 type PairManager struct {
-	runMu   sync.Mutex
-	stateMu sync.Mutex
-
+	runMu        sync.Mutex
+	stateMu      sync.Mutex
 	outputStdout *pairOutputWriter
 	outputStderr *pairOutputWriter
 
 	stdin *os.File
 
 	cancel context.CancelFunc
+	closed bool
 	em     *event.Manager
 }
 
@@ -43,11 +43,15 @@ func (t *PairManager) Start(ctx context.Context, device model.Device) error {
 		return errors.New("pairing already in progress")
 	}
 	defer t.runMu.Unlock()
-
 	// Set execute timeout to 1 minute.
 	timeout := time.Minute
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	t.stateMu.Lock()
+	if t.closed {
+		t.stateMu.Unlock()
+		cancel()
+		return context.Canceled
+	}
 	t.cancel = cancel
 	t.stateMu.Unlock()
 	defer func() {
@@ -95,12 +99,15 @@ func (t *PairManager) Start(ctx context.Context, device model.Device) error {
 
 func (t *PairManager) Close() {
 	t.stateMu.Lock()
+	t.closed = true
 	cancel := t.cancel
 	t.cancel = nil
 	t.stateMu.Unlock()
 	if cancel != nil {
 		cancel()
 	}
+	t.runMu.Lock()
+	defer t.runMu.Unlock()
 	if t.em != nil {
 		_ = t.em.CloseWait()
 	}
@@ -132,6 +139,7 @@ func (t *PairManager) OutputLog() string {
 }
 
 type pairOutputWriter struct {
+	mu   sync.Mutex
 	data []byte
 	em   *event.Manager
 }
@@ -143,7 +151,9 @@ func newPairOutputWriter(em *event.Manager) *pairOutputWriter {
 }
 
 func (w *pairOutputWriter) Write(p []byte) (n int, err error) {
+	w.mu.Lock()
 	w.data = append(w.data, p...)
+	w.mu.Unlock()
 	w.em.MustFire("output", event.M{"text": string(p)})
 
 	n = len(p)
@@ -151,6 +161,8 @@ func (w *pairOutputWriter) Write(p []byte) (n int, err error) {
 }
 
 func (w *pairOutputWriter) String() string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 	return string(w.data)
 }
 

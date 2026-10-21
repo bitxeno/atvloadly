@@ -1,9 +1,11 @@
 package server
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/exec"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/secret"
@@ -50,6 +52,9 @@ var (
 )
 
 func action(c *cli.Context) error {
+	if _, err := exec.LookPath("plumesign"); err != nil {
+		return fmt.Errorf("plumesign is required: place the executable next to atvloadly or on PATH: %w", err)
+	}
 	// init config
 	debug := c.Bool("debug") || c.Bool("verbose")
 	if c.Bool("debug") || c.Bool("verbose") {

@@ -5,11 +5,11 @@
 
 <div align="center">
 
-[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt-989898)](https://github.com/bitxeno/atvloadly/internal/releases)
+[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt%20%7C%20macOS-989898)](https://github.com/bitxeno/atvloadly/releases)
 [![release](https://img.shields.io/docker/v/bitxeno/atvloadly?label=docker%20latest&sort=semver)](https://hub.docker.com/r/bitxeno/atvloadly)
 [![Docker Image Size](https://img.shields.io/docker/image-size/bitxeno/atvloadly)](https://hub.docker.com/r/bitxeno/atvloadly)
 [![Docker Pulls](https://img.shields.io/docker/pulls/bitxeno/atvloadly)](https://hub.docker.com/r/bitxeno/atvloadly)
-[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/internal/blob/master/LICENSE)
+[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/blob/master/LICENSE)
 
 </div>
 
@@ -25,6 +25,7 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 ## 主要功能
 
 * docker 运行 (只支持 Linux/OpenWrt 平台)
+* 支持 macOS 原生运行（Apple Silicon 和 Intel）
 * 支持 AppleTV 配对
 * 支持自动刷新 app
 * 支持跟踪 GitHub Releases / AltStore 源，手动或自动更新 app
@@ -44,7 +45,14 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 
 ## 安装
 
-> 😔 **只支持 Linux/OpenWrt 系统，不支持 Mac/Windows 系统**
+### macOS 原生运行
+
+atvloadly 可以在 Apple Silicon 和 Intel Mac 上原生运行：用和 Linux 相同的命令从源码编译，
+另外编译签名引擎。编译、配对、数据目录和故障排查请参考 [macOS 使用说明](./doc/macos.md)。
+
+### Linux/OpenWrt（Docker）
+
+暂不支持 Windows。
 
 1. Linux/OpenWrt 宿主机需要安装 `avahi-deamon` 服务
    

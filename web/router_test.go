@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"testing"
 
@@ -20,6 +22,22 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
+
+// Run queue-mutating route tests in their own process. Otherwise a later
+// settings test starts the global worker, which installs the earlier test's
+// queued app using that later test's database and temporary directory.
+func isolatedInstallQueueTest(t *testing.T) bool {
+	t.Helper()
+	if os.Getenv("ATVLOADLY_QUEUE_TEST") == t.Name() {
+		return true
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=^"+regexp.QuoteMeta(t.Name())+"$")
+	cmd.Env = append(os.Environ(), "ATVLOADLY_QUEUE_TEST="+t.Name())
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("isolated install queue test: %v\n%s", err, output)
+	}
+	return false
+}
 
 // newTestServer returns the routed server over a fresh data directory and
 // database. It returns the data directory.
@@ -104,6 +122,9 @@ func TestAppIconServesOnlyStoredIcons(t *testing.T) {
 // stored IPA directory out from under the worker. Refuse the delete until the
 // operation has finished, matching the source-edit guards.
 func TestDeleteRefusesInstallingApp(t *testing.T) {
+	if !isolatedInstallQueueTest(t) {
+		return
+	}
 	server, dataDir := newTestServer(t)
 	const appID uint = 900001
 	ipaPath := writeFile(t, filepath.Join(dataDir, "ipa", strconv.FormatUint(uint64(appID), 10), "app.ipa"), "ipa")
@@ -230,6 +251,9 @@ func TestInstallRefusesUnusableCustomIdentifier(t *testing.T) {
 // passes validation and is queued, so it is not refused as an unusable
 // combination.
 func TestInstallAcceptsAppleIDCustomIdentifier(t *testing.T) {
+	if !isolatedInstallQueueTest(t) {
+		return
+	}
 	server, _ := newTestServer(t)
 
 	var body bytes.Buffer

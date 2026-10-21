@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/bitxeno/atvloadly/internal/app"
@@ -14,6 +15,10 @@ import (
 )
 
 func loadLockdownDevices() (map[string]model.LockdownDevice, error) {
+	// macOS protects the record files; usbmuxd serves them without root.
+	if runtime.GOOS == "darwin" {
+		return loadLockdownDevicesFromUsbmuxd()
+	}
 	files, err := os.ReadDir(app.LockdownDir())
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -47,6 +52,10 @@ func loadLockdownDevices() (map[string]model.LockdownDevice, error) {
 }
 
 func removeLockdownDevice(udid string) {
+	// macOS owns these records; deleting one would unpair the device from the Mac.
+	if runtime.GOOS == "darwin" {
+		return
+	}
 	lockdownFile := filepath.Join(app.LockdownDir(), udid+".plist")
 	if _, err := os.Stat(lockdownFile); os.IsNotExist(err) {
 		return

@@ -5,11 +5,11 @@
 
 <div align="center">
 
-[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt-989898)](https://github.com/bitxeno/atvloadly/internal/releases)
+[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt%20%7C%20macOS-989898)](https://github.com/bitxeno/atvloadly/releases)
 [![release](https://img.shields.io/docker/v/bitxeno/atvloadly?label=docker%20latest&sort=semver)](https://hub.docker.com/r/bitxeno/atvloadly)
 [![Docker Image Size](https://img.shields.io/docker/image-size/bitxeno/atvloadly)](https://hub.docker.com/r/bitxeno/atvloadly)
 [![Docker Pulls](https://img.shields.io/docker/pulls/bitxeno/atvloadly)](https://hub.docker.com/r/bitxeno/atvloadly)
-[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/internal/blob/master/LICENSE)
+[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/blob/master/LICENSE)
 
 </div>
 
@@ -24,6 +24,7 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
 ## Features
 
 * Docker running (only supports Linux/OpenWrt platforms)
+* Native macOS support (Apple Silicon and Intel)
 * Supports AppleTV pairing
 * Supports automatic app refresh
 * Supports tracking GitHub releases / AltStore sources, with manual or automatic app updates
@@ -43,7 +44,16 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
 
 ## Installation
 
-> 😔 **Only supports Linux/OpenWrt systems, does not support Mac/Windows systems.**
+### macOS (native)
+
+atvloadly runs natively on Apple Silicon and Intel Macs, built from source with
+the same commands as on Linux plus the signing engine. See the
+[macOS guide](./doc/macos.md) for building, pairing, data directories and
+troubleshooting.
+
+### Linux/OpenWrt (Docker)
+
+Windows is not supported.
 
 1. The Linux/OpenWrt host needs to install `avahi-deamon`.
    

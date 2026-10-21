@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -52,18 +51,20 @@ type Configuration struct {
 }
 
 func SideloadDataDir() string {
-	if home, err := os.UserHomeDir(); err != nil {
-		return "~/.config/PlumeImpactor"
-	} else {
-		return fmt.Sprintf("%s/.config/PlumeImpactor", home)
+	// Match plumesign's get_data_path, including XDG_CONFIG_HOME on macOS.
+	if dir := os.Getenv("XDG_CONFIG_HOME"); dir != "" {
+		return filepath.Join(dir, "PlumeImpactor")
 	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+	return filepath.Join(home, ".config", "PlumeImpactor")
 }
 
 func LockdownDir() string {
+	// macOS pair records are read through usbmuxd, not from this directory.
 	switch runtime.GOOS {
-	case "darwin":
-		homeDir, _ := os.UserHomeDir()
-		return filepath.Join(homeDir, "/.config/atvloadly/lockdown")
 	case "windows":
 		if programData := os.Getenv("ProgramData"); programData != "" {
 			return filepath.Join(programData, "Apple", "Lockdown")

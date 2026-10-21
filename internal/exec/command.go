@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -131,10 +132,14 @@ func (c *Cmd) Run() error {
 	defer cancel()
 
 	log.Debugf(">> %s", c.logLine())
-	cmd := exec.CommandContext(ctx, c.Name, c.Args...)
+	name, err := LookPath(c.Name)
+	if err != nil {
+		return err
+	}
+	cmd := exec.CommandContext(ctx, name, c.Args...)
 	c.setupCmd(cmd)
 
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			_ = cmd.Process.Kill()
@@ -155,7 +160,11 @@ func (c *Cmd) CombinedOutput() ([]byte, error) {
 	defer cancel()
 
 	log.Debugf(">> %s", c.logLine())
-	cmd := exec.CommandContext(ctx, c.Name, c.Args...)
+	name, err := LookPath(c.Name)
+	if err != nil {
+		return nil, err
+	}
+	cmd := exec.CommandContext(ctx, name, c.Args...)
 	c.setupCmd(cmd)
 
 	output, err := cmd.CombinedOutput()
@@ -163,6 +172,20 @@ func (c *Cmd) CombinedOutput() ([]byte, error) {
 		return output, c.parseError(err, output)
 	}
 	return output, err
+}
+
+// LookPath finds the bundled signing engine before searching PATH. The bundle
+// can be launched from any working directory without installing a global CLI.
+func LookPath(name string) (string, error) {
+	if name == "plumesign" {
+		if executable, err := os.Executable(); err == nil {
+			bundled := filepath.Join(filepath.Dir(executable), name)
+			if _, err := os.Stat(bundled); err == nil {
+				return exec.LookPath(bundled)
+			}
+		}
+	}
+	return exec.LookPath(name)
 }
 
 func (c *Cmd) setupCmd(cmd *exec.Cmd) {

@@ -18,7 +18,7 @@
           >{{ device.name }}
         </p>
         <p><label class="inline-block w-16">IP：</label>{{ truncateIP(device.ip) }}</p>
-        <button class="btn btn-primary" @click="start">
+        <button class="btn btn-primary" @click="start" :disabled="!device.id">
           {{ $t("pair.step.start.button") }}
         </button>
       </div>
@@ -44,7 +44,7 @@
           <button
             class="btn btn-primary"
             @click="confirmPin"
-            :disabled="status.confirm"
+            :disabled="status.confirm || !pin"
           >
             <span class="loading loading-spinner" v-show="status.confirm"></span
             >{{ $t("pair.step.pin.button") }}
@@ -59,6 +59,8 @@
           </div>
           {{ $t("pair.step.completed.msg") }}
         </div>
+
+        <p v-if="!success" role="alert">{{ msg }}</p>
 
         <button class="btn" @click="goback">
           {{ $t("pair.step.completed.button") }}
@@ -80,10 +82,9 @@ export default {
       loading: false,
       id: "",
       device: {},
-      cmd: {
-        output: "",
-        line: "",
-      },
+      output: "",
+      pairTimer: null,
+      pendingStart: false,
       success: false,
       status: {
         confirm: false,
@@ -97,6 +98,17 @@ export default {
     this.initWebSocket();
     this.fetchData();
   },
+  beforeUnmount() {
+    clearTimeout(this.pairTimer);
+    if (this.websock) {
+      this.websock.onopen = null;
+      this.websock.onerror = null;
+      this.websock.onmessage = null;
+      this.websock.onclose = null;
+      this.websock.close();
+    }
+    this.pin = "";
+  },
   methods: {
     fetchData() {
       let _this = this;
@@ -105,30 +117,42 @@ export default {
       });
     },
     start() {
-      let _this = this;
-      _this.active = 1;
-
-      _this.loading = true;
-      _this.websocketsend(1, _this.device.id || _this.id);
+      if (this.active !== 0) return;
+      this.active = 1;
+      this.loading = true;
+      this.output = "";
+      this.pairTimer = setTimeout(() => {
+        this.finishPair(false, "pair.toast.timeout");
+      }, 75000);
+      if (this.websock.readyState === WebSocket.CONNECTING) {
+        this.pendingStart = true;
+      } else {
+        this.websocketsend(1, this.device.id || this.id);
+      }
     },
     confirmPin() {
-      let _this = this;
-      _this.status.confirm = true;
-
-      _this.websocketsend(2, _this.pin);
-      return;
+      if (this.active !== 1 || this.status.confirm || !this.pin) return;
+      this.status.confirm = true;
+      this.websocketsend(2, this.pin);
+      this.pin = "";
+    },
+    finishPair(success, message = "pair.toast.pair_error") {
+      if (this.active !== 1) return;
+      clearTimeout(this.pairTimer);
+      this.pairTimer = null;
+      this.pendingStart = false;
+      this.active = 2;
+      this.success = success;
+      this.loading = false;
+      this.status.confirm = false;
+      this.pin = "";
+      this.output = "";
+      this.msg = success ? "" : this.$t(message);
+      if (!success) toast.error(this.msg);
+      this.websock.close();
     },
     onPinInput() {
       this.pin = this.pin.replace(/\D/g, "").slice(0, 6);
-    },
-    onSubmit() {
-      this.$message("submit!");
-    },
-    onCancel() {
-      this.$message({
-        message: "cancel!",
-        type: "warning",
-      });
     },
     goback() {
       this.$router.push("/");
@@ -138,7 +162,6 @@ export default {
         (location.protocol === "https:" ? "wss://" : "ws://") +
         location.host +
         "/ws/pair";
-      console.log(wsuri);
       this.websock = new WebSocket(wsuri);
       this.websock.onopen = this.websocketonopen;
       this.websock.onerror = this.websocketonerror;
@@ -146,68 +169,49 @@ export default {
       this.websock.onclose = this.websocketclose;
     },
     websocketonopen() {
-      console.log("WebSocket connect success.");
+      if (this.pendingStart && this.active === 1) {
+        this.pendingStart = false;
+        this.websocketsend(1, this.device.id || this.id);
+      }
     },
-    websocketonerror(e) {
-      console.log("WebSocket connect failed.");
+    websocketonerror() {
+      this.finishPair(false, "pair.toast.connection_lost");
     },
     websocketonmessage(e) {
-      let _this = this;
-
-      let line = e.data
-
-      if (_this.active === 1) {
-        // show Enter PIN
-        if (line.indexOf("Enter PIN") !== -1) {
-          _this.pin = "";
-          _this.loading = false;
-          _this.$nextTick(() => {
-            _this.$refs.pinInput?.focus();
-          });
-          line = "";
-          return;
-        }
-
-        // pairing error
-        if (line.indexOf("Invalid PIN") !== -1) {
-          _this.active = 2;
-          toast.error(this.$t("pair.toast.pin_incorrect"));
-          return;
-        }
-        if (line.indexOf("ERROR") !== -1) {
-          _this.active = 2;
-          console.log(line);
-          toast.error(this.$t("pair.toast.pair_error"));
-          return;
-        }
-
-        if (line.indexOf("No device found") !== -1) {
-          // usbmuxd service not started
-          _this.active = 2;
-          toast.error(this.$t("pair.toast.no_device_found"));
-          return;
-        }
-
-        // pairing successful.
-        if (line.indexOf("SUCCESS") !== -1) {
-          _this.active++;
-          _this.success = true;
-          return;
-        }
+      if (this.active !== 1) return;
+      if (e.data === "Pairing Succeeded!") {
+        this.finishPair(true);
+        return;
+      }
+      if (e.data === "Pairing Failed!") {
+        const message = this.output.includes("Invalid PIN")
+          ? "pair.toast.pin_incorrect"
+          : this.output.includes("No device found")
+            ? "pair.toast.no_device_found"
+            : "pair.toast.pair_error";
+        this.finishPair(false, message);
+        return;
+      }
+      this.output = (this.output + e.data).slice(-16384);
+      if (this.loading && this.output.includes("Enter PIN")) {
+        this.pin = "";
+        this.loading = false;
+        this.$nextTick(() => this.$refs.pinInput?.focus());
       }
     },
-
     websocketsend(t, data) {
-      let _this = this;
-      if (typeof data !== 'string') {
-        data = JSON.stringify(data);
+      if (this.websock.readyState !== WebSocket.OPEN) {
+        this.finishPair(false, "pair.toast.connection_lost");
+        return;
       }
-      const json = JSON.stringify({ t: t, d: data });
-      _this.websock.send(json);
+      try {
+        this.websock.send(JSON.stringify({ t, d: data }));
+      } catch {
+        this.finishPair(false, "pair.toast.connection_lost");
+      }
     },
-
-    websocketclose(e) {
-      console.log(`connection closed (${e.code})`);
+    websocketclose() {
+      this.finishPair(false, "pair.toast.connection_lost");
     },
   },
 };

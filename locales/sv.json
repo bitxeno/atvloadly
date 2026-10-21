@@ -151,7 +151,9 @@
     "toast": {
       "pin_incorrect": "Fel PIN-kod",
       "pair_error": "Parkopplingen misslyckades. Se konsolen för mer information.",
-      "no_device_found": "Enheten hittades inte. Kontrollera att tjänsten usbmuxd körs."
+      "no_device_found": "Enheten hittades inte. Kontrollera att tjänsten usbmuxd körs.",
+      "timeout": "Parkopplingen tog för lång tid. Kontrollera Apple TV och försök igen.",
+      "connection_lost": "Anslutningen bröts. Gå tillbaka till enhetslistan för att kontrollera parkopplingen."
     },
     "step": {
       "start": {

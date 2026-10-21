@@ -151,7 +151,9 @@
         "toast": {
             "pin_incorrect": "PIN码不正确",
             "pair_error": "配对出错，请到控制台查看详细信息",
-            "no_device_found": "找不到设备，请确认 usbmuxd 服务已启动"
+            "no_device_found": "找不到设备，请确认 usbmuxd 服务已启动",
+            "timeout": "配对超时，请检查 Apple TV 后重试。",
+            "connection_lost": "连接已断开，请返回设备列表查看配对状态。"
         },
         "step": {
             "start": {

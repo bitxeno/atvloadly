@@ -455,11 +455,6 @@ func (t *InstallManager) NeedsCertificateReset() bool {
 	return strings.Contains(t.OutputLog(), certificateResetRequiredMarker)
 }
 
-func (t *InstallManager) IsSuccess() bool {
-	log := t.OutputLog()
-	return strings.Contains(log, "Installation Succeeded") || strings.Contains(log, "Installation complete")
-}
-
 func (t *InstallManager) OutputLog() string {
 	return t.outputStdout.String()
 }
