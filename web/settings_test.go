@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -178,5 +179,34 @@ func TestSaveUpdateSettingsReplacesAndClearsToken(t *testing.T) {
 	}
 	if result.Code != -1 {
 		t.Fatalf("masked preview accepted, code = %d", result.Code)
+	}
+}
+
+// The reset endpoint delegates to the engine command; the flag it reports is
+// the engine result, so a missing engine is reported as a failure.
+func TestResetAnisetteRouteRunsEngineCommand(t *testing.T) {
+	engineDir := t.TempDir()
+	record := filepath.Join(engineDir, "args")
+	script := "#!/bin/sh\n" +
+		"printf '%s\\n' \"$@\" > " + record + "\n" +
+		"exit 0\n"
+	if err := os.WriteFile(filepath.Join(engineDir, "plumesign"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", engineDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	server, _ := newTestServer(t)
+	resp, err := server.Test(httptest.NewRequest(http.MethodPost, "/api/settings/reset/anisette", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = decodeAPI(t, resp)
+
+	data, err := os.ReadFile(record)
+	if err != nil {
+		t.Fatalf("the engine was not run: %v", err)
+	}
+	if got := strings.Join(strings.Fields(string(data)), " "); got != "anisette reset" {
+		t.Errorf("arguments = %q, want %q", got, "anisette reset")
 	}
 }

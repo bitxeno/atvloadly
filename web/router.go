@@ -847,9 +847,9 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))
 	})
 
-	// Delete the Anisette provisioning state (state.plist); it is recreated on next use
+	// Reset the Anisette data through the engine; it is generated again on next use
 	api.Post("/settings/reset/anisette", func(c *fiber.Ctx) error {
-		if err := service.ResetAnisette(); err != nil {
+		if err := manager.ResetAnisette(); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError("reset failed: " + err.Error()))
 		}
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))
