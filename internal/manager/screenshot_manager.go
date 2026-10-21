@@ -62,7 +62,7 @@ func (m *ScreenshotManager) EnsureMounted(ctx context.Context, dev *model.Device
 		return "", err
 	}
 
-	port := fmt.Sprintf("%d", dev.ServicePort())
+	port := fmt.Sprintf("%d", dev.Port)
 	args := []string{"mount", "--ip", dev.IP, "--port", port, "--udid", dev.UDID}
 	args = append(args, "--image", imagePath, "--manifest", manifestPath, "--trustcache", trustCachePath)
 
@@ -96,7 +96,7 @@ func (m *ScreenshotManager) TakeScreenshot(ctx context.Context, dev *model.Devic
 	}
 
 	outputPath := filepath.Join(m.outputDir, fmt.Sprintf("screenshot-%d.png", time.Now().UnixNano()))
-	port := fmt.Sprintf("%d", dev.ServicePort())
+	port := fmt.Sprintf("%d", dev.Port)
 
 	args := []string{"screenshot", "--ip", dev.IP, "--port", port, "--udid", dev.UDID, "--output", outputPath}
 

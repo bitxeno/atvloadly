@@ -297,7 +297,7 @@ func ImportPairingFile(ip string, port string, deviceID string, data []byte) err
 		// The dialog validates the record over the install service port the
 		// user entered; keep that port on the device so later tunnels use it.
 		if p, err := strconv.ParseUint(port, 10, 16); err == nil {
-			if dev, ok := manager.GetDeviceByID(deviceID); ok && dev.ServicePort() != uint16(p) {
+			if dev, ok := manager.GetDeviceByID(deviceID); ok && dev.Port != uint16(p) {
 				manager.ApplyInstallPort(dev, uint16(p))
 			}
 		}

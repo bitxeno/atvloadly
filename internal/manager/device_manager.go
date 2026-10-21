@@ -299,7 +299,7 @@ func (dm *DeviceManager) GetDeviceByUDID(udid string) (*model.Device, bool) {
 func (dm *DeviceManager) GetDeviceInfo(dev *model.Device) (*model.DeviceInfo, error) {
 	cmd := exec.Command("plumesign", "device-info", "-u", dev.UDID).WithTimeout(5 * time.Second)
 	if dev.Connection == model.DeviceConnectionRemote {
-		cmd = exec.Command("plumesign", "device-info", "--ip", dev.IP, "--port", fmt.Sprintf("%d", dev.ServicePort()), "-u", dev.UDID).WithTimeout(5 * time.Second)
+		cmd = exec.Command("plumesign", "device-info", "--ip", dev.IP, "--port", fmt.Sprintf("%d", dev.Port), "-u", dev.UDID).WithTimeout(5 * time.Second)
 	}
 
 	data, err := cmd.CombinedOutput()
@@ -453,7 +453,7 @@ func (dm *DeviceManager) ReloadDevices() {
 func (dm *DeviceManager) CheckAfcServiceStatus(dev *model.Device) error {
 	cmd := exec.Command("plumesign", "check", "afc", "--udid", dev.UDID).WithTimeout(10 * time.Second)
 	if dev.Connection == model.DeviceConnectionRemote {
-		cmd = exec.Command("plumesign", "check", "afc", "--ip", dev.IP, "--port", fmt.Sprintf("%d", dev.ServicePort()), "--udid", dev.UDID).WithTimeout(10 * time.Second)
+		cmd = exec.Command("plumesign", "check", "afc", "--ip", dev.IP, "--port", fmt.Sprintf("%d", dev.Port), "--udid", dev.UDID).WithTimeout(10 * time.Second)
 	}
 
 	data, err := cmd.CombinedOutput()

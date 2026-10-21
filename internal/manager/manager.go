@@ -72,6 +72,12 @@ func RefreshManualInstallPort(id string) {
 	deviceManager.RefreshManualInstallPort(id)
 }
 
+// FreshInstallDevice re-detects the install service port of a manual device
+// and returns the up-to-date device for tunnel use; see DeviceManager.
+func FreshInstallDevice(dev *model.Device) *model.Device {
+	return deviceManager.FreshInstallDevice(dev)
+}
+
 // ApplyInstallPort records the install page's chosen install service port on
 // the device. Manual devices persist the value; discovered devices keep it
 // in memory until their next announcement refresh.

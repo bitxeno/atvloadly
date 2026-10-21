@@ -301,7 +301,7 @@ func runExternalInstall(ctx context.Context, installMgr *manager.InstallManager,
 	opts := manager.InstallOptions{
 		UDID:             app.UDID,
 		IP:               dev.IP,
-		Port:             dev.ServicePort(),
+		Port:             dev.Port,
 		IpaPath:          ext.IpaPath,
 		CustomName:       app.CustomName,
 		RemoveExtensions: app.RemoveExtensions,

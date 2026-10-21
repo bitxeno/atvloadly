@@ -197,7 +197,7 @@ func (dm *DeviceManager) DeleteManualDevice(id string) (bool, error) {
 // devices; discovered devices keep it in memory until their next
 // announcement refresh replaces them.
 func (dm *DeviceManager) UpdateManualInstallPort(dev *model.Device, port uint16) {
-	dev.InstallPort = port
+	dev.Port = port
 	dm.SaveDevice(*dev)
 
 	manualMu.Lock()
@@ -296,7 +296,7 @@ func (dm *DeviceManager) PairCompleted(id string) {
 	// The pairing record just written makes the install-service handshake
 	// possible; let it find the install port while the user heads to the
 	// install page, so manual devices need no repeated port entry there.
-	if updated && device.InstallPort == 0 {
+	if updated {
 		go dm.scanAndStoreInstallPort(device.ID, device.IP)
 	}
 }
@@ -331,6 +331,23 @@ func (dm *DeviceManager) RefreshManualInstallPort(id string) {
 	dm.scanAndStoreInstallPort(device.ID, device.IP)
 }
 
+// FreshInstallDevice re-detects the install service port of a manual device
+// and returns the up-to-date device for tunnel use: manual devices repick
+// the listener port whenever their services restart and nothing re-announces
+// the address, so every install or refresh entry dials the port freshly.
+// Non-manual devices are returned untouched; their announcement keeps the
+// port current.
+func (dm *DeviceManager) FreshInstallDevice(dev *model.Device) *model.Device {
+	if dev == nil || !dev.Manual {
+		return dev
+	}
+	dm.RefreshManualInstallPort(dev.ID)
+	if fresh, ok := dm.GetDeviceByID(dev.ID); ok {
+		return fresh
+	}
+	return dev
+}
+
 // ImportPairedDevice marks a device Paired from an imported pairing record,
 // which plumesign check pairing has already validated over the given port
 // and saved into its store. The record import is the way to add a device
@@ -340,10 +357,9 @@ func (dm *DeviceManager) RefreshManualInstallPort(id string) {
 // without one, a new paired device is created from the probed identity.
 func (dm *DeviceManager) ImportPairedDevice(ip string, port uint16) error {
 	probe := model.Device{
-		IP:          ip,
-		Port:        port,
-		InstallPort: port,
-		Connection:  model.DeviceConnectionRemote,
+		IP:         ip,
+		Port:       port,
+		Connection: model.DeviceConnectionRemote,
 	}
 
 	var udid, productType, productVersion, name string
@@ -375,7 +391,7 @@ func (dm *DeviceManager) ImportPairedDevice(ip string, port uint16) error {
 	entries := readManualDevices()
 	idx := -1
 	for i, entry := range entries {
-		if entry.IP == ip && (entry.Port == port || entry.InstallPort == port) {
+		if entry.IP == ip && entry.Port == port {
 			idx = i
 			break
 		}
@@ -384,7 +400,6 @@ func (dm *DeviceManager) ImportPairedDevice(ip string, port uint16) error {
 	device := model.Device{
 		IP:                        ip,
 		Port:                      port,
-		InstallPort:               port,
 		Connection:                model.DeviceConnectionRemote,
 		Status:                    model.Paired,
 		UDID:                      udid,
@@ -438,7 +453,7 @@ func pairFileDeviceInfo(device model.Device) (string, *model.DeviceInfo, error) 
 
 	var lastErr error
 	for _, file := range candidates {
-		info, err := probeDeviceInfo(device.IP, device.ServicePort(), file)
+		info, err := probeDeviceInfo(device.IP, device.Port, file)
 		if err == nil && info != nil && info.UniqueDeviceID != "" {
 			return file, info, nil
 		}
