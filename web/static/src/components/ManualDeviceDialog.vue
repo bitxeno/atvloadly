@@ -81,17 +81,6 @@
           />
         </div>
 
-        <div class="form-control">
-          <label class="label pb-1">{{ $t("home.dialog.manual.form.install_port_label") }}</label>
-          <input
-            type="number"
-            min="1"
-            max="65535"
-            class="input input-bordered w-full"
-            v-model="importForm.port"
-          />
-        </div>
-
         <p class="text-sm text-base-content/70 whitespace-normal">
           {{ $t("home.dialog.manual.import.tips") }}
         </p>
@@ -117,7 +106,7 @@
         <button
           type="button"
           class="btn btn-primary"
-          :disabled="importBusy || !importForm.file || !importForm.ip || !importForm.port"
+          :disabled="importBusy || !importForm.file || !importForm.ip"
           @click="submitImport"
         >
           <span class="loading loading-spinner loading-xs" v-show="importBusy"></span>
@@ -148,7 +137,6 @@ export default {
       importForm: {
         file: null,
         ip: "",
-        port: 49152,
         deviceId: "",
       },
     };
@@ -161,10 +149,9 @@ export default {
     showImport(device) {
       this.importForm = {
         file: null,
+        // The install service port is detected by scanning during the
+        // import itself; only the address goes in.
         ip: device ? device.ip : "",
-        // Import validates the record over the tunnel-capable remote-pairing
-        // service, so the install service port is what goes here.
-        port: device && device.port ? device.port : 49152,
         deviceId: device && device.id ? device.id : "",
       };
       this.visibleImport = true;
@@ -199,7 +186,6 @@ export default {
       const data = new FormData();
       data.append("file", this.importForm.file);
       data.append("ip", this.importForm.ip);
-      data.append("port", String(Number(this.importForm.port)));
       if (this.importForm.deviceId) {
         data.append("device_id", this.importForm.deviceId);
       }

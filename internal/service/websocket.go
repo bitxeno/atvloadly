@@ -69,15 +69,9 @@ func HandleInstallMessage(c *websocket.Conn) {
 
 			// The install message bypasses the install queue: re-detect the
 			// manual device's install port before every tunnel use, so the
-			// user's port input below stays the only explicit override.
+			// tunnel always runs over the port the device currently
+			// announces.
 			dev = manager.FreshInstallDevice(dev)
-
-			// The install page lets the user pick the install service port:
-			// remote-pairing devices pair on one port and install on another,
-			// and only the user knows the current announced one.
-			if v.InstallPort > 0 {
-				manager.ApplyInstallPort(dev, v.InstallPort)
-			}
 
 			go runInstallMessage(websocketMgr, installMgr, v, dev)
 		case model.MessageType2FA:

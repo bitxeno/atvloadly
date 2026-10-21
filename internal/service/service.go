@@ -284,9 +284,17 @@ func ResetAnisette() error {
 	return nil
 }
 
-func ImportPairingFile(ip string, port string, deviceID string, data []byte) error {
-	// Call manager to process the file
-	if err := manager.ImportPairingFile(ip, port, data); err != nil {
+func ImportPairingFile(ip string, deviceID string, data []byte) error {
+	// The record is validated over the device's install service port, which
+	// no dialog collects anymore: find it by scanning, exactly like the
+	// automatic refreshes do. A failed scan is the user's error answer; the
+	// pairing record is never trusted without it.
+	port, _, err := manager.ScanInstallPort(ip)
+	if err != nil {
+		return err
+	}
+	portStr := strconv.FormatUint(uint64(port), 10)
+	if err := manager.ImportPairingFile(ip, portStr, data); err != nil {
 		return err
 	}
 
@@ -294,16 +302,14 @@ func ImportPairingFile(ip string, port string, deviceID string, data []byte) err
 	// Paired. A dialog opened on a device row passes its ID; without one,
 	// the device is added or upgraded from the record itself.
 	if deviceID != "" {
-		// The dialog validates the record over the install service port the
-		// user entered; keep that port on the device so later tunnels use it.
-		if p, err := strconv.ParseUint(port, 10, 16); err == nil {
-			if dev, ok := manager.GetDeviceByID(deviceID); ok && dev.Port != uint16(p) {
-				manager.ApplyInstallPort(dev, uint16(p))
-			}
+		// The record validated over the scanned port; keep it on the device
+		// so later tunnels use the same one.
+		if dev, ok := manager.GetDeviceByID(deviceID); ok && dev.Port != port {
+			manager.ApplyInstallPort(dev, port)
 		}
 		manager.PairCompleted(deviceID)
-	} else if p, err := strconv.ParseUint(port, 10, 16); err == nil {
-		if err := manager.ImportPairedDevice(ip, uint16(p)); err != nil {
+	} else {
+		if err := manager.ImportPairedDevice(ip, port); err != nil {
 			return err
 		}
 	}

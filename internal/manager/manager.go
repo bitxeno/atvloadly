@@ -67,8 +67,8 @@ func RefreshDeviceInfo(dev *model.Device) (*model.Device, error) {
 
 // AddManualDevice registers a device that avahi cannot discover; see
 // DeviceManager.AddManualDevice.
-func AddManualDevice(ip string, port uint16, name string) (*model.Device, error) {
-	return deviceManager.AddManualDevice(ip, port, name)
+func AddManualDevice(ip string, name string) (*model.Device, error) {
+	return deviceManager.AddManualDevice(ip, name)
 }
 
 func DeleteManualDevice(id string) (bool, error) {

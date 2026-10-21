@@ -78,7 +78,7 @@ func addManualDevice(t *testing.T, ip string) (*DeviceManager, *model.Device) {
 	t.Helper()
 
 	dm := newDeviceManager()
-	dev, err := dm.AddManualDevice(ip, 62078, "")
+	dev, err := dm.AddManualDevice(ip, "")
 	if err != nil {
 		t.Fatalf("AddManualDevice failed: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestAddManualDeviceUsesSuppliedName(t *testing.T) {
 	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
 
 	dm := newDeviceManager()
-	named, err := dm.AddManualDevice("100.64.0.13", 62078, "My Apple TV")
+	named, err := dm.AddManualDevice("100.64.0.13", "My Apple TV")
 	if err != nil {
 		t.Fatalf("AddManualDevice failed: %v", err)
 	}
@@ -146,7 +146,7 @@ func TestAddManualDeviceRejectsBadInput(t *testing.T) {
 	dm := newDeviceManager()
 
 	// Public address.
-	if _, err := dm.AddManualDevice("8.8.8.8", 62078, ""); err == nil {
+	if _, err := dm.AddManualDevice("8.8.8.8", ""); err == nil {
 		t.Error("public address should be rejected")
 	}
 
@@ -174,7 +174,7 @@ func TestAddManualDeviceRequiresReachableAddress(t *testing.T) {
 	t.Cleanup(func() { probeHostReachability = original })
 
 	dm := newDeviceManager()
-	if _, err := dm.AddManualDevice("100.64.0.40", 0, ""); err == nil {
+	if _, err := dm.AddManualDevice("100.64.0.40", ""); err == nil {
 		t.Error("an unreachable address should not be registered")
 	}
 	if len(reachCalls) != 1 {
@@ -188,7 +188,7 @@ func TestAddManualDeviceRequiresReachableAddress(t *testing.T) {
 	}
 
 	up = true
-	dev, err := dm.AddManualDevice("100.64.0.40", 0, "")
+	dev, err := dm.AddManualDevice("100.64.0.40", "")
 	if err != nil {
 		t.Fatalf("AddManualDevice failed: %v", err)
 	}
@@ -207,7 +207,7 @@ func TestAddManualDeviceDefaultsPairPort(t *testing.T) {
 	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
 	dm := newDeviceManager()
 
-	dev, err := dm.AddManualDevice("100.64.0.12", 0, "")
+	dev, err := dm.AddManualDevice("100.64.0.12", "")
 	if err != nil {
 		t.Fatalf("AddManualDevice failed: %v", err)
 	}
@@ -245,7 +245,7 @@ func TestAddManualDeviceReplacesStaleEntry(t *testing.T) {
 	addManualDevice(t, "100.64.0.12")
 
 	// Same device moves to a new address: only one entry may remain.
-	replaced, err := newDeviceManager().AddManualDevice("100.113.5.5", 62078, "")
+	replaced, err := newDeviceManager().AddManualDevice("100.113.5.5", "")
 	if err != nil {
 		t.Fatalf("second add failed: %v", err)
 	}
@@ -263,7 +263,7 @@ func TestDeleteManualDevice(t *testing.T) {
 	setupManualDeviceTest(t, nil, completeDeviceInfo(), nil)
 
 	_, dev := addManualDevice(t, "100.64.0.12")
-	if _, err := newDeviceManager().AddManualDevice("100.64.0.9", 62078, "second"); err != nil {
+	if _, err := newDeviceManager().AddManualDevice("100.64.0.9", "second"); err != nil {
 		t.Fatalf("second add failed: %v", err)
 	}
 

@@ -92,8 +92,8 @@ var probeHostReachability = defaultProbeHostReachability
 
 // AddManualDevice registers a device address that avahi cannot discover,
 // typically reached over a mesh VPN such as Tailscale. The pairing port is
-// Apple's fixed lockdown port, so port 0 means "use the fixed value" and the
-// Add Device flow needs no port input at all. Persisting the registration is
+// Apple's fixed lockdown port, so the Add Device flow needs no port input
+// at all. Persisting the registration is
 // gated on an ICMP echo request: a mistyped address or an offline device
 // fails right in the dialog instead of leaving a registration behind that
 // fails the pairing flow moments later. The check is deliberately portless
@@ -104,13 +104,11 @@ var probeHostReachability = defaultProbeHostReachability
 // starts Pairable with an empty UDID; PairCompleted fills in the rest once
 // the pairing flow succeeds, including the install-port scan that needs the
 // freshly written pairing record.
-func (dm *DeviceManager) AddManualDevice(ip string, port uint16, name string) (*model.Device, error) {
+func (dm *DeviceManager) AddManualDevice(ip string, name string) (*model.Device, error) {
 	if ip == "" {
 		return nil, fmt.Errorf("ip is required")
 	}
-	if port == 0 {
-		port = pairPortFixed
-	}
+	port := pairPortFixed
 	addr, err := netip.ParseAddr(ip)
 	if err != nil || !isLanAddr(addr) {
 		return nil, fmt.Errorf("ip %s is not a private LAN or CGNAT address", ip)

@@ -285,13 +285,12 @@ func route(fi *fiber.App) {
 		var req struct {
 			Name string `json:"name"`
 			IP   string `json:"ip"`
-			Port uint16 `json:"port"`
 		}
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError("Invalid argument. error: " + err.Error()))
 		}
 
-		device, err := manager.AddManualDevice(req.IP, req.Port, req.Name)
+		device, err := manager.AddManualDevice(req.IP, req.Name)
 		if err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
@@ -467,11 +466,12 @@ func route(fi *fiber.App) {
 		}
 
 		ip := c.FormValue("ip")
-		port := c.FormValue("port")
 		deviceID := c.FormValue("device_id")
 
-		// Call manager to process the file
-		if err := service.ImportPairingFile(ip, port, deviceID, data); err != nil {
+		// The install service port is detected by scanning, like every
+		// automatic refresh does; a scan failure refuses the import with
+		// the scan's error answer.
+		if err := service.ImportPairingFile(ip, deviceID, data); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 

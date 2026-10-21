@@ -75,17 +75,16 @@
                     "name_label": "Device name:",
                     "name_placeholder": "Optional, e.g. Living room Apple TV",
                     "ip_label": "Device IP:",
-                    "ip_placeholder": "LAN IP or 100.x.y.z over Tailscale",
-                    "install_port_label": "Install service port:"
+                    "ip_placeholder": "LAN IP or 100.x.y.z over Tailscale"
                 },
                 "import": {
                     "file_label": "Pairing record (.plist):",
-                    "tips": "The record is validated against the device over the install service port, saved here for later installs, and the device is created or upgraded to paired. No pairing port is needed. ",
+                    "tips": "The record is validated against the device over its install service port, which is found automatically by scanning. The record is saved for later installs and the device is created or upgraded to paired. When no install service port answers, the import fails.",
                     "instructions": {
                         "title": "Where the record comes from",
                         "step1": "You will need to download 'idevice pair'. For iPhone you will have to connect over USB, but Apple TV can connect over Wi-fi.",
                         "step2": "Once the program can see your device, click 'Create' under 'Remote Pairing'. This will create the plist file that we need.",
-                        "step3": "Import it above with the device IP and the install service port (the _remotepairing._tcp port from dns-sd; no pairing port is needed)."
+                        "step3": "Import it above with the device IP; the install service port is found automatically, and the import fails rather than trusting the record when the device is not reachable."
                     }
                 },
                 "instructions": {
@@ -240,12 +239,6 @@
             "login_success": "Login Success"
         },
         "form": {
-            "install_port": {
-                "label": "Install service port:",
-                "placeholder": "49152",
-                "hint": "Port of the service installs run over; it can differ from the pairing port. Leave empty to keep the registered port.",
-                "manual_hint": "This device was added manually and nothing re-announces it: the install service port is re-detected automatically before installs. Use Fetch Device Info to check the device is reachable."
-            },
             "mode": {
                 "file": "IPA file",
                 "link": "IPA URL",

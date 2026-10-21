@@ -37,17 +37,6 @@
               v-if="device.connection === 'RPPairing'"
               class="w-full max-w-[12rem] form-control items-center"
             >
-              <label class="label py-1 pb-0">
-                <span class="label-text-alt text-center">{{ $t("install.form.install_port.label") }}</span>
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="65535"
-                class="input input-bordered input-sm w-full"
-                v-model="installPortInput"
-                :placeholder="$t('install.form.install_port.placeholder')"
-              />
               <button
                 type="button"
                 class="btn btn-xs btn-outline mt-1"
@@ -59,12 +48,6 @@
                 <span class="loading loading-spinner loading-xs" v-show="deviceInfoRefresh.busy"></span>
                 {{ $t("install.form.device_info.refresh") }}
               </button>
-              <label class="label py-1" v-if="device.manual">
-                <span class="label-text-alt text-center" v-html="$t('install.form.install_port.manual_hint')"></span>
-              </label>
-              <label class="label py-1 pt-0">
-                <span class="label-text-alt text-center">{{ $t("install.form.install_port.hint") }}</span>
-              </label>
             </div>
           </div>
         </div>
@@ -615,14 +598,9 @@ export default {
       sourceSelection: null,
       ipa: {},
       device: {},
-      // Install service port override, shown for remote-pairing devices:
-      // pairing and installs can run on different ports, and only the user
-      // can tell which port the device currently announces. Empty keeps the
-      // device's registered install port.
-      installPortInput: "",
-      // State of the install-port scan launched from the port field. The
-      // sweep can take up to two minutes behind slow connections, so the
-      // button carries its own spinner and stays disabled while running.
+      // State of the device-info refetch launched from the button: it can
+      // take a moment, so it carries its own spinner and stays disabled
+      // while running.
       deviceInfoRefresh: { busy: false },
       loading: false,
       websock: null,
@@ -839,9 +817,6 @@ export default {
       let _this = this;
       api.getDevice(_this.id).then((res) => {
         _this.device = res.data;
-        if (!_this.installPortInput && res.data && res.data.port) {
-          _this.installPortInput = String(res.data.port);
-        }
       });
       const accounts = api.getAccounts().then((res) => {
         const m = res.data || {};
@@ -1216,7 +1191,6 @@ export default {
             signing_identity_id: external ? Number(_this.signing.identityId) : 0,
             allow_missing_entitlements: external && _this.signing.allowMissingEntitlements,
             revoke_certificate_serial: "",
-            install_port: _this.device.connection === "RPPairing" ? Number(_this.installPortInput) || 0 : 0,
             source,
         };
         // Kept so the certificate dialog can resend this same install with the
