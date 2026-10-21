@@ -453,11 +453,11 @@ export default {
       method: "post",
     });
   },
-  scanInstallPort: (ip) => {
+  scanInstallPort: (ip, id) => {
     return request({
       url: "/api/devices/scan/install-port",
       method: "post",
-      data: { ip },
+      data: { ip, id },
       timeout: 120000,
     });
   },

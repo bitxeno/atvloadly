@@ -839,8 +839,8 @@ export default {
       let _this = this;
       api.getDevice(_this.id).then((res) => {
         _this.device = res.data;
-        if (!_this.installPortInput && res.data && res.data.install_port) {
-          _this.installPortInput = String(res.data.install_port);
+        if (!_this.installPortInput && res.data && res.data.port) {
+          _this.installPortInput = String(res.data.port);
         }
       });
       const accounts = api.getAccounts().then((res) => {
@@ -880,7 +880,7 @@ export default {
         return;
       }
       _this.installPortScan.busy = true;
-      api.scanInstallPort(_this.device.ip).then((res) => {
+      api.scanInstallPort(_this.device.ip, _this.device.id).then((res) => {
         const port = res.data && res.data.install_port ? res.data.install_port : null;
         if (port) {
           _this.installPortInput = String(port);

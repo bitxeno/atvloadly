@@ -301,10 +301,13 @@ func route(fi *fiber.App) {
 	// Detects the install-port service of a device reachable over the
 	// network: a TCP sweep over the dynamic range, validated with the
 	// tunnel handshake where possible. Used to prefill the install-port
-	// input during add and import flows.
+	// input during add and import flows. When the request names a device,
+	// the result is recorded on it, so a scan from the install page makes
+	// later operations use the detected port without another scan.
 	api.Post("/devices/scan/install-port", func(c *fiber.Ctx) error {
 		var req struct {
 			IP string `json:"ip"`
+			ID string `json:"id"`
 		}
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError("Invalid argument. error: " + err.Error()))
@@ -316,6 +319,11 @@ func route(fi *fiber.App) {
 		port, open, err := manager.ScanInstallPort(req.IP)
 		if err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		if req.ID != "" && port != 0 {
+			if dev, ok := manager.GetDeviceByID(req.ID); ok && dev.Manual {
+				manager.ApplyInstallPort(dev, port)
+			}
 		}
 		return c.Status(http.StatusOK).JSON(apiSuccess(map[string]any{
 			"install_port": port,

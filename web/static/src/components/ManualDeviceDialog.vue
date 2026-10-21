@@ -176,7 +176,7 @@ export default {
         ip: device ? device.ip : "",
         // Import validates the record over the tunnel-capable remote-pairing
         // service, so the install service port is what goes here.
-        port: device && device.install_port ? device.install_port : device && device.port ? device.port : 49152,
+        port: device && device.port ? device.port : 49152,
         deviceId: device && device.id ? device.id : "",
       };
       this.visibleImport = true;
@@ -196,7 +196,7 @@ export default {
       }
       this.scanBusy = true;
       try {
-        const res = await api.scanInstallPort(this.importForm.ip);
+        const res = await api.scanInstallPort(this.importForm.ip, this.importForm.deviceId);
         const port = res.data && res.data.install_port ? res.data.install_port : null;
         if (port) {
           this.importForm.port = port;
