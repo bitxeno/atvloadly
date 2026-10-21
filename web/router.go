@@ -298,39 +298,6 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(device))
 	})
 
-	// Detects the install-port service of a device reachable over the
-	// network: a TCP sweep over the dynamic range, validated with the
-	// tunnel handshake where possible. Used to prefill the install-port
-	// input during add and import flows. When the request names a device,
-	// the result is recorded on it, so a scan from the install page makes
-	// later operations use the detected port without another scan.
-	api.Post("/devices/scan/install-port", func(c *fiber.Ctx) error {
-		var req struct {
-			IP string `json:"ip"`
-			ID string `json:"id"`
-		}
-		if err := c.BodyParser(&req); err != nil {
-			return c.Status(http.StatusOK).JSON(apiError("Invalid argument. error: " + err.Error()))
-		}
-		if req.IP == "" {
-			return c.Status(http.StatusOK).JSON(apiError("ip is required"))
-		}
-
-		port, open, err := manager.ScanInstallPort(req.IP)
-		if err != nil {
-			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
-		}
-		if req.ID != "" && port != 0 {
-			if dev, ok := manager.GetDeviceByID(req.ID); ok && dev.Manual {
-				manager.ApplyInstallPort(dev, port)
-			}
-		}
-		return c.Status(http.StatusOK).JSON(apiSuccess(map[string]any{
-			"install_port": port,
-			"open_ports":   open,
-		}))
-	})
-
 	api.Post("/devices/manual/:id/delete", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 
@@ -351,6 +318,25 @@ func route(fi *fiber.App) {
 		}
 
 		return c.Status(http.StatusOK).JSON(apiError("device not found"))
+	})
+
+	// Refreshes a device's identity over the network (plumesign
+	// device-info) and stores the reported fields on it. The install
+	// page's device-info button uses it to prove the device is reachable
+	// while pulling name and product updates: nothing announces an
+	// overlay-connected device, so this is the manual counterpart of the
+	// mDNS identity refresh.
+	api.Post("/devices/:id/device-info", func(c *fiber.Ctx) error {
+		device, ok := manager.GetDeviceByID(c.Params("id"))
+		if !ok {
+			return c.Status(http.StatusOK).JSON(apiError("device not found"))
+		}
+
+		fresh, err := manager.RefreshDeviceInfo(device)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(fresh))
 	})
 
 	api.Post("/devices/:id/mountimage", func(c *fiber.Ctx) error {

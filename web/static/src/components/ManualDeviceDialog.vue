@@ -90,17 +90,6 @@
             class="input input-bordered w-full"
             v-model="importForm.port"
           />
-          <button
-            type="button"
-            class="btn btn-xs btn-outline mt-1"
-            :disabled="scanBusy || !importForm.ip || !importForm.file"
-            @click="scanImportPort"
-            :title="$t('home.dialog.manual.form.install_port_scan')"
-            :aria-label="$t('home.dialog.manual.form.install_port_scan')"
-          >
-            <span class="loading loading-spinner loading-xs" v-show="scanBusy"></span>
-            {{ $t("home.dialog.manual.form.install_port_scan") }}
-          </button>
         </div>
 
         <p class="text-sm text-base-content/70 whitespace-normal">
@@ -152,7 +141,6 @@ export default {
       visibleImport: false,
       addBusy: false,
       importBusy: false,
-      scanBusy: false,
       addForm: {
         name: "",
         ip: "",
@@ -189,28 +177,6 @@ export default {
     },
     onFileChange(event) {
       this.importForm.file = event.target.files && event.target.files.length > 0 ? event.target.files[0] : null;
-    },
-    async scanImportPort() {
-      if (!this.importForm.ip || this.scanBusy) {
-        return;
-      }
-      this.scanBusy = true;
-      try {
-        const res = await api.scanInstallPort(this.importForm.ip, this.importForm.deviceId);
-        const port = res.data && res.data.install_port ? res.data.install_port : null;
-        if (port) {
-          this.importForm.port = port;
-          toast.success(this.$t("home.dialog.manual.form.install_port_scan_success", { port }));
-        } else {
-          toast.error(this.$t("home.dialog.manual.form.install_port_scan_failed"));
-        }
-      } catch (err) {
-        // request.js already shows the error.
-        console.error(err);
-        toast.error(this.$t("home.dialog.manual.form.install_port_scan_failed"));
-      } finally {
-        this.scanBusy = false;
-      }
     },
     async submitAdd() {
       this.addBusy = true;

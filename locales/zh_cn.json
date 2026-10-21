@@ -76,10 +76,7 @@
                     "name_placeholder": "可选，例如：客厅的 Apple TV",
                     "ip_label": "设备 IP：",
                     "ip_placeholder": "局域网 IP 或 Tailscale 的 100.x.y.z",
-                    "install_port_label": "安装服务端口：",
-                    "install_port_scan": "扫描端口",
-                    "install_port_scan_success": "检测到安装端口 {port}",
-                    "install_port_scan_failed": "未找到安装端口；请检查设备是否可达"
+                    "install_port_label": "安装服务端口："
                 },
                 "import": {
                     "file_label": "配对记录文件（.plist）：",
@@ -239,8 +236,7 @@
             "install_success": "安装成功",
             "install_failed": "安装失败，请查看日志了解详细信息",
             "connection_closed": "安装连接已关闭，请重试。",
-            "app_group_unavailable": "无法使用此 Apple 帐号注册该应用的共享存储组。请确认该帐号有创建 App Groups 的权限，并支持该应用所需的功能。详情请查看技术日志。"
-        ,
+            "app_group_unavailable": "无法使用此 Apple 帐号注册该应用的共享存储组。请确认该帐号有创建 App Groups 的权限，并支持该应用所需的功能。详情请查看技术日志。",
             "login_success": "登录成功"
         },
         "form": {
@@ -248,10 +244,7 @@
                 "label": "安装服务端口：",
                 "placeholder": "49152",
                 "hint": "安装所经由的服务的端口，可能与配对端口不同。留空则使用已登记的端口。",
-                "scan": "扫描端口",
-                "manual_hint": "该设备为手动添加，无法自动刷新：重启后安装服务端口可能会变化。点击“扫描端口”可自动刷新。",
-                "scan_success": "检测到安装端口 {port}",
-                "scan_failed": "未找到安装端口；请检查设备是否可达"
+                "manual_hint": "该设备为手动添加，无法自动刷新：安装前会自动重新检测安装服务端口。可通过“获取设备信息”检查设备是否可达。"
             },
             "mode": {
                 "file": "IPA 文件",
@@ -359,9 +352,13 @@
             "allow_missing_entitlements": {
                 "label": "允许缺少权限",
                 "tips": "即使描述文件未授予应用请求的部分权限（entitlements）也进行签名，依赖这些权限的功能可能无法使用。"
+            },
+            "device_info": {
+                "refresh": "获取设备信息",
+                "success": "设备信息已刷新",
+                "failed": "无法连接设备；请检查地址是否可达"
             }
-        }
-        ,
+        },
         "login_modal": {
             "title": "登录 Apple 帐号",
             "2fa_warning": "只支持受信任的设备接收 2FA，不支持短信接收",
@@ -524,25 +521,27 @@
             "button": {
                 "submit": "保 存"
             }
-        }
-            ,
-            "advanced": {
-                "title": "高级",
-                "update_coreadi": "更新 CoreADI",
-                "update_coreadi_confirm": "确认要下载并更新 CoreADI 库文件吗？",
-                "reset_anisette": "重置 Anisette 数据",
-                "reset_anisette_confirm": "确认要重置 Anisette 数据吗？下次登录或安装时将重新生成。",
-                "cancel": "取消",
-                "confirm": "确认",
-                "toast": {
-                    "downloading": "正在下载...",
-                    "success": "更新完成",
-                    "failed": "更新失败"
-                }
+        },
+        "advanced": {
+            "title": "高级",
+            "update_coreadi": "更新 CoreADI",
+            "update_coreadi_confirm": "确认要下载并更新 CoreADI 库文件吗？",
+            "reset_anisette": "重置 Anisette 数据",
+            "reset_anisette_confirm": "确认要重置 Anisette 数据吗？下次登录或安装时将重新生成。",
+            "cancel": "取消",
+            "confirm": "确认",
+            "toast": {
+                "downloading": "正在下载...",
+                "success": "更新完成",
+                "failed": "更新失败"
             }
+        }
     },
     "account": {
-      "status_labels": {"valid": "有效", "invalid": "无效"},
+        "status_labels": {
+            "valid": "有效",
+            "invalid": "无效"
+        },
         "select_account": "选择帐号",
         "select_placeholder": "请选择一个帐号",
         "table": {
@@ -570,9 +569,9 @@
             "logout_success": "帐号登出成功",
             "logout_failed": "登出帐号失败"
         },
-      "heading": {
-          "apple_accounts": "Apple 帐号"
-      }
+        "heading": {
+            "apple_accounts": "Apple 帐号"
+        }
     },
     "source_dialog": {
         "title_track": "跟踪 {{name}} 的更新",
@@ -660,8 +659,7 @@
             "delete_success": "设备删除成功",
             "delete_failed": "删除设备失败"
         }
-    }
-    ,
+    },
     "tools": {
         "ssdp": {
             "title": "SSDP 扫描器",

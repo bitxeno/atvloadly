@@ -51,6 +51,20 @@ func GetDeviceByUDID(udid string) (*model.Device, bool) {
 	return deviceManager.GetDeviceByUDID(udid)
 }
 
+// RefreshDeviceInfo probes the device's identity over the network and
+// stores the reported name and product fields on the device. The install
+// page's device-info button uses it both to prove the device is reachable
+// and to pull identity updates the discovery path has no opportunity to
+// refresh (nothing announces an overlay-connected device).
+func RefreshDeviceInfo(dev *model.Device) (*model.Device, error) {
+	devInfo, err := deviceManager.GetDeviceInfo(dev)
+	if err != nil {
+		return nil, err
+	}
+	deviceManager.AppendProductInfo(dev, *devInfo)
+	return dev, nil
+}
+
 // AddManualDevice registers a device that avahi cannot discover; see
 // DeviceManager.AddManualDevice.
 func AddManualDevice(ip string, port uint16, name string) (*model.Device, error) {

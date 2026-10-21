@@ -453,12 +453,11 @@ export default {
       method: "post",
     });
   },
-  scanInstallPort: (ip, id) => {
+  refreshDeviceInfo: (id) => {
     return request({
-      url: "/api/devices/scan/install-port",
+      url: `/api/devices/${id}/device-info`,
       method: "post",
-      data: { ip, id },
-      timeout: 120000,
+      timeout: 15000,
     });
   },
   scanWireless: () => {

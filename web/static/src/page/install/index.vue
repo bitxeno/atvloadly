@@ -51,13 +51,13 @@
               <button
                 type="button"
                 class="btn btn-xs btn-outline mt-1"
-                :disabled="installPortScan.busy"
-                @click="scanInstallPort"
-                :title="$t('install.form.install_port.scan')"
-                :aria-label="$t('install.form.install_port.scan')"
+                :disabled="deviceInfoRefresh.busy"
+                @click="refreshDeviceInfo"
+                :title="$t('install.form.device_info.refresh')"
+                :aria-label="$t('install.form.device_info.refresh')"
               >
-                <span class="loading loading-spinner loading-xs" v-show="installPortScan.busy"></span>
-                {{ $t("install.form.install_port.scan") }}
+                <span class="loading loading-spinner loading-xs" v-show="deviceInfoRefresh.busy"></span>
+                {{ $t("install.form.device_info.refresh") }}
               </button>
               <label class="label py-1" v-if="device.manual">
                 <span class="label-text-alt text-center" v-html="$t('install.form.install_port.manual_hint')"></span>
@@ -623,7 +623,7 @@ export default {
       // State of the install-port scan launched from the port field. The
       // sweep can take up to two minutes behind slow connections, so the
       // button carries its own spinner and stays disabled while running.
-      installPortScan: { busy: false },
+      deviceInfoRefresh: { busy: false },
       loading: false,
       websock: null,
       // Generation of the current install attempt. Every release of the
@@ -874,26 +874,23 @@ export default {
         }
       });
     },
-    scanInstallPort() {
+    refreshDeviceInfo() {
       const _this = this;
-      if (!_this.device.ip || _this.installPortScan.busy) {
+      if (!_this.device.id || _this.deviceInfoRefresh.busy) {
         return;
       }
-      _this.installPortScan.busy = true;
-      api.scanInstallPort(_this.device.ip, _this.device.id).then((res) => {
-        const port = res.data && res.data.install_port ? res.data.install_port : null;
-        if (port) {
-          _this.installPortInput = String(port);
-          toast.success(_this.$t("install.form.install_port.scan_success", { port }));
-        } else {
-          toast.error(_this.$t("install.form.install_port.scan_failed"));
-        }
+      _this.deviceInfoRefresh.busy = true;
+      api.refreshDeviceInfo(_this.device.id).then((res) => {
+        const fresh = res.data || {};
+        Object.assign(_this.device, fresh);
+        toast.success(_this.$t("install.form.device_info.success"));
       }).catch(() => {
-        // request.js already shows the response error; add a short message
-        // since the scan may end silently for the user waiting two minutes.
-        toast.error(_this.$t("install.form.install_port.scan_failed"));
+        // request.js already shows the response error; add a short
+        // message since the probe takes a few seconds and may otherwise
+        // look like it did nothing.
+        toast.error(_this.$t("install.form.device_info.failed"));
       }).finally(() => {
-        _this.installPortScan.busy = false;
+        _this.deviceInfoRefresh.busy = false;
       });
     },
     setSigningMode(mode) {

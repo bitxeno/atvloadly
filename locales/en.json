@@ -76,10 +76,7 @@
                     "name_placeholder": "Optional, e.g. Living room Apple TV",
                     "ip_label": "Device IP:",
                     "ip_placeholder": "LAN IP or 100.x.y.z over Tailscale",
-                    "install_port_label": "Install service port:",
-                    "install_port_scan": "Scan port",
-                    "install_port_scan_success": "Install port {port} detected",
-                    "install_port_scan_failed": "No install port found; check that the device is reachable"
+                    "install_port_label": "Install service port:"
                 },
                 "import": {
                     "file_label": "Pairing record (.plist):",
@@ -88,7 +85,7 @@
                         "title": "Where the record comes from",
                         "step1": "You will need to download 'idevice pair'. For iPhone you will have to connect over USB, but Apple TV can connect over Wi-fi.",
                         "step2": "Once the program can see your device, click 'Create' under 'Remote Pairing'. This will create the plist file that we need.",
-                        "step3": "Import it above with the device IP and the install service port (the _remotepairing._tcp port from dns-sd; no pairing port is needed). You can use the button to automatically scan for the install port."
+                        "step3": "Import it above with the device IP and the install service port (the _remotepairing._tcp port from dns-sd; no pairing port is needed)."
                     }
                 },
                 "instructions": {
@@ -239,8 +236,7 @@
             "install_success": "Installation Successful",
             "install_failed": "Installation Failed. Please check logs for more information.",
             "connection_closed": "Installation connection closed. Please try again.",
-            "app_group_unavailable": "The app's shared storage group could not be registered with this Apple account. Check that the account can create App Groups and supports the app's required capabilities. See the technical log for details."
-        ,
+            "app_group_unavailable": "The app's shared storage group could not be registered with this Apple account. Check that the account can create App Groups and supports the app's required capabilities. See the technical log for details.",
             "login_success": "Login Success"
         },
         "form": {
@@ -248,10 +244,7 @@
                 "label": "Install service port:",
                 "placeholder": "49152",
                 "hint": "Port of the service installs run over; it can differ from the pairing port. Leave empty to keep the registered port.",
-                "scan": "Scan port",
-                "manual_hint": "This device was added manually and nothing re-announces it: the install service port may change after a restart. Click Scan port to refresh it automatically.",
-                "scan_success": "Install port {port} detected",
-                "scan_failed": "No install port found; check that the device is reachable"
+                "manual_hint": "This device was added manually and nothing re-announces it: the install service port is re-detected automatically before installs. Use Fetch Device Info to check the device is reachable."
             },
             "mode": {
                 "file": "IPA file",
@@ -359,9 +352,13 @@
             "allow_missing_entitlements": {
                 "label": "Allow missing entitlements",
                 "tips": "Sign even though the provisioning profile does not grant some entitlements the app requests. Features relying on them may not work."
+            },
+            "device_info": {
+                "refresh": "Fetch Device Info",
+                "success": "Device info refreshed",
+                "failed": "Could not reach the device; check the address"
             }
-        }
-        ,
+        },
         "login_modal": {
             "title": "Login Apple Account",
             "2fa_warning": "Only trusted devices can receive the 2FA code. Receiving it by SMS is not supported.",
@@ -524,25 +521,27 @@
             "button": {
                 "submit": "Save"
             }
-        }
-            ,
-            "advanced": {
-                "title": "Advanced",
-                "update_coreadi": "Update CoreADI",
-                "update_coreadi_confirm": "Are you sure you want update the CoreADI libraries?",
-                "reset_anisette": "Reset Anisette Data",
-                "reset_anisette_confirm": "Are you sure you want to reset the Anisette data? It will be provisioned again on the next login or install.",
-                "cancel": "Cancel",
-                "confirm": "Confirm",
-                "toast": {
-                    "downloading": "Downloading...",
-                    "success": "Update completed",
-                    "failed": "Update failed"
-                }
+        },
+        "advanced": {
+            "title": "Advanced",
+            "update_coreadi": "Update CoreADI",
+            "update_coreadi_confirm": "Are you sure you want update the CoreADI libraries?",
+            "reset_anisette": "Reset Anisette Data",
+            "reset_anisette_confirm": "Are you sure you want to reset the Anisette data? It will be provisioned again on the next login or install.",
+            "cancel": "Cancel",
+            "confirm": "Confirm",
+            "toast": {
+                "downloading": "Downloading...",
+                "success": "Update completed",
+                "failed": "Update failed"
             }
+        }
     },
     "account": {
-      "status_labels": {"valid": "Valid", "invalid": "Invalid"},
+        "status_labels": {
+            "valid": "Valid",
+            "invalid": "Invalid"
+        },
         "select_account": "Select Account",
         "select_placeholder": "Please select an account",
         "table": {
@@ -570,9 +569,9 @@
             "logout_success": "Account logged out successfully",
             "logout_failed": "Failed to logout account"
         },
-      "heading": {
-          "apple_accounts": "Apple Accounts"
-      }
+        "heading": {
+            "apple_accounts": "Apple Accounts"
+        }
     },
     "source_dialog": {
         "title_track": "Track updates for {{name}}",
@@ -660,8 +659,7 @@
             "delete_success": "Device deleted successfully",
             "delete_failed": "Failed to delete device"
         }
-    }
-    ,
+    },
     "tools": {
         "ssdp": {
             "title": "SSDP Scanner",

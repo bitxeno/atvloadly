@@ -54,7 +54,7 @@
       "paired_devices": "Parkopplade enheter",
       "service_status": "Tjänststatus",
       "installed_app": "Installerade appar",
-          "add_device": "Lägg till enhet"
+      "add_device": "Lägg till enhet"
     },
     "dialog": {
       "delete_confirm": {
@@ -76,10 +76,7 @@
           "name_placeholder": "Valfritt, t.ex. Apple TV i vardagsrummet",
           "ip_label": "Enhetens IP:",
           "ip_placeholder": "LAN-IP eller 100.x.y.z över Tailscale",
-          "install_port_label": "Installationsport:",
-          "install_port_scan": "Sök port",
-          "install_port_scan_success": "Installationsport {port} hittades",
-          "install_port_scan_failed": "Ingen installationsport hittades; kontrollera att enheten kan nås"
+          "install_port_label": "Installationsport:"
         },
         "import": {
           "file_label": "Parkopplingspost (.plist):",
@@ -247,10 +244,7 @@
         "label": "Installationsport:",
         "placeholder": "49152",
         "hint": "Porten till tjänsten som installationer körs via; den kan skilja sig från parkopplingsporten. Lämna tomt för att behålla den registrerade porten.",
-        "scan": "Sök port",
-        "manual_hint": "Enheten lades till manuellt och uppdateras inte automatiskt: installationsporten kan ändras efter en omstart. Klicka på Sök port för att uppdatera den automatiskt.",
-        "scan_success": "Installationsport {port} hittades",
-        "scan_failed": "Ingen installationsport hittades; kontrollera att enheten kan nås"
+        "manual_hint": "Den här enheten lades till manuellt och annonseras inte igen: installationstjänstens port identifieras om automatiskt före installationer. Använd Hämta enhetsinfo för att kontrollera att enheten är nåbar."
       },
       "mode": {
         "file": "IPA-fil",
@@ -358,6 +352,11 @@
       "allow_missing_entitlements": {
         "label": "Tillåt saknade entitlements",
         "tips": "Signera även om provisioneringsprofilen inte beviljar vissa entitlements som appen begär. Funktioner som är beroende av dem kanske inte fungerar."
+      },
+      "device_info": {
+        "refresh": "Hämta enhetsinfo",
+        "success": "Enhetsinfo uppdaterad",
+        "failed": "Kunde inte nå enheten; kontrollera att adressen är tillgänglig"
       }
     },
     "login_modal": {
@@ -539,7 +538,10 @@
     }
   },
   "account": {
-    "status_labels": {"valid": "Giltigt", "invalid": "Ogiltigt"},
+    "status_labels": {
+      "valid": "Giltigt",
+      "invalid": "Ogiltigt"
+    },
     "select_account": "Välj konto",
     "select_placeholder": "Välj ett konto",
     "table": {
