@@ -148,7 +148,9 @@ func (dm *DeviceManager) LoadManualDevices() {
 	entries := readManualDevices()
 	manualMu.Unlock()
 
-	for _, device := range entries {
+	healed := false
+	for i := range entries {
+		device := entries[i]
 		// The UDID stays empty until the pairing flow succeeds, so devices
 		// may be restored before they are Paired.
 		if device.ID == "" || device.IP == "" {
@@ -160,9 +162,22 @@ func (dm *DeviceManager) LoadManualDevices() {
 		// Re-derive the class from the product type: older entries may
 		// carry the add-flow placeholder guess although the paired probe
 		// recorded an iPhone or iPad product type.
+		before := device.DeviceClass
 		device.ParseDeviceClass()
+		if before != device.DeviceClass {
+			log.Infof("Manual device %s reclassified: %s -> %s", device.Name, before, device.DeviceClass)
+			healed = true
+		}
+		entries[i] = device
 		dm.SaveDevice(device)
 		log.Debugf("Manual device restored: %s (%s)", device.Name, device.UDID)
+	}
+	if healed {
+		manualMu.Lock()
+		if err := writeManualDevices(entries); err != nil {
+			log.Err(err).Msg("Failed to persist reclassified manual devices:")
+		}
+		manualMu.Unlock()
 	}
 }
 
