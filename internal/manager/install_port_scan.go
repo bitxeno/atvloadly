@@ -188,12 +188,11 @@ func sweepOpenPorts(ip string, probe func(port uint16) error) (uint16, []uint16)
 // record — resolved from its stored UDID — gets its tunnel handshake probed
 // against every reachable non-pairing port as its dial completes; the first
 // validated handshake terminates the remaining sweep and answers
-// immediately, which behind slow overlay paths (cellular relays in
-// particular) runs in the time of finding the port instead of the time of
-// sweeping the range. Records of unrelated devices are never tried, and
-// only a handshake-validated port is ever offered: a non-validated port
-// means no install port was found, every other opener is an error. The
-// open-port list is returned for diagnostics.
+// immediately, so a slow overlay path only pays for the time of finding
+// the port instead of the time of sweeping the range. Records of unrelated
+// devices are never tried, and only a handshake-validated port is ever
+// offered: a non-validated port means no install port was found, every
+// other opener is an error. The open-port list is returned for diagnostics.
 func ScanDeviceInstallPort(dev *model.Device) (uint16, []uint16, error) {
 	record, err := pairingRecordForUDID(dev.UDID)
 	if err != nil {
@@ -206,7 +205,11 @@ func ScanDeviceInstallPort(dev *model.Device) (uint16, []uint16, error) {
 		return found, open, nil
 	}
 	if len(open) == 0 {
-		return 0, nil, fmt.Errorf("no open developer ports found; check that the device is reachable and that Remote Access is enabled")
+		// iOS does not start or expose the local developer and lockdown
+		// services without an active 802.11 Wi-Fi link (cellular data is
+		// not accepted), so a battery of correct dials can still find
+		// nothing on a device that left Wi-Fi.
+		return 0, nil, fmt.Errorf("no open developer ports found; check that the device is connected to a Wi-Fi network, reachable and that Remote Access is enabled")
 	}
 	return 0, open, fmt.Errorf("no open port passed the pairing-record handshake on %s", dev.IP)
 }
