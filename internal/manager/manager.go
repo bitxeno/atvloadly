@@ -51,6 +51,73 @@ func GetDeviceByUDID(udid string) (*model.Device, bool) {
 	return deviceManager.GetDeviceByUDID(udid)
 }
 
+// RefreshDeviceInfo probes the device's identity over the network and
+// stores the reported name and product fields on the device. The install
+// page's device-info button uses it both to prove the device is reachable
+// and to pull identity updates the discovery path has no opportunity to
+// refresh (nothing announces an overlay-connected device).
+func RefreshDeviceInfo(dev *model.Device) (*model.Device, error) {
+	// Devices repick their install-service port whenever their services
+	// restart, and a stored one then refuses connections, so the query
+	// runs like every tunnel use: over a freshly scanned port. A scan
+	// failure is reported as-is, it is the more honest reachability
+	// answer.
+	port, _, err := ScanDeviceInstallPort(dev)
+	if err != nil {
+		return nil, err
+	}
+	if port > 0 && port != dev.Port {
+		deviceManager.UpdateManualInstallPort(dev, port)
+	}
+	devInfo, err := deviceManager.GetDeviceInfo(dev)
+	if err != nil {
+		return nil, err
+	}
+	deviceManager.AppendProductInfo(dev, *devInfo)
+	return dev, nil
+}
+
+// AddManualDevice registers a device that avahi cannot discover; see
+// DeviceManager.AddManualDevice.
+func AddManualDevice(ip string, name string) (*model.Device, error) {
+	return deviceManager.AddManualDevice(ip, name)
+}
+
+func DeleteManualDevice(id string) (bool, error) {
+	return deviceManager.DeleteManualDevice(id)
+}
+
+// PairCompleted marks a device Paired after a successful pairing flow.
+func PairCompleted(id string) {
+	deviceManager.PairCompleted(id)
+}
+
+// RefreshManualInstallPort re-detects the install service port of a manual
+// device; see DeviceManager.
+func RefreshManualInstallPort(id string) {
+	deviceManager.RefreshManualInstallPort(id)
+}
+
+// FreshInstallDevice re-detects the install service port of a manual device
+// and returns the up-to-date device for tunnel use; see DeviceManager.
+func FreshInstallDevice(dev *model.Device) *model.Device {
+	return deviceManager.FreshInstallDevice(dev)
+}
+
+// ApplyInstallPort records the install page's chosen install service port on
+// the device. Manual devices persist the value; discovered devices keep it
+// in memory until their next announcement refresh.
+func ApplyInstallPort(dev *model.Device, port uint16) {
+	deviceManager.UpdateManualInstallPort(dev, port)
+}
+
+// ImportPairedDevice adds or upgrades a device from an imported pairing
+// record that already validated against it; see DeviceManager.
+// ImportPairedDevice.
+func ImportPairedDevice(ip string, port uint16) error {
+	return deviceManager.ImportPairedDevice(ip, port)
+}
+
 // GetDeviceInfo queries the device for its lockdown values, including the
 // hardware UniqueDeviceID.
 func GetDeviceInfo(dev *model.Device) (*model.DeviceInfo, error) {

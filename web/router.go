@@ -277,6 +277,39 @@ func route(fi *fiber.App) {
 		}
 	})
 
+	// Manually add a device that avahi cannot discover, typically one
+	// reached through a mesh VPN (Tailscale). The device is probed over
+	// the network with plumesign device-info; the pairing flow then runs
+	// normally over the supplied address.
+	api.Post("/devices/manual", func(c *fiber.Ctx) error {
+		var req struct {
+			Name string `json:"name"`
+			IP   string `json:"ip"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument. error: " + err.Error()))
+		}
+
+		device, err := manager.AddManualDevice(req.IP, req.Name)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(device))
+	})
+
+	api.Post("/devices/manual/:id/delete", func(c *fiber.Ctx) error {
+		id := c.Params("id")
+
+		found, err := manager.DeleteManualDevice(id)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		if !found {
+			return c.Status(http.StatusOK).JSON(apiError("device not found"))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
 	api.Get("/devices/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		if device, ok := manager.GetDeviceDetail(id); ok {
@@ -284,6 +317,25 @@ func route(fi *fiber.App) {
 		}
 
 		return c.Status(http.StatusOK).JSON(apiError("device not found"))
+	})
+
+	// Refreshes a device's identity over the network (plumesign
+	// device-info) and stores the reported fields on it. The install
+	// page's device-info button uses it to prove the device is reachable
+	// while pulling name and product updates: nothing announces an
+	// overlay-connected device, so this is the manual counterpart of the
+	// mDNS identity refresh.
+	api.Post("/devices/:id/device-info", func(c *fiber.Ctx) error {
+		device, ok := manager.GetDeviceByID(c.Params("id"))
+		if !ok {
+			return c.Status(http.StatusOK).JSON(apiError("device not found"))
+		}
+
+		fresh, err := manager.RefreshDeviceInfo(device)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(fresh))
 	})
 
 	api.Post("/devices/:id/mountimage", func(c *fiber.Ctx) error {
@@ -414,10 +466,12 @@ func route(fi *fiber.App) {
 		}
 
 		ip := c.FormValue("ip")
-		port := c.FormValue("port")
+		deviceID := c.FormValue("device_id")
 
-		// Call manager to process the file
-		if err := service.ImportPairingFile(ip, port, data); err != nil {
+		// The install service port is detected by scanning, like every
+		// automatic refresh does; a scan failure refuses the import with
+		// the scan's error answer.
+		if err := service.ImportPairingFile(ip, deviceID, data); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 

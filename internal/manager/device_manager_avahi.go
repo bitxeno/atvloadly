@@ -101,6 +101,10 @@ func (dm *DeviceManager) Start() {
 	ctx := dm.ctx
 	dm.mu.Unlock()
 
+	// Manual devices have no discovery mechanism to recreate them, so they
+	// are restored from the persistence file at every startup.
+	dm.LoadManualDevices()
+
 	// A browser freed because the provider dropped a dead connection ends
 	// runDiscovery. Reconnect and restart discovery instead of leaving the
 	// daemon permanently without device discovery.

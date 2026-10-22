@@ -75,7 +75,15 @@ func (t *PairManager) Start(ctx context.Context, device model.Device) error {
 		_ = stdinReader.Close()
 	}()
 
-	port := fmt.Sprintf("%d", device.Port)
+	// Manual devices pair on Apple's fixed manual-pairing port. The
+	// regular remote-pairing service lives on an ephemeral port which the
+	// install-port scan rewrites Port to, so the pairing port must not be
+	// read back from Port.
+	pairPort := device.Port
+	if device.Manual {
+		pairPort = pairPortFixed
+	}
+	port := fmt.Sprintf("%d", pairPort)
 	err = exec.CommandContext(ctx, "plumesign", "pair", "--ip", device.IP, "--port", port).
 		WithTimeout(timeout).
 		WithDir(app.Config.Server.DataDir).
@@ -182,6 +190,7 @@ func ImportPairingFile(ip string, port string, data []byte) error {
 
 	// Execute the check command
 	_, err = exec.NewCommand("plumesign", "check", "pairing", "--ip", ip, "--port", port, "-f", tmpFilePath).
+		WithTimeout(installProbeWait).
 		WithDir(app.Config.Server.DataDir).
 		WithEnv(GetRunEnvs()).
 		CombinedOutput()

@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"net/netip"
 	"testing"
 	"time"
 
@@ -234,5 +235,51 @@ func TestPairingCheckCleanupOwnership(t *testing.T) {
 	}
 	if _, ok := dm.pairingCancel["device-b"]; ok {
 		t.Fatal("normal completion left a stale cancellation entry")
+	}
+}
+
+// TestIsLanAddrCGNAT verifies that Tailscale/CGNAT addresses are accepted
+// alongside RFC 1918 space, and that public, IPv6 and invalid addresses
+// are still rejected.
+func TestIsLanAddrCGNAT(t *testing.T) {
+	valid := []string{
+		"192.168.1.50",   // RFC 1918
+		"10.1.2.3",       // RFC 1918
+		"172.16.0.9",     // RFC 1918
+		"100.64.0.12",    // CGNAT lower bound
+		"100.100.100.100",
+		"100.127.255.254", // CGNAT upper bound
+	}
+	for _, s := range valid {
+		addr, err := netip.ParseAddr(s)
+		if err != nil {
+			t.Fatalf("unexpected parse error for %s: %v", s, err)
+		}
+		if !isLanAddr(addr) {
+			t.Errorf("expected %s to be accepted", s)
+		}
+	}
+
+	invalid := []string{
+		"100.63.255.255",  // below CGNAT range
+		"100.128.0.0",     // above CGNAT range
+		"8.8.8.8",         // public
+		"172.32.0.1",      // outside private /12
+		"::1",             // IPv6
+		"fe80::1",         // IPv6 link-local
+	}
+	for _, s := range invalid {
+		addr, err := netip.ParseAddr(s)
+		if err != nil {
+			t.Fatalf("unexpected parse error for %s: %v", s, err)
+		}
+		if isLanAddr(addr) {
+			t.Errorf("expected %s to be rejected", s)
+		}
+	}
+
+	// Zero addr must be rejected without panicking.
+	if isLanAddr(netip.Addr{}) {
+		t.Errorf("zero addr should be rejected")
 	}
 }

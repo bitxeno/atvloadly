@@ -67,6 +67,12 @@ func HandleInstallMessage(c *websocket.Conn) {
 				continue
 			}
 
+			// The install message bypasses the install queue: re-detect the
+			// manual device's install port before every tunnel use, so the
+			// tunnel always runs over the port the device currently
+			// announces.
+			dev = manager.FreshInstallDevice(dev)
+
 			go runInstallMessage(websocketMgr, installMgr, v, dev)
 		case model.MessageType2FA:
 			code := msg.Data
@@ -508,6 +514,11 @@ func runPairMessage(mgr *manager.WebsocketManager, pairMgr *manager.PairManager,
 		mgr.WriteMessage(msg)
 		return
 	}
+
+	// The pair succeeded. Mark the device Paired: manual devices have no
+	// mDNS re-announcement to upgrade their status, so this is required
+	// before the device becomes installable.
+	manager.PairCompleted(device.ID)
 }
 
 // HandleScreenshotMessage removed — the screenshot flow now uses the

@@ -33,6 +33,22 @@
           <div class="flex flex-col gap-y-2 items-center justify-center">
             <span>{{ device.name }}</span>
             <span>({{ truncateIP(device.ip) }})</span>
+            <div
+              v-if="device.connection === 'RPPairing'"
+              class="w-full max-w-[12rem] form-control items-center"
+            >
+              <button
+                type="button"
+                class="btn btn-xs btn-outline mt-1"
+                :disabled="deviceInfoRefresh.busy"
+                @click="refreshDeviceInfo"
+                :title="$t('install.form.device_info.refresh')"
+                :aria-label="$t('install.form.device_info.refresh')"
+              >
+                <span class="loading loading-spinner loading-xs" v-show="deviceInfoRefresh.busy"></span>
+                {{ $t("install.form.device_info.refresh") }}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -582,6 +598,10 @@ export default {
       sourceSelection: null,
       ipa: {},
       device: {},
+      // State of the device-info refetch launched from the button: it can
+      // take a moment, so it carries its own spinner and stays disabled
+      // while running.
+      deviceInfoRefresh: { busy: false },
       loading: false,
       websock: null,
       // Generation of the current install attempt. Every release of the
@@ -827,6 +847,25 @@ export default {
             _this.form.account = _this.accounts[0].email;
           }
         }
+      });
+    },
+    refreshDeviceInfo() {
+      const _this = this;
+      if (!_this.device.id || _this.deviceInfoRefresh.busy) {
+        return;
+      }
+      _this.deviceInfoRefresh.busy = true;
+      api.refreshDeviceInfo(_this.device.id).then((res) => {
+        const fresh = res.data || {};
+        Object.assign(_this.device, fresh);
+        toast.success(_this.$t("install.form.device_info.success"));
+      }).catch(() => {
+        // request.js already shows the response error; add a short
+        // message since the probe takes a few seconds and may otherwise
+        // look like it did nothing.
+        toast.error(_this.$t("install.form.device_info.failed"));
+      }).finally(() => {
+        _this.deviceInfoRefresh.busy = false;
       });
     },
     setSigningMode(mode) {

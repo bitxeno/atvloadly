@@ -268,10 +268,44 @@ func UpdateCoreADI() error {
 	return nil
 }
 
-func ImportPairingFile(ip string, port string, data []byte) error {
-	// Call manager to process the file
-	if err := manager.ImportPairingFile(ip, port, data); err != nil {
+// ResetAnisette removes the Anisette provisioning state so the next login or
+// install provisions it again. It mirrors upstream impactor ResetAnisetteData
+// which deletes the provisioning files under <data_path>
+// (see claration/impactor@321eac4).
+func ResetAnisette() error {
+	for _, name := range []string{"state.plist", "identifier", "adb.pb"} {
+		path := filepath.Join(app.SideloadDataDir(), name)
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	log.Infof("Reset Anisette data. dir: %s", app.SideloadDataDir())
+	return nil
+}
+
+func ImportPairingFile(ip string, deviceID string, data []byte) error {
+	// Discover candidate ports and validate them with the uploaded record.
+	// Previously saved records may belong to other devices, so they cannot
+	// establish the correct port for a first-time import.
+	port, err := manager.ScanAndImportPairingFile(ip, data)
+	if err != nil {
 		return err
+	}
+
+	// The imported record makes the device queryable, which upgrades it to
+	// Paired. A dialog opened on a device row passes its ID; without one,
+	// the device is added or upgraded from the record itself.
+	if deviceID != "" {
+		// The record validated over the scanned port; keep it on the device
+		// so later tunnels use the same one.
+		if dev, ok := manager.GetDeviceByID(deviceID); ok && dev.Port != port {
+			manager.ApplyInstallPort(dev, port)
+		}
+		manager.PairCompleted(deviceID)
+	} else {
+		if err := manager.ImportPairedDevice(ip, port); err != nil {
+			return err
+		}
 	}
 
 	// force reload devices

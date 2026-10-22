@@ -29,12 +29,22 @@ var deviceManager = newDeviceManager()
 // backs up, and godbus leaks one goroutine per undelivered signal.
 const pairingCheckInterval = 60 * time.Second
 
+// cgnatPrefix is the RFC 6598 shared address space (100.64.0.0/10) used by
+// Tailscale and other mesh-VPN overlays. Devices reachable only through a
+// mesh VPN announce themselves from this range; plumesign connects over it
+// fine, so it is accepted alongside RFC 1918 LAN space.
+var cgnatPrefix = netip.MustParsePrefix("100.64.0.0/10")
+
 // isLanAddr reports whether addr is a private IPv4 address that the
 // plumesign tooling can connect to. Global IPv6 addresses (e.g. an
 // ISP-delegated prefix announced via AAAA) and public addresses are
-// rejected: LAN devices are reached over private IPv4 only.
+// rejected: LAN devices are reached over private IPv4, or over overlay
+// networks such as Tailscale (CGNAT 100.64.0.0/10).
 func isLanAddr(addr netip.Addr) bool {
-	return addr.IsValid() && addr.Is4() && addr.IsPrivate()
+	if !addr.IsValid() || !addr.Is4() {
+		return false
+	}
+	return addr.IsPrivate() || cgnatPrefix.Contains(addr)
 }
 
 // pairingCheck identifies one in-flight check so an older check cannot
@@ -287,21 +297,31 @@ func (dm *DeviceManager) GetDeviceByUDID(udid string) (*model.Device, bool) {
 }
 
 func (dm *DeviceManager) GetDeviceInfo(dev *model.Device) (*model.DeviceInfo, error) {
-	cmd := exec.Command("plumesign", "device-info", "-u", dev.UDID).WithTimeout(5 * time.Second)
-	if dev.Connection == model.DeviceConnectionRemote {
-		cmd = exec.Command("plumesign", "device-info", "--ip", dev.IP, "--port", fmt.Sprintf("%d", dev.Port), "-u", dev.UDID).WithTimeout(5 * time.Second)
+	if dev.Connection != model.DeviceConnectionRemote {
+		cmd := exec.Command("plumesign", "device-info", "-u", dev.UDID).WithTimeout(5 * time.Second)
+
+		data, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Err(err).Msgf("Error getting device info for %s (%s): %s", dev.Name, dev.UDID, string(data))
+			return nil, fmt.Errorf("%s%s", string(data), err.Error())
+		}
+
+		return parseDeviceInfoOutput(string(data), dev.UDID), nil
 	}
 
-	data, err := cmd.CombinedOutput()
+	record, err := pairingRecordForUDID(dev.UDID)
 	if err != nil {
-		log.Err(err).Msgf("Error getting device info for %s (%s): %s", dev.Name, dev.UDID, string(data))
-		return nil, fmt.Errorf("%s%s", string(data), err.Error())
+		return nil, err
 	}
-	output := string(data)
-	lines := strings.Split(string(output), "\n")
+	return probeDeviceInfo(dev.IP, dev.Port, record)
+}
 
-	devInfo := &model.DeviceInfo{UniqueDeviceID: dev.UDID}
-	for _, line := range lines {
+// parseDeviceInfoOutput parses the key: value lines printed by
+// plumesign device-info. When udid is impossible to read from the output,
+// it is kept as the fallback UniqueDeviceID.
+func parseDeviceInfoOutput(output string, fallbackUDID string) *model.DeviceInfo {
+	devInfo := &model.DeviceInfo{UniqueDeviceID: fallbackUDID}
+	for _, line := range strings.Split(output, "\n") {
 		var parts = strings.Split(line, ":")
 		if len(parts) != 2 {
 			continue
@@ -331,7 +351,7 @@ func (dm *DeviceManager) GetDeviceInfo(dev *model.Device) (*model.DeviceInfo, er
 			devInfo.DeveloperModeStatus = value == "true"
 		}
 	}
-	return devInfo, nil
+	return devInfo
 }
 
 func (dm *DeviceManager) AppendProductInfo(dev *model.Device, devInfo model.DeviceInfo) {
