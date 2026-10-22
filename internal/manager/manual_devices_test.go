@@ -557,9 +557,12 @@ func TestScanAndStoreInstallPort(t *testing.T) {
 	if dev.Port != pairPortFixed {
 		t.Fatalf("fresh manual device carries Port %d, want the pairing port %d", dev.Port, pairPortFixed)
 	}
+	// PairCompleted stores the UDID before the background scan runs; the
+	// scan resolves the pairing record from it.
+	dev.UDID = completeDeviceInfo().UniqueDeviceID
 
 	_, probed := stubScan(t, []uint16{49152}, 49152)
-	dm.scanAndStoreInstallPort(dev.ID, dev.IP)
+	dm.scanAndStoreInstallPort(dev)
 
 	scanned, ok := dm.GetDeviceByID(dev.ID)
 	if !ok {
@@ -585,7 +588,7 @@ func TestScanAndStoreInstallPortNoCandidate(t *testing.T) {
 	dm, dev := addManualDevice(t, "100.64.0.12")
 
 	_, _ = stubScan(t, []uint16{62078}, 0)
-	dm.scanAndStoreInstallPort(dev.ID, dev.IP)
+	dm.scanAndStoreInstallPort(dev)
 
 	if dev.Port != pairPortFixed {
 		t.Errorf("Port = %d, want the pairing port kept after a failed scan", dev.Port)

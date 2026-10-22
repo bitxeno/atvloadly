@@ -57,6 +57,18 @@ func GetDeviceByUDID(udid string) (*model.Device, bool) {
 // and to pull identity updates the discovery path has no opportunity to
 // refresh (nothing announces an overlay-connected device).
 func RefreshDeviceInfo(dev *model.Device) (*model.Device, error) {
+	// Devices repick their install-service port whenever their services
+	// restart, and a stored one then refuses connections, so the query
+	// runs like every tunnel use: over a freshly scanned port. A scan
+	// failure is reported as-is, it is the more honest reachability
+	// answer.
+	port, _, err := ScanDeviceInstallPort(dev)
+	if err != nil {
+		return nil, err
+	}
+	if port > 0 && port != dev.Port {
+		deviceManager.UpdateManualInstallPort(dev, port)
+	}
 	devInfo, err := deviceManager.GetDeviceInfo(dev)
 	if err != nil {
 		return nil, err

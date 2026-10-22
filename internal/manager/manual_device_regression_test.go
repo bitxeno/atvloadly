@@ -9,10 +9,9 @@ import (
 // A saved pairing record must not make an arbitrary open TCP port appear
 // validated when every tunnel handshake fails.
 func TestScanInstallPortRejectsUnverifiedCandidate(t *testing.T) {
-	_, probed := stubScan(t, []uint16{49152, 51000}, 0)
-	pairingRecordPaths = func() []string { return []string{"existing-device.plist"} }
+	_, probed := stubScan(t, []uint16{49152, 51000}, 0, "existing-device.plist")
 
-	port, open, err := ScanInstallPort("100.99.166.81")
+	port, open, err := ScanDeviceInstallPort(scanTarget())
 	if err == nil || port != 0 {
 		t.Fatalf("expected no selected port and an error after failed handshakes; got port=%d, err=%v", port, err)
 	}
@@ -31,9 +30,8 @@ func TestScanInstallPortCapsHandshakeValidationAttempts(t *testing.T) {
 		ports = append(ports, scanPortFirst+uint16(i))
 	}
 
-	_, probed := stubScan(t, ports, 0)
-	pairingRecordPaths = func() []string { return []string{"existing-device.plist"} }
-	_, _, _ = ScanInstallPort("100.99.166.81")
+	_, probed := stubScan(t, ports, 0, "existing-device.plist")
+	_, _, _ = ScanDeviceInstallPort(scanTarget())
 
 	attempts := 0
 	for _, count := range probed {

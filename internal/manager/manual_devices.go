@@ -324,23 +324,23 @@ func (dm *DeviceManager) PairCompleted(id string) {
 	// possible; let it find the install port while the user heads to the
 	// install page, so manual devices need no repeated port entry there.
 	if updated {
-		go dm.scanAndStoreInstallPort(device.ID, device.IP)
+		go dm.scanAndStoreInstallPort(device)
 	}
 }
 
 // scanAndStoreInstallPort detects the device's install-service port with the
-// handshake-validated port scan and records it for the device. Runs as a
+// handshake-validated scan and records it for the device. Runs as a
 // background step after pairing completes; failure is non-fatal because the
 // install page offers the same scan manually.
-func (dm *DeviceManager) scanAndStoreInstallPort(id string, ip string) {
-	port, _, err := ScanInstallPort(ip)
+func (dm *DeviceManager) scanAndStoreInstallPort(dev *model.Device) {
+	port, _, err := ScanDeviceInstallPort(dev)
 	if err != nil || port == 0 {
-		log.Warnf("Install port scan for %s found nothing usable: %v", ip, err)
+		log.Warnf("Install port scan for %s found nothing usable: %v", dev.IP, err)
 		return
 	}
-	if device, ok := dm.GetDeviceByID(id); ok {
+	if device, ok := dm.GetDeviceByID(dev.ID); ok {
 		dm.UpdateManualInstallPort(device, port)
-		log.Infof("Install port scan for %s: %d recorded", ip, port)
+		log.Infof("Install port scan for %s: %d recorded", dev.IP, port)
 	}
 }
 
@@ -355,7 +355,7 @@ func (dm *DeviceManager) RefreshManualInstallPort(id string) {
 	if !ok || !device.Manual {
 		return
 	}
-	dm.scanAndStoreInstallPort(device.ID, device.IP)
+	dm.scanAndStoreInstallPort(device)
 }
 
 // FreshInstallDevice re-detects the install service port of a manual device

@@ -297,19 +297,23 @@ func (dm *DeviceManager) GetDeviceByUDID(udid string) (*model.Device, bool) {
 }
 
 func (dm *DeviceManager) GetDeviceInfo(dev *model.Device) (*model.DeviceInfo, error) {
-	cmd := exec.Command("plumesign", "device-info", "-u", dev.UDID).WithTimeout(5 * time.Second)
-	if dev.Connection == model.DeviceConnectionRemote {
-		cmd = exec.Command("plumesign", "device-info", "--ip", dev.IP, "--port", fmt.Sprintf("%d", dev.Port), "-u", dev.UDID).WithTimeout(5 * time.Second)
+	if dev.Connection != model.DeviceConnectionRemote {
+		cmd := exec.Command("plumesign", "device-info", "-u", dev.UDID).WithTimeout(5 * time.Second)
+
+		data, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Err(err).Msgf("Error getting device info for %s (%s): %s", dev.Name, dev.UDID, string(data))
+			return nil, fmt.Errorf("%s%s", string(data), err.Error())
+		}
+
+		return parseDeviceInfoOutput(string(data), dev.UDID), nil
 	}
 
-	data, err := cmd.CombinedOutput()
+	record, err := pairingRecordForUDID(dev.UDID)
 	if err != nil {
-		log.Err(err).Msgf("Error getting device info for %s (%s): %s", dev.Name, dev.UDID, string(data))
-		return nil, fmt.Errorf("%s%s", string(data), err.Error())
+		return nil, err
 	}
-
-	devInfo := parseDeviceInfoOutput(string(data), dev.UDID)
-	return devInfo, nil
+	return probeDeviceInfo(dev.IP, dev.Port, record)
 }
 
 // parseDeviceInfoOutput parses the key: value lines printed by

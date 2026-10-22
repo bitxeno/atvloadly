@@ -10,7 +10,6 @@ import (
 // record must be used to check which port accepts the import.
 func TestScanAndImportPairingFileUsesUploadedRecord(t *testing.T) {
 	_, _ = stubScan(t, []uint16{pairPortFixed, 49152, 51000, 60001}, 0)
-	pairingRecordPaths = func() []string { return []string{"unrelated.plist"} }
 
 	record := []byte("uploaded-record")
 	var checked []uint16
