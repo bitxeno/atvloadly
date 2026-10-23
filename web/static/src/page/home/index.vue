@@ -56,10 +56,7 @@
                     :title="forgetConfirmId === item.id ? $t('home.sidebar.device_status.forget_confirm') : $t('home.sidebar.device_status.forget')"
                     :aria-label="$t('home.sidebar.device_status.forget')"
                     @click.stop.prevent="forgetDevice(item)"
-                  >
-                    <span v-if="forgetConfirmId === item.id" class="atv-device-forget-text">{{ $t("home.sidebar.device_status.forget_confirm") }}</span>
-                    <span v-else class="w-4 h-4"><DismissIcon /></span>
-                  </button>
+                  ><span class="atv-device-forget-label">{{ forgetConfirmId === item.id ? $t("home.sidebar.device_status.forget_confirm") : $t("home.sidebar.device_status.forget") }}</span></button>
                 </p>
               </div>
             </a>
@@ -1031,10 +1028,10 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
   box-shadow: 0 0 0 2px var(--atv-surface);
 }
 
-/* "Forget" action for a manual device: sits inline right after the status
-   text (the "已添加 · RPPairing" line). Hidden at rest and revealed on row
-   hover (desktop); always visible on phones. First click arms, second
-   confirms. */
+/* "Forget" action for a manual device: an underlined text link on the status
+   line ("已添加 · RPPairing · 删除设备"), prefixed by a dotted separator that
+   only appears on row hover. Hidden at rest (desktop) and always visible on
+   phones. First click arms, second confirms. */
 .atv-device-subline {
   display: flex;
   align-items: center;
@@ -1045,15 +1042,30 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
 .atv-device-forget {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
   padding: 0;
-  border-radius: 6px;
-  color: var(--atv-muted);
+  border: 0;
+  background: none;
+  font-size: 0.8rem;
+  color: var(--atv-danger);
+  white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 120ms ease, background-color 120ms ease, color 120ms ease;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+
+/* Dotted separator before the link, only on row hover. The underline lives on
+   the inner label so it never reaches this pseudo-element. */
+.atv-device-forget::before {
+  content: "·";
+  margin-right: 6px;
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.atv-device-forget-label {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .atv-device-row--manual:hover .atv-device-forget,
@@ -1063,27 +1075,24 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
   pointer-events: auto;
 }
 
+.atv-device-row--manual:hover .atv-device-forget::before,
+.atv-device-forget:focus-visible::before,
+.atv-device-forget--armed::before {
+  opacity: 1;
+}
+
 .atv-device-forget:hover {
-  background: var(--atv-surface-hover);
-  color: var(--atv-danger);
+  color: var(--atv-danger-hover);
 }
 
 .atv-device-forget--armed {
-  width: auto;
-  padding: 0 6px;
   color: var(--atv-danger);
-  background: var(--atv-danger-soft);
 }
 
-.atv-device-forget-text {
-  font-size: 0.72rem;
-  font-weight: 650;
-  white-space: nowrap;
-}
-
-/* Phones have no hover: keep the forget button visible. */
+/* Phones have no hover: keep the forget link visible (separator included). */
 @media (max-width: 767px) {
-  .atv-device-forget {
+  .atv-device-forget,
+  .atv-device-forget::before {
     opacity: 1;
     pointer-events: auto;
   }
