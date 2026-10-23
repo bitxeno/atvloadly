@@ -8,6 +8,10 @@ type RemoteDevice struct {
 	Model             string `json:"model"`
 	Name              string `json:"name"`
 	RemotePairingUDID string `json:"remotepairing_udid"`
+	// Manual is set when the device was paired by a manually entered IP
+	// (e.g. over Tailscale). RemotePairingIP then holds that address.
+	Manual          bool   `json:"manual,omitempty"`
+	RemotePairingIP string `json:"remotepairing_ip,omitempty"`
 }
 
 func (d *RemoteDevice) GetDeviceClass() string {

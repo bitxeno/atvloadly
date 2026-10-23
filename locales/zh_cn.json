@@ -88,7 +88,12 @@
             "device_status": {
                 "pairable": "待配对",
                 "paired": "已连接",
-                "unpaired": "未连接"
+                "unpaired": "未连接",
+                "added": "已添加",
+                "ip_badge": "IP",
+                "forget": "忘记",
+                "forget_confirm": "确认",
+                "forget_done": "已忘记设备"
             },
             "tips": {
                 "no_paired_devices": "没有连接设备",

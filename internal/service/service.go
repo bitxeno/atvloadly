@@ -279,3 +279,9 @@ func ImportPairingFile(ip string, port string, manual bool, data []byte) error {
 
 	return nil
 }
+
+// DeleteManualDevice forgets a manually added device: its pairing files and
+// its in-memory entry are removed.
+func DeleteManualDevice(udid string) error {
+	return manager.DeleteManualDevice(udid)
+}

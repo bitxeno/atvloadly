@@ -88,7 +88,12 @@
       "device_status": {
         "pairable": "Спреман за упаривање",
         "paired": "Упарен",
-        "unpaired": "Није упарен"
+        "unpaired": "Није упарен",
+        "added": "Додат",
+        "ip_badge": "IP",
+        "forget": "Заборави",
+        "forget_confirm": "Потврди",
+        "forget_done": "Уређај је заборављен"
       },
       "tips": {
         "no_paired_devices": "Нема повезаних уређаја",

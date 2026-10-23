@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
@@ -59,6 +60,28 @@ func GetDeviceInfo(dev *model.Device) (*model.DeviceInfo, error) {
 
 func ReloadDevices() {
 	deviceManager.ReloadDevices()
+}
+
+// ReloadManualDevices rebuilds the manual-device list from the pairing files.
+func ReloadManualDevices() {
+	deviceManager.ReloadManualDevices()
+}
+
+// DeleteManualDevice removes a manually added device: its pairing files
+// (<udid>.json and <udid>.plist) and its in-memory entry.
+func DeleteManualDevice(udid string) error {
+	if strings.TrimSpace(udid) == "" {
+		return fmt.Errorf("udid is required")
+	}
+	// Both files belong to the same pairing record: delete them together.
+	for _, ext := range []string{".json", ".plist"} {
+		path := filepath.Join(app.RemotePairingDir(), udid+ext)
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	deviceManager.RemoveManualDevice(utils.Md5(udid))
+	return nil
 }
 
 func ScanDevices() {

@@ -44,7 +44,12 @@ type pairingCheck struct {
 }
 
 type DeviceManager struct {
-	devices              sync.Map
+	devices sync.Map
+	// manualDevices holds devices paired by a manually entered IP (e.g. over
+	// Tailscale) that mDNS cannot discover. They are loaded from the pairing
+	// files and merged into GetDevices, and survive Scan() (which only clears
+	// mDNS devices).
+	manualDevices        sync.Map
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	mu                   sync.Mutex
@@ -228,8 +233,21 @@ func (dm *DeviceManager) checkRemotePairingAsync(ctx context.Context, identifier
 
 func (dm *DeviceManager) GetDevices() []model.Device {
 	devices := []model.Device{}
+	seen := map[string]bool{}
 	dm.devices.Range(func(k, v any) bool {
-		devices = append(devices, v.(model.Device))
+		dev := v.(model.Device)
+		devices = append(devices, dev)
+		seen[deviceKey(dev)] = true
+		return true
+	})
+
+	// Merge manual (pairing-file) devices, skipping any already discovered by
+	// mDNS so the fresher discovered entry wins.
+	dm.manualDevices.Range(func(k, v any) bool {
+		dev := v.(model.Device)
+		if !seen[deviceKey(dev)] {
+			devices = append(devices, dev)
+		}
 		return true
 	})
 
@@ -432,6 +450,73 @@ func (dm *DeviceManager) ReloadDevices() {
 
 		return true
 	})
+
+	// Refresh the manual (pairing-file) devices on every reload.
+	dm.ReloadManualDevices()
+}
+
+// deviceKey deduplicates devices by UDID, falling back to IP when the UDID is
+// unknown.
+func deviceKey(dev model.Device) string {
+	if dev.UDID != "" {
+		return "udid:" + dev.UDID
+	}
+	return "ip:" + dev.IP
+}
+
+// ReloadManualDevices rebuilds manualDevices from the pairing files. A manual
+// device is one paired by a manually entered IP (json has manual=true and a
+// remotepairing_ip); mDNS-discovered devices are not written here.
+func (dm *DeviceManager) ReloadManualDevices() {
+	dm.loadManualDevicesFromDir(app.RemotePairingDir())
+}
+
+// loadManualDevicesFromDir rebuilds manualDevices from the .json pairing files
+// in dir (split out so tests can point at a temp directory).
+func (dm *DeviceManager) loadManualDevicesFromDir(dir string) {
+	dm.manualDevices = sync.Map{}
+	matches, err := filepath.Glob(filepath.Join(dir, "*.json"))
+	if err != nil {
+		log.Err(err).Msg("Failed to list pairing files")
+		return
+	}
+	for _, path := range matches {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			log.Err(err).Msgf("Failed to read pairing file %s", path)
+			continue
+		}
+		var rd model.RemoteDevice
+		if err := utils.FromJSON(data, &rd); err != nil {
+			continue
+		}
+		if !rd.Manual || rd.RemotePairingIP == "" {
+			continue
+		}
+		udid := rd.RemotePairingUDID
+		id := utils.Md5(udid)
+		dev := model.Device{
+			ID:          id,
+			Name:        rd.Name,
+			IP:          rd.RemotePairingIP,
+			UDID:        udid,
+			Manual:      true,
+			Connection:  model.DeviceConnectionRemote,
+			Status:      model.Paired,
+			DeviceClass: rd.GetDeviceClass(),
+			DiscoveryAt: time.Now(),
+		}
+		if dev.Name == "" {
+			dev.Name = rd.RemotePairingIP
+		}
+		dm.manualDevices.Store(id, dev)
+	}
+}
+
+// RemoveManualDevice drops a manual device from memory (after its pairing
+// files are deleted).
+func (dm *DeviceManager) RemoveManualDevice(id string) {
+	dm.manualDevices.Delete(id)
 }
 
 func (dm *DeviceManager) CheckAfcServiceStatus(dev *model.Device) error {

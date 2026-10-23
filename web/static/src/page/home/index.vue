@@ -31,20 +31,35 @@
               v-for="item in pairedDevices"
               v-bind:key="item.id"
               @click="installIpa(item)"
+              @mouseleave="forgetConfirmId = null"
             >
               <div>
-                <div class="avatar online">
-                  <div class="w-16 rounded">
+                <div class="avatar" :class="{ online: !item.manual }">
+                  <div class="w-16 rounded atv-device-icon-wrap">
                     <IPhoneIcon v-if="item.name.toLowerCase().includes('iphone')" />
                     <AppleTVIcon v-else />
+                    <span v-if="item.manual" class="atv-ip-badge">{{ $t("home.sidebar.device_status.ip_badge") }}</span>
                   </div>
                 </div>
               </div>
 
-              <div class="flex flex-col justify-top">
+              <div class="flex flex-col justify-top flex-1 min-w-0">
                 <h4>{{ item.name }} ({{ truncateIP(item.ip) }})</h4>
                 <p>{{ formatDeviceStatus(item) }}</p>
               </div>
+
+              <button
+                v-if="item.manual"
+                type="button"
+                class="atv-device-forget"
+                :class="{ 'atv-device-forget--armed': forgetConfirmId === item.id }"
+                :title="forgetConfirmId === item.id ? $t('home.sidebar.device_status.forget_confirm') : $t('home.sidebar.device_status.forget')"
+                :aria-label="$t('home.sidebar.device_status.forget')"
+                @click.stop.prevent="forgetDevice(item)"
+              >
+                <span v-if="forgetConfirmId === item.id" class="atv-device-forget-text">{{ $t("home.sidebar.device_status.forget_confirm") }}</span>
+                <span v-else class="w-4 h-4"><DismissIcon /></span>
+              </button>
             </a>
           </div>
 
@@ -435,6 +450,8 @@ export default {
       // ID of the app armed for deletion in the row dropdown menu. Clicking
       // delete once arms it, clicking again confirms.
       confirmDeleteId: null,
+      // ID of a manual device armed for "forget" confirmation.
+      forgetConfirmId: null,
     };
   },
   computed: {
@@ -781,7 +798,10 @@ export default {
       return connection;
     },
     formatDeviceStatus(item) {
-      const status = this.formatStatus(item.status);
+      // Manual (pairing-file) devices are "added", not discovered as connected.
+      const status = item.manual
+        ? this.$t("home.sidebar.device_status.added")
+        : this.formatStatus(item.status);
       const connection = this.formatConnection(item.connection);
 
       if (!connection) {
@@ -789,6 +809,21 @@ export default {
       }
 
       return `${status} · ${connection}`;
+    },
+    async forgetDevice(item) {
+      // First click arms the confirmation, second click deletes.
+      if (this.forgetConfirmId !== item.id) {
+        this.forgetConfirmId = item.id;
+        return;
+      }
+      this.forgetConfirmId = null;
+      try {
+        await api.deleteManualDevice(item.id);
+        toast.success(this.$t("home.sidebar.device_status.forget_done"));
+        this.fetchData();
+      } catch (error) {
+        console.error(error);
+      }
     },
     isIOSApp(item) {
       if (!item || !item.device_class) return false;
@@ -973,6 +1008,57 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
   height: 18px;
   color: var(--atv-muted);
   flex-shrink: 0;
+}
+
+/* Manual (pairing-file) device: "IP" badge on the icon's top-right corner
+   instead of the online dot. */
+.atv-device-icon-wrap {
+  position: relative;
+}
+
+.atv-ip-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  padding: 2px 5px;
+  border-radius: 7px;
+  background: var(--atv-accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  box-shadow: 0 0 0 2px var(--atv-surface);
+}
+
+/* "Forget" action for a manual device: first click arms, second confirms. */
+.atv-device-forget {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-width: 28px;
+  padding: 0 6px;
+  border-radius: 8px;
+  color: var(--atv-muted);
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.atv-device-forget:hover {
+  background: var(--atv-surface-hover);
+  color: var(--atv-danger);
+}
+
+.atv-device-forget--armed {
+  color: var(--atv-danger);
+  background: var(--atv-danger-soft);
+}
+
+.atv-device-forget-text {
+  font-size: 0.72rem;
+  font-weight: 650;
+  white-space: nowrap;
 }
 
 .empty {

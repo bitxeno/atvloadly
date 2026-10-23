@@ -251,6 +251,13 @@ export default {
     });
   },
 
+  deleteManualDevice: (id) => {
+    return request({
+      url: `/api/devices/${id}/manual/delete`,
+      method: "post",
+    });
+  },
+
   refreshApp: (id) => {
     return request({
       url: `/api/apps/${id}/refresh`,

@@ -88,7 +88,12 @@
             "device_status": {
                 "pairable": "Pairable",
                 "paired": "Paired",
-                "unpaired": "Unpaired"
+                "unpaired": "Unpaired",
+                "added": "Added",
+                "ip_badge": "IP",
+                "forget": "Forget",
+                "forget_confirm": "Confirm",
+                "forget_done": "Device forgotten"
             },
             "tips": {
                 "no_paired_devices": "No connected devices",

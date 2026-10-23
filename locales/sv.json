@@ -88,7 +88,12 @@
       "device_status": {
         "pairable": "Kan parkopplas",
         "paired": "Parkopplad",
-        "unpaired": "Inte parkopplad"
+        "unpaired": "Inte parkopplad",
+        "added": "Tillagd",
+        "ip_badge": "IP",
+        "forget": "Glöm",
+        "forget_confirm": "Bekräfta",
+        "forget_done": "Enheten har glömts"
       },
       "tips": {
         "no_paired_devices": "Inga parkopplade enheter",
