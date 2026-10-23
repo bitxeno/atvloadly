@@ -203,7 +203,7 @@ export default {
             if (line.indexOf("Login Failed") !== -1) {
                 _this.loginLoading = false;
                 _this.authLoading = false;
-                toast.error(_this.loginErr);
+                toast.error(_this.loginErr, { autoClose: 7000 });
                 return;
             }
 
@@ -228,7 +228,7 @@ export default {
         loginWebsocketonerror(e) {
             console.log("Login WebSocket connect failed.");
             this.loginLoading = false;
-            toast.error("WebSocket connection failed");
+            toast.error("WebSocket connection failed", { autoClose: 7000 });
         },
         is2FAPrompt(line) {
             if (typeof line !== "string") return false;
