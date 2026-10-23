@@ -12,8 +12,9 @@ jobs:
     strategy:
       matrix:
         go_version: [1.25.x]
+        os: [ubuntu-latest, macos-latest]
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/setup-go@v6
         with:
@@ -23,7 +24,18 @@ jobs:
           node-version: 24
       - uses: actions/checkout@v6
       - name: build frontend
-        run: cd ./web/static && npm install && npm test && npm run build
+        run: cd ./web/static && npm ci && npm test && npm run build
+      - name: test backend
+        run: go test ./...
+      - name: build backend
+        run: go build -o build/atvloadly .
+      - name: compile macOS architectures
+        if: runner.os == 'macOS'
+        env:
+          CGO_ENABLED: "1"
+        run: |
+          GOOS=darwin GOARCH=arm64 go build -o build/atvloadly-darwin-arm64 .
+          GOOS=darwin GOARCH=amd64 go build -o build/atvloadly-darwin-amd64 .
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:

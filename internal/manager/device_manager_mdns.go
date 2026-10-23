@@ -39,7 +39,7 @@ func (dm *DeviceManager) Start() {
 	dm.mu.Unlock()
 
 	client, err := zeroconf.New().
-		Browse(dm.handleMDNSEvent,
+		Browse(func(e zeroconf.Event) { dm.handleMDNSEvent(ctx, e) },
 			zeroconf.NewType(mdnsServiceAppleMobdev2),
 			zeroconf.NewType(mdnsServiceRemotePairing),
 			zeroconf.NewType(mdnsServiceRemoteManualPairing),
@@ -51,16 +51,28 @@ func (dm *DeviceManager) Start() {
 	}
 
 	log.Info("mDNS discovery started...")
-	<-ctx.Done()
-	if err := client.Close(); err != nil {
-		log.Err(err).Msg("Failed to close mDNS browser")
+	defer func() {
+		if err := client.Close(); err != nil {
+			log.Err(err).Msg("Failed to close mDNS browser")
+		}
+		log.Info("mDNS discovery stopped")
+	}()
+
+	// Reopen interfaces after Wi-Fi changes or waking a Mac from sleep.
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			client.Reload()
+		}
 	}
-	log.Info("mDNS discovery stopped")
 }
 
-func (dm *DeviceManager) handleMDNSEvent(e zeroconf.Event) {
-	if e.Service == nil || e.Op == zeroconf.OpUpdated {
-		log.Printf("%s name=%s host=%s type=%s ip=%v port=%d ", e.Op.String(), e.Name, e.Hostname, e.Type.Name, e.Addrs, e.Port)
+func (dm *DeviceManager) handleMDNSEvent(ctx context.Context, e zeroconf.Event) {
+	if e.Service == nil || ctx.Err() != nil {
 		return
 	}
 
@@ -81,32 +93,12 @@ func (dm *DeviceManager) handleMDNSEvent(e zeroconf.Event) {
 	}
 
 	host := dm.parseName(e.Hostname)
-	log.Printf("%s name=%s type=%s ip=%s port=%d txt=%v", e.Op.String(), serviceName, serviceType, ip, e.Port, e.Text)
+	log.Printf("%s name=%s type=%s ip=%s port=%d", e.Op.String(), serviceName, serviceType, ip, e.Port)
 
 	switch serviceType {
 	case mdnsServiceAppleMobdev2:
 		macAddr := strings.Split(serviceName, "@")[0]
-		lockdownDevices, err := loadLockdownDevices()
-		if err != nil {
-			log.Println(err)
-			return
-		}
-
-		if lockdownDev, ok := lockdownDevices[macAddr]; ok {
-			log.Debugf("add lockdown device >> %v", lockdownDev)
-			udid := lockdownDev.Name
-			dm.devices.Store(udid, model.Device{
-				ID:          utils.Md5(udid),
-				Name:        host,
-				ServiceName: serviceName,
-				MacAddr:     macAddr,
-				IP:          ip,
-				UDID:        udid,
-				Connection:  model.DeviceConnectionLockdown,
-				Status:      model.Paired,
-				DiscoveryAt: time.Now(),
-			})
-		}
+		dm.lookupLockdownDevice(ctx, serviceName, macAddr, host, ip)
 	case mdnsServiceRemotePairing:
 		// WARN:
 		// when open remote pairing port and close the rsd handshake, it may trigger mdns event again
@@ -122,6 +114,7 @@ func (dm *DeviceManager) handleMDNSEvent(e zeroconf.Event) {
 			log.Warnf("Remote pairing service missing auth tag: name=%s ip=%s", serviceName, ip)
 			return
 		}
+		dm.rememberRemotePairingService(serviceName, identifier)
 
 		// Throttle duplicate events for the same device: the iPhone
 		// re-announces the remote pairing service every few seconds, and
@@ -136,7 +129,7 @@ func (dm *DeviceManager) handleMDNSEvent(e zeroconf.Event) {
 		// Run the slow pairing check off the event loop: the loop stays
 		// responsive under event bursts, and a Remove event can cancel the
 		// check (killing the plumesign subprocess) to release the goroutine.
-		go dm.checkRemotePairingAsync(dm.ctx, identifier, authTag, serviceName, host, ip, e.Port)
+		go dm.checkRemotePairingAsync(ctx, identifier, authTag, serviceName, host, ip, e.Port)
 	case mdnsServiceRemoteManualPairing:
 		name := serviceName
 		if txtName := dm.parseTextRecordName(e.Text); txtName != "" {
@@ -170,26 +163,119 @@ func (dm *DeviceManager) handleMDNSGoodbye(serviceType string, serviceName strin
 	switch serviceType {
 	case mdnsServiceAppleMobdev2:
 		macAddr := strings.Split(serviceName, "@")[0]
+		dm.cancelLockdownLookup(serviceName)
 		dm.DeleteDeviceByMacAddr(macAddr)
 	case mdnsServiceRemotePairing:
 		// Cancel any in-flight pairing check and clear the throttle for
 		// this device: a disconnect and reconnect within the throttle
 		// window must not be skipped, otherwise the device never
 		// reappears on the home page.
-		dm.cancelPairingCheck(serviceName)
-		dm.clearPairingThrottle(serviceName)
+		dm.removeRemotePairingService(serviceName)
 		dm.DeleteDeviceByServiceName(serviceName, model.DeviceConnectionRemote)
 	case mdnsServiceRemoteManualPairing:
 		dm.DeleteDeviceByServiceName(serviceName, model.DeviceConnectionRemote)
 	}
 }
 
-func (dm *DeviceManager) Scan() {
-	dm.mu.Lock()
-	if dm.cancel != nil {
-		dm.cancel()
+// lockdownLookupDelays are the waits before each pair record lookup. macOS
+// usbmuxd discovers the same mobdev2 announcement on its own and may not have
+// attached the device, and so cannot serve its pair record, when atvloadly
+// receives the announcement.
+var lockdownLookupDelays = []time.Duration{0, time.Second, 3 * time.Second, 6 * time.Second}
+
+// lookupLockdownDevice adds the device announced by a mobdev2 service once
+// its pair record is available. A newer announcement, a goodbye or a rescan
+// cancels the lookup. The lookup is registered before this returns, so a
+// goodbye handled right after the announcement always cancels it.
+func (dm *DeviceManager) lookupLockdownDevice(ctx context.Context, serviceName, macAddr, host, ip string) {
+	lookupCtx, cancel := context.WithCancel(ctx)
+	lookup := &pairingCheck{cancel: cancel}
+	dm.pairingMu.Lock()
+	if prev, ok := dm.lockdownLookups[serviceName]; ok {
+		prev.cancel()
 	}
-	dm.mu.Unlock()
+	dm.lockdownLookups[serviceName] = lookup
+	dm.pairingMu.Unlock()
+	go dm.runLockdownLookup(lookupCtx, lookup, serviceName, macAddr, host, ip)
+}
+
+func (dm *DeviceManager) runLockdownLookup(lookupCtx context.Context, lookup *pairingCheck, serviceName, macAddr, host, ip string) {
+	defer func() {
+		lookup.cancel()
+		dm.pairingMu.Lock()
+		if dm.lockdownLookups[serviceName] == lookup {
+			delete(dm.lockdownLookups, serviceName)
+		}
+		dm.pairingMu.Unlock()
+	}()
+
+	for _, delay := range lockdownLookupDelays {
+		select {
+		case <-lookupCtx.Done():
+			return
+		case <-time.After(delay):
+		}
+		// select picks randomly when both cases are ready.
+		if lookupCtx.Err() != nil {
+			return
+		}
+		lockdownDevices, err := loadLockdownDevices()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		lockdownDev, ok := lockdownDevices[macAddr]
+		if !ok {
+			continue
+		}
+
+		udid := lockdownDev.Name
+		// Remote pairing wins over lockdown for the same device. Linux deletes
+		// the lockdown record once remote pairing succeeds, but macOS owns its
+		// records, so later mobdev2 announcements still match them.
+		if existing, ok := dm.GetDeviceByUDID(udid); ok && existing.Connection == model.DeviceConnectionRemote {
+			return
+		}
+		log.Debugf("add lockdown device >> %v", lockdownDev)
+		device := model.Device{
+			ID:          utils.Md5(udid),
+			Name:        host,
+			ServiceName: serviceName,
+			MacAddr:     macAddr,
+			IP:          ip,
+			UDID:        udid,
+			Connection:  model.DeviceConnectionLockdown,
+			Status:      model.Paired,
+			DiscoveryAt: time.Now(),
+		}
+		device.ParseDeviceClass()
+		// Save under pairingMu: a goodbye cancels the lookup under the same
+		// lock before deleting the device, so it cannot be re-added after.
+		dm.pairingMu.Lock()
+		saved := lookupCtx.Err() == nil
+		if saved {
+			dm.SaveDevice(device)
+		}
+		dm.pairingMu.Unlock()
+		if saved {
+			dm.onDeviceConnected(device)
+		}
+		return
+	}
+	log.Debugf("no pair record for mobdev2 service %s", serviceName)
+}
+
+func (dm *DeviceManager) cancelLockdownLookup(serviceName string) {
+	dm.pairingMu.Lock()
+	defer dm.pairingMu.Unlock()
+	if lookup, ok := dm.lockdownLookups[serviceName]; ok {
+		lookup.cancel()
+		delete(dm.lockdownLookups, serviceName)
+	}
+}
+
+func (dm *DeviceManager) Scan() {
+	dm.Stop()
 
 	time.Sleep(time.Second)
 
@@ -260,7 +346,7 @@ func (dm *DeviceManager) ScanServices(ctx context.Context, callback func(service
 
 			client, err := zeroconf.New().
 				Browse(func(e zeroconf.Event) {
-					if e.Service == nil || e.Op != zeroconf.OpAdded {
+					if e.Service == nil || e.Op == zeroconf.OpRemoved {
 						return
 					}
 

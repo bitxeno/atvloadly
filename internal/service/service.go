@@ -138,7 +138,7 @@ func CheckAfcService(ctx context.Context, id string) error {
 	if err = manager.CheckAfcServiceStatus(device.UDID); err != nil {
 		log.Infof("check afc service status error: %s", err)
 		// try restart usbmuxd to fix afc connect issue
-		if err = manager.Usbmuxd().Restart(); err == nil {
+		if restartErr := manager.Usbmuxd().Restart(); restartErr == nil {
 			time.Sleep(5 * time.Second)
 			err = manager.CheckAfcServiceStatus(device.UDID)
 		}
@@ -171,8 +171,11 @@ func SetLanguage(lang string) {
 	}
 }
 
-// UpdateCoreADI downloads the latest Apple Music APK and saves it to DataDir/PlumeImpactor/lib
+// UpdateCoreADI downloads the Apple Music libraries used by Linux Anisette.
 func UpdateCoreADI() error {
+	if runtime.GOOS != "linux" {
+		return errors.New("CoreADI updates are only supported on Linux; macOS uses system Anisette")
+	}
 	// Determine package arch used inside the APK zip
 	pkgArch := "x86_64"
 	if runtime.GOARCH == "arm64" {
@@ -220,7 +223,7 @@ func UpdateCoreADI() error {
 		_ = zr.Close()
 	}()
 
-	destDir := filepath.Join(app.Config.Server.DataDir, "PlumeImpactor", "lib", pkgArch)
+	destDir := filepath.Join(app.SideloadDataDir(), "lib", pkgArch)
 	if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
 		return fmt.Errorf("create dir failed: %w", err)
 	}

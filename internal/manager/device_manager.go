@@ -64,6 +64,10 @@ type DeviceManager struct {
 	// Avahi's ItemRemove signal to the identifier supplied only by ItemNew.
 	// Both pairingCancel and pairingCheckedAt are keyed by the identifier.
 	remotePairingServices map[string]string
+	// lockdownLookups tracks the delayed pair record lookup of each mobdev2
+	// service, so a goodbye or rescan stops a lookup that would otherwise
+	// re-add a device that has already left.
+	lockdownLookups map[string]*pairingCheck
 }
 
 func newDeviceManager() *DeviceManager {
@@ -73,6 +77,7 @@ func newDeviceManager() *DeviceManager {
 		pairingCheckedAt:      make(map[string]time.Time),
 		pairingCancel:         make(map[string]*pairingCheck),
 		remotePairingServices: make(map[string]string),
+		lockdownLookups:       make(map[string]*pairingCheck),
 	}
 }
 
@@ -404,14 +409,19 @@ func (dm *DeviceManager) DeleteDeviceByServiceName(serviceName string, conection
 }
 
 func (dm *DeviceManager) ReloadDevices() {
+	var lockdownDevices map[string]model.LockdownDevice
 	dm.devices.Range(func(k, v any) bool {
 		dev := v.(model.Device)
-		if dev.Status == model.Pairable {
+		// Only a device announced with its Wi-Fi MAC address can match a
+		// lockdown record, so remote pairable devices never read the records.
+		if dev.Status == model.Pairable && dev.MacAddr != "" {
 			// 检查是否已连接
-			lockdownDevices, err := loadLockdownDevices()
-			if err != nil {
-				log.Println(err)
-				return false
+			if lockdownDevices == nil {
+				var err error
+				if lockdownDevices, err = loadLockdownDevices(); err != nil {
+					log.Println(err)
+					return false
+				}
 			}
 
 			if lockdownDev, ok := lockdownDevices[dev.MacAddr]; ok {
@@ -539,6 +549,20 @@ func (dm *DeviceManager) Stop() {
 		dm.ctx = nil
 		log.Info("Device manager stopped")
 	}
+
+	// A rescan must recheck devices even within the pairing throttle window.
+	dm.pairingMu.Lock()
+	defer dm.pairingMu.Unlock()
+	for _, check := range dm.pairingCancel {
+		check.cancel()
+	}
+	clear(dm.pairingCancel)
+	clear(dm.pairingCheckedAt)
+	clear(dm.remotePairingServices)
+	for _, lookup := range dm.lockdownLookups {
+		lookup.cancel()
+	}
+	clear(dm.lockdownLookups)
 }
 
 // Exported functions for external package usage

@@ -267,28 +267,26 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		return
 	}
 
-	if installMgr.IsSuccess() {
-		now := time.Now()
-		expirationDate := now.AddDate(0, 0, 7)
-		if installMgr.ProvisioningProfile != nil {
-			expirationDate = installMgr.ProvisioningProfile.ExpirationDate.Local()
-		}
-		v.RefreshedDate = &now
-		v.ExpirationDate = &expirationDate
-		v.RefreshedResult = true
+	now := time.Now()
+	expirationDate := now.AddDate(0, 0, 7)
+	if installMgr.ProvisioningProfile != nil {
+		expirationDate = installMgr.ProvisioningProfile.ExpirationDate.Local()
+	}
+	v.RefreshedDate = &now
+	v.ExpirationDate = &expirationDate
+	v.RefreshedResult = true
 
-		app, err := SaveApp(v)
-		if err != nil {
-			installMgr.CleanTempFiles(v.IpaPath, v.Icon)
-			msg := fmt.Sprintf("ERROR: save app to db failed. %s", err.Error())
-			mgr.WriteMessage(msg)
-			mgr.WriteMessage("\n")
-			mgr.WriteMessage("Installation Failed!")
-			return
-		} else {
-			installMgr.SaveLog(app.ID)
-			mgr.WriteMessage("Installation Succeeded!")
-		}
+	app, err := SaveApp(v)
+	if err != nil {
+		installMgr.CleanTempFiles(v.IpaPath, v.Icon)
+		msg := fmt.Sprintf("ERROR: save app to db failed. %s", err.Error())
+		mgr.WriteMessage(msg)
+		mgr.WriteMessage("\n")
+		mgr.WriteMessage("Installation Failed!")
+		return
+	} else {
+		installMgr.SaveLog(app.ID)
+		mgr.WriteMessage("Installation Succeeded!")
 	}
 
 	// SaveApp moves the temp files to their permanent location on success,
@@ -470,6 +468,7 @@ func HandlePairMessage(c *websocket.Conn) {
 		websocketMgr.WriteMessage(line)
 	})
 	defer pairMgr.Close()
+	started := false
 
 	for {
 		msg, err := websocketMgr.ReadMessage()
@@ -484,18 +483,23 @@ func HandlePairMessage(c *websocket.Conn) {
 
 		switch msg.Type {
 		case model.MessageTypePair:
+			if started {
+				continue
+			}
 			id := msg.Data
 			device, found := manager.GetDeviceByID(id)
 			if !found || device == nil {
 				websocketMgr.WriteMessage(fmt.Sprintf("ERROR: device not found: %s", id))
+				websocketMgr.WriteMessage("Pairing Failed!")
 				continue
 			}
+			started = true
 			go runPairMessage(websocketMgr, pairMgr, *device)
 		case model.MessageTypePairConfirm:
 			code := msg.Data
 			pairMgr.Write([]byte(code + "\n"))
 		default:
-			_ = c.WriteMessage(websocket.TextMessage, []byte("ERROR: invalid message type"))
+			websocketMgr.WriteMessage("ERROR: invalid message type")
 			continue
 		}
 	}
@@ -506,8 +510,10 @@ func runPairMessage(mgr *manager.WebsocketManager, pairMgr *manager.PairManager,
 	if err != nil {
 		msg := fmt.Sprintf("ERROR: %s", err.Error())
 		mgr.WriteMessage(msg)
+		mgr.WriteMessage("Pairing Failed!")
 		return
 	}
+	mgr.WriteMessage("Pairing Succeeded!")
 }
 
 // HandleScreenshotMessage removed — the screenshot flow now uses the

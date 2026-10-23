@@ -1,0 +1,6 @@
+# Application data defaults to ~/Library/Application Support/atvloadly.
+# PlumeImpactor stores accounts and remote pairing records in
+# ${XDG_CONFIG_HOME:-$HOME/.config}/PlumeImpactor.
+server:
+  listen_addr: 127.0.0.1
+  port: 9000

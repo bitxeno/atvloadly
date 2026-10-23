@@ -18,6 +18,25 @@ func (dm *DeviceManager) devicesCount() int {
 	return n
 }
 
+func TestStopAllowsImmediatePairingRecheck(t *testing.T) {
+	dm := newDeviceManager()
+	dm.checkPairingThrottle("device")
+	dm.rememberRemotePairingService("service", "device")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	dm.pairingCancel["device"] = &pairingCheck{cancel: cancel}
+	dm.Stop()
+	if ctx.Err() == nil {
+		t.Error("Stop did not cancel the pairing check")
+	}
+	if dm.checkPairingThrottle("device") {
+		t.Error("rescan would skip a recently discovered device")
+	}
+	if len(dm.remotePairingServices) != 0 {
+		t.Error("Stop retained stale service mappings")
+	}
+}
+
 func TestCheckPairingThrottle(t *testing.T) {
 	dm := newDeviceManager()
 

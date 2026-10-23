@@ -5,11 +5,11 @@
 
 <div align="center">
 
-[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt-989898)](https://github.com/bitxeno/atvloadly/internal/releases)
+[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt%20%7C%20macOS-989898)](https://github.com/bitxeno/atvloadly/releases)
 [![release](https://img.shields.io/docker/v/bitxeno/atvloadly?label=docker%20latest&sort=semver)](https://hub.docker.com/r/bitxeno/atvloadly)
 [![Docker Image Size](https://img.shields.io/docker/image-size/bitxeno/atvloadly)](https://hub.docker.com/r/bitxeno/atvloadly)
 [![Docker Pulls](https://img.shields.io/docker/pulls/bitxeno/atvloadly)](https://hub.docker.com/r/bitxeno/atvloadly)
-[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/internal/blob/master/LICENSE)
+[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/blob/master/LICENSE)
 
 </div>
 
@@ -42,7 +42,10 @@ atvloadly är en webbtjänst för sideloading av appar på Apple TV. Den använd
 
 ## Installation
 
-> 😔 **Stöder endast Linux/OpenWrt. Mac och Windows stöds inte.**
+macOS kan köras direkt på Apple Silicon och Intel. Se [macOS-guiden](./doc/macos.md)
+för bygge och installation. Windows stöds inte.
+
+### Linux/OpenWrt (Docker)
 
 1. Linux/OpenWrt-värden måste ha `avahi-daemon` installerad.
    

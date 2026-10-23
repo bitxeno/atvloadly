@@ -1,10 +1,29 @@
 package exec
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestBundledPlumesignRunsOutsideBundleDirectory(t *testing.T) {
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundled := filepath.Join(filepath.Dir(executable), "plumesign")
+	if err := os.WriteFile(bundled, []byte("#!/bin/sh\nprintf 'bundled engine'\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Remove(bundled) })
+	t.Setenv("PATH", t.TempDir())
+	output, err := Command("plumesign").WithDir(t.TempDir()).CombinedOutput()
+	if err != nil || string(output) != "bundled engine" {
+		t.Fatalf("bundled engine: output=%q err=%v", output, err)
+	}
+}
 
 // A secret argument is masked in the debug log while the process still gets
 // the real value. -p carries a password for some subcommands and a package

@@ -617,15 +617,11 @@ func (t *Task) runInternal(v model.InstalledApp, refresh bool, installMgr *manag
 		return nil, fmt.Errorf("%s %s", installMgr.ErrorLog(), err.Error())
 	}
 
-	if installMgr.IsSuccess() {
-		expirationDate := time.Now().AddDate(0, 0, 7)
-		if installMgr.ProvisioningProfile != nil {
-			expirationDate = installMgr.ProvisioningProfile.ExpirationDate.Local()
-		}
-		return &installResult{ExpirationDate: expirationDate}, nil
-	} else {
-		return nil, fmt.Errorf("install failed with unknown error. %s", installMgr.ErrorLog())
+	expirationDate := time.Now().AddDate(0, 0, 7)
+	if installMgr.ProvisioningProfile != nil {
+		expirationDate = installMgr.ProvisioningProfile.ExpirationDate.Local()
 	}
+	return &installResult{ExpirationDate: expirationDate}, nil
 }
 
 // runExternal installs v with its external signing identity. A refresh of an

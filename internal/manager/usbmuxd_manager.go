@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"time"
@@ -10,6 +11,9 @@ import (
 )
 
 var usbmuxdManager = newUsbmuxdManager()
+
+// ErrUsbmuxdRestartUnsupported means the OS manages usbmuxd itself.
+var ErrUsbmuxdRestartUnsupported = errors.New("restarting usbmuxd is only supported on Linux")
 
 type UsbmuxdManager struct {
 	isSupport bool
@@ -31,7 +35,7 @@ func (m *UsbmuxdManager) TryWaitReady(d time.Duration) {
 func (m *UsbmuxdManager) Restart() error {
 	if !m.isSupport {
 		log.Warnf("restarting usbmuxd is only supported on Linux")
-		return nil
+		return ErrUsbmuxdRestartUnsupported
 	}
 
 	cmd := exec.Command("/etc/init.d/usbmuxd", "restart").WithTimeout(time.Minute)

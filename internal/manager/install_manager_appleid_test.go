@@ -111,3 +111,38 @@ func containsArg(args []string, want string) bool {
 	}
 	return false
 }
+
+// The process exit status is the completion contract. INFO logs may be
+// suppressed by RUST_LOG and a success-looking log can precede a later failure.
+func TestAppleIDCompletionUsesExitStatus(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		output    string
+		exitCode  string
+		wantError bool
+	}{
+		{name: "silent success", exitCode: "0"},
+		{name: "failure after a success log", output: "Installation complete!", exitCode: "3", wantError: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			setupAppleIDInstall(t, "silent-install")
+			dir := t.TempDir()
+			script := "#!/bin/sh\nif [ \"$1\" = check ]; then echo SUCCESS; exit 0; fi\n" +
+				"printf '%s' '" + tt.output + "'\nexit " + tt.exitCode + "\n"
+			if err := os.WriteFile(filepath.Join(dir, "plumesign"), []byte(script), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+			t.Setenv("RUST_LOG", "warn")
+			mgr := NewInteractiveInstallManager()
+			defer mgr.Close()
+			err := mgr.Start(context.Background(), InstallOptions{UDID: "silent-install", Account: "test@example.com", IpaPath: "app.ipa"})
+			if (err != nil) != tt.wantError {
+				t.Fatalf("Start returned %v, want error = %v", err, tt.wantError)
+			}
+			if !tt.wantError && mgr.OutputLog() != "" {
+				t.Fatal("silent engine unexpectedly produced output")
+			}
+		})
+	}
+}

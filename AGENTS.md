@@ -166,9 +166,10 @@ docs(readme): update installation instructions
 
 ## Platform Limitations
 
-- **Linux/OpenWrt ONLY** - macOS/Windows not supported
-- Requires `avahi-daemon` for device discovery
-- Requires `usbmuxd2` for iOS device communication
+- Linux/OpenWrt uses Docker, Avahi and usbmuxd2.
+- macOS runs natively using mDNS discovery and the OS-managed usbmuxd.
+  Build with the standard commands plus the signing engine; see `doc/macos.md`.
+- Windows is not supported.
 
 
 # Agreement
