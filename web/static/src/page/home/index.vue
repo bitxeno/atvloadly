@@ -1,32 +1,22 @@
 <template>
   <div class="xl:flex xl:flex-row xl:gap-x-12">
     <div class="xl:basis-3/12 min-w-0 flex gap-x-16 flex-col gap-y-8 mb-8 xl:mb-0">
-      <div v-show="pairableDevices.length > 0">
-        <h4 class="mb-2">{{ $t("home.heading.pairable_devices") }}</h4>
-        <div class="flex flex-col w-full border-opacity-50">
-          <div class="grid card atv-device-panel">
-            <a
-              class="atv-device-row flex flex-row gap-x-3 cursor-pointer"
-              v-for="item in pairableDevices"
-              v-bind:key="item.id"
-              @click="startPair(item)"
-            >
-              <div>
-                <div class="avatar">
-                  <div class="w-16 rounded">
-                    <IPhoneIcon v-if="isIPhone(item)" />
-                    <AppleTVIcon v-else />
-                  </div>
-                </div>
-              </div>
-
-              <div class="flex flex-col justify-top">
-                <h4>{{ item.name }} ({{ truncateIP(item.ip) }})</h4>
-                <p>{{ formatDeviceStatus(item) }}</p>
-              </div>
-            </a>
+      <div class="grid card atv-device-panel">
+        <router-link
+          :to="{ name: 'add-device' }"
+          class="atv-device-row flex flex-row gap-x-3 cursor-pointer"
+        >
+          <div class="atv-add-device-icon">
+            <PlusIcon />
           </div>
-        </div>
+          <div class="atv-add-device-text">
+            <h4>{{ $t("home.sidebar.add_device.title") }}</h4>
+            <p>{{ $t("home.sidebar.add_device.subtitle") }}</p>
+          </div>
+          <span class="atv-add-device-chevron">
+            <ChevronRightIcon />
+          </span>
+        </router-link>
       </div>
 
       <div>
@@ -73,7 +63,7 @@
         </div>
       </div>
 
-      <div>
+      <div class="atv-service-status">
         <h4 class="mb-2">{{ $t("home.heading.service_status") }}</h4>
         <div class="flex flex-col w-full border-opacity-50">
           <div
@@ -448,11 +438,6 @@ export default {
     };
   },
   computed: {
-    pairableDevices: function () {
-      return this.devices.filter(function (item) {
-        return item.status == "pairable";
-      });
-    },
     pairedDevices: function () {
       return this.devices.filter(function (item) {
         return item.status == "paired";
@@ -731,9 +716,6 @@ export default {
           this.checkingUpdates = false;
         });
     },
-    startPair(device) {
-      this.$router.push({ name: "pair", params: { id: device.id } });
-    },
     installIpa(device) {
       this.$router.push({ name: "install", params: { id: device.id } });
     },
@@ -807,12 +789,6 @@ export default {
       }
 
       return `${status} · ${connection}`;
-    },
-    isIPhone(item) {
-      if (item.device_class) {
-        return item.device_class.toLowerCase() == "iphone" || item.device_class.toLowerCase() == "ipad";
-      }
-      return item.name && (item.name.toLowerCase().includes("iphone") || item.name.toLowerCase().includes("ipad"));
     },
     isIOSApp(item) {
       if (!item || !item.device_class) return false;
@@ -942,6 +918,8 @@ import GithubIcon from "@/assets/icons/github.svg";
 import LinkIcon from "@/assets/icons/link.svg";
 import RefreshIcon from "@/assets/icons/refresh.svg";
 import DownloadIcon from "@/assets/icons/download.svg";
+import PlusIcon from "@/assets/icons/plus.svg";
+import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
 </script>
 
   
@@ -949,6 +927,54 @@ import DownloadIcon from "@/assets/icons/download.svg";
 .headline {
   @apply prose mb-2;
 }
+
+/* Persistent entry that opens the add-device page. It reuses the device
+   panel/row so its hover tint is inset by the panel padding, exactly like the
+   connected-device rows. */
+.atv-add-device-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 9999px;
+  background: var(--atv-accent-soft);
+  color: var(--atv-accent);
+  flex-shrink: 0;
+}
+
+.atv-add-device-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.atv-add-device-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.atv-add-device-text h4 {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  font-weight: 700;
+  color: var(--atv-ink);
+}
+
+.atv-add-device-text p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--atv-muted);
+  line-height: 1.35;
+}
+
+.atv-add-device-chevron {
+  width: 18px;
+  height: 18px;
+  color: var(--atv-muted);
+  flex-shrink: 0;
+}
+
 .empty {
   background-image: repeating-linear-gradient(
     45deg,

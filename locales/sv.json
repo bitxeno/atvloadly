@@ -50,7 +50,6 @@
   },
   "home": {
     "heading": {
-      "pairable_devices": "Enheter som kan parkopplas",
       "paired_devices": "Parkopplade enheter",
       "service_status": "Tjänststatus",
       "installed_app": "Installerade appar"
@@ -82,6 +81,10 @@
       "update_failed": "Installationen av {{version}} misslyckades och görs inte om automatiskt. Använd Uppgradera för att försöka igen."
     },
     "sidebar": {
+      "add_device": {
+        "title": "Lägg till ny enhet",
+        "subtitle": "Anslut AppleTV eller iPhone"
+      },
       "device_status": {
         "pairable": "Kan parkopplas",
         "paired": "Parkopplad",
@@ -626,6 +629,34 @@
     "ssdp": {
       "title": "SSDP-skanner",
       "pairable_label": "Tjänstetyp för parkopplingsbara enheter: _remotepairing-manual-pairing._tcp"
+    }
+  },
+  "addDevice": {
+    "title": "Lägg till ny enhet",
+    "tabs": {
+      "appletv": "Apple TV",
+      "iphone": "iPhone"
+    },
+    "appletv": {
+      "device_label": "Apple TV-enhet",
+      "ip_placeholder": "t.ex. 192.168.1.120",
+      "ip_tips": "Apple TV:n måste vara i parkopplingsläge för att kunna hittas och anslutas; stöder en lokal IP-adress eller en Tailscale IP-adress",
+      "pairing_step1": "Öppna Inställningar → Fjärrkontroller och enheter → Fjärrapp och enheter på Apple TV:n för att gå in i parkopplingsläge.",
+      "pairing_step2": "Uppdatera enhetslistan och välj Apple TV:n, klicka sedan på Starta parkoppling.",
+      "no_device": "IP-adressen matchar ingen hittad Apple TV. Uppdatera listan och välj en enhet.",
+      "submit": "Starta parkoppling"
+    },
+    "iphone": {
+      "device_label": "iPhone-enhet",
+      "device_placeholder": "t.ex. 192.168.1.205, eller välj en enhet",
+      "device_tips": "iPhone måste låsas upp för att kunna hittas och anslutas; stöder en lokal IP-adress eller en Tailscale IP-adress",
+      "upload_label": "Ladda upp parkopplingsfil",
+      "no_device": "IP-adressen matchar ingen hittad iPhone. Uppdatera listan och välj en enhet.",
+      "submit": "Starta anslutning"
+    },
+    "toast": {
+      "device_required": "Ange eller välj en enhets IP-adress",
+      "file_required": "Ladda upp en parkopplingsfil först"
     }
   },
   "laboratory": {

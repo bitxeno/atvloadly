@@ -467,6 +467,12 @@
 
 /* Account, certificate, and device tables become cards on narrow screens. */
 @media (max-width: 767px) {
+  /* The service-status card is secondary on phones: hide it to keep the
+     sidebar focused on adding and selecting devices. */
+  .app-container .main-container .atv-service-status {
+    display: none;
+  }
+
   .app-container .main-container .atv-account-page {
     min-width: 0;
     width: 100%;

@@ -50,7 +50,6 @@
   },
   "home": {
     "heading": {
-      "pairable_devices": "Uređaji spremni za uparivanje",
       "paired_devices": "Upareni uređaji",
       "service_status": "Status usluge",
       "installed_app": "Instalirane aplikacije"
@@ -82,6 +81,10 @@
       "update_failed": "Instaliranje verzije {{version}} nije uspelo i neće se automatski ponoviti. Koristite „Ažuriraj“ da pokušate ponovo."
     },
     "sidebar": {
+      "add_device": {
+        "title": "Dodaj novi uređaj",
+        "subtitle": "Povežite AppleTV ili iPhone"
+      },
       "device_status": {
         "pairable": "Spreman za uparivanje",
         "paired": "Uparen",
@@ -629,6 +632,34 @@
     "ssdp": {
       "title": "SSDP skener",
       "pairable_label": "Tip usluge uređaja spremnog za uparivanje: _remotepairing-manual-pairing._tcp"
+    }
+  },
+  "addDevice": {
+    "title": "Dodaj novi uređaj",
+    "tabs": {
+      "appletv": "Apple TV",
+      "iphone": "iPhone"
+    },
+    "appletv": {
+      "device_label": "Apple TV uređaj",
+      "ip_placeholder": "npr. 192.168.1.120",
+      "ip_tips": "Apple TV mora biti u režimu uparivanja da bi bio otkriven i povezan; podržana je lokalna IP adresa ili Tailscale IP adresa",
+      "pairing_step1": "Na Apple TV-u otvorite Podešavanja → Daljinski upravljači i uređaji → Aplikacija i uređaji za daljinsko upravljanje da biste ušli u režim uparivanja.",
+      "pairing_step2": "Osvežite listu uređaja i izaberite Apple TV, zatim kliknite na Započni uparivanje.",
+      "no_device": "IP adresa ne odgovara nijednom otkrivenom Apple TV-u. Osvežite listu i izaberite uređaj.",
+      "submit": "Započni uparivanje"
+    },
+    "iphone": {
+      "device_label": "iPhone uređaj",
+      "device_placeholder": "npr. 192.168.1.205, ili izaberite uređaj",
+      "device_tips": "iPhone mora biti otključan da bi bio otkriven i povezan; podržana je lokalna IP adresa ili Tailscale IP adresa",
+      "upload_label": "Otpremi datoteku za uparivanje",
+      "no_device": "IP adresa ne odgovara nijednom otkrivenom iPhone-u. Osvežite listu i izaberite uređaj.",
+      "submit": "Započni povezivanje"
+    },
+    "toast": {
+      "device_required": "Unesite ili izaberite IP adresu uređaja",
+      "file_required": "Prvo otpremite datoteku za uparivanje"
     }
   },
   "laboratory": {

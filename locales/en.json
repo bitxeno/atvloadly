@@ -50,7 +50,6 @@
     },
     "home": {
         "heading": {
-            "pairable_devices": "Pairable Devices",
             "paired_devices": "Paired Devices",
             "service_status": "Service Status",
             "installed_app": "Installed Apps"
@@ -82,6 +81,10 @@
             "update_failed": "Installing {{version}} failed and is not retried automatically. Use Update to retry."
         },
         "sidebar": {
+            "add_device": {
+                "title": "Add New Device",
+                "subtitle": "Connect AppleTV or iPhone"
+            },
             "device_status": {
                 "pairable": "Pairable",
                 "paired": "Paired",
@@ -630,6 +633,34 @@
         "ssdp": {
             "title": "SSDP Scanner",
             "pairable_label": "Pairable device service type: _remotepairing-manual-pairing._tcp"
+        }
+    },
+    "addDevice": {
+        "title": "Add New Device",
+        "tabs": {
+            "appletv": "Apple TV",
+            "iphone": "iPhone"
+        },
+        "appletv": {
+            "device_label": "Apple TV Device",
+            "ip_placeholder": "e.g. 192.168.1.120",
+            "ip_tips": "The Apple TV must be in pairing mode to be discovered and connected; supports a LAN IP address or a Tailscale IP address",
+            "pairing_step1": "On the Apple TV, open Settings → Remotes and Devices → Remote App and Devices to enter pairing mode.",
+            "pairing_step2": "Refresh the device list and pick the Apple TV, then click Start Pairing.",
+            "no_device": "The IP address does not match a discovered Apple TV. Refresh the list and pick a device.",
+            "submit": "Start Pairing"
+        },
+        "iphone": {
+            "device_label": "iPhone Device",
+            "device_placeholder": "e.g. 192.168.1.205, or pick a device",
+            "device_tips": "The iPhone must be unlocked to be discovered and connected; supports a LAN IP address or a Tailscale IP address",
+            "upload_label": "Upload Pairing File",
+            "no_device": "The IP address does not match a discovered iPhone. Refresh the list and pick a device.",
+            "submit": "Start Connecting"
+        },
+        "toast": {
+            "device_required": "Please enter or select a device IP address",
+            "file_required": "Please upload a pairing file first"
         }
     },
     "laboratory": {

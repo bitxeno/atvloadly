@@ -18,6 +18,17 @@ const routes = [
     ],
   },
   {
+    path: "/add-device",
+    component: () => import("@/page/layout.vue"),
+    children: [
+      {
+        path: "",
+        name: "add-device",
+        component: () => import("@/page/add-device/index.vue"),
+      },
+    ],
+  },
+  {
     path: "/pair/:id",
     component: () => import("@/page/layout.vue"),
     children: [
