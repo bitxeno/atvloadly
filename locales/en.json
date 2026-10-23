@@ -317,7 +317,7 @@
         ,
         "login_modal": {
             "title": "Login Apple Account",
-            "2fa_warning": "Only trusted devices can receive the 2FA code. Receiving it by SMS is not supported.",
+            "setup_2fa_help": "How to set up an iPhone as a trusted device for 2FA?",
             "button": {
                 "close": "Close",
                 "login": "Login",
@@ -483,14 +483,25 @@
                 "title": "Advanced",
                 "update_coreadi": "Update CoreADI",
                 "update_coreadi_confirm": "Are you sure you want update the CoreADI libraries?",
+                "anisette_server": "Anisette Server",
+                "anisette_server_default_tag": "Default",
+                "anisette_server_tips": "Leave empty to use the default server. Changing the server invalidates existing anisette data; reset the account if requests start failing.",
+                "save": "Save",
                 "reset_anisette": "Reset Anisette Data",
-                "reset_anisette_confirm": "Are you sure you want to reset the Anisette data? It will be provisioned again on the next login or install.",
+                "reset_anisette_select": "Select an account",
+                "reset_anisette_empty": "Anisette data is reset per account. Add an Apple ID account first.",
+                "reset_anisette_confirm": "Are you sure you want to reset the Anisette data of {{email}}? A new device identity is generated on its next use, so the account must log in again.",
+                "reset": "Reset",
                 "cancel": "Cancel",
                 "confirm": "Confirm",
                 "toast": {
                     "downloading": "Downloading...",
                     "success": "Update completed",
-                    "failed": "Update failed"
+                    "failed": "Update failed",
+                    "reset_success": "Anisette data of {{email}} reset",
+                    "reset_failed": "Reset failed",
+                    "server_success": "Anisette server saved",
+                    "server_failed": "Saving anisette server failed"
                 }
             }
     },

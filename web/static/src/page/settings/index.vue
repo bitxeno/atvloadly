@@ -295,7 +295,7 @@
             }}</span>
           </label>
           <div class="flex flex-col grow">
-            <div class="join w-full atv-saved-source-add">
+            <div class="join w-full atv-join-row">
               <input
                 v-model="githubTokenInput"
                 type="text"
@@ -385,7 +385,7 @@
             <span class="label-text">{{ $t("settings.sources.add.label") }}</span>
           </label>
           <div class="flex flex-col grow min-w-0">
-            <div class="join w-full atv-saved-source-add">
+            <div class="join w-full atv-join-row">
               <input
                 v-model="newSourceUrl"
                 type="text"
@@ -465,6 +465,41 @@
     <section class="section bg-base-100">
       <h2 class="atv-section-heading">{{ $t('settings.advanced.title') }}</h2>
       <form>
+        <div class="form-item">
+          <label class="form-item-label">
+            <span class="label-text">{{ $t('settings.advanced.anisette_server') }}</span>
+          </label>
+          <div class="form-item-content">
+            <div ref="serverComboNode" class="dropdown w-full">
+              <div class="join w-full atv-join-row" tabindex="0" role="button">
+                <input
+                  v-model="advanced.anisetteServer"
+                  type="text"
+                  class="input input-bordered join-item flex-1 min-w-0 font-mono text-sm"
+                  :placeholder="anisetteServerDefault"
+                  :disabled="advanced.serverLoading"
+                  spellcheck="false"
+                  @focus="serverComboOpen = true"
+                />
+                <button type="button" class="btn btn-primary join-item" :disabled="advanced.serverLoading || !serverDirty" @click="saveAnisetteServer">
+                  <span class="loading loading-spinner" v-show="advanced.serverLoading"></span>{{ $t('settings.advanced.save') }}
+                </button>
+              </div>
+              <ul v-show="serverComboOpen" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-full gap-1">
+                <li v-for="preset in anisetteServerPresets" :key="preset.url">
+                  <button type="button" @click="pickAnisetteServer(preset.default ? '' : preset.url)">
+                    <span class="font-mono text-sm">{{ preset.url }}</span>
+                    <span class="text-xs opacity-50">{{ preset.name }}</span>
+                    <span v-if="preset.default" class="badge badge-neutral badge-sm">{{ $t('settings.advanced.anisette_server_default_tag') }}</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+            <label class="label">
+              <span class="label-text-alt whitespace-normal">{{ $t('settings.advanced.anisette_server_tips') }}</span>
+            </label>
+          </div>
+        </div>
         <div class="form-item" style="display: none">
           <label class="form-item-label">
             <span class="label-text">{{ $t('settings.advanced.update_coreadi') }}</span>
@@ -491,20 +526,37 @@
             <span class="label-text">{{ $t('settings.advanced.reset_anisette') }}</span>
           </label>
           <div class="form-item-content">
-            <Popper placement="top" arrow="true">
-              <template #content="{ close }">
-                <div class="flex flex-col gap-y-2">
-                  <div class="py-2">{{ $t('settings.advanced.reset_anisette_confirm') }}</div>
-                  <div class="flex gap-x-2 justify-end items-center">
-                    <a class="link link-primary link-hover" @click="close">{{ $t('settings.advanced.cancel') }}</a>
-                    <button class="btn btn-primary" @click.prevent="confirmResetAnisette(close)">{{ $t('settings.advanced.confirm') }}</button>
+            <div v-if="anisetteAccounts.length === 0" class="alert alert-warning atv-warning text-sm">
+              <span class="whitespace-normal">{{ $t('settings.advanced.reset_anisette_empty') }}</span>
+            </div>
+            <div v-else class="join w-full atv-join-row">
+              <select
+                v-model="advanced.anisetteEmail"
+                class="select select-bordered join-item flex-1 min-w-0"
+                :disabled="advanced.anisetteLoading"
+              >
+                <option value="" disabled selected>
+                  {{ $t('settings.advanced.reset_anisette_select') }}
+                </option>
+                <option v-for="account in anisetteAccounts" :key="account.email" :value="account.email">
+                  {{ account.email }}
+                </option>
+              </select>
+              <Popper placement="top" arrow="true">
+                <template #content="{ close }">
+                  <div class="flex flex-col gap-y-2">
+                    <div class="py-2">{{ $t('settings.advanced.reset_anisette_confirm', { email: advanced.anisetteEmail }) }}</div>
+                    <div class="flex gap-x-2 justify-end items-center">
+                      <a class="link link-primary link-hover" @click="close">{{ $t('settings.advanced.cancel') }}</a>
+                      <button class="btn btn-primary" @click.prevent="confirmResetAnisette(close)">{{ $t('settings.advanced.confirm') }}</button>
+                    </div>
                   </div>
-                </div>
-              </template>
-              <button type="button" class="btn btn-error w-48" :disabled="advanced.anisetteLoading">
-                <span class="loading loading-spinner" v-show="advanced.anisetteLoading"></span>{{ $t('settings.advanced.reset_anisette') }}
-              </button>
-            </Popper>
+                </template>
+                <button type="button" class="btn btn-error join-item" :disabled="advanced.anisetteLoading || !advanced.anisetteEmail">
+                  <span class="loading loading-spinner" v-show="advanced.anisetteLoading"></span>{{ $t('settings.advanced.reset') }}
+                </button>
+              </Popper>
+            </div>
           </div>
         </div>
       </form>
@@ -555,7 +607,18 @@ export default {
       advanced: {
         adiLoading: false,
         anisetteLoading: false,
+        anisetteEmail: "",
+        anisetteServer: "",
+        savedAnisetteServer: "",
+        serverLoading: false,
       },
+      anisetteAccounts: [],
+      serverComboOpen: false,
+      anisetteServerPresets: [
+        { name: "Jkcoxson (Mac)", url: "https://mac-ani.jkcoxson.com", default: true },
+        { name: "SideStore (Mac)", url: "https://new.ani.sidestore.io" },
+        { name: "StikStore (Mac)", url: "https://ani3.stikstore.app" },
+      ],
       savedSources: [],
       newSourceUrl: "",
       addingSource: false,
@@ -567,6 +630,29 @@ export default {
   created() {
     this.fetchData();
     this.fetchSavedSources();
+    this.fetchAnisetteAccounts();
+    this.fetchAnisetteServer();
+  },
+  mounted() {
+    // Close the server dropdown when a click lands outside the combobox.
+    this.serverOutsideClose = (event) => {
+      if (this.serverComboOpen && this.$refs.serverComboNode && !this.$refs.serverComboNode.contains(event.target)) {
+        this.serverComboOpen = false;
+      }
+    };
+    document.addEventListener("click", this.serverOutsideClose);
+  },
+  beforeUnmount() {
+    document.removeEventListener("click", this.serverOutsideClose);
+  },
+  computed: {
+    serverDirty() {
+      return (this.advanced.anisetteServer || "").trim() !== this.advanced.savedAnisetteServer;
+    },
+    anisetteServerDefault() {
+      const preset = this.anisetteServerPresets.find((p) => p.default);
+      return preset ? preset.url : "";
+    },
   },
   methods: {
     fetchData() {
@@ -722,22 +808,80 @@ export default {
         });
     },
 
-    confirmResetAnisette(close) {
-      let _this = this;
-      close && close();
+    fetchAnisetteAccounts() {
+      // Anisette data is provisioned per account, so a reset needs the account
+      // to reset.
+      api.getAccounts().then((res) => {
+        const accounts = res.data || {};
+        this.anisetteAccounts = Object.keys(accounts).map((key) => accounts[key]);
+        if (!this.anisetteAccounts.some((a) => a.email === this.advanced.anisetteEmail)) {
+          this.advanced.anisetteEmail = "";
+        }
+      });
+    },
 
-      _this.advanced.anisetteLoading = true;
-      api.resetAnisette()
+    fetchAnisetteServer() {
+      this.advanced.serverLoading = true;
+      api.getAnisetteServer()
         .then((res) => {
-          if (res.data) {
-            toast.success(this.$t('settings.advanced.toast.success'));
-          } else {
-            toast.error(this.$t('settings.advanced.toast.failed'));
-          }
+          // The default server arrives as an empty value, so the input shows
+          // the default through its placeholder instead.
+          this.advanced.savedAnisetteServer = res.data?.server || "";
+          this.advanced.anisetteServer = this.advanced.savedAnisetteServer;
         })
         .catch((err) => {
           console.error(err);
-          toast.error(this.$t('settings.advanced.toast.failed'));
+        })
+        .finally(() => {
+          this.advanced.serverLoading = false;
+        });
+    },
+
+    pickAnisetteServer(url) {
+      this.advanced.anisetteServer = url;
+      this.serverComboOpen = false;
+    },
+
+    saveAnisetteServer() {
+      // An empty value restores the engine default server.
+      const server = (this.advanced.anisetteServer || "").trim();
+      this.advanced.serverLoading = true;
+      api.setAnisetteServer({ server })
+        .then((res) => {
+          if (res.data) {
+            toast.success(this.$t('settings.advanced.toast.server_success'));
+            // Read back the value the engine stores, so the input shows the
+            // active server instead of what was typed.
+            this.fetchAnisetteServer();
+          } else {
+            toast.error(this.$t('settings.advanced.toast.server_failed'));
+            this.advanced.serverLoading = false;
+          }
+        })
+        .catch((err) => {
+          // request.js already shows the error.
+          console.error(err);
+          this.advanced.serverLoading = false;
+        });
+    },
+
+    confirmResetAnisette(close) {
+      let _this = this;
+      close && close();
+      if (!_this.advanced.anisetteEmail) return;
+
+      _this.advanced.anisetteLoading = true;
+      api.resetAnisette({ email: _this.advanced.anisetteEmail })
+        .then((res) => {
+          if (res.data) {
+            toast.success(this.$t('settings.advanced.toast.reset_success', { email: _this.advanced.anisetteEmail }));
+          } else {
+            toast.error(this.$t('settings.advanced.toast.reset_failed'));
+          }
+        })
+        .catch((err) => {
+          // request.js already shows the error.
+          console.error(err);
         })
         .finally(() => {
           _this.advanced.anisetteLoading = false;
@@ -879,19 +1023,30 @@ form {
   border-radius: 12px;
 }
 
-/* Keep the URL input and the Add button fused like other join rows. */
-.atv-saved-source-add > .join-item {
+/* Keep the input and action button of a join row fused like the install page. */
+.atv-join-row > .join-item {
   height: auto;
   min-height: 46px;
   border-radius: 0;
 }
 
-.atv-saved-source-add > .join-item:first-child {
+.atv-join-row > .join-item:first-child {
   border-start-start-radius: var(--rounded-btn, 0.5rem);
   border-end-start-radius: var(--rounded-btn, 0.5rem);
 }
 
-.atv-saved-source-add > .join-item:last-child {
+.atv-join-row > .join-item:last-child {
+  border-start-end-radius: var(--rounded-btn, 0.5rem);
+  border-end-end-radius: var(--rounded-btn, 0.5rem);
+}
+
+/* A Popper wraps its trigger in a div, so the join fusion has to reach the
+   button inside that wrapper. */
+.atv-join-row > :last-child .btn {
+  height: auto;
+  min-height: 46px;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
   border-start-end-radius: var(--rounded-btn, 0.5rem);
   border-end-end-radius: var(--rounded-btn, 0.5rem);
 }

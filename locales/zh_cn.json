@@ -317,7 +317,7 @@
         ,
         "login_modal": {
             "title": "登录 Apple 帐号",
-            "2fa_warning": "只支持受信任的设备接收 2FA，不支持短信接收",
+            "setup_2fa_help": "如何把 iPhone 设为 2FA 授信设备？",
             "button": {
                 "close": "关闭",
                 "login": "登录",
@@ -483,14 +483,25 @@
                 "title": "高级",
                 "update_coreadi": "更新 CoreADI",
                 "update_coreadi_confirm": "确认要下载并更新 CoreADI 库文件吗？",
+                "anisette_server": "Anisette 服务器",
+                "anisette_server_default_tag": "默认",
+                "anisette_server_tips": "留空使用默认服务器。更换服务器后已有的 Anisette 数据会失效；如请求开始失败，请重置对应帐号。",
+                "save": "保存",
                 "reset_anisette": "重置 Anisette 数据",
-                "reset_anisette_confirm": "确认要重置 Anisette 数据吗？下次登录或安装时将重新生成。",
+                "reset_anisette_select": "请选择帐号",
+                "reset_anisette_empty": "Anisette 数据按帐号重置，请先添加 Apple ID 帐号。",
+                "reset_anisette_confirm": "确认要重置 {{email}} 的 Anisette 数据吗？下次使用该帐号时将生成新的设备身份，需要重新登录。",
+                "reset": "重置",
                 "cancel": "取消",
                 "confirm": "确认",
                 "toast": {
                     "downloading": "正在下载...",
                     "success": "更新完成",
-                    "failed": "更新失败"
+                    "failed": "更新失败",
+                    "reset_success": "已重置 {{email}} 的 Anisette 数据",
+                    "reset_failed": "重置失败",
+                    "server_success": "Anisette 服务器已保存",
+                    "server_failed": "保存 Anisette 服务器失败"
                 }
             }
     },
