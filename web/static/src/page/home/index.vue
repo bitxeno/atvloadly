@@ -30,15 +30,16 @@
               class="atv-device-row flex flex-row gap-x-3 cursor-pointer"
               v-for="item in pairedDevices"
               v-bind:key="item.id"
+              :class="{ 'atv-device-row--manual': item.manual }"
               @click="installIpa(item)"
               @mouseleave="forgetConfirmId = null"
             >
               <div>
                 <div class="avatar" :class="{ online: !item.manual }">
-                  <div class="w-16 rounded atv-device-icon-wrap">
+                  <span v-if="item.manual" class="atv-ip-badge">{{ $t("home.sidebar.device_status.ip_badge") }}</span>
+                  <div class="w-16 rounded">
                     <IPhoneIcon v-if="item.name.toLowerCase().includes('iphone')" />
                     <AppleTVIcon v-else />
-                    <span v-if="item.manual" class="atv-ip-badge">{{ $t("home.sidebar.device_status.ip_badge") }}</span>
                   </div>
                 </div>
               </div>
@@ -1010,16 +1011,14 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
   flex-shrink: 0;
 }
 
-/* Manual (pairing-file) device: "IP" badge on the icon's top-right corner
-   instead of the online dot. */
-.atv-device-icon-wrap {
-  position: relative;
-}
-
+/* Manual (pairing-file) device: "IP" badge on the avatar's top-right corner
+   instead of the online dot. It sits on .avatar (not .avatar > div, which
+   daisyUI clips with overflow:hidden) so it is never cut off. */
 .atv-ip-badge {
   position: absolute;
   top: -6px;
   right: -6px;
+  z-index: 11;
   padding: 2px 5px;
   border-radius: 7px;
   background: var(--atv-accent);
@@ -1031,8 +1030,11 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
   box-shadow: 0 0 0 2px var(--atv-surface);
 }
 
-/* "Forget" action for a manual device: first click arms, second confirms. */
+/* "Forget" action for a manual device: floats at the far right, appears on
+   row hover (desktop). First click arms, second confirms. Always visible on
+   phones where there is no hover. */
 .atv-device-forget {
+  margin-left: auto;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -1042,7 +1044,14 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
   padding: 0 6px;
   border-radius: 8px;
   color: var(--atv-muted);
-  transition: background-color 120ms ease, color 120ms ease;
+  opacity: 0;
+  transition: opacity 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.atv-device-row:hover .atv-device-forget,
+.atv-device-forget:focus-visible,
+.atv-device-forget--armed {
+  opacity: 1;
 }
 
 .atv-device-forget:hover {
@@ -1059,6 +1068,18 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
   font-size: 0.72rem;
   font-weight: 650;
   white-space: nowrap;
+}
+
+/* Phones have no hover: keep the forget button visible and reflow the row so
+   it never overlaps the device text. */
+@media (max-width: 767px) {
+  .atv-device-row--manual {
+    flex-wrap: wrap;
+  }
+
+  .atv-device-forget {
+    opacity: 1;
+  }
 }
 
 .empty {
