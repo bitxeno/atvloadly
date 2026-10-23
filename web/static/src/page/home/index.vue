@@ -46,21 +46,22 @@
 
               <div class="flex flex-col justify-top flex-1 min-w-0">
                 <h4>{{ item.name }} ({{ truncateIP(item.ip) }})</h4>
-                <p>{{ formatDeviceStatus(item) }}</p>
+                <p class="atv-device-subline">
+                  <span>{{ formatDeviceStatus(item) }}</span>
+                  <button
+                    v-if="item.manual"
+                    type="button"
+                    class="atv-device-forget"
+                    :class="{ 'atv-device-forget--armed': forgetConfirmId === item.id }"
+                    :title="forgetConfirmId === item.id ? $t('home.sidebar.device_status.forget_confirm') : $t('home.sidebar.device_status.forget')"
+                    :aria-label="$t('home.sidebar.device_status.forget')"
+                    @click.stop.prevent="forgetDevice(item)"
+                  >
+                    <span v-if="forgetConfirmId === item.id" class="atv-device-forget-text">{{ $t("home.sidebar.device_status.forget_confirm") }}</span>
+                    <span v-else class="w-4 h-4"><DismissIcon /></span>
+                  </button>
+                </p>
               </div>
-
-              <button
-                v-if="item.manual"
-                type="button"
-                class="atv-device-forget"
-                :class="{ 'atv-device-forget--armed': forgetConfirmId === item.id }"
-                :title="forgetConfirmId === item.id ? $t('home.sidebar.device_status.forget_confirm') : $t('home.sidebar.device_status.forget')"
-                :aria-label="$t('home.sidebar.device_status.forget')"
-                @click.stop.prevent="forgetDevice(item)"
-              >
-                <span v-if="forgetConfirmId === item.id" class="atv-device-forget-text">{{ $t("home.sidebar.device_status.forget_confirm") }}</span>
-                <span v-else class="w-4 h-4"><DismissIcon /></span>
-              </button>
             </a>
           </div>
 
@@ -1030,28 +1031,26 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
   box-shadow: 0 0 0 2px var(--atv-surface);
 }
 
-/* "Forget" action for a manual device: absolutely positioned at the row's
-   far right so it never takes space from the title text. Hidden at rest and
-   revealed on row hover (desktop); always visible on phones. First click
-   arms, second confirms. */
-.atv-device-row--manual {
-  position: relative;
+/* "Forget" action for a manual device: sits inline right after the status
+   text (the "已添加 · RPPairing" line). Hidden at rest and revealed on row
+   hover (desktop); always visible on phones. First click arms, second
+   confirms. */
+.atv-device-subline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .atv-device-forget {
-  position: absolute;
-  top: 50%;
-  right: 10px;
-  transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 28px;
-  min-width: 28px;
-  padding: 0 6px;
-  border-radius: 8px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 6px;
   color: var(--atv-muted);
-  background: var(--atv-surface);
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms ease, background-color 120ms ease, color 120ms ease;
@@ -1070,6 +1069,8 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
 }
 
 .atv-device-forget--armed {
+  width: auto;
+  padding: 0 6px;
   color: var(--atv-danger);
   background: var(--atv-danger-soft);
 }
@@ -1080,14 +1081,8 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
   white-space: nowrap;
 }
 
-/* Phones have no hover: keep the forget button visible. Reserve room on the
-   manual row's right so the absolutely positioned button never covers the
-   device text. */
+/* Phones have no hover: keep the forget button visible. */
 @media (max-width: 767px) {
-  .atv-device-row--manual {
-    padding-right: 46px;
-  }
-
   .atv-device-forget {
     opacity: 1;
     pointer-events: auto;

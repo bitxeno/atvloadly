@@ -91,7 +91,7 @@
                 "unpaired": "Unpaired",
                 "added": "Added",
                 "ip_badge": "IP",
-                "forget": "Forget",
+                "forget": "Delete device",
                 "forget_confirm": "Confirm",
                 "forget_done": "Device forgotten"
             },
