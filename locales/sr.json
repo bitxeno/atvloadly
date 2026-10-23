@@ -480,6 +480,10 @@
       "title": "Напредно",
       "update_coreadi": "Ажурирај CoreADI",
       "update_coreadi_confirm": "Да ли сте сигурни да желите да ажурирате CoreADI библиотеке?",
+      "anisette_server": "Anisette сервер",
+      "anisette_server_default_tag": "Подразумевани",
+      "anisette_server_tips": "Оставите празно за подразумевани сервер. Промена сервера чини постојеће Anisette податке неважећим; ресетујте налог ако захтеви почну да отказују.",
+      "save": "Сачувај",
       "reset_anisette": "Ресетуј Anisette податке",
       "reset_anisette_select": "Изаберите налог",
       "reset_anisette_empty": "Anisette подаци се ресетују по налогу. Прво додајте Apple ID налог.",
@@ -492,7 +496,9 @@
         "success": "Ажурирање је завршено",
         "failed": "Ажурирање није успело",
         "reset_success": "Anisette подаци за {{email}} су ресетовани",
-        "reset_failed": "Ресетовање није успело"
+        "reset_failed": "Ресетовање није успело",
+        "server_success": "Anisette сервер је сачуван",
+        "server_failed": "Чување Anisette сервера није успело"
       }
     }
   },

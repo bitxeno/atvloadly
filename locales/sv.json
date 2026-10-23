@@ -480,6 +480,10 @@
       "title": "Avancerat",
       "update_coreadi": "Uppdatera CoreADI",
       "update_coreadi_confirm": "Vill du verkligen uppdatera CoreADI-biblioteken?",
+      "anisette_server": "Anisette-server",
+      "anisette_server_default_tag": "Standard",
+      "anisette_server_tips": "Lämna tomt för att använda standardservern. Byt av server gör befintlig Anisette-data ogiltig; återställ kontot om anropen börjar misslyckas.",
+      "save": "Spara",
       "reset_anisette": "Återställ Anisette-data",
       "reset_anisette_select": "Välj ett konto",
       "reset_anisette_empty": "Anisette-data återställs per konto. Lägg till ett Apple ID-konto först.",
@@ -492,7 +496,9 @@
         "success": "Uppdateringen är klar",
         "failed": "Uppdateringen misslyckades",
         "reset_success": "Anisette-data för {{email}} har återställts",
-        "reset_failed": "Återställningen misslyckades"
+        "reset_failed": "Återställningen misslyckades",
+        "server_success": "Anisette-servern har sparats",
+        "server_failed": "Det gick inte att spara Anisette-servern"
       }
     }
   },

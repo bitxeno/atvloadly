@@ -465,6 +465,41 @@
     <section class="section bg-base-100">
       <h2 class="atv-section-heading">{{ $t('settings.advanced.title') }}</h2>
       <form>
+        <div class="form-item">
+          <label class="form-item-label">
+            <span class="label-text">{{ $t('settings.advanced.anisette_server') }}</span>
+          </label>
+          <div class="form-item-content">
+            <div ref="serverComboNode" class="dropdown w-full">
+              <div class="join w-full atv-join-row" tabindex="0" role="button">
+                <input
+                  v-model="advanced.anisetteServer"
+                  type="text"
+                  class="input input-bordered join-item flex-1 min-w-0 font-mono text-sm"
+                  :placeholder="anisetteServerDefault"
+                  :disabled="advanced.serverLoading"
+                  spellcheck="false"
+                  @focus="serverComboOpen = true"
+                />
+                <button type="button" class="btn btn-primary join-item" :disabled="advanced.serverLoading || !serverDirty" @click="saveAnisetteServer">
+                  <span class="loading loading-spinner" v-show="advanced.serverLoading"></span>{{ $t('settings.advanced.save') }}
+                </button>
+              </div>
+              <ul v-show="serverComboOpen" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-full gap-1">
+                <li v-for="preset in anisetteServerPresets" :key="preset.url">
+                  <button type="button" @click="pickAnisetteServer(preset.default ? '' : preset.url)">
+                    <span class="font-mono text-sm">{{ preset.url }}</span>
+                    <span class="text-xs opacity-50">{{ preset.name }}</span>
+                    <span v-if="preset.default" class="badge badge-neutral badge-sm">{{ $t('settings.advanced.anisette_server_default_tag') }}</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+            <label class="label">
+              <span class="label-text-alt whitespace-normal">{{ $t('settings.advanced.anisette_server_tips') }}</span>
+            </label>
+          </div>
+        </div>
         <div class="form-item" style="display: none">
           <label class="form-item-label">
             <span class="label-text">{{ $t('settings.advanced.update_coreadi') }}</span>
@@ -573,8 +608,17 @@ export default {
         adiLoading: false,
         anisetteLoading: false,
         anisetteEmail: "",
+        anisetteServer: "",
+        savedAnisetteServer: "",
+        serverLoading: false,
       },
       anisetteAccounts: [],
+      serverComboOpen: false,
+      anisetteServerPresets: [
+        { name: "Jkcoxson (Mac)", url: "https://mac-ani.jkcoxson.com", default: true },
+        { name: "SideStore (Mac)", url: "https://new.ani.sidestore.io" },
+        { name: "StikStore (Mac)", url: "https://ani3.stikstore.app" },
+      ],
       savedSources: [],
       newSourceUrl: "",
       addingSource: false,
@@ -587,6 +631,28 @@ export default {
     this.fetchData();
     this.fetchSavedSources();
     this.fetchAnisetteAccounts();
+    this.fetchAnisetteServer();
+  },
+  mounted() {
+    // Close the server dropdown when a click lands outside the combobox.
+    this.serverOutsideClose = (event) => {
+      if (this.serverComboOpen && this.$refs.serverComboNode && !this.$refs.serverComboNode.contains(event.target)) {
+        this.serverComboOpen = false;
+      }
+    };
+    document.addEventListener("click", this.serverOutsideClose);
+  },
+  beforeUnmount() {
+    document.removeEventListener("click", this.serverOutsideClose);
+  },
+  computed: {
+    serverDirty() {
+      return (this.advanced.anisetteServer || "").trim() !== this.advanced.savedAnisetteServer;
+    },
+    anisetteServerDefault() {
+      const preset = this.anisetteServerPresets.find((p) => p.default);
+      return preset ? preset.url : "";
+    },
   },
   methods: {
     fetchData() {
@@ -752,6 +818,51 @@ export default {
           this.advanced.anisetteEmail = "";
         }
       });
+    },
+
+    fetchAnisetteServer() {
+      this.advanced.serverLoading = true;
+      api.getAnisetteServer()
+        .then((res) => {
+          // The default server arrives as an empty value, so the input shows
+          // the default through its placeholder instead.
+          this.advanced.savedAnisetteServer = res.data?.server || "";
+          this.advanced.anisetteServer = this.advanced.savedAnisetteServer;
+        })
+        .catch((err) => {
+          console.error(err);
+        })
+        .finally(() => {
+          this.advanced.serverLoading = false;
+        });
+    },
+
+    pickAnisetteServer(url) {
+      this.advanced.anisetteServer = url;
+      this.serverComboOpen = false;
+    },
+
+    saveAnisetteServer() {
+      // An empty value restores the engine default server.
+      const server = (this.advanced.anisetteServer || "").trim();
+      this.advanced.serverLoading = true;
+      api.setAnisetteServer({ server })
+        .then((res) => {
+          if (res.data) {
+            toast.success(this.$t('settings.advanced.toast.server_success'));
+            // Read back the value the engine stores, so the input shows the
+            // active server instead of what was typed.
+            this.fetchAnisetteServer();
+          } else {
+            toast.error(this.$t('settings.advanced.toast.server_failed'));
+            this.advanced.serverLoading = false;
+          }
+        })
+        .catch((err) => {
+          // request.js already shows the error.
+          console.error(err);
+          this.advanced.serverLoading = false;
+        });
     },
 
     confirmResetAnisette(close) {

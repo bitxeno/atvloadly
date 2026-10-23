@@ -430,6 +430,21 @@ export default {
       data,
     });
   },
+  getAnisetteServer: () => {
+    return request({
+      url: "/api/settings/anisette/server",
+      method: "get",
+      timeout: 30000,
+    });
+  },
+  setAnisetteServer: (data) => {
+    return request({
+      url: "/api/settings/anisette/server",
+      method: "post",
+      timeout: 30000,
+      data,
+    });
+  },
   importPair: (data) => {
     return request({
       url: "/api/pair/import",

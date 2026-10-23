@@ -865,6 +865,29 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))
 	})
 
+	// The anisette server the engine provisions against; the server is empty
+	// when the engine default is in effect.
+	api.Get("/settings/anisette/server", func(c *fiber.Ctx) error {
+		state, err := manager.AnisetteServer()
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(state))
+	})
+
+	api.Post("/settings/anisette/server", func(c *fiber.Ctx) error {
+		var req struct {
+			Server string `json:"server"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument"))
+		}
+		if err := manager.SetAnisetteServer(req.Server); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
 	api.Get("/notify/send", func(c *fiber.Ctx) error {
 		title := c.Query("title")
 		desc := c.Query("desc")
