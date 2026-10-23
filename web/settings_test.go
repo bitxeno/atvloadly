@@ -182,9 +182,41 @@ func TestSaveUpdateSettingsReplacesAndClearsToken(t *testing.T) {
 	}
 }
 
-// The reset endpoint delegates to the engine command; the flag it reports is
-// the engine result, so a missing engine is reported as a failure.
-func TestResetAnisetteRouteRunsEngineCommand(t *testing.T) {
+// The reset endpoint names the account it resets, because Anisette state is
+// provisioned per account; the flag it reports is the engine result.
+func TestResetAnisetteRouteRunsEngineCommandForAccount(t *testing.T) {
+	engineDir := t.TempDir()
+	record := filepath.Join(engineDir, "args")
+	script := "#!/bin/sh\n" +
+		"printf '%s\\n' \"$@\" > " + record + "\n" +
+		"exit 0\n"
+	if err := os.WriteFile(filepath.Join(engineDir, "plumesign"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", engineDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	server, _ := newTestServer(t)
+	req := httptest.NewRequest(http.MethodPost, "/api/settings/reset/anisette", strings.NewReader(`{"email":"user@example.com"}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := server.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = decodeAPI(t, resp)
+
+	data, err := os.ReadFile(record)
+	if err != nil {
+		t.Fatalf("the engine was not run: %v", err)
+	}
+	want := "anisette reset -u user@example.com"
+	if got := strings.Join(strings.Fields(string(data)), " "); got != want {
+		t.Errorf("arguments = %q, want %q", got, want)
+	}
+}
+
+// Without an account the request names no Anisette state to reset, so it is
+// rejected instead of resetting an unrelated account.
+func TestResetAnisetteRouteRejectsMissingAccount(t *testing.T) {
 	engineDir := t.TempDir()
 	record := filepath.Join(engineDir, "args")
 	script := "#!/bin/sh\n" +
@@ -200,13 +232,21 @@ func TestResetAnisetteRouteRunsEngineCommand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = decodeAPI(t, resp)
-
-	data, err := os.ReadFile(record)
+	defer func() { _ = resp.Body.Close() }()
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		t.Fatalf("the engine was not run: %v", err)
+		t.Fatal(err)
 	}
-	if got := strings.Join(strings.Fields(string(data)), " "); got != "anisette reset" {
-		t.Errorf("arguments = %q, want %q", got, "anisette reset")
+	var result struct {
+		Code int `json:"code"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatalf("decode %q: %v", body, err)
+	}
+	if result.Code == 200 {
+		t.Fatalf("a missing account was accepted, body %q", body)
+	}
+	if _, err := os.Stat(record); !os.IsNotExist(err) {
+		t.Errorf("the engine was run without an account (stat err = %v)", err)
 	}
 }

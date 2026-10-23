@@ -847,9 +847,19 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))
 	})
 
-	// Reset the Anisette data through the engine; it is generated again on next use
+	// Reset one account's Anisette data through the engine; a new device
+	// identity is generated the next time that account is used.
 	api.Post("/settings/reset/anisette", func(c *fiber.Ctx) error {
-		if err := manager.ResetAnisette(); err != nil {
+		var req struct {
+			Email string `json:"email"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument"))
+		}
+		if strings.TrimSpace(req.Email) == "" {
+			return c.Status(http.StatusOK).JSON(apiError("email is required"))
+		}
+		if err := manager.ResetAnisette(req.Email); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError("reset failed: " + err.Error()))
 		}
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))

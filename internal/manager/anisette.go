@@ -1,19 +1,28 @@
 package manager
 
 import (
+	"errors"
+	"strings"
+
 	"github.com/bitxeno/atvloadly/internal/exec"
 	"github.com/bitxeno/atvloadly/internal/log"
 )
 
-// ResetAnisette deletes the local Anisette provisioning data through the
-// engine, so it is generated again on the next login or install. The engine
-// owns the location of its data and drops every file that belongs to it; the
-// command is local, so it needs no working directory or proxy environment.
-func ResetAnisette() error {
-	if _, err := exec.NewCommand("plumesign", "anisette", "reset").CombinedOutput(); err != nil {
-		log.Err(err).Msg("Error resetting anisette data")
+// ResetAnisette drops the Anisette provisioning data of a single account
+// through the engine, so a new device identity is generated the next time that
+// account is used. Anisette state is provisioned per account, so the engine
+// needs the account to know which state to discard. The command is local, so
+// it needs no working directory or proxy environment.
+func ResetAnisette(email string) error {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return errors.New("account email is required")
+	}
+
+	if _, err := exec.NewCommand("plumesign", "anisette", "reset", "-u", email).CombinedOutput(); err != nil {
+		log.Err(err).Msgf("Error resetting anisette data for %s", email)
 		return err
 	}
-	log.Infof("Reset anisette data")
+	log.Infof("Reset anisette data for %s", email)
 	return nil
 }

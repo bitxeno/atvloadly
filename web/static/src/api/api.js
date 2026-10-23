@@ -422,11 +422,12 @@ export default {
       timeout: 600000,
     });
   },
-  resetAnisette: () => {
+  resetAnisette: (data) => {
     return request({
       url: "/api/settings/reset/anisette",
       method: "post",
       timeout: 30000,
+      data,
     });
   },
   importPair: (data) => {

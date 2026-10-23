@@ -23,17 +23,32 @@ func fakeAnisetteEngine(t *testing.T, exitCode string) string {
 	return record
 }
 
-// Anisette data is reset by the engine rather than by deleting files this
-// process guesses, so the engine owns the location of its provisioning data.
-func TestResetAnisetteRunsEngineCommand(t *testing.T) {
+// Anisette state is provisioned per account, so the reset names the account
+// and the engine discards exactly that state.
+func TestResetAnisetteRunsEngineCommandForAccount(t *testing.T) {
 	record := fakeAnisetteEngine(t, "0")
 
-	if err := ResetAnisette(); err != nil {
+	if err := ResetAnisette("user@example.com"); err != nil {
 		t.Fatalf("ResetAnisette() error = %v", err)
 	}
 
-	if got := strings.Join(recordedArgs(t, record), " "); got != "anisette reset" {
-		t.Errorf("arguments = %q, want %q", got, "anisette reset")
+	want := "anisette reset -u user@example.com"
+	if got := strings.Join(recordedArgs(t, record), " "); got != want {
+		t.Errorf("arguments = %q, want %q", got, want)
+	}
+}
+
+// A blank account names no Anisette state, so the call is rejected before any
+// command runs.
+func TestResetAnisetteRequiresAccount(t *testing.T) {
+	record := fakeAnisetteEngine(t, "0")
+
+	if err := ResetAnisette("   "); err == nil {
+		t.Fatal("ResetAnisette() error = nil, want an error")
+	}
+
+	if _, err := os.Stat(record); !os.IsNotExist(err) {
+		t.Errorf("the engine was run for a blank account (stat err = %v)", err)
 	}
 }
 
@@ -41,7 +56,7 @@ func TestResetAnisetteRunsEngineCommand(t *testing.T) {
 func TestResetAnisetteReportsEngineFailure(t *testing.T) {
 	fakeAnisetteEngine(t, "1")
 
-	if err := ResetAnisette(); err == nil {
+	if err := ResetAnisette("user@example.com"); err == nil {
 		t.Fatal("ResetAnisette() error = nil, want an error")
 	}
 }

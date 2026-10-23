@@ -315,7 +315,7 @@
     },
     "login_modal": {
       "title": "Logga in på ett Apple-konto",
-      "2fa_warning": "Endast betrodda enheter kan ta emot 2FA-koden. Att ta emot den via SMS stöds inte.",
+      "setup_2fa_help": "Hur sätter man upp en iPhone som betrodd enhet för 2FA?",
       "button": {
         "close": "Stäng",
         "login": "Logga in",
@@ -481,13 +481,18 @@
       "update_coreadi": "Uppdatera CoreADI",
       "update_coreadi_confirm": "Vill du verkligen uppdatera CoreADI-biblioteken?",
       "reset_anisette": "Återställ Anisette-data",
-      "reset_anisette_confirm": "Vill du verkligen återställa Anisette-data? Den skapas på nytt vid nästa inloggning eller installation.",
+      "reset_anisette_select": "Välj ett konto",
+      "reset_anisette_empty": "Anisette-data återställs per konto. Lägg till ett Apple ID-konto först.",
+      "reset_anisette_confirm": "Vill du verkligen återställa Anisette-data för {{email}}? En ny enhetsidentitet skapas vid nästa användning, så kontot måste logga in igen.",
+      "reset": "Återställ",
       "cancel": "Avbryt",
       "confirm": "Bekräfta",
       "toast": {
         "downloading": "Laddar ned…",
         "success": "Uppdateringen är klar",
-        "failed": "Uppdateringen misslyckades"
+        "failed": "Uppdateringen misslyckades",
+        "reset_success": "Anisette-data för {{email}} har återställts",
+        "reset_failed": "Återställningen misslyckades"
       }
     }
   },
