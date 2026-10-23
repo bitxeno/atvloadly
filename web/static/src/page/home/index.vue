@@ -1030,12 +1030,19 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
   box-shadow: 0 0 0 2px var(--atv-surface);
 }
 
-/* "Forget" action for a manual device: floats at the far right, appears on
-   row hover (desktop). First click arms, second confirms. Always visible on
-   phones where there is no hover. */
+/* "Forget" action for a manual device: absolutely positioned at the row's
+   far right so it never takes space from the title text. Hidden at rest and
+   revealed on row hover (desktop); always visible on phones. First click
+   arms, second confirms. */
+.atv-device-row--manual {
+  position: relative;
+}
+
 .atv-device-forget {
-  margin-left: auto;
-  flex-shrink: 0;
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1044,14 +1051,17 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
   padding: 0 6px;
   border-radius: 8px;
   color: var(--atv-muted);
+  background: var(--atv-surface);
   opacity: 0;
+  pointer-events: none;
   transition: opacity 120ms ease, background-color 120ms ease, color 120ms ease;
 }
 
-.atv-device-row:hover .atv-device-forget,
+.atv-device-row--manual:hover .atv-device-forget,
 .atv-device-forget:focus-visible,
 .atv-device-forget--armed {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .atv-device-forget:hover {
@@ -1070,15 +1080,17 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
   white-space: nowrap;
 }
 
-/* Phones have no hover: keep the forget button visible and reflow the row so
-   it never overlaps the device text. */
+/* Phones have no hover: keep the forget button visible. Reserve room on the
+   manual row's right so the absolutely positioned button never covers the
+   device text. */
 @media (max-width: 767px) {
   .atv-device-row--manual {
-    flex-wrap: wrap;
+    padding-right: 46px;
   }
 
   .atv-device-forget {
     opacity: 1;
+    pointer-events: auto;
   }
 }
 
