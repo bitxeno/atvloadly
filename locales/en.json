@@ -156,6 +156,17 @@
             "pair_error": "Pairing error. Please check the console for more information.",
             "no_device_found": "Device not found. Please make sure the usbmuxd service is running."
         },
+        "manual": {
+            "discovering": "Discovering the pairing port…",
+            "stage_mdns": "Looking up the pairing service…",
+            "stage_scanning": "Scanning ports… {{percent}}%",
+            "stage_probing": "Verifying the pairing service…",
+            "stage_found": "Pairing port found",
+            "stage_failed": "Pairing port not found",
+            "found": "Pairing port: {{port}}",
+            "failed": "Could not find the pairing port. Make sure the Apple TV is in pairing mode.",
+            "retry": "Rediscover"
+        },
         "step": {
             "start": {
                 "title": "Start",

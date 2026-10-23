@@ -156,6 +156,17 @@
       "pair_error": "Greška pri uparivanju. Više informacija potražite u konzoli.",
       "no_device_found": "Uređaj nije pronađen. Proverite da li je usluga usbmuxd pokrenuta."
     },
+    "manual": {
+      "discovering": "Traženje porta za uparivanje…",
+      "stage_mdns": "Pretraga usluge za uparivanje…",
+      "stage_scanning": "Skeniranje portova… {{percent}}%",
+      "stage_probing": "Provera usluge za uparivanje…",
+      "stage_found": "Port za uparivanje je pronađen",
+      "stage_failed": "Port za uparivanje nije pronađen",
+      "found": "Port za uparivanje: {{port}}",
+      "failed": "Nije moguće pronaći port za uparivanje. Proverite da li je Apple TV u režimu uparivanja.",
+      "retry": "Ponovi pretragu"
+    },
     "step": {
       "start": {
         "title": "Početak",

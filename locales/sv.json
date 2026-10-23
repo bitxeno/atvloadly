@@ -156,6 +156,17 @@
       "pair_error": "Parkopplingen misslyckades. Se konsolen för mer information.",
       "no_device_found": "Enheten hittades inte. Kontrollera att tjänsten usbmuxd körs."
     },
+    "manual": {
+      "discovering": "Söker parkopplingsport…",
+      "stage_mdns": "Slår upp parkopplingstjänsten…",
+      "stage_scanning": "Skannar portar… {{percent}}%",
+      "stage_probing": "Verifierar parkopplingstjänsten…",
+      "stage_found": "Parkopplingsport hittad",
+      "stage_failed": "Parkopplingsport hittades inte",
+      "found": "Parkopplingsport: {{port}}",
+      "failed": "Kunde inte hitta parkopplingsporten. Kontrollera att Apple TV:n är i parkopplingsläge.",
+      "retry": "Sök igen"
+    },
     "step": {
       "start": {
         "title": "Start",

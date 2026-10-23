@@ -15,10 +15,60 @@
         <p>
           <label class="inline-block w-16"
             >{{ $t("pair.step.start.device") }}：</label
-          >{{ device.name }}
+          >{{ deviceLabel }}
         </p>
-        <p><label class="inline-block w-16">IP：</label>{{ truncateIP(device.ip) }}</p>
-        <button class="btn btn-primary" @click="start">
+        <p><label class="inline-block w-16">IP：</label>{{ truncateIP(deviceIp) }}</p>
+
+        <!-- Manual IP: discover the pairing port before pairing is allowed -->
+        <div v-if="isManual" class="atv-discovery" :class="'atv-discovery--' + discovery.stage">
+          <div class="atv-discovery-head">
+            <span
+              v-if="discovery.stage === 'found'"
+              class="w-5 h-5 text-green-500"
+            ><CheckMarkIcon /></span>
+            <span
+              v-else-if="discovery.stage === 'failed'"
+              class="w-5 h-5 text-red-500"
+            ><DismissIcon /></span>
+            <span
+              v-else
+              class="loading loading-spinner loading-sm"
+            ></span>
+            <span class="atv-discovery-title">{{ discoveryTitle }}</span>
+          </div>
+
+          <!-- Scanning progress bar -->
+          <div
+            v-if="discovery.stage === 'mdns' || discovery.stage === 'scanning' || discovery.stage === 'probing'"
+            class="atv-discovery-bar"
+          >
+            <div class="atv-discovery-bar-fill" :style="{ width: discoveryBarWidth }"></div>
+          </div>
+
+          <p v-if="discovery.stage === 'found'" class="atv-discovery-detail">
+            {{ $t("pair.manual.found", { port: discovery.port }) }}
+            <span v-if="discovery.name">· {{ discovery.name }}</span>
+          </p>
+          <p v-else-if="discovery.stage === 'failed'" class="atv-discovery-detail atv-discovery-detail--error">
+            {{ $t("pair.manual.failed") }}
+          </p>
+
+          <button
+            v-if="discovery.stage === 'failed' || discovery.stage === 'found'"
+            type="button"
+            class="btn btn-sm btn-soft atv-discovery-retry"
+            @click="discover"
+          >
+            <span class="w-4 h-4"><RefreshIcon /></span>
+            {{ $t("pair.manual.retry") }}
+          </button>
+        </div>
+
+        <button
+          class="btn btn-primary"
+          @click="start"
+          :disabled="isManual && discovery.stage !== 'found'"
+        >
           {{ $t("pair.step.start.button") }}
         </button>
       </div>
@@ -80,6 +130,15 @@ export default {
       loading: false,
       id: "",
       device: {},
+      // Manual-IP pairing state
+      isManual: false,
+      manualIp: "",
+      discovery: {
+        stage: "", // mdns | scanning | probing | found | failed
+        percent: 0,
+        port: 0,
+        name: "",
+      },
       cmd: {
         output: "",
         line: "",
@@ -91,11 +150,60 @@ export default {
       msg: "",
     };
   },
+  computed: {
+    deviceIp() {
+      return this.isManual ? this.manualIp : this.device.ip;
+    },
+    deviceLabel() {
+      if (this.isManual) {
+        return this.device.name || this.manualIp;
+      }
+      return this.device.name;
+    },
+    discoveryTitle() {
+      switch (this.discovery.stage) {
+        case "mdns":
+          return this.$t("pair.manual.stage_mdns");
+        case "scanning":
+          return this.$t("pair.manual.stage_scanning", { percent: this.discovery.percent });
+        case "probing":
+          return this.$t("pair.manual.stage_probing");
+        case "found":
+          return this.$t("pair.manual.stage_found");
+        case "failed":
+          return this.$t("pair.manual.stage_failed");
+        default:
+          return this.$t("pair.manual.discovering");
+      }
+    },
+    discoveryBarWidth() {
+      const pct = Math.min(100, Math.max(0, this.discovery.percent || 0));
+      return pct + "%";
+    },
+  },
   created() {
-    this.id = this.$route.params.id;
+    this.isManual = this.$route.name === "pair-manual" || !!this.$route.query.ip;
+    this.id = this.$route.params.id || "";
 
     this.initWebSocket();
-    this.fetchData();
+
+    if (this.isManual) {
+      this.manualIp = (this.$route.query.ip || "").toString();
+      this.device = { ip: this.manualIp, name: this.manualIp };
+      // Discovery starts in websocketonopen: the socket is still CONNECTING
+      // here, so the start button stays disabled until the port is found.
+    } else {
+      this.fetchData();
+    }
+  },
+  unmounted() {
+    if (this.websock) {
+      try {
+        this.websock.close();
+      } catch (e) {
+        /* ignore */
+      }
+    }
   },
   methods: {
     fetchData() {
@@ -104,12 +212,23 @@ export default {
         _this.device = res.data;
       });
     },
+    discover() {
+      let _this = this;
+      _this.discovery = { stage: "", percent: 0, port: 0, name: "" };
+      // t=3: request manual pairing port discovery for the entered IP.
+      _this.websocketsend(3, _this.manualIp);
+    },
     start() {
       let _this = this;
       _this.active = 1;
 
       _this.loading = true;
-      _this.websocketsend(1, _this.device.id || _this.id);
+      if (_this.isManual) {
+        // t=4: pair the manually entered IP with the discovered port.
+        _this.websocketsend(4, { ip: _this.manualIp, port: _this.discovery.port });
+      } else {
+        _this.websocketsend(1, _this.device.id || _this.id);
+      }
     },
     confirmPin() {
       let _this = this;
@@ -147,6 +266,10 @@ export default {
     },
     websocketonopen() {
       console.log("WebSocket connect success.");
+      // Manual mode: begin discovery once the socket is open.
+      if (this.isManual) {
+        this.discover();
+      }
     },
     websocketonerror(e) {
       console.log("WebSocket connect failed.");
@@ -154,7 +277,27 @@ export default {
     websocketonmessage(e) {
       let _this = this;
 
-      let line = e.data
+      let line = e.data;
+
+      // Discovery progress arrives as a JSON object (leading '{'); everything
+      // else is raw pairing output.
+      if (typeof line === "string" && line.charAt(0) === "{") {
+        let msg;
+        try {
+          msg = JSON.parse(line);
+        } catch (err) {
+          msg = null;
+        }
+        if (msg && msg.kind === "discover") {
+          _this.discovery.stage = msg.stage || "";
+          _this.discovery.percent = msg.percent || 0;
+          if (msg.stage === "found") {
+            _this.discovery.port = msg.port || 0;
+            _this.discovery.name = msg.name || "";
+          }
+          return;
+        }
+      }
 
       if (_this.active === 1) {
         // show Enter PIN
@@ -199,11 +342,20 @@ export default {
 
     websocketsend(t, data) {
       let _this = this;
+      // Guard against a send while the socket is still CONNECTING (0) or
+      // closing. readyState 1 === OPEN; a test double may omit it.
+      const sock = _this.websock;
+      if (!sock) {
+        return;
+      }
+      if (sock.readyState !== undefined && sock.readyState !== 1) {
+        return;
+      }
       if (typeof data !== 'string') {
         data = JSON.stringify(data);
       }
       const json = JSON.stringify({ t: t, d: data });
-      _this.websock.send(json);
+      sock.send(json);
     },
 
     websocketclose(e) {
@@ -215,9 +367,74 @@ export default {
 
 <script setup>
 import CheckMarkIcon from "@/assets/icons/checkmark.svg";
+import DismissIcon from "@/assets/icons/dismiss.svg";
+import RefreshIcon from "@/assets/icons/refresh.svg";
 </script>
 <style scoped>
 .line {
   text-align: center;
+}
+
+/* Manual-IP pairing port discovery panel */
+.atv-discovery {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--atv-border);
+  border-radius: 12px;
+  background: var(--atv-surface-alt);
+}
+
+.atv-discovery--found {
+  border-color: var(--atv-success-border, #b7e4c7);
+  background: var(--atv-success-soft, #f0fbf3);
+}
+
+.atv-discovery--failed {
+  border-color: var(--atv-danger, #e5a3a3);
+  background: var(--atv-danger-soft, #fdf2f2);
+}
+
+.atv-discovery-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 650;
+  color: var(--atv-ink);
+}
+
+.atv-discovery-title {
+  font-size: 0.9rem;
+}
+
+.atv-discovery-bar {
+  height: 6px;
+  width: 100%;
+  border-radius: 999px;
+  background: var(--atv-border);
+  overflow: hidden;
+}
+
+.atv-discovery-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--atv-accent);
+  transition: width 200ms ease;
+}
+
+.atv-discovery-detail {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--atv-muted);
+}
+
+.atv-discovery-detail--error {
+  color: var(--atv-danger, #b23b3b);
+}
+
+.atv-discovery-retry {
+  align-self: flex-start;
+  gap: 6px;
 }
 </style>

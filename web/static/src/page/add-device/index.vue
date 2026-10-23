@@ -277,12 +277,14 @@ export default {
         return;
       }
       const device = await this.findDevice(() => this.atvDevices, this.loadAppleTVDevices, ip);
-      if (!device) {
-        toast.error(this.$t("addDevice.appletv.no_device"));
+      if (device) {
+        // Discovered device: hand it to the existing pairing flow page.
+        this.$router.push({ name: "pair", params: { id: device.id } });
         return;
       }
-      // Hand the device to the existing pairing flow page.
-      this.$router.push({ name: "pair", params: { id: device.id } });
+      // Manual IP: open the pair page in manual mode, which discovers the
+      // pairing port before allowing pairing.
+      this.$router.push({ name: "pair-manual", query: { ip } });
     },
     onFileChange(e) {
       this.files = e.target.files;

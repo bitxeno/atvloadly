@@ -104,3 +104,29 @@ func TestPairConcurrentClose(t *testing.T) {
 		t.Fatalf("Close did not cancel active pairing: %v", ctx.Err())
 	}
 }
+
+func TestPairCommandArgsManualFlag(t *testing.T) {
+	discovered := model.Device{IP: "192.168.1.229", Port: 61108}
+	args := pairCommandArgs(discovered, "61108")
+	if pairArgsHas(args, "--manual") {
+		t.Fatalf("discovered device must not pass --manual: %v", args)
+	}
+
+	manual := model.Device{IP: "100.64.0.9", Port: 61108, Manual: true}
+	args = pairCommandArgs(manual, "61108")
+	if !pairArgsHas(args, "--manual") {
+		t.Fatalf("manual device must pass --manual: %v", args)
+	}
+	if !pairArgsHas(args, "100.64.0.9") || !pairArgsHas(args, "61108") {
+		t.Fatalf("manual args missing ip/port: %v", args)
+	}
+}
+
+func pairArgsHas(args []string, want string) bool {
+	for _, a := range args {
+		if a == want {
+			return true
+		}
+	}
+	return false
+}

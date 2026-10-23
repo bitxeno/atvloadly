@@ -156,6 +156,17 @@
             "pair_error": "配对出错，请到控制台查看详细信息",
             "no_device_found": "找不到设备，请确认 usbmuxd 服务已启动"
         },
+        "manual": {
+            "discovering": "正在探测配对端口…",
+            "stage_mdns": "正在查找配对服务…",
+            "stage_scanning": "正在扫描端口… {{percent}}%",
+            "stage_probing": "正在校验配对服务…",
+            "stage_found": "已找到配对端口",
+            "stage_failed": "未找到配对端口",
+            "found": "配对端口：{{port}}",
+            "failed": "未找到配对端口，请确认 Apple TV 已进入配对模式。",
+            "retry": "重新探测"
+        },
         "step": {
             "start": {
                 "title": "开始",

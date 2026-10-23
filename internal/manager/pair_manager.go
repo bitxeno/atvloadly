@@ -76,7 +76,7 @@ func (t *PairManager) Start(ctx context.Context, device model.Device) error {
 	}()
 
 	port := fmt.Sprintf("%d", device.Port)
-	err = exec.CommandContext(ctx, "plumesign", "pair", "--ip", device.IP, "--port", port).
+	err = exec.CommandContext(ctx, "plumesign", pairCommandArgs(device, port)...).
 		WithTimeout(timeout).
 		WithDir(app.Config.Server.DataDir).
 		WithEnv(GetRunEnvs()).
@@ -129,6 +129,16 @@ func (t *PairManager) ErrorLog() string {
 
 func (t *PairManager) OutputLog() string {
 	return t.outputStdout.String()
+}
+
+// pairCommandArgs builds the `plumesign pair` arguments. A manually entered
+// IP carries --manual so the engine knows the address was not probed.
+func pairCommandArgs(device model.Device, port string) []string {
+	args := []string{"pair", "--ip", device.IP, "--port", port}
+	if device.Manual {
+		args = append(args, "--manual")
+	}
+	return args
 }
 
 type pairOutputWriter struct {
