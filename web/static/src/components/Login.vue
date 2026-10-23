@@ -6,11 +6,24 @@
       :class="['modal', { 'modal-open': loginDialogVisible }]"
     >
       <div class="modal-box">
-        <h3 class="font-bold text-lg">{{ $t("install.login_modal.title") }}</h3>
-        <div class="alert alert-warning atv-warning text-sm mt-3">
-          <span class="whitespace-normal break-words">{{
-            $t("install.login_modal.2fa_warning")
-          }}</span>
+        <div class="flex items-center justify-between">
+          <h3 class="font-bold text-lg">{{ $t("install.login_modal.title") }}</h3>
+          <div class="dropdown dropdown-left dropdown-hover">
+            <label tabindex="0" class="cursor-pointer">
+              <div class="w-4 h-4 text-secondary-content"><HelpIcon /></div>
+            </label>
+            <div
+              tabindex="0"
+              class="dropdown-content z-[1] rounded-box shadow bg-base-100 p-2 w-56 text-sm"
+            >
+              <a
+                class="link link-hover"
+                href="https://github.com/bitxeno/atvloadly/wiki/Setup-burned-account-to-receive-2FA-on-a-trusted-device"
+                target="_blank"
+                rel="noopener noreferrer"
+              >{{ $t("install.login_modal.setup_2fa_help") }}</a>
+            </div>
+          </div>
         </div>
         <form ref="loginForm" class="flex flex-col gap-y-4 mt-4" @submit.prevent>
           <div class="form-control w-full">
@@ -97,9 +110,11 @@
 
 <script>
 import { toast } from "vue3-toastify";
+import HelpIcon from "@/assets/icons/help.svg";
 
 export default {
     name: "Login",
+    components: { HelpIcon },
     data() {
         return {
             loginWebsock: null,
