@@ -106,4 +106,25 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Phones: give each option a comfortable tap target and let long device
+   names wrap instead of being cut off. */
+@media (max-width: 767px) {
+  .atv-combo-list {
+    max-height: 45vh;
+  }
+
+  .atv-combo-list li > button {
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+
+  .atv-combo-label {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    word-break: break-word;
+    line-height: 1.35;
+  }
+}
 </style>

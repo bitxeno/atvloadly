@@ -485,12 +485,14 @@
                   <span class="loading loading-spinner" v-show="advanced.serverLoading"></span>{{ $t('settings.advanced.save') }}
                 </button>
               </div>
-              <ul v-show="serverComboOpen" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-full gap-1">
+              <ul v-show="serverComboOpen" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-full gap-1 atv-anisette-list">
                 <li v-for="preset in anisetteServerPresets" :key="preset.url">
-                  <button type="button" @click="pickAnisetteServer(preset.default ? '' : preset.url)">
-                    <span class="font-mono text-sm">{{ preset.url }}</span>
-                    <span class="text-xs opacity-50">{{ preset.name }}</span>
-                    <span v-if="preset.default" class="badge badge-neutral badge-sm">{{ $t('settings.advanced.anisette_server_default_tag') }}</span>
+                  <button type="button" class="atv-anisette-item" @click="pickAnisetteServer(preset.default ? '' : preset.url)">
+                    <span class="font-mono text-sm atv-anisette-url">{{ preset.url }}</span>
+                    <span class="atv-anisette-meta">
+                      <span class="text-xs opacity-50">{{ preset.name }}</span>
+                      <span v-if="preset.default" class="badge badge-neutral badge-sm">{{ $t('settings.advanced.anisette_server_default_tag') }}</span>
+                    </span>
                   </button>
                 </li>
               </ul>
@@ -1088,6 +1090,43 @@ form {
 
   .section :deep(.btn.w-48) {
     width: 100%;
+  }
+}
+
+/* Anisette server presets: stack the URL above its name and default tag so
+   nothing is squeezed on a narrow screen. */
+.atv-anisette-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.atv-anisette-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .atv-anisette-list {
+    max-height: 45vh;
+    overflow-y: auto;
+  }
+
+  .atv-anisette-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 10px 12px;
+    min-height: 44px;
+  }
+
+  .atv-anisette-url {
+    white-space: normal;
+    word-break: break-all;
+    line-height: 1.35;
   }
 }
 </style>
