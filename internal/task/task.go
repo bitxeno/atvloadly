@@ -597,6 +597,16 @@ func (t *Task) runInternal(v model.InstalledApp, refresh bool, installMgr *manag
 		return nil, fmt.Errorf("device not found for UDID: %s", v.UDID)
 	}
 
+	// A manual (Tailscale) device has no mDNS-provided tunnel port; resolve it
+	// before installing so the engine can reach the device over RSD.
+	if manager.ManualPortNeedsResolve(dev) {
+		installMgr.WriteLog("Resolving tunnel port for manual device...\n")
+	}
+	if err := manager.PrepareManualDevice(context.Background(), dev); err != nil {
+		installMgr.WriteLog(err.Error() + "\n")
+		return nil, err
+	}
+
 	err := installMgr.TryStart(context.Background(), manager.InstallOptions{
 		UDID:             v.UDID,
 		Account:          v.Account,

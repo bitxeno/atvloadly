@@ -26,6 +26,9 @@ type Device struct {
 	DeveloperModeStatus      bool             `json:"developer_mode_status"`
 	PersonalizedImageMounted bool             `json:"personalized_image_mounted"`
 	DiscoveryAt              time.Time        `json:"-"`
+	// PortResolvedAt is when a manual device's dynamic tunnel Port was last
+	// discovered. Not serialized: it only guards the in-memory cache.
+	PortResolvedAt time.Time `json:"-"`
 }
 
 func (d *Device) ParseDeviceClass() {

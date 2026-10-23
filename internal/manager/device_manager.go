@@ -49,7 +49,11 @@ type DeviceManager struct {
 	// Tailscale) that mDNS cannot discover. They are loaded from the pairing
 	// files and merged into GetDevices, and survive Scan() (which only clears
 	// mDNS devices).
-	manualDevices        sync.Map
+	manualDevices sync.Map
+	// manualPortMu/manualPortLocks serialize tunnel-port discovery per manual
+	// device so a concurrent install and refresh do not scan simultaneously.
+	manualPortMu         sync.Mutex
+	manualPortLocks      map[string]*sync.Mutex
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	mu                   sync.Mutex
@@ -78,6 +82,7 @@ func newDeviceManager() *DeviceManager {
 		pairingCheckedAt:      make(map[string]time.Time),
 		pairingCancel:         make(map[string]*pairingCheck),
 		remotePairingServices: make(map[string]string),
+		manualPortLocks:       make(map[string]*sync.Mutex),
 	}
 }
 
@@ -474,6 +479,13 @@ func (dm *DeviceManager) ReloadManualDevices() {
 // loadManualDevicesFromDir rebuilds manualDevices from the .json pairing files
 // in dir (split out so tests can point at a temp directory).
 func (dm *DeviceManager) loadManualDevicesFromDir(dir string) {
+	// Preserve a resolved tunnel port across reloads: ports are dynamic, but a
+	// freshly probed one stays valid for the cache TTL.
+	previous := sync.Map{}
+	dm.manualDevices.Range(func(k, v any) bool {
+		previous.Store(k, v)
+		return true
+	})
 	dm.manualDevices = sync.Map{}
 	matches, err := filepath.Glob(filepath.Join(dir, "*.json"))
 	if err != nil {
@@ -509,8 +521,82 @@ func (dm *DeviceManager) loadManualDevicesFromDir(dir string) {
 		if dev.Name == "" {
 			dev.Name = rd.RemotePairingIP
 		}
+		if old, ok := previous.Load(id); ok {
+			o := old.(model.Device)
+			dev.Port = o.Port
+			dev.PortResolvedAt = o.PortResolvedAt
+		}
 		dm.manualDevices.Store(id, dev)
 	}
+}
+
+// manualPortTTL bounds how long a discovered manual-device tunnel port is
+// reused before it is probed again.
+const manualPortTTL = 60 * time.Second
+
+// discoverTunnelPortFunc resolves a manual device's _remotepairing tunnel
+// port. It is a variable so tests can replace the network probe.
+var discoverTunnelPortFunc = DiscoverManualTunnelPort
+
+// manualPortLock returns the per-device mutex used to serialize port discovery.
+func (dm *DeviceManager) manualPortLock(key string) *sync.Mutex {
+	dm.manualPortMu.Lock()
+	defer dm.manualPortMu.Unlock()
+	l, ok := dm.manualPortLocks[key]
+	if !ok {
+		l = &sync.Mutex{}
+		dm.manualPortLocks[key] = l
+	}
+	return l
+}
+
+// PrepareManualDevice ensures a manual device has a usable _remotepairing
+// tunnel port before an install/refresh/mount. Non-manual devices are a no-op.
+// The port is dynamic, so it is re-probed when missing or older than
+// manualPortTTL. It never retries automatically; callers decide what to do on
+// error.
+func (dm *DeviceManager) PrepareManualDevice(ctx context.Context, dev *model.Device) error {
+	if dev == nil || !dev.Manual || dev.IP == "" {
+		return nil
+	}
+	if dev.Port != 0 && time.Since(dev.PortResolvedAt) < manualPortTTL {
+		return nil
+	}
+
+	key := dev.UDID
+	if key == "" {
+		key = dev.IP
+	}
+	lock := dm.manualPortLock(key)
+	lock.Lock()
+	defer lock.Unlock()
+
+	// Another caller may have resolved the port while we waited; the cache is
+	// shared, so check it even when this caller's copy is still empty.
+	if dev.Port != 0 && time.Since(dev.PortResolvedAt) < manualPortTTL {
+		return nil
+	}
+	if dev.UDID != "" {
+		if cached, ok := dm.manualDevices.Load(utils.Md5(dev.UDID)); ok {
+			c := cached.(model.Device)
+			if c.Port != 0 && time.Since(c.PortResolvedAt) < manualPortTTL {
+				dev.Port = c.Port
+				dev.PortResolvedAt = c.PortResolvedAt
+				return nil
+			}
+		}
+	}
+
+	port, _, err := discoverTunnelPortFunc(ctx, dev.IP, nil)
+	if err != nil {
+		return fmt.Errorf("manual device tunnel port not found for %s: %w", dev.IP, err)
+	}
+	dev.Port = port
+	dev.PortResolvedAt = time.Now()
+	if dev.UDID != "" {
+		dm.manualDevices.Store(utils.Md5(dev.UDID), *dev)
+	}
+	return nil
 }
 
 // RemoveManualDevice drops a manual device from memory (after its pairing

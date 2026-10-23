@@ -232,6 +232,18 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 	manager.ReserveUploadTempFiles(v.IpaPath, v.Icon)
 	defer manager.ReleaseUploadTempFiles(v.IpaPath, v.Icon)
 
+	// A manual (Tailscale) device has no mDNS-provided tunnel port; resolve it
+	// before installing so the engine can reach the device over RSD.
+	if manager.ManualPortNeedsResolve(dev) {
+		mgr.WriteMessage("Resolving tunnel port for manual device...\n")
+	}
+	if err := manager.PrepareManualDevice(mgr.Context(), dev); err != nil {
+		mgr.WriteMessage(fmt.Sprintf("ERROR: %s", err.Error()))
+		mgr.WriteMessage("\n")
+		mgr.WriteMessage("Installation Failed!")
+		return
+	}
+
 	if v.IsExternalSigning() {
 		runExternalInstallMessage(mgr, installMgr, v, dev)
 		return

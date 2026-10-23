@@ -1,9 +1,13 @@
 package manager
 
 import (
+	"context"
 	"os"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/bitxeno/atvloadly/internal/model"
 )
@@ -73,5 +77,121 @@ func TestDeleteManualDeviceRemovesBothFiles(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(pdir, "AAA"+ext)); !os.IsNotExist(err) {
 			t.Fatalf("%s should be deleted", ext)
 		}
+	}
+}
+
+func withTunnelProbe(t *testing.T, fn func(context.Context, string, DiscoveryProgress) (uint16, *PairingServiceInfo, error)) {
+	t.Helper()
+	previous := discoverTunnelPortFunc
+	discoverTunnelPortFunc = fn
+	t.Cleanup(func() { discoverTunnelPortFunc = previous })
+}
+
+func TestPrepareManualDeviceResolvesPort(t *testing.T) {
+	calls := 0
+	withTunnelProbe(t, func(ctx context.Context, ip string, _ DiscoveryProgress) (uint16, *PairingServiceInfo, error) {
+		calls++
+		if ip != "100.65.100.37" {
+			t.Fatalf("unexpected ip: %s", ip)
+		}
+		return 49152, &PairingServiceInfo{Port: 49152, Tunnel: true}, nil
+	})
+
+	dm := newDeviceManager()
+	dev := model.Device{ID: "id", IP: "100.65.100.37", UDID: "AAA", Manual: true}
+	if err := dm.PrepareManualDevice(context.Background(), &dev); err != nil {
+		t.Fatalf("prepare: %v", err)
+	}
+	if dev.Port != 49152 {
+		t.Fatalf("port = %d, want 49152", dev.Port)
+	}
+	if calls != 1 {
+		t.Fatalf("probe calls = %d, want 1", calls)
+	}
+}
+
+func TestPrepareManualDeviceNoopForDiscovered(t *testing.T) {
+	calls := 0
+	withTunnelProbe(t, func(context.Context, string, DiscoveryProgress) (uint16, *PairingServiceInfo, error) {
+		calls++
+		return 1, nil, nil
+	})
+	dm := newDeviceManager()
+	dev := model.Device{IP: "192.168.1.9", UDID: "BBB", Manual: false}
+	if err := dm.PrepareManualDevice(context.Background(), &dev); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 0 || dev.Port != 0 {
+		t.Fatalf("discovered device must not be probed: calls=%d port=%d", calls, dev.Port)
+	}
+}
+
+func TestPrepareManualDeviceReusesFreshPort(t *testing.T) {
+	calls := 0
+	withTunnelProbe(t, func(context.Context, string, DiscoveryProgress) (uint16, *PairingServiceInfo, error) {
+		calls++
+		return 1, nil, nil
+	})
+	dm := newDeviceManager()
+	dev := model.Device{IP: "100.65.100.37", UDID: "AAA", Manual: true, Port: 49152, PortResolvedAt: time.Now()}
+	if err := dm.PrepareManualDevice(context.Background(), &dev); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 0 {
+		t.Fatalf("fresh cached port must not be re-probed, calls=%d", calls)
+	}
+}
+
+func TestPrepareManualDeviceReprobesExpiredPort(t *testing.T) {
+	calls := 0
+	withTunnelProbe(t, func(context.Context, string, DiscoveryProgress) (uint16, *PairingServiceInfo, error) {
+		calls++
+		return 50000, nil, nil
+	})
+	dm := newDeviceManager()
+	dev := model.Device{IP: "100.65.100.37", UDID: "AAA", Manual: true, Port: 49152, PortResolvedAt: time.Now().Add(-2 * manualPortTTL)}
+	if err := dm.PrepareManualDevice(context.Background(), &dev); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 || dev.Port != 50000 {
+		t.Fatalf("expired port must be re-probed: calls=%d port=%d", calls, dev.Port)
+	}
+}
+
+func TestPrepareManualDeviceErrorKeepsPortZero(t *testing.T) {
+	withTunnelProbe(t, func(context.Context, string, DiscoveryProgress) (uint16, *PairingServiceInfo, error) {
+		return 0, nil, ErrTunnelPortNotFound
+	})
+	dm := newDeviceManager()
+	dev := model.Device{IP: "100.65.100.37", UDID: "AAA", Manual: true}
+	if err := dm.PrepareManualDevice(context.Background(), &dev); err == nil {
+		t.Fatal("expected error")
+	}
+	if dev.Port != 0 {
+		t.Fatalf("port must stay 0 on error, got %d", dev.Port)
+	}
+}
+
+func TestPrepareManualDeviceConcurrentSingleProbe(t *testing.T) {
+	var calls int32
+	withTunnelProbe(t, func(context.Context, string, DiscoveryProgress) (uint16, *PairingServiceInfo, error) {
+		atomic.AddInt32(&calls, 1)
+		time.Sleep(20 * time.Millisecond)
+		return 49152, nil, nil
+	})
+	dm := newDeviceManager()
+
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			dev := model.Device{IP: "100.65.100.37", UDID: "AAA", Manual: true}
+			_ = dm.PrepareManualDevice(context.Background(), &dev)
+		}()
+	}
+	wg.Wait()
+	if got := atomic.LoadInt32(&calls); got != 1 {
+		t.Fatalf("concurrent prepare probed %d times, want 1", got)
 	}
 }
