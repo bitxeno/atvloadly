@@ -456,6 +456,14 @@ export default {
       data,
     });
   },
+  discoverTunnelPort: (ip) => {
+    return request({
+      url: "/api/pair/tunnel-port",
+      method: "get",
+      timeout: 30000,
+      params: { ip },
+    });
+  },
   scanWireless: () => {
     return request({
       url: "/api/scan/wireless",

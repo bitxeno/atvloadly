@@ -130,3 +130,19 @@ func pairArgsHas(args []string, want string) bool {
 	}
 	return false
 }
+
+func TestPairingCheckArgsManualFlag(t *testing.T) {
+	args := pairingCheckArgs("192.168.1.205", "49152", "/tmp/p.plist", false)
+	if pairArgsHas(args, "--manual") {
+		t.Fatalf("discovered device must not pass --manual: %v", args)
+	}
+	args = pairingCheckArgs("100.64.0.9", "49152", "/tmp/p.plist", true)
+	if !pairArgsHas(args, "--manual") {
+		t.Fatalf("manual device must pass --manual: %v", args)
+	}
+	for _, want := range []string{"check", "pairing", "100.64.0.9", "49152", "/tmp/p.plist"} {
+		if !pairArgsHas(args, want) {
+			t.Fatalf("missing %q in %v", want, args)
+		}
+	}
+}

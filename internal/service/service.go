@@ -268,9 +268,9 @@ func UpdateCoreADI() error {
 	return nil
 }
 
-func ImportPairingFile(ip string, port string, data []byte) error {
+func ImportPairingFile(ip string, port string, manual bool, data []byte) error {
 	// Call manager to process the file
-	if err := manager.ImportPairingFile(ip, port, data); err != nil {
+	if err := manager.ImportPairingFile(ip, port, manual, data); err != nil {
 		return err
 	}
 

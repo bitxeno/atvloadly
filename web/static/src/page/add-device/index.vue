@@ -168,6 +168,8 @@ export default {
       files: [],
       connecting: false,
       confirmDialogVisible: false,
+      // Parameters remembered for the overwrite confirmation of an import.
+      pendingImport: null,
     };
   },
   computed: {
@@ -300,16 +302,34 @@ export default {
         return;
       }
 
-      // The pairing service port comes from the discovered device.
-      const device = await this.findDevice(() => this.iphoneDevices, this.loadIphoneDevices, ip);
-      if (!device || !device.port) {
+      // A discovered device already carries its _remotepairing tunnel port.
+      const known = (this.iphoneDevices || []).find((item) => item.ip === ip);
+      if (known && known.port) {
+        await this.submitImport(ip, known.port, false, false);
+        return;
+      }
+
+      // Manual IP: discover the tunnel port, then validate the pairing file
+      // over it with --manual. The button spinner covers both steps.
+      this.connecting = true;
+      let tunnel;
+      try {
+        const res = await api.discoverTunnelPort(ip);
+        tunnel = res && res.data;
+      } catch (error) {
+        console.error("Failed to discover tunnel port:", error);
+        tunnel = null;
+      } finally {
+        this.connecting = false;
+      }
+      if (!tunnel || !tunnel.port) {
         toast.error(this.$t("addDevice.iphone.no_device"));
         return;
       }
 
-      await this.submitImport(device, false);
+      await this.submitImport(ip, tunnel.port, true, false);
     },
-    async submitImport(device, override) {
+    async submitImport(ip, port, manual, override) {
       this.connecting = true;
       try {
         const formData = new FormData();
@@ -317,8 +337,11 @@ export default {
         if (override) {
           formData.append("override", "true");
         }
-        formData.append("ip", device.ip);
-        formData.append("port", device.port);
+        if (manual) {
+          formData.append("manual", "true");
+        }
+        formData.append("ip", ip);
+        formData.append("port", port);
 
         await api.importPair(formData);
         toast.success(this.$t("laboratory.toast.import_success"));
@@ -333,6 +356,8 @@ export default {
           error.message &&
           error.message.includes("pairing file already exists")
         ) {
+          // Remember how to resubmit on overwrite confirmation.
+          this.pendingImport = { ip, port, manual };
           this.confirmDialogVisible = true;
         }
       } finally {
@@ -340,13 +365,13 @@ export default {
       }
     },
     async onConfirmOverride() {
-      const ip = (this.iphoneIp || "").trim();
-      const device = await this.findDevice(() => this.iphoneDevices, this.loadIphoneDevices, ip);
-      if (!device) {
-        this.confirmDialogVisible = false;
+      const pending = this.pendingImport;
+      this.pendingImport = null;
+      this.confirmDialogVisible = false;
+      if (!pending) {
         return;
       }
-      this.submitImport(device, true);
+      await this.submitImport(pending.ip, pending.port, pending.manual, true);
     },
   },
 };

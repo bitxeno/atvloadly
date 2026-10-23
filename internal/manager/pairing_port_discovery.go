@@ -36,6 +36,10 @@ const (
 	// DNS-SD query.
 	rpManualPairingFQDN = "_remotepairing-manual-pairing._tcp.local."
 
+	// rpTunnelFQDN is the tunnel/install service type (used for iPhone, which
+	// is validated over the _remotepairing tunnel port).
+	rpTunnelFQDN = "_remotepairing._tcp.local."
+
 	// Dynamic service ports live in the Darwin ephemeral range.
 	rpPortFirst = 49152
 	rpPortLast  = 65535
@@ -52,6 +56,10 @@ const (
 
 // ErrPairingPortNotFound is returned when no port answers allowsPairSetup.
 var ErrPairingPortNotFound = errors.New("manual pairing port not found")
+
+// ErrTunnelPortNotFound is returned when no port answers
+// allowsIncomingTunnelConnections.
+var ErrTunnelPortNotFound = errors.New("manual tunnel port not found")
 
 // Discovery stages reported to the caller so the UI can show progress.
 const (
@@ -185,8 +193,14 @@ func ProbePairingService(ctx context.Context, ip string, port uint16, timeout ti
 // returns the manual-pairing SRV port when the device answers. This is the fast
 // path on the same LAN; it fails across overlay networks.
 func discoverPairingPortMDNS(ctx context.Context, ip string, timeout time.Duration) (uint16, bool) {
+	return discoverPortMDNS(ctx, ip, rpManualPairingFQDN, timeout)
+}
+
+// discoverPortMDNS sends a unicast DNS-SD PTR query for fqdn and returns the
+// first SRV port in the answer.
+func discoverPortMDNS(ctx context.Context, ip, fqdn string, timeout time.Duration) (uint16, bool) {
 	m := new(dns.Msg)
-	m.SetQuestion(rpManualPairingFQDN, dns.TypePTR)
+	m.SetQuestion(fqdn, dns.TypePTR)
 	m.RecursionDesired = false
 
 	dialer := net.Dialer{Timeout: timeout}
@@ -299,8 +313,52 @@ func probePorts(ctx context.Context, ip string, ports []uint16, concurrency int,
 	return results
 }
 
-// discoverManualPairingPort is the testable core: it tries the mDNS fast path
-// (unless skipped) then the two-stage TCP scan over [first,last].
+// portMatcher reports whether a handshaked service is the wanted one.
+type portMatcher func(*PairingServiceInfo) bool
+
+// discoverPortByService is the testable core shared by the manual-pairing and
+// tunnel discovery: it tries the mDNS fast path (unless skipped) then the
+// two-stage TCP scan over [first,last], returning the first port that satisfies
+// pick.
+func discoverPortByService(ctx context.Context, ip, fqdn string, first, last uint16, skipMDNS bool, pick portMatcher, progress DiscoveryProgress) (port uint16, info *PairingServiceInfo, err error) {
+	report := func(stage string, pct int) {
+		if progress != nil {
+			progress(stage, pct)
+		}
+	}
+
+	if !skipMDNS {
+		report(DiscoverStageMDNS, 0)
+		if p, ok := discoverPortMDNS(ctx, ip, fqdn, rpMDNSTimeout); ok {
+			if si, perr := ProbePairingService(ctx, ip, p, rpProbeTimeout); perr == nil && pick(si) {
+				report(DiscoverStageFound, 100)
+				return p, si, nil
+			}
+		}
+	}
+
+	report(DiscoverStageScanning, 0)
+	open := scanOpenPorts(ctx, ip, first, last, rpDialConcurrency, rpDialTimeout, func(done, total int) {
+		report(DiscoverStageScanning, done*100/total)
+	})
+	if ctx.Err() != nil {
+		return 0, nil, ctx.Err()
+	}
+
+	report(DiscoverStageProbing, 0)
+	for _, si := range probePorts(ctx, ip, open, rpProbeConcurrency, rpProbeTimeout) {
+		if pick(si) {
+			report(DiscoverStageFound, 100)
+			return si.Port, si, nil
+		}
+	}
+
+	report(DiscoverStageFailed, 100)
+	return 0, nil, nil
+}
+
+// discoverManualPairingPort is the manual-pairing variant: it also captures the
+// tunnel port seen during the same scan.
 func discoverManualPairingPort(ctx context.Context, ip string, first, last uint16, skipMDNS bool, progress DiscoveryProgress) (pairPort, tunnelPort uint16, info *PairingServiceInfo, err error) {
 	report := func(stage string, pct int) {
 		if progress != nil {
@@ -349,4 +407,20 @@ func discoverManualPairingPort(ctx context.Context, ip string, first, last uint1
 // specified IP: mDNS unicast fast path, then a full two-stage TCP scan.
 func DiscoverManualPairingPort(ctx context.Context, ip string, progress DiscoveryProgress) (pairPort, tunnelPort uint16, info *PairingServiceInfo, err error) {
 	return discoverManualPairingPort(ctx, ip, rpPortFirst, rpPortLast, false, progress)
+}
+
+// DiscoverManualTunnelPort finds the _remotepairing tunnel port for a manually
+// specified iPhone: mDNS unicast fast path, then a two-stage TCP scan. The
+// tunnel port is where `plumesign check pairing` validates the pairing file.
+func DiscoverManualTunnelPort(ctx context.Context, ip string, progress DiscoveryProgress) (port uint16, info *PairingServiceInfo, err error) {
+	port, info, err = discoverPortByService(ctx, ip, rpTunnelFQDN, rpPortFirst, rpPortLast, false, func(si *PairingServiceInfo) bool {
+		return si.Tunnel
+	}, progress)
+	if err != nil {
+		return 0, nil, err
+	}
+	if port == 0 {
+		return 0, nil, ErrTunnelPortNotFound
+	}
+	return port, info, nil
 }

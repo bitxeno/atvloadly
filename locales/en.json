@@ -666,7 +666,7 @@
             "device_placeholder": "e.g. 192.168.1.205, or pick a device",
             "device_tips": "The iPhone must be unlocked to be discovered and connected; supports a LAN IP address or a Tailscale IP address",
             "upload_label": "Upload Pairing File",
-            "no_device": "The IP address does not match a discovered iPhone. Refresh the list and pick a device.",
+            "no_device": "Could not find the iPhone tunnel service. Make sure the iPhone is unlocked and reachable on the same network (or over Tailscale).",
             "submit": "Start Connecting"
         },
         "toast": {

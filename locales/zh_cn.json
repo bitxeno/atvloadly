@@ -666,7 +666,7 @@
             "device_placeholder": "例如 192.168.1.205，或从列表选择设备",
             "device_tips": "iPhone 需要先解锁屏幕，才能被发现和连接，支持局域网 IP 地址或 Tailscale IP 地址",
             "upload_label": "上传 Pairing File",
-            "no_device": "该 IP 未匹配到已发现的 iPhone，请刷新列表后选择设备。",
+            "no_device": "未找到 iPhone 隧道服务端口，请确认 iPhone 已解锁且与电脑网络可达（局域网或 Tailscale）。",
             "submit": "开始连接"
         },
         "toast": {

@@ -170,3 +170,44 @@ func TestDiscoverManualPairingPortNotFound(t *testing.T) {
 		t.Fatalf("want ErrPairingPortNotFound, got %v", err)
 	}
 }
+
+func TestDiscoverTunnelPortFindsTunnel(t *testing.T) {
+	port, stop := rpMockServer(t, rpTunnelResponse)
+	defer stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	var stages []string
+	gotPort, info, err := discoverPortByService(ctx, "127.0.0.1", rpTunnelFQDN, port, port, true, func(si *PairingServiceInfo) bool {
+		return si.Tunnel
+	}, func(stage string, _ int) {
+		stages = append(stages, stage)
+	})
+	if err != nil {
+		t.Fatalf("discover tunnel: %v", err)
+	}
+	if gotPort != port || info == nil || !info.Tunnel {
+		t.Fatalf("unexpected result: port=%d info=%+v", gotPort, info)
+	}
+	if len(stages) == 0 || stages[len(stages)-1] != DiscoverStageFound {
+		t.Fatalf("expected to end in found stage, got %v", stages)
+	}
+}
+
+func TestDiscoverTunnelPortIgnoresPairSetupOnly(t *testing.T) {
+	// A pair-setup-only service must not be selected as a tunnel port.
+	port, stop := rpMockServer(t, rpPairSetupResponse)
+	defer stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	gotPort, _, err := discoverPortByService(ctx, "127.0.0.1", rpTunnelFQDN, port, port, true, func(si *PairingServiceInfo) bool {
+		return si.Tunnel
+	}, nil)
+	if err != nil {
+		t.Fatalf("discover: %v", err)
+	}
+	if gotPort != 0 {
+		t.Fatalf("pair-setup service must not be picked as tunnel, got port %d", gotPort)
+	}
+}
