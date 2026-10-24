@@ -1,6 +1,6 @@
-# atvloadly Desktop (mygo + webview)
+# atvloadly Desktop (mygo + menu bar)
 
-atvloadly 桌面版：用 [mygo](https://github.com/egoist/mygo)（Webview 壳）+ 复用现有 Go
+atvloadly 桌面版：用 [mygo](https://github.com/egoist/mygo)（菜单栏壳）+ 复用现有 Go
 server 作为本地后端，支持 macOS 12+ 与 Windows 10/11（x64 / arm64）。
 
 ## 总体架构
@@ -10,16 +10,17 @@ server 作为本地后端，支持 macOS 12+ 与 Windows 10/11（x64 / arm64）�
 │  atvloadly.app / atvloadly.exe（mygo 单二进制 + 嵌入前端）    │
 │                                                              │
 │  ┌──────────────────────┐      ┌──────────────────────────┐  │
-│  │ Webview（系统自带）  │      │ 内嵌 atvloadly server     │
-│  │ macOS: WKWebView     │◄────►│ （现有 Fiber web/ 层，    │
-│  │ Windows: WebView2    │ HTTP │  复用 internal/* 全部业务 │
-│  └──────────────────────┘      └────────────┬─────────────┘  │
-│                                             │                │
-│                                  ┌──────────▼─────────────┐  │
-│                                  │ plumesign（随包分发）  │  │
-│                                  │ resources 按平台打包， │  │
-│                                  │ 构建时下载并签名       │  │
-│                                  └────────────────────────┘  │
+│  │ 菜单栏 / 通知区域    │      │ 内嵌 atvloadly server     │  │
+│  │ 浏览器 / 日志 / 退出 │      │ （现有 Fiber web/ 层，    │  │
+│  └──────────┬───────────┘      │  复用 internal/* 全部业务 │  │
+│             │                  └────────────┬─────────────┘  │
+│             │ 默认浏览器 HTTP               │                │
+│             ▼                               ▼                │
+│   http://127.0.0.1:<port>/      ┌─────────────────────────┐  │
+│                                 │ plumesign（随包分发）   │  │
+│                                 │ resources 按平台打包，  │  │
+│                                 │ 构建时下载并签名        │  │
+│                                 └─────────────────────────┘  │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -27,9 +28,10 @@ server 作为本地后端，支持 macOS 12+ 与 Windows 10/11（x64 / arm64）�
 
 1. 启动现有 server（复用 `cmd/server` 的引导顺序：config → settings → logger → i18n →
    db → signing → secrets → tasks → device manager），监听 `127.0.0.1:<随机空闲端口>`；
-2. 打开一个 mygo webview 窗口加载 `http://127.0.0.1:<port>/`；
-3. 窗口关闭时优雅停机退出。
+2. 在菜单栏 / 任务栏通知区域驻留图标，菜单提供"打开浏览器"、"打开日志文件"与"退出程序"（文案随界面语言本地化）；
+3. 启动后用默认浏览器打开 `http://127.0.0.1:<port>/`；退出时优雅停机。
 
+没有应用主窗口：macOS 不出现在 Dock（`LSUIElement`），Windows 不显示任务栏窗口按钮。
 不使用 `mygo.Bind` 的 typed IPC —— 前端仍走 HTTP API + WebSocket（`/ws/install`、
 `/ws/pair`、`/ws/login`），代码零改动；不重写 UI，直接复用 Vue 3 前端（`web/static`）。
 
@@ -40,14 +42,17 @@ desktop/
 ├── README.md                    # 本文件（开发方案）
 └── app/
     ├── go.mod                   # 独立 module（mygo 需要 Go 1.27+，见关键决策 #2）
-    ├── main.go                  # 桌面壳入口：起 server goroutine + mygo 窗口
-    ├── server.go                # bootstrap：复用 server 启动逻辑，注入随机端口与桌面数据目录
-    ├── window.go                # mygo 窗口配置、关闭→退出联动、单实例
+    ├── main.go                  # 桌面壳入口：起 server、菜单栏图标、单实例、打开浏览器
+    ├── locales.go               # 内嵌服务端文案（构建时从仓库根 locales/ 复制）
     ├── plumesign.go             # plumesign 资源路径解析（PathResources 优先，PATH 回退）
-    ├── mygo.config.ts           # mygo CLI 配置（devUrl、buildCommand、resources）
+    ├── mygo.config.ts           # mygo CLI 配置（LSUIElement、buildCommand、resources）
     ├── package.json             # 桌面壳工具链（mygo CLI）
+    ├── assets/
+    │   ├── tray-darwin.svg      # macOS 菜单栏图标源文件
+    │   ├── tray-darwin.png      # 由 SVG 栅格化的黑色透明模板图
+    │   └── tray-windows.png     # 通知区域图标，取自 resources/icon.png
     └── resources/
-        ├── icon.png             # 桌面应用图标（1024×1024）
+        ├── icon.png             # 桌面应用图标（1024×1024，由 AppIcon.icon 渲染）
         ├── darwin/bin/plumesign          # macOS universal（构建时脚本下载）
         └── windows-amd64/bin/plumesign.exe
 ```
@@ -90,6 +95,9 @@ embed；desktop module 够不到根 main 的 embed，因此构建时由 `buildCo
 `locales.go` embed 这份副本，`run()` 里调 `i18n.Init`。根目录结构不动；
 目录结构如 web 的 `src → dist` 一样，源在根、副本进包。
 
+菜单文案使用同一份 locales 的 `tray.*` 键：启动时优先使用 Web UI 已保存的语言，
+首次启动跟随系统语言；Web UI 切换语言后，`i18n.OnLanguageChanged` 回调会重建菜单。
+
 ### 桌面版需要处理的服务端差异
 
 | 差异点 | 现状 | 桌面版处理 |
@@ -97,7 +105,8 @@ embed；desktop module 够不到根 main 的 embed，因此构建时由 `buildCo
 | 设备发现（mDNS） | `device_manager_mdns.go`（`//go:build !linux`）已用纯 Go zeroconf | 无需改动；Windows/macOS 直接可用 |
 | lockdown 目录 | `app.LockdownDir()` 已按平台处理 | 无需改动 |
 | 配置文件 | `config.yaml`（koanf） | 桌面版不要求用户写 yaml：启动时生成默认配置到用户数据目录 |
-| 日志 | lumberjack 文件 + stdout | 写到用户数据目录 `logs/`，窗口内提供"打开日志"入口（后续） |
+| 日志 | lumberjack 文件 + stdout | 写到用户数据目录的 `app.log`，菜单"打开日志文件"用默认编辑器打开 |
+| 子进程控制台窗口 | Windows GUI 程序执行控制台子进程会弹出黑窗 | `internal/exec` 统一加 `HideWindow` + `CREATE_NO_WINDOW`，plumesign 全部调用静默 |
 
 ## 开发流程
 
@@ -106,7 +115,7 @@ embed；desktop module 够不到根 main 的 embed，因此构建时由 `buildCo
 ```sh
 cd desktop/app
 npm install
-npm run dev             # mygo dev：构建并启动桌面壳（窗口加载内嵌 server）
+npm run dev             # mygo dev：构建并启动桌面壳（驻留菜单栏 + 打开浏览器）
 ```
 
 ### 构建
@@ -150,6 +159,8 @@ ad-hoc 签名。
 
 | 里程碑 | 内容 | 验收 |
 |--------|------|------|
-| M1 桌面壳跑通 ✅ | 独立 go.mod、bootstrap 提取、内嵌 server + webview 加载回环地址 | macOS 打包 app 启动：窗口显示完整前端，mDNS 发现设备，回环 200 |
-| M2 图标 + plumesign + 单实例 ✅ | Icon Composer 图标（Liquid Glass）、plumesign 随包分发、单实例锁 | Dock 显示新图标；bundle 内签名 plumesign 进 PATH；二次启动退出并聚焦已有窗口 |
+| M1 桌面壳跑通 ✅ | 独立 go.mod、bootstrap 提取、内嵌 server + 默认浏览器加载回环地址 | macOS 打包 app 启动：浏览器显示完整前端，mDNS 发现设备，回环 200 |
+| M2 图标 + plumesign + 单实例 ✅ | Icon Composer 图标（Liquid Glass）、plumesign 随包分发、单实例锁 | 菜单栏显示图标；bundle 内签名 plumesign 进 PATH；二次启动在已有实例中打开浏览器 |
 | M3 发布打磨 ✅ | 版本号注入（version_gen.go）、CI（desktop-release.yml：macOS universal 签名公证 + Windows NSIS，desktop-v* tag 触发） | `npm run build:release` 后 `/api/version` 报告注入版本；CI 待真实 tag 验证 |
+| M4 菜单栏常驻 ✅ | 去掉主窗口，macOS `LSUIElement` + Windows 通知区域图标；单击图标显示"打开浏览器 / 打开日志文件 / 退出程序" | 双击运行后自动打开浏览器且无主窗口；退出菜单停止内嵌 server 并结束进程 |
+| M5 Windows 打磨 ✅ | Windows 应用/通知区域图标取自 `AppIcon.icon` 的渲染；plumesign 子进程不再弹出控制台窗口 | 任务栏与通知区域显示 App 图标；配对、安装等操作全程无黑窗 |

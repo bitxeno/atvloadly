@@ -2,7 +2,17 @@ name: "🖥️ Desktop Release"
 
 # Desktop builds of the mygo app in desktop/app, published with the server
 # release. The whole dependency tree is pure Go (lzfse decodes through
-# bitxeno/lzfse-go), so any runner compiles every platform without cgo.
+# bitxeno/lzfse-go), so any runner compiles every platform without cgo —
+# except code signing and the DMG, which need macOS: the darwin targets
+# build on macos-latest (unsigned Go binaries are killed by Apple silicon
+# kernels, and hdiutil only exists there), Windows builds on ubuntu-latest
+# (mygo downloads NSIS itself).
+#
+# After publishing, the macOS DMG is pushed as a Homebrew cask to the
+# bitxeno/homebrew-tap repo (secrets HOMEBREW_TAP_TOKEN with contents:write
+# on that repo). The cask strips the quarantine xattr post-install and fixes
+# the bundled plumesign's exec bit, so `brew install --cask bitxeno/tap/atvloadly`
+# works without Gatekeeper friction.
 on:
   push:
     tags: ["desktop-v*"]
@@ -11,10 +21,21 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     name: Build apps
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            platforms: darwin/universal
+          - os: ubuntu-latest
+            platforms: windows/amd64,windows/arm64
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v6
@@ -32,6 +53,17 @@ jobs:
       - name: Build frontend
         run: cd web/static && npm install && npm run build
 
+      # plumesign binaries are gitignored (desktop/app/resources/*/bin/);
+      # fetch them so the app bundles its signing engine.
+      - name: Fetch plumesign
+        run: desktop/scripts/fetch-plumesign.sh
+
+      # mygo makes the Windows installer with NSIS and only warns when it is
+      # missing (it downloads NSIS itself on Windows, not on Linux).
+      - name: Install NSIS
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq nsis
+
       - name: Build desktop apps
         working-directory: desktop/app
         env:
@@ -44,12 +76,12 @@ jobs:
           MACOS_NOTARY_PROFILE: ${{ secrets.MACOS_NOTARY_PROFILE }}
         run: |
           npm install
-          npm run build:release -- -platform darwin/universal,windows/amd64,windows/arm64
+          npm run build:release -- -platform=${{ matrix.platforms }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: desktop-apps
+          name: desktop-apps-${{ matrix.os }}
           path: desktop/app/build/
           retention-days: 1
 
@@ -58,18 +90,134 @@ jobs:
     needs: [build]
     if: startsWith(github.ref, 'refs/tags/desktop-v')
     runs-on: ubuntu-latest
+    outputs:
+      VERSION: ${{ steps.version.outputs.VERSION }}
+      DMG_SHA256: ${{ steps.cask.outputs.DMG_SHA256 }}
     steps:
-      - name: Download artifact
+      - name: Download macOS artifact
         uses: actions/download-artifact@v8
         with:
-          name: desktop-apps
+          name: desktop-apps-macos-latest
           path: dist
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: desktop-apps-ubuntu-latest
+          path: dist
+
+      - name: Derive version
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#desktop-v}" >> "$GITHUB_OUTPUT"
+
+      # mygo names the universal DMG "atvloadly <version>.dmg" (with a space);
+      # rename to the dash form the cask and checksums reference.
+      - name: Normalize artifact names
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          DMG="$(find dist -name "atvloadly $VERSION.dmg" | head -1)"
+          if [ -z "$DMG" ]; then
+            echo "DMG 'atvloadly $VERSION.dmg' not found in dist:" >&2
+            find dist -type f >&2
+            exit 1
+          fi
+          mv "$DMG" "dist/atvloadly-$VERSION.dmg"
+          ls -la dist
 
       - name: Create release
         uses: softprops/action-gh-release@v3
         with:
           name: atvloadly Desktop ${{ github.ref_name }}
           files: |
-            dist/**/*
+            dist/**/*.dmg
+            dist/**/*.exe
           generate_release_notes: true
           draft: true
+
+      # Cask generation needs the DMG's final checksum, so it runs after the
+      # release step. The DMG upload already happened above; only the cask
+      # file itself is uploaded here.
+      - name: Generate Homebrew cask
+        id: cask
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          DMG="dist/atvloadly-$VERSION.dmg"
+          [ -f "$DMG" ] || { echo "missing $DMG" >&2; exit 1; }
+          SHA=$(sha256sum "$DMG" | awk '{print $1}')
+          echo "DMG_SHA256=$SHA" >> "$GITHUB_OUTPUT"
+
+          # Indentation and the ENV.fetch style follow `brew style --fix`
+          # output so the tap repo's cop does not push back (the dshdock
+          # cask was validated this way).
+          cat > atvloadly.rb <<RUBY
+          # typed: strict
+          # frozen_string_literal: true
+
+          cask "atvloadly" do
+            version "$VERSION"
+            sha256 "$SHA"
+
+            url "https://github.com/$GITHUB_REPOSITORY/releases/download/desktop-v$VERSION/atvloadly-$VERSION.dmg"
+            name "atvloadly"
+            desc "Sideload apps onto Apple TV devices"
+            homepage "https://github.com/$GITHUB_REPOSITORY"
+
+            depends_on :macos
+
+            app "atvloadly.app"
+
+            # The build is not notarized (ad-hoc signing): strip quarantine
+            # right after install to avoid the first-launch Gatekeeper block,
+            # and restore the exec bit on the bundled plumesign engine under
+            # Resources/bin. Users downloading the DMG directly do not go
+            # through this path; caveats keeps the manual instructions.
+            postflight_steps do
+              run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{appdir}}/atvloadly.app"]
+              set_permissions "{{appdir}}/atvloadly.app/Contents/Resources/bin/plumesign", "0755"
+            end
+
+            caveats <<~EOS
+              The build is not notarized (ad-hoc signing). If Gatekeeper
+              blocks the first launch: right-click the app and choose Open,
+              or run
+                xattr -dr com.apple.quarantine /Applications/atvloadly.app
+            EOS
+          end
+          RUBY
+          ruby -c atvloadly.rb
+
+      - name: Upload cask to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$GITHUB_REF_NAME" atvloadly.rb --clobber
+
+      - name: Push cask to Homebrew tap
+        env:
+          TAP_REPO: ${{ secrets.HOMEBREW_TAP_REPO }}
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        # Skip gracefully when the secrets are not configured: the cask is
+        # attached to the Release assets and can be copied into the tap
+        # manually.
+        if: env.TAP_REPO != '' && env.TAP_TOKEN != ''
+        run: |
+          set -euo pipefail
+          # Use the Contents API instead of git push: git credentials are
+          # picky about OAuth token formats, while the API's Bearer auth
+          # plus printing the raw response on failure stays diagnosable.
+          API="https://api.github.com/repos/${TAP_REPO}/contents/Casks/atvloadly.rb"
+          OLD_SHA=$(curl -sf -H "Authorization: Bearer ${TAP_TOKEN}" "$API" | jq -r '.sha // empty') || true
+          jq -n --arg message "atvloadly ${VERSION}" \
+                --arg content "$(base64 -w0 atvloadly.rb)" \
+                --arg sha "$OLD_SHA" \
+                '{message: $message, content: $content}
+                 + (if $sha == "" then {} else {sha: $sha} end)' > payload.json
+          HTTP=$(curl -s -o response.json -w "%{http_code}" \
+            -X PUT -H "Authorization: Bearer ${TAP_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "$API" -d @payload.json)
+          echo "tap update HTTP ${HTTP}"
+          cat response.json | jq -r '.commit.html_url // .message'
+          case "$HTTP" in 200|201) exit 0;; *) exit 1;; esac

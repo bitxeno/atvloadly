@@ -28,10 +28,20 @@ func init() {
 }
 `;
 writeFileSync("version_gen.go", file);
+
+// The version reaches the macos bundle two more ways: mygo.config.ts reads
+// VERSION into the config (Info.plist, DMG file name), and mygo stamps the
+// same value into the update manifest.
 console.log("$", `version=${version} commit=${commit}`, "mygo build");
 
-const skipDmg = process.platform !== "win32" ? ["-skip-dmg"] : [];
-const r = spawnSync("go", ["run", "github.com/egoist/mygo/cmd/mygo", "build", ...skipDmg, ...process.argv.slice(2)], {
+// The DMG needs macOS (hdiutil) and only makes sense for darwin targets;
+// skip it otherwise (mygo would warn per darwin target).
+const argv = process.argv.slice(2);
+const platformArg = argv.indexOf("-platform");
+const platforms = (platformArg !== -1 ? argv[platformArg + 1] : argv.find((a) => a.startsWith("-platform="))?.split("=")[1]) || "";
+const hasDarwinTargets = platforms.split(",").some((p) => p.startsWith("darwin/"));
+const skipDmg = hasDarwinTargets ? [] : ["-skip-dmg"];
+const r = spawnSync("go", ["run", "github.com/egoist/mygo/cmd/mygo", "build", ...skipDmg, ...argv], {
   stdio: "inherit",
   env: { ...process.env, CGO_ENABLED: "0" },
 });

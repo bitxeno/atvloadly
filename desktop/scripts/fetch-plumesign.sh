@@ -42,9 +42,23 @@ if fetch "plumesign-macos-universal.tar.gz" /tmp/plumesign-macos.tar.gz; then
   rm -rf /tmp/plumesign-extract /tmp/plumesign-macos.tar.gz
 fi
 
-# Windows: a plain executable per architecture.
+# Windows: a plain executable per architecture. The upstream release has no
+# windows-arm64 asset; when it is missing, fall back to the x86_64 binary —
+# Windows on ARM runs it through emulation.
 mkdir -p resources/windows-amd64/bin resources/windows-arm64/bin
-fetch "plumesign-windows-x86_64.exe" resources/windows-amd64/bin/plumesign.exe || true
-fetch "plumesign-windows-arm64.exe" resources/windows-arm64/bin/plumesign.exe || true
+if fetch "plumesign-windows-x86_64.exe" resources/windows-amd64/bin/plumesign.exe; then
+  chmod +x resources/windows-amd64/bin/plumesign.exe
+  if [[ ! -f resources/windows-arm64/bin/plumesign.exe ]]; then
+    echo "note  plumesign-windows-arm64.exe not published; using the x86_64 binary (emulated on ARM)"
+    cp resources/windows-amd64/bin/plumesign.exe resources/windows-arm64/bin/plumesign.exe
+  else
+    echo "keep  resources/windows-arm64/bin/plumesign.exe"
+  fi
+else
+  echo "warn  windows plumesign missing; place a local build at resources/windows-amd64/bin/plumesign.exe" >&2
+  # An empty bin directory still gets packaged and breaks the NSIS "File /r"
+  # step ("no files found"); drop the directories so mygo skips them.
+  rmdir resources/windows-amd64/bin resources/windows-arm64/bin 2>/dev/null || true
+fi
 
 echo "plumesign resources ready (${VERSION}) — missing binaries warn and fall back to PATH"
