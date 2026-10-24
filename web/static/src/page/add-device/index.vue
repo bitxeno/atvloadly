@@ -153,10 +153,14 @@ export default {
   data() {
     return {
       activeTab: "appletv",
-      // Minimum spinner duration for the Apple TV list (first load, tab
-      // entry and manual refresh): the devices endpoint answers almost
-      // instantly, so the animation would otherwise not be visible.
+      // Minimum spinner duration for the Apple TV list (first load and
+      // manual refresh): the devices endpoint answers almost instantly,
+      // so the animation would otherwise not be visible.
       appleTVSpinnerMs: 1000,
+      // Each tab's list is fetched only the first time it is shown;
+      // later switches reuse the cached list.
+      atvLoaded: false,
+      iphoneLoaded: false,
       // Apple TV tab
       atvDevices: [],
       atvIp: "",
@@ -194,11 +198,12 @@ export default {
   methods: {
     selectTab(tab) {
       this.activeTab = tab;
-      // Each tab's list is refreshed when the tab is entered, so switching
-      // tabs always shows currently discoverable devices.
-      if (tab === "appletv") {
+      // A tab's list is refreshed only the first time it is shown; later
+      // switches reuse the loaded list. The combobox refresh button
+      // reloads on demand.
+      if (tab === "appletv" && !this.atvLoaded) {
         this.loadAppleTVDevices(this.appleTVSpinnerMs);
-      } else if (tab === "iphone") {
+      } else if (tab === "iphone" && !this.iphoneLoaded) {
         this.loadIphoneDevices();
       }
     },
@@ -213,8 +218,8 @@ export default {
     async loadAppleTVDevices(minSpinnerMs = 0) {
       // The devices endpoint answers almost instantly, so without a minimum
       // duration the spinner would flash by unnoticed. Keep it up for at
-      // least the requested time so first load, tab entry and refresh all
-      // give visible feedback.
+      // least the requested time so first load and refresh both give
+      // visible feedback.
       const startedAt = Date.now();
       this.loadingAtv = true;
       try {
@@ -227,6 +232,7 @@ export default {
             device.status === "pairable" &&
             (!device.device_class || this.isAppleTV(device)),
         );
+        this.atvLoaded = true;
       } catch (error) {
         console.error("Failed to load devices:", error);
       } finally {
@@ -251,6 +257,7 @@ export default {
         this.iphoneDevices = (res.data || []).filter(
           (device) => !device.device_class || this.isIPhone(device),
         );
+        this.iphoneLoaded = true;
       } catch (error) {
         console.error("Failed to load devices:", error);
         toast.error(
