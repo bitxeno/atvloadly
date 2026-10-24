@@ -468,6 +468,8 @@ export default {
       url: "/api/pair/tunnel-port",
       method: "get",
       timeout: 30000,
+      // The caller shows its own toast on failure; skip the interceptor toast.
+      silent: true,
       params: { ip },
     });
   },
