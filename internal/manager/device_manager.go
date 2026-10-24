@@ -52,8 +52,14 @@ type DeviceManager struct {
 	manualDevices sync.Map
 	// manualPortMu/manualPortLocks serialize tunnel-port discovery per manual
 	// device so a concurrent install and refresh do not scan simultaneously.
-	manualPortMu         sync.Mutex
-	manualPortLocks      map[string]*sync.Mutex
+	manualPortMu    sync.Mutex
+	manualPortLocks map[string]*sync.Mutex
+	// probeMu guards probeStates: per-UDID liveness tracking for mDNS devices
+	// that also have a manual (pairing-file) record. A device that fails
+	// repeated TCP probes is marked stale and hidden from GetDevices so its
+	// manual entry takes over.
+	probeMu              sync.Mutex
+	probeStates          map[string]*deviceProbeState
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	mu                   sync.Mutex
@@ -83,6 +89,7 @@ func newDeviceManager() *DeviceManager {
 		pairingCancel:         make(map[string]*pairingCheck),
 		remotePairingServices: make(map[string]string),
 		manualPortLocks:       make(map[string]*sync.Mutex),
+		probeStates:           make(map[string]*deviceProbeState),
 	}
 }
 
@@ -112,6 +119,7 @@ func (dm *DeviceManager) updateRemotePairingDevice(serviceName, ip string, port 
 			dev.Port = port
 			dev.DiscoveryAt = time.Now()
 			dm.devices.Store(k, dev)
+			dm.markDeviceAnnounced(dev)
 			return false
 		}
 		return true
@@ -231,6 +239,7 @@ func (dm *DeviceManager) checkRemotePairingAsync(ctx context.Context, identifier
 	removeLockdownDevice(device.UDID)
 	dm.DeleteDeviceByUDID(device.UDID)
 	dm.SaveDevice(device)
+	dm.markDeviceAnnounced(device)
 
 	// Trigger device connection callback
 	dm.onDeviceConnected(device)
@@ -241,6 +250,11 @@ func (dm *DeviceManager) GetDevices() []model.Device {
 	seen := map[string]bool{}
 	dm.devices.Range(func(k, v any) bool {
 		dev := v.(model.Device)
+		// A stale mDNS entry is hidden so its manual (pairing-file) record
+		// takes over. Liveness is only tracked for dual-source devices.
+		if dm.isDeviceStale(dev) {
+			return true
+		}
 		devices = append(devices, dev)
 		seen[deviceKey(dev)] = true
 		return true
@@ -391,6 +405,7 @@ func (dm *DeviceManager) DeleteDeviceByUDID(udid string) {
 		}
 		return true
 	})
+	dm.clearProbeState(udid)
 }
 
 func (dm *DeviceManager) DeleteDeviceByMacAddr(macAddr string) {
@@ -418,8 +433,10 @@ func (dm *DeviceManager) HasCheckedDevice(ip string, port uint16, name string) b
 
 func (dm *DeviceManager) DeleteDeviceByServiceName(serviceName string, conection model.DeviceConnection) {
 	dm.devices.Range(func(k, v any) bool {
-		if v.(model.Device).Connection == conection && v.(model.Device).ServiceName == serviceName {
+		dev := v.(model.Device)
+		if dev.Connection == conection && dev.ServiceName == serviceName {
 			dm.devices.Delete(k)
+			dm.clearProbeState(probeKey(dev))
 			return false
 		}
 		return true
