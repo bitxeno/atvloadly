@@ -44,11 +44,14 @@ const (
 	rpPortFirst = 49152
 	rpPortLast  = 65535
 
-	// Tuned from the design doc's measurements: 1024 concurrent dials with a
-	// 250ms timeout scans the whole range in a few seconds without exhausting
-	// local ports.
+	// Tuned from the design doc's measurements: 1024 concurrent dials scan
+	// the whole range in a few seconds without exhausting local ports. The
+	// 600ms dial timeout leaves room for high-latency overlay networks
+	// (Tailscale relay RTT is 100-250ms): at 250ms the open service ports
+	// that need a full handshake often exceed the budget and are missed,
+	// which makes tunnel discovery fail intermittently.
 	rpDialConcurrency  = 1024
-	rpDialTimeout      = 250 * time.Millisecond
+	rpDialTimeout      = 600 * time.Millisecond
 	rpProbeConcurrency = 16
 	rpProbeTimeout     = 2 * time.Second
 	rpMDNSTimeout      = 1500 * time.Millisecond
