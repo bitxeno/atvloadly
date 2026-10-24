@@ -487,7 +487,10 @@
               </div>
               <ul v-show="serverComboOpen" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-full gap-1 atv-anisette-list">
                 <li v-for="preset in anisetteServerPresets" :key="preset.url">
-                  <button type="button" class="atv-anisette-item" @click="pickAnisetteServer(preset.default ? '' : preset.url)">
+                  <!-- mousedown.prevent keeps focus on the input: WebKit moves
+                       focus on mousedown, which would close the list before
+                       the click lands. -->
+                  <button type="button" class="atv-anisette-item" @mousedown.prevent @click="pickAnisetteServer(preset.default ? '' : preset.url)">
                     <span class="font-mono text-sm atv-anisette-url">{{ preset.url }}</span>
                     <span class="atv-anisette-meta">
                       <span class="text-xs opacity-50">{{ preset.name }}</span>

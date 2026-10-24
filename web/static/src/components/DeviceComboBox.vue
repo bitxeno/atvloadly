@@ -29,7 +29,9 @@
       class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-full gap-1 atv-combo-list"
     >
       <li v-for="option in options" :key="option.value">
-        <button type="button" @click="pick(option)">
+        <!-- mousedown.prevent keeps focus on the input: WebKit moves focus on
+             mousedown, which would close the list before the click lands. -->
+        <button type="button" @mousedown.prevent @click="pick(option)">
           <span class="atv-combo-label">{{ option.label }}</span>
         </button>
       </li>
