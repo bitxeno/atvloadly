@@ -7,7 +7,6 @@ import (
 	"encoding/pem"
 	"os"
 	"path/filepath"
-	"syscall"
 
 	"github.com/bitxeno/atvloadly/internal/model"
 )
@@ -79,10 +78,11 @@ func Materialize(ws *Workspace, identity model.SigningIdentity, sealer *Sealer) 
 // writeSecretFile creates path (0600, never replacing an existing file or
 // following a symlink) with data.
 func writeSecretFile(path string, data []byte) error {
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL|syscall.O_NOFOLLOW, 0o600)
+	f, err := openNoFollow(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL)
 	if err != nil {
 		return Wrap(ClassSigning, CodeWorkspaceFailed, err, "the signing material cannot be written")
 	}
+	_ = f.Chmod(0o600)
 	_, err = f.Write(data)
 	if closeErr := f.Close(); err == nil {
 		err = closeErr
