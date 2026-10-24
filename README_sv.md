@@ -5,7 +5,7 @@
 
 <div align="center">
 
-[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt-989898)](https://github.com/bitxeno/atvloadly/internal/releases)
+[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt%20%7C%20macos%20%7C%20windows-989898)](https://github.com/bitxeno/atvloadly/internal/releases)
 [![release](https://img.shields.io/docker/v/bitxeno/atvloadly?label=docker%20latest&sort=semver)](https://hub.docker.com/r/bitxeno/atvloadly)
 [![Docker Image Size](https://img.shields.io/docker/image-size/bitxeno/atvloadly)](https://hub.docker.com/r/bitxeno/atvloadly)
 [![Docker Pulls](https://img.shields.io/docker/pulls/bitxeno/atvloadly)](https://hub.docker.com/r/bitxeno/atvloadly)
@@ -19,11 +19,11 @@
 
 </div>
 
-atvloadly är en webbtjänst för sideloading av appar på Apple TV. Den använder [Impactor](https://github.com/claration/Impactor) som underliggande teknik för sideloading och uppdaterar automatiskt apparna för att de ska fortsätta vara tillgängliga.
+atvloadly är en webbtjänst för sideloading av appar på Apple TV. Den använder [Impactor](https://github.com/claration/Impactor) som underliggande teknik för sideloading och uppdaterar automatiskt apparna för att de ska fortsätta vara tillgängliga. Den kan köras som Docker-tjänst på Linux/OpenWrt eller som en inbyggd skrivbordsapp på macOS och Windows.
 
 ## Funktioner
 
-* Körs i Docker (stöder endast Linux/OpenWrt)
+* Körs i Docker (Linux/OpenWrt) eller som inbyggd skrivbordsapp (macOS / Windows)
 * Stöd för parkoppling med Apple TV
 * Stöd för automatisk appuppdatering
 * Stöd för att följa GitHub Releases / AltStore-källor med manuella eller automatiska appuppdateringar
@@ -42,7 +42,7 @@ atvloadly är en webbtjänst för sideloading av appar på Apple TV. Den använd
 
 ## Installation
 
-> 😔 **Stöder endast Linux/OpenWrt. Mac och Windows stöds inte.**
+### Docker (Linux/OpenWrt)
 
 1. Linux/OpenWrt-värden måste ha `avahi-daemon` installerad.
    
@@ -80,6 +80,18 @@ atvloadly är en webbtjänst för sideloading av appar på Apple TV. Den använd
    docker compose up -d
    ```
 
+### Skrivbordsapp (macOS / Windows)
+
+**macOS 15+ (rekommenderas, Homebrew):**
+
+```
+brew install --cask bitxeno/tap/atvloadly
+```
+
+**Windows 10/11 (x64 / arm64):**
+
+Ladda ner och kör installationsprogrammet (`.exe`) från [Releases](https://github.com/bitxeno/atvloadly/releases).
+
 ## Kom igång
 
 ### Förberedelser (mycket viktigt‼️)
@@ -106,13 +118,17 @@ atvloadly är en webbtjänst för sideloading av appar på Apple TV. Den använd
 
 2. Apple TV hittas inte
 
-> Stäng av VPN, starta om Apple TV, gå in i parkopplingsläget igen och kontrollera att **[Verktyg]** kan upptäcka enheter av typen `_remotepairing-manual-pairing._tcp`. Försök sedan parkoppla igen.
+> 1. Stäng av VPN, starta om Apple TV, gå in i parkopplingsläget igen och kontrollera att **[Verktyg]** kan upptäcka enheter av typen `_remotepairing-manual-pairing._tcp`. Försök sedan parkoppla igen.
 >
-> Prova vid behov `privileged: true` i `docker-compose.yml` eller `--privileged` i `docker run` i stället för `--security-opt seccomp:unconfined`.
+> 2. Prova att starta om tjänsten `avahi-daemon`.
+>
+> 3. Prova vid behov `privileged: true` i `docker-compose.yml` eller `--privileged` i `docker run` i stället för `--security-opt seccomp:unconfined`.
+>
+> 4. Skrivbordsappen (macOS / Windows) använder ingen avahi-daemon: kontrollera att Apple TV och datorn är på samma nätverk och att den lokala brandväggen tillåter appen att använda mDNS.
 
 3. Det går inte att logga in på Apple-kontot
 
-> Apples säkerhets- eller riskkontroller kan ha aktiverats. Apple begränsar inloggningar i vissa regioner. Prova att ange en proxy i inställningarna eller skapa ett nytt konto.
+> Apples säkerhets- eller riskkontroller kan ha aktiverats. Apple begränsar inloggningar i vissa regioner. Prova att skapa ett nytt konto.
 
 4. IPA-appen kraschar efter installation
 

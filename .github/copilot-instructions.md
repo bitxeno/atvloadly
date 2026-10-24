@@ -24,12 +24,15 @@ atvloadly is a web service for sideloading apps on Apple TV, built with Go + Fib
   - Auto-refresh installed apps (prevents 7-day signature expiration)
   - Uses `robfig/cron` scheduler
 
-## Platform Limitations
+## Platforms
 
-**Linux/OpenWrt ONLY**, macOS/Windows not supported:
-- Depends on `avahi-daemon` service for device discovery
-- Requires `usbmuxd2` for iOS device communication
-- Docker image based on Ubuntu 22.04 ([Dockerfile](Dockerfile))
+- **Docker server**: Linux/OpenWrt
+  - Depends on `avahi-daemon` service for device discovery
+  - Requires `usbmuxd2` for iOS device communication
+  - Docker image based on Ubuntu 22.04 ([Dockerfile](Dockerfile))
+- **Desktop app** (`desktop/`, mygo menu-bar shell): macOS 12+ and Windows 10/11 (x64 / arm64)
+  - Bundles the server and `plumesign`; no Docker or `avahi-daemon`
+  - Discovers devices over mDNS ([device_manager_mdns.go](internal/manager/device_manager_mdns.go)) instead of avahi/D-Bus
 
 ## Development Workflow
 
