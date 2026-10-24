@@ -573,7 +573,7 @@ func isManualPairingIP(ip string) bool {
 // runPairDiscovery discovers the manual-pairing port of ip and streams progress
 // and the final result to the pair page.
 func runPairDiscovery(ctx context.Context, mgr *manager.WebsocketManager, ip string) {
-	port, info, err := manager.DiscoverManualPairingPort(ctx, ip, func(stage string, percent int) {
+	port, tunnelPort, info, err := manager.DiscoverManualPairingPort(ctx, ip, func(stage string, percent int) {
 		writePairDiscovery(mgr, model.PairingDiscoveryMessage{
 			Kind: "discover", Stage: stage, Percent: percent,
 		})
@@ -586,7 +586,7 @@ func runPairDiscovery(ctx context.Context, mgr *manager.WebsocketManager, ip str
 	}
 	msg := model.PairingDiscoveryMessage{
 		Kind: "discover", Stage: manager.DiscoverStageFound, Percent: 100,
-		Port: port,
+		Port: port, TunnelPort: tunnelPort,
 	}
 	if info != nil {
 		msg.Name = info.DeviceName
