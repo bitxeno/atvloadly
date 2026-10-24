@@ -671,7 +671,13 @@
       "device_tips": "iPhone mora biti otključan da bi bio otkriven i povezan; podržana je lokalna IP adresa ili Tailscale IP adresa",
       "upload_label": "Otpremi datoteku za uparivanje",
       "no_device": "Nije moguće pronaći uslugu tunela iPhone-a. Proverite da li je iPhone otključan i dostupan na istoj mreži (ili preko Tailscale-a).",
-      "submit": "Započni povezivanje"
+      "submit": "Započni povezivanje",
+      "tailscale_wifi": {
+        "title": "Wi-Fi je potreban za Tailscale",
+        "content": "iPhone je povezan preko Tailscale-a. iPhone mora biti povezan na Wi-Fi da bi veza funkcionisala. Nastaviti?",
+        "cancel": "Otkaži",
+        "confirm": "Nastavi"
+      }
     },
     "toast": {
       "device_required": "Unesite ili izaberite IP adresu uređaja",

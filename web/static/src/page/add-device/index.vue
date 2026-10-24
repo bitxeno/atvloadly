@@ -132,6 +132,19 @@
       </div>
     </div>
 
+    <!-- Tailscale reminder: connecting to an iPhone over a Tailscale IP
+         (100.x.x.x) only works while the iPhone is on Wi-Fi. -->
+    <dialog id="tailscale_modal" class="modal" :class="{ 'modal-open': tailscaleDialogVisible }">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg">{{ $t("addDevice.iphone.tailscale_wifi.title") }}</h3>
+        <p class="py-4">{{ $t("addDevice.iphone.tailscale_wifi.content") }}</p>
+        <div class="modal-action">
+          <button class="btn" @click="onCancelTailscale">{{ $t("addDevice.iphone.tailscale_wifi.cancel") }}</button>
+          <button class="btn btn-primary" @click="onConfirmTailscale">{{ $t("addDevice.iphone.tailscale_wifi.confirm") }}</button>
+        </div>
+      </div>
+    </dialog>
+
     <dialog id="confirm_modal" class="modal" :class="{ 'modal-open': confirmDialogVisible }">
       <div class="modal-box">
         <h3 class="font-bold text-lg">{{ $t("laboratory.dialog.override.title") }}</h3>
@@ -178,6 +191,11 @@ export default {
       confirmDialogVisible: false,
       // Parameters remembered for the overwrite confirmation of an import.
       pendingImport: null,
+      // Shown when a 100.x.x.x (Tailscale) iPhone IP is used, because such a
+      // connection only works while the iPhone is on Wi-Fi.
+      tailscaleDialogVisible: false,
+      // The connect flow remembered while the Tailscale reminder is shown.
+      pendingTailscaleConnect: null,
     };
   },
   computed: {
@@ -218,6 +236,12 @@ export default {
     isIPhone(device) {
       const cls = (device.device_class || "").toLowerCase();
       return cls === "iphone" || cls === "ipad";
+    },
+    // Tailscale assigns addresses from the 100.64.0.0/10 range (100.x.x.x).
+    // An iPhone reached over such an address is only reachable while it is
+    // connected to Wi-Fi, so the connect flow warns the user first.
+    isTailscaleIP(ip) {
+      return /^100\.(?:[0-9]{1,3})\.(?:[0-9]{1,3})\.(?:[0-9]{1,3})$/.test((ip || "").trim());
     },
     async loadAppleTVDevices(minSpinnerMs = 0) {
       // The devices endpoint answers almost instantly, so without a minimum
@@ -313,6 +337,31 @@ export default {
         return;
       }
 
+      // Connecting to an iPhone over a Tailscale (100.x.x.x) address only works
+      // while the iPhone is on Wi-Fi: warn the user before connecting.
+      if (this.isTailscaleIP(ip)) {
+        this.pendingTailscaleConnect = { ip };
+        this.tailscaleDialogVisible = true;
+        return;
+      }
+
+      await this.connectIPhone(ip);
+    },
+    // The Tailscale reminder was confirmed: continue with the remembered IP.
+    async onConfirmTailscale() {
+      const pending = this.pendingTailscaleConnect;
+      this.pendingTailscaleConnect = null;
+      this.tailscaleDialogVisible = false;
+      if (!pending) {
+        return;
+      }
+      await this.connectIPhone(pending.ip);
+    },
+    onCancelTailscale() {
+      this.pendingTailscaleConnect = null;
+      this.tailscaleDialogVisible = false;
+    },
+    async connectIPhone(ip) {
       // A discovered device already carries its _remotepairing tunnel port.
       const known = (this.iphoneDevices || []).find((item) => item.ip === ip);
       if (known && known.port) {

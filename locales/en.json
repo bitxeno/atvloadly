@@ -672,7 +672,13 @@
             "device_tips": "The iPhone must be unlocked to be discovered and connected; supports a LAN IP address or a Tailscale IP address",
             "upload_label": "Upload Pairing File",
             "no_device": "Could not find the iPhone tunnel service. Make sure the iPhone is unlocked and reachable on the same network (or over Tailscale).",
-            "submit": "Start Connecting"
+            "submit": "Start Connecting",
+            "tailscale_wifi": {
+                "title": "Wi-Fi Required for Tailscale",
+                "content": "The iPhone is connected over Tailscale. The iPhone must be connected to Wi-Fi for the connection to work. Continue?",
+                "cancel": "Cancel",
+                "confirm": "Continue"
+            }
         },
         "toast": {
             "device_required": "Please enter or select a device IP address",
