@@ -44,18 +44,18 @@ const (
 	rpPortFirst = 49152
 	rpPortLast  = 65535
 
-	// Tuned from the design doc's measurements: 1024 concurrent dials scan
-	// the whole range in a few seconds without exhausting local ports. The
-	// 600ms dial timeout leaves room for high-latency overlay networks
-	// (Tailscale relay RTT is 100-250ms): at 250ms the open service ports
-	// that need a full handshake often exceed the budget and are missed,
-	// which makes tunnel discovery fail intermittently. 1536 keeps the same
-	// fd headroom (the doc's 2048 regressed) while shortening the
-	// timeout-bound waves: Apple devices silently drop SYNs to closed ports,
-	// so a full sweep costs waves x timeout, and more parallel dials shrink
-	// the number of waves.
-	rpDialConcurrency = 1536
-	rpDialTimeout     = 600 * time.Millisecond
+	// Tuned against a real device over a Tailscale relay (see
+	// doc/misc/remote-pairing-port-discovery.md): a burst of thousands of
+	// SYNs saturates the relay queue and the open service ports themselves
+	// start timing out, so at 1024+ concurrency most full scans miss the
+	// tunnel port entirely. A small wave (128 dials) keeps the relay
+	// responsive: closed ports answer RST fast and only ~600 of 16k dials
+	// hit the timeout, and every full sweep finds the service. The 1.5s
+	// timeout covers the relay's bursty RTT (single dials measure 0.3-1.1s
+	// under no load), which a 600ms budget cannot. Lowest ports are found
+	// in the first wave thanks to the ascending order and early exit.
+	rpDialConcurrency = 128
+	rpDialTimeout     = 1500 * time.Millisecond
 	// Host-local services inside the range (rapportd, the app's own HTTP
 	// listener) accept connections but never answer the handshake, so they
 	// hold a probe slot until the probe timeout. Keep enough slots that a

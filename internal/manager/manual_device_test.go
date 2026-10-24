@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"sync"
@@ -87,6 +88,13 @@ func withTunnelProbe(t *testing.T, fn func(context.Context, string, DiscoveryPro
 	t.Cleanup(func() { discoverTunnelPortFunc = previous })
 }
 
+func withRememberedPortProbe(t *testing.T, fn func(context.Context, string, uint16) (*PairingServiceInfo, error)) {
+	t.Helper()
+	previous := probeRememberedPortFunc
+	probeRememberedPortFunc = fn
+	t.Cleanup(func() { probeRememberedPortFunc = previous })
+}
+
 func TestPrepareManualDeviceResolvesPort(t *testing.T) {
 	calls := 0
 	withTunnelProbe(t, func(ctx context.Context, ip string, _ DiscoveryProgress) (uint16, *PairingServiceInfo, error) {
@@ -148,6 +156,11 @@ func TestPrepareManualDeviceReprobesExpiredPort(t *testing.T) {
 		calls++
 		return 50000, nil, nil
 	})
+	// The remembered port is dead: the single-port re-check must fail so the
+	// full discovery runs.
+	withRememberedPortProbe(t, func(context.Context, string, uint16) (*PairingServiceInfo, error) {
+		return nil, errors.New("stale port")
+	})
 	dm := newDeviceManager()
 	dev := model.Device{IP: "100.65.100.37", UDID: "AAA", Manual: true, Port: 49152, PortResolvedAt: time.Now().Add(-2 * manualPortTTL)}
 	if err := dm.PrepareManualDevice(context.Background(), &dev); err != nil {
@@ -155,6 +168,29 @@ func TestPrepareManualDeviceReprobesExpiredPort(t *testing.T) {
 	}
 	if calls != 1 || dev.Port != 50000 {
 		t.Fatalf("expired port must be re-probed: calls=%d port=%d", calls, dev.Port)
+	}
+}
+
+func TestPrepareManualDeviceReusesAliveRememberedPort(t *testing.T) {
+	// An expired port that still answers the handshake is reused without a
+	// full-range scan.
+	withTunnelProbe(t, func(context.Context, string, DiscoveryProgress) (uint16, *PairingServiceInfo, error) {
+		t.Fatal("full discovery must not run when the remembered port is alive")
+		return 0, nil, nil
+	})
+	withRememberedPortProbe(t, func(_ context.Context, _ string, port uint16) (*PairingServiceInfo, error) {
+		if port != 49152 {
+			t.Fatalf("unexpected remembered port %d", port)
+		}
+		return &PairingServiceInfo{Port: port, Tunnel: true}, nil
+	})
+	dm := newDeviceManager()
+	dev := model.Device{IP: "100.65.100.37", UDID: "AAA", Manual: true, Port: 49152, PortResolvedAt: time.Now().Add(-2 * manualPortTTL)}
+	if err := dm.PrepareManualDevice(context.Background(), &dev); err != nil {
+		t.Fatal(err)
+	}
+	if dev.Port != 49152 || time.Since(dev.PortResolvedAt) >= manualPortTTL {
+		t.Fatalf("alive remembered port must be refreshed: port=%d resolvedAt=%v", dev.Port, dev.PortResolvedAt)
 	}
 }
 

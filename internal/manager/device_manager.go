@@ -555,6 +555,12 @@ const manualPortTTL = 60 * time.Second
 // port. It is a variable so tests can replace the network probe.
 var discoverTunnelPortFunc = DiscoverManualTunnelPort
 
+// probeRememberedPortFunc re-checks a remembered tunnel port with a single
+// handshake. It is a variable so tests can replace the network probe.
+var probeRememberedPortFunc = func(ctx context.Context, ip string, port uint16) (*PairingServiceInfo, error) {
+	return ProbePairingService(ctx, ip, port, rpProbeTimeout)
+}
+
 // manualPortLock returns the per-device mutex used to serialize port discovery.
 func (dm *DeviceManager) manualPortLock(key string) *sync.Mutex {
 	dm.manualPortMu.Lock()
@@ -604,6 +610,21 @@ func (dm *DeviceManager) PrepareManualDevice(ctx context.Context, dev *model.Dev
 		}
 	}
 
+	// The tunnel port only changes when the device restarts its services, so
+	// a remembered port usually survives the TTL. Probe it first with a
+	// single dial (cheap and relay-friendly) before falling back to the
+	// expensive full-range scan.
+	if remembered := dm.rememberedManualPort(dev); remembered != 0 {
+		if si, err := probeRememberedPortFunc(ctx, dev.IP, remembered); err == nil && si != nil && si.Tunnel {
+			dev.Port = remembered
+			dev.PortResolvedAt = time.Now()
+			if dev.UDID != "" {
+				dm.manualDevices.Store(utils.Md5(dev.UDID), *dev)
+			}
+			return nil
+		}
+	}
+
 	port, _, err := discoverTunnelPortFunc(ctx, dev.IP, nil)
 	if err != nil {
 		return fmt.Errorf("manual device tunnel port not found for %s: %w", dev.IP, err)
@@ -614,6 +635,24 @@ func (dm *DeviceManager) PrepareManualDevice(ctx context.Context, dev *model.Dev
 		dm.manualDevices.Store(utils.Md5(dev.UDID), *dev)
 	}
 	return nil
+}
+
+// rememberedManualPort returns the last tunnel port seen for the device, from
+// the caller's copy first, then the shared cache. A port survives in the
+// cache after its TTL expires: it is stale for direct use, but still the
+// best first candidate to re-probe.
+func (dm *DeviceManager) rememberedManualPort(dev *model.Device) uint16 {
+	if dev.Port != 0 {
+		return dev.Port
+	}
+	if dev.UDID == "" {
+		return 0
+	}
+	if cached, ok := dm.manualDevices.Load(utils.Md5(dev.UDID)); ok {
+		c := cached.(model.Device)
+		return c.Port
+	}
+	return 0
 }
 
 // RemoveManualDevice drops a manual device from memory (after its pairing
