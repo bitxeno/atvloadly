@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "sync-locales": "mkdir -p locales && cp -R ../../locales/. locales/",
+    "sync-locales": "node sync-locales.mjs",
     "dev": "npm run sync-locales && cross-env CGO_ENABLED=0 mygo dev",
     "build": "cross-env CGO_ENABLED=0 mygo build",
     "build:release": "node build.mjs"

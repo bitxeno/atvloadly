@@ -1,5 +1,10 @@
 {
   "language": "sr-Latn",
+  "tray": {
+    "open_browser": "Otvori u pregledaču",
+    "open_log": "Otvori datoteku evidencije",
+    "quit": "Izađi"
+  },
   "common": {
     "loading": "Učitavanje...",
     "button": {
