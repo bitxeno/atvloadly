@@ -15,7 +15,7 @@ import (
 
 	"github.com/iineva/CgbiPngFix/ipaPng"
 
-	"github.com/iineva/bom/pkg/asset"
+	"github.com/bitxeno/atvloadly/pkg/bom/pkg/asset"
 	"github.com/iineva/ipa-server/pkg/plist"
 	"github.com/iineva/ipa-server/pkg/seekbuf"
 )
