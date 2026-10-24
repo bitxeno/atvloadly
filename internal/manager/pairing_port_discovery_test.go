@@ -147,7 +147,7 @@ func TestDiscoverManualPairingPortFindsPairSetup(t *testing.T) {
 	var stages []string
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	pairPort, _, info, err := discoverManualPairingPort(ctx, "127.0.0.1", port, port, true, func(stage string, _ int) {
+	pairPort, info, err := discoverManualPairingPort(ctx, "127.0.0.1", port, port, true, func(stage string, _ int) {
 		stages = append(stages, stage)
 	})
 	if err != nil {
@@ -165,7 +165,7 @@ func TestDiscoverManualPairingPortNotFound(t *testing.T) {
 	// Nothing listens in this range on 127.0.0.1: expect not found.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_, _, _, err := discoverManualPairingPort(ctx, "127.0.0.1", 1, 1, true, nil)
+	_, _, err := DiscoverManualPairingPort(ctx, "127.0.0.1", nil)
 	if err != ErrPairingPortNotFound {
 		t.Fatalf("want ErrPairingPortNotFound, got %v", err)
 	}

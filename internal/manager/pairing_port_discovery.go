@@ -9,7 +9,6 @@ import (
 	"io"
 	"net"
 	"net/netip"
-	"sort"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -50,8 +49,12 @@ const (
 	// 600ms dial timeout leaves room for high-latency overlay networks
 	// (Tailscale relay RTT is 100-250ms): at 250ms the open service ports
 	// that need a full handshake often exceed the budget and are missed,
-	// which makes tunnel discovery fail intermittently.
-	rpDialConcurrency = 1024
+	// which makes tunnel discovery fail intermittently. 1536 keeps the same
+	// fd headroom (the doc's 2048 regressed) while shortening the
+	// timeout-bound waves: Apple devices silently drop SYNs to closed ports,
+	// so a full sweep costs waves x timeout, and more parallel dials shrink
+	// the number of waves.
+	rpDialConcurrency = 1536
 	rpDialTimeout     = 600 * time.Millisecond
 	// Host-local services inside the range (rapportd, the app's own HTTP
 	// listener) accept connections but never answer the handshake, so they
@@ -208,13 +211,6 @@ func probePairingService(ctx context.Context, ip string, port uint16, timeout, r
 		return nil, err
 	}
 	return parseHandshakeBody(body, port)
-}
-
-// discoverPairingPortMDNS sends a unicast DNS-SD query to the device's 5353 and
-// returns the manual-pairing SRV port when the device answers. This is the fast
-// path on the same LAN; it fails across overlay networks.
-func discoverPairingPortMDNS(ctx context.Context, ip string, timeout time.Duration) (uint16, bool) {
-	return discoverPortMDNS(ctx, ip, rpManualPairingFQDN, timeout)
 }
 
 // discoverPortMDNS sends a unicast DNS-SD PTR query for fqdn and returns the
@@ -396,115 +392,26 @@ func discoverPortByService(ctx context.Context, ip, fqdn string, first, last uin
 	return 0, nil, nil
 }
 
-// discoverManualPairingPort is the manual-pairing variant: it also captures the
-// tunnel port seen during the same scan.
-func discoverManualPairingPort(ctx context.Context, ip string, first, last uint16, skipMDNS bool, progress DiscoveryProgress) (pairPort, tunnelPort uint16, info *PairingServiceInfo, err error) {
-	report := func(stage string, pct int) {
-		if progress != nil {
-			progress(stage, pct)
-		}
-	}
-
-	if !skipMDNS && !skipMDNSForIP(ip) {
-		report(DiscoverStageMDNS, 0)
-		if p, ok := discoverPairingPortMDNS(ctx, ip, rpMDNSTimeout); ok {
-			if si, perr := ProbePairingService(ctx, ip, p, rpProbeTimeout); perr == nil && si.PairSetup {
-				report(DiscoverStageFound, 100)
-				return p, 0, si, nil
-			}
-		}
-	}
-
-	report(DiscoverStageScanning, 0)
-	services := scanAllPairingServices(ctx, ip, first, last, progress)
-	if ctx.Err() != nil {
-		return 0, 0, nil, ctx.Err()
-	}
-	for _, si := range services {
-		if si.PairSetup && pairPort == 0 {
-			pairPort = si.Port
-			info = si
-		}
-		if si.Tunnel && tunnelPort == 0 {
-			tunnelPort = si.Port
-		}
-	}
-
-	if pairPort == 0 {
-		report(DiscoverStageFailed, 100)
-		return 0, tunnelPort, nil, ErrPairingPortNotFound
-	}
-	report(DiscoverStageFound, 100)
-	return pairPort, tunnelPort, info, nil
-}
-
-// scanAllPairingServices probes the range and returns every RPPairing service
-// found, in port order. Unlike scanProbedPorts it cannot stop early: the
-// manual-pairing flow wants the pair-setup port and also any tunnel port
-// seen along the way.
-func scanAllPairingServices(ctx context.Context, ip string, first, last uint16, progress DiscoveryProgress) []*PairingServiceInfo {
-	var (
-		mu       sync.Mutex
-		probed   int64
-		reported int32
-	)
-	total := int(last) - int(first) + 1
-	count := func() {
-		n := atomic.AddInt64(&probed, 1)
-		reportPct(progress, &reported, int(n), total)
-	}
-
-	var results []*PairingServiceInfo
-	sem := make(chan struct{}, rpDialConcurrency)
-	probeSem := make(chan struct{}, rpProbeConcurrency)
-	var wg sync.WaitGroup
-	for port := int(first); port <= int(last); port++ {
-		if ctx.Err() != nil {
-			break
-		}
-		sem <- struct{}{}
-		wg.Add(1)
-		go func(p uint16) {
-			defer wg.Done()
-			defer func() { <-sem }()
-
-			dialer := net.Dialer{Timeout: rpDialTimeout}
-			conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(ip, strconv.Itoa(int(p))))
-			if err != nil {
-				count()
-				return
-			}
-			_ = conn.Close()
-
-			select {
-			case <-ctx.Done():
-				count()
-				return
-			case probeSem <- struct{}{}:
-			}
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				defer func() { <-probeSem }()
-				si, _ := ProbePairingService(ctx, ip, p, rpProbeTimeout)
-				count()
-				if si != nil {
-					mu.Lock()
-					results = append(results, si)
-					mu.Unlock()
-				}
-			}()
-		}(uint16(port))
-	}
-	wg.Wait()
-	sort.Slice(results, func(i, j int) bool { return results[i].Port < results[j].Port })
-	return results
+// discoverManualPairingPort is the manual-pairing variant: it stops at the
+// first service that allows the PIN pair-setup flow.
+func discoverManualPairingPort(ctx context.Context, ip string, first, last uint16, skipMDNS bool, progress DiscoveryProgress) (uint16, *PairingServiceInfo, error) {
+	return discoverPortByService(ctx, ip, rpManualPairingFQDN, first, last, skipMDNS, func(si *PairingServiceInfo) bool {
+		return si.PairSetup
+	}, progress)
 }
 
 // DiscoverManualPairingPort finds the manual-pairing port for a manually
-// specified IP: mDNS unicast fast path, then a full two-stage TCP scan.
-func DiscoverManualPairingPort(ctx context.Context, ip string, progress DiscoveryProgress) (pairPort, tunnelPort uint16, info *PairingServiceInfo, err error) {
-	return discoverManualPairingPort(ctx, ip, rpPortFirst, rpPortLast, false, progress)
+// specified IP: mDNS unicast fast path (unless skipped for overlay IPs), then
+// a pipelined ascending scan that stops at the first pair-setup service.
+func DiscoverManualPairingPort(ctx context.Context, ip string, progress DiscoveryProgress) (pairPort uint16, info *PairingServiceInfo, err error) {
+	pairPort, info, err = discoverManualPairingPort(ctx, ip, rpPortFirst, rpPortLast, false, progress)
+	if err != nil {
+		return 0, nil, err
+	}
+	if pairPort == 0 {
+		return 0, nil, ErrPairingPortNotFound
+	}
+	return pairPort, info, nil
 }
 
 // DiscoverManualTunnelPort finds the _remotepairing tunnel port for a manually
