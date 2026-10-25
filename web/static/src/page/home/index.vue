@@ -48,17 +48,24 @@
                 <h4>{{ item.name }} ({{ truncateIP(item.ip) }})</h4>
                 <p class="atv-device-subline">
                   <span>{{ formatDeviceStatus(item) }}</span>
-                  <button
-                    v-if="item.manual"
-                    type="button"
-                    class="atv-device-forget"
-                    :class="{ 'atv-device-forget--armed': forgetConfirmId === item.id }"
-                    :title="forgetConfirmId === item.id ? $t('home.sidebar.device_status.forget_confirm') : $t('home.sidebar.device_status.forget')"
-                    :aria-label="$t('home.sidebar.device_status.forget')"
-                    @click.stop.prevent="forgetDevice(item)"
-                  ><span class="atv-device-forget-label">{{ forgetConfirmId === item.id ? $t("home.sidebar.device_status.forget_confirm") : $t("home.sidebar.device_status.forget") }}</span></button>
                 </p>
               </div>
+
+              <button
+                v-if="item.manual"
+                type="button"
+                class="atv-device-forget"
+                :class="{ 'atv-device-forget--armed': forgetConfirmId === item.id }"
+                :title="forgetConfirmId === item.id ? $t('home.sidebar.device_status.forget_confirm') : $t('home.sidebar.device_status.forget')"
+                :aria-label="$t('home.sidebar.device_status.forget')"
+                @click.stop.prevent="forgetDevice(item)"
+              >
+                <span class="atv-device-forget-icon"><TrashIcon /></span>
+                <span
+                  class="atv-device-forget-label"
+                  v-if="forgetConfirmId === item.id"
+                >{{ $t("home.sidebar.device_status.forget_confirm") }}</span>
+              </button>
             </a>
           </div>
 
@@ -954,6 +961,7 @@ import RefreshIcon from "@/assets/icons/refresh.svg";
 import DownloadIcon from "@/assets/icons/download.svg";
 import PlusIcon from "@/assets/icons/plus.svg";
 import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
+import TrashIcon from "@/assets/icons/trash.svg";
 </script>
 
   
@@ -1036,10 +1044,13 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
   box-shadow: 0 0 0 2px var(--atv-surface);
 }
 
-/* "Forget" action for a manual device: an underlined text link on the status
-   line ("已添加 · RPPairing · 删除设备"), prefixed by a dotted separator that
-   only appears on row hover. Hidden at rest (desktop) and always visible on
-   phones. First click arms, second confirms. */
+/* "Forget" action for a manual device: a trash icon that floats over the far
+   right edge of the row without taking any horizontal space from the title
+   (absolute, out of flow). Hidden at rest on desktop and revealed on row hover
+   or keyboard focus, where it grows a left-to-right fade panel that covers the
+   title text beneath it. First click arms the confirmation (the icon turns red
+   and shows the confirm label), the second click deletes. Always visible on
+   phones, which have no hover. */
 .atv-device-subline {
   display: flex;
   align-items: center;
@@ -1047,33 +1058,53 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
   flex-wrap: wrap;
 }
 
+/* Positioning context for the floating forget panel; overflow keeps the
+   panel's fill inside the row's rounded corners. */
+.atv-device-row {
+  position: relative;
+  overflow: hidden;
+}
+
 .atv-device-forget {
-  display: inline-flex;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
   align-items: center;
-  padding: 0;
+  justify-content: flex-end;
+  gap: 5px;
+  padding: 0 16px 0 52px;
   border: 0;
-  background: none;
-  font-size: 0.8rem;
-  color: var(--atv-danger);
+  border-radius: 0 12px 12px 0;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--atv-surface-hover) 46%
+  );
+  color: var(--atv-muted);
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 120ms ease, color 120ms ease;
+  transition: opacity 140ms ease, color 140ms ease;
 }
 
-/* Dotted separator before the link, only on row hover. The underline lives on
-   the inner label so it never reaches this pseudo-element. */
-.atv-device-forget::before {
-  content: "·";
-  margin-right: 6px;
-  text-decoration: none;
-  opacity: 0;
-  transition: opacity 120ms ease;
+.atv-device-forget-icon {
+  display: inline-flex;
+  width: 17px;
+  height: 17px;
+}
+
+.atv-device-forget-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .atv-device-forget-label {
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--atv-danger);
 }
 
 .atv-device-row--manual:hover .atv-device-forget,
@@ -1083,24 +1114,23 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
   pointer-events: auto;
 }
 
-.atv-device-row--manual:hover .atv-device-forget::before,
-.atv-device-forget:focus-visible::before,
-.atv-device-forget--armed::before {
-  opacity: 1;
-}
-
-.atv-device-forget:hover {
-  color: var(--atv-danger-hover);
-}
-
+.atv-device-forget:hover,
 .atv-device-forget--armed {
   color: var(--atv-danger);
 }
 
-/* Phones have no hover: keep the forget link visible (separator included). */
-@media (max-width: 767px) {
-  .atv-device-forget,
-  .atv-device-forget::before {
+/* Touch devices (phones and iPads) have no hover, so the forget icon is
+   always shown. With no hovered row to blend into, the gradient fades to the
+   card's own background instead of the hover tint, and the panel is kept
+   compact so it covers as little of the title as possible. */
+@media (hover: none) {
+  .atv-device-forget {
+    padding: 0 12px 0 16px;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      var(--atv-surface) 46%
+    );
     opacity: 1;
     pointer-events: auto;
   }
