@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 1248 1248">
+  <title>White A logo</title>
+  <g fill="none" stroke="#FFFFFF" stroke-width="110" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M300 784 L620 220 L1000 950"/>
+  </g>
+  <g fill="#FFFFFF">
+    <path d="M254 873 H798 Q811 873 828 892 L879 982 Q885 997 868 997 H253 C219 997 194 971 194 936 C194 901 220 873 254 873 Z"/>
+    <path d="M561 630 H653 Q665 630 678 646 L756 778 Q761 789 749 789 H650 Q638 789 623 772 L555 647 Q550 630 561 630 Z"/>
+  </g>
+</svg>

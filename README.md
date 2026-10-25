@@ -5,7 +5,7 @@
 
 <div align="center">
 
-[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt-989898)](https://github.com/bitxeno/atvloadly/internal/releases)
+[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt%20%7C%20macos%20%7C%20windows-989898)](https://github.com/bitxeno/atvloadly/internal/releases)
 [![release](https://img.shields.io/docker/v/bitxeno/atvloadly?label=docker%20latest&sort=semver)](https://hub.docker.com/r/bitxeno/atvloadly)
 [![Docker Image Size](https://img.shields.io/docker/image-size/bitxeno/atvloadly)](https://hub.docker.com/r/bitxeno/atvloadly)
 [![Docker Pulls](https://img.shields.io/docker/pulls/bitxeno/atvloadly)](https://hub.docker.com/r/bitxeno/atvloadly)
@@ -19,11 +19,11 @@ English | [Svenska](./README_sv.md) | [中文](./README_cn.md)
 
 </div>
 
-atvloadly is a web service that supports sideloading app on Apple TV. It uses [Impactor](https://github.com/claration/Impactor) as the underlying technology for sideloading and automatically refreshes the app to ensure its long-term availability.
+atvloadly is a web service that supports sideloading app on Apple TV. It uses [Impactor](https://github.com/claration/Impactor) as the underlying technology for sideloading and automatically refreshes the app to ensure its long-term availability. It runs as a Docker service on Linux/OpenWrt or as a native desktop app on macOS and Windows.
 
 ## Features
 
-* Docker running (only supports Linux/OpenWrt platforms)
+* Docker running (Linux/OpenWrt) or a native desktop app (macOS / Windows)
 * Supports AppleTV pairing
 * Supports automatic app refresh
 * Supports tracking GitHub releases / AltStore sources, with manual or automatic app updates
@@ -43,7 +43,7 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
 
 ## Installation
 
-> 😔 **Only supports Linux/OpenWrt systems, does not support Mac/Windows systems.**
+### Docker (Linux/OpenWrt)
 
 1. The Linux/OpenWrt host needs to install `avahi-deamon`.
    
@@ -81,6 +81,18 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
    docker compose up -d
    ```
 
+### Desktop app (macOS / Windows)
+
+**macOS 15+ (recommended, Homebrew):**
+
+```
+brew install --cask bitxeno/tap/atvloadly
+```
+
+**Windows 10/11 (x64 / arm64):**
+
+Download and run the installer (`.exe`) from [Releases](https://github.com/bitxeno/atvloadly/releases).
+
 
 
 ## Getting Started
@@ -117,13 +129,17 @@ The private keys are stored encrypted with a deployment key file (`signing.key_f
 
 2. Unable to find AppleTV
 
-> Please turn off the VPN, restart the AppleTV, re-enter pairing mode, make sure **[Tool]** can detect devices of the `_remotepairing-manual-pairing._tcp` type, and pair again.
+> 1. Please turn off the VPN, restart the AppleTV, re-enter pairing mode, make sure **[Tool]** can detect devices of the `_remotepairing-manual-pairing._tcp` type, and pair again.
 >
-> Try using `privileged: true` in your docker-compose.yml or `--privileged` in your docker run command instead of `--security-opt seccomp:unconfined`.
+> 2. Try restarting the `avahi-daemon` service.
+>
+> 3. Try using `privileged: true` in your docker-compose.yml or `--privileged` in your docker run command instead of `--security-opt seccomp:unconfined`.
+>
+> 4. On the desktop app (macOS / Windows) no avahi-daemon is involved: check that the Apple TV is on the same network and that the local firewall allows the app to use mDNS.
 
 3. Failed to log in to Apple account
 
-> This may have triggered Apple's risk control. Apple has login restrictions for certain regions. You can try adding a proxy in the settings. Alternatively, try creating a new account.
+> This may have triggered Apple's risk control. Apple has login restrictions for certain regions. Alternatively, try creating a new account.
 
 4. IPA crashes after installation
 

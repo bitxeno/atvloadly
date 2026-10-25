@@ -170,11 +170,11 @@ fix(install): resolve timeout issue during IPA installation
 docs(readme): update installation instructions
 ```
 
-## Platform Limitations
+## Platforms
 
-- **Linux/OpenWrt ONLY** - macOS/Windows not supported
-- Requires `avahi-daemon` for device discovery
-- Requires `usbmuxd2` for iOS device communication
+- **Docker server**: Linux/OpenWrt (requires `avahi-daemon` for device discovery and `usbmuxd2` for iOS device communication)
+- **Desktop app** (`desktop/`): macOS 12+ and Windows 10/11 (x64 / arm64); bundles the server and plumesign, no Docker or `avahi-daemon` needed
+- On non-Linux targets the device manager discovers Apple TV over mDNS (`internal/manager/device_manager_mdns.go`) instead of D-Bus/avahi
 
 
 # Agreement

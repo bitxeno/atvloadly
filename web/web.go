@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"math"
+	"net"
 	"runtime/debug"
 
 	"github.com/bitxeno/atvloadly/internal/app"
@@ -16,6 +17,32 @@ func Run(addr string, port int) error {
 	server := fiber.New(fiber.Config{
 		BodyLimit: math.MaxInt,
 	})
+	setup(server)
+
+	if err := server.Listen(fmt.Sprintf("%s:%d", addr, port)); err != nil {
+		log.Error(err.Error())
+		return err
+	}
+	return nil
+}
+
+// RunListener serves the web app on an existing listener, which the desktop
+// app uses to bind a random loopback port before opening its window. It
+// returns when the listener closes.
+func RunListener(ln net.Listener) error {
+	server := fiber.New(fiber.Config{
+		BodyLimit: math.MaxInt,
+	})
+	setup(server)
+
+	if err := server.Listener(ln); err != nil {
+		log.Error(err.Error())
+		return err
+	}
+	return nil
+}
+
+func setup(server *fiber.App) {
 
 	// set fiber web server access log
 	server.Use(logger.New())
@@ -37,9 +64,4 @@ func Run(addr string, port int) error {
 	}))
 
 	route(server)
-	if err := server.Listen(fmt.Sprintf("%s:%d", addr, port)); err != nil {
-		log.Error(err.Error())
-		return err
-	}
-	return nil
 }

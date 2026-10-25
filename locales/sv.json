@@ -1,5 +1,10 @@
 {
   "language": "sv",
+  "tray": {
+    "open_browser": "Öppna i webbläsare",
+    "open_log": "Öppna loggfil",
+    "quit": "Avsluta"
+  },
   "common": {
     "loading": "Laddar…",
     "button": {

@@ -18,7 +18,7 @@ func InitConfig(path string, debug bool) (*Configuration, error) {
 		return nil, err
 	}
 	if path == "" {
-		path = filepath.Join(cfg.DefaultConfigDir(), "config.yaml")
+		path = filepath.Join(cfg.AppDataDir(), "config.yaml")
 	}
 	c, err := cfg.Load(path)
 	if err != nil {
@@ -28,7 +28,7 @@ func InitConfig(path string, debug bool) (*Configuration, error) {
 		return nil, err
 	}
 	if configuration.Server.DataDir == "" {
-		configuration.Server.DataDir = cfg.DefaultConfigDir()
+		configuration.Server.DataDir = cfg.AppDataDir()
 	}
 	if configuration.Signing.KeyFile == "" {
 		configuration.Signing.KeyFile = filepath.Join(configuration.Server.DataDir, "keys", "signing-identity.key")
@@ -54,7 +54,7 @@ func InitSettings(conf *Configuration, debug bool) (*SettingsConfiguration, erro
 
 	confDir := conf.Server.DataDir
 	if confDir == "" {
-		confDir = cfg.DefaultConfigDir()
+		confDir = cfg.AppDataDir()
 	}
 	path := filepath.Join(confDir, "settings.json")
 	c, err := cfg.Load(path)
@@ -81,7 +81,7 @@ func InitLogger(conf *Configuration) error {
 		if conf.Server.DataDir != "" {
 			conf.Log.LogFile = filepath.Join(conf.Server.DataDir, "app.log")
 		} else {
-			conf.Log.LogFile = filepath.Join(cfg.DefaultConfigDir(), "app.log")
+			conf.Log.LogFile = filepath.Join(cfg.AppDataDir(), "app.log")
 		}
 	}
 	log.AddFileOutput(conf.Log.LogFile)
@@ -99,7 +99,7 @@ func InitDb(conf *Configuration) error {
 		conf.Db.Path = conf.Server.DataDir
 	}
 	if conf.Db.Path == "" {
-		conf.Db.Path = cfg.DefaultConfigDir()
+		conf.Db.Path = cfg.AppDataDir()
 	}
 	if err := db.Open(conf.Db).AutoMigrate(&model.InstalledApp{}, &model.SigningIdentity{}, &model.SavedSource{}); err != nil {
 		return err

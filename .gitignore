@@ -41,3 +41,15 @@ signing-work/
 !**/testdata/**/*.mobileprovision
 !**/testdata/**/*.pem
 !**/testdata/**/*.key
+
+# Desktop app build output and downloaded plumesign binaries
+desktop/app/build/
+desktop/app/resources/*/bin/
+desktop/app/.mygo/
+
+# The desktop app embeds a build-time copy of the root locales/
+desktop/app/locales/
+
+# Stray go build binary
+desktop/app/desktop
+version_gen.go

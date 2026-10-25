@@ -1,5 +1,10 @@
 {
     "language": "en",
+    "tray": {
+        "open_browser": "Open in Browser",
+        "open_log": "Open Log File",
+        "quit": "Quit"
+    },
     "common": {
         "loading": "Loading...",
         "button": {

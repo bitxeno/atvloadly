@@ -81,3 +81,21 @@ func Load(path string) (*configuration, error) {
 
 	return conf, nil
 }
+
+// appDataDir overrides DefaultConfigDir when set; the desktop app points it
+// at its user data directory.
+var appDataDir string
+
+// SetAppDataDir overrides the default data directory for this process.
+func SetAppDataDir(dir string) {
+	appDataDir = dir
+}
+
+// AppDataDir returns the directory this process keeps its data in: the
+// override set by SetAppDataDir, or the platform default.
+func AppDataDir() string {
+	if appDataDir != "" {
+		return appDataDir
+	}
+	return DefaultConfigDir()
+}

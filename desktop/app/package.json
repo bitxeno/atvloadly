@@ -1,0 +1,15 @@
+{
+  "name": "atvloadly-desktop",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync-locales": "node sync-locales.mjs",
+    "dev": "npm run sync-locales && cross-env CGO_ENABLED=0 mygo dev",
+    "build": "cross-env CGO_ENABLED=0 mygo build",
+    "build:release": "node build.mjs"
+  },
+  "devDependencies": {
+    "cross-env": "^10.0.0",
+    "mygo-cli": "^0.6.3"
+  }
+}

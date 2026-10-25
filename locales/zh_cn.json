@@ -1,5 +1,10 @@
 {
     "language": "zh_cn",
+    "tray": {
+        "open_browser": "打开浏览器",
+        "open_log": "打开日志文件",
+        "quit": "退出程序"
+    },
     "common": {
         "loading": "加载中...",
         "button": {

@@ -5,7 +5,7 @@
 
 <div align="center">
 
-[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt-989898)](https://github.com/bitxeno/atvloadly/internal/releases)
+[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt%20%7C%20macos%20%7C%20windows-989898)](https://github.com/bitxeno/atvloadly/internal/releases)
 [![release](https://img.shields.io/docker/v/bitxeno/atvloadly?label=docker%20latest&sort=semver)](https://hub.docker.com/r/bitxeno/atvloadly)
 [![Docker Image Size](https://img.shields.io/docker/image-size/bitxeno/atvloadly)](https://hub.docker.com/r/bitxeno/atvloadly)
 [![Docker Pulls](https://img.shields.io/docker/pulls/bitxeno/atvloadly)](https://hub.docker.com/r/bitxeno/atvloadly)
@@ -19,12 +19,12 @@
 
 </div>
 
-atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通过使用 [PlumeImpactor](https://github.com/khcrysalis/PlumeImpactor) 实现侧载，并会自动刷新 App 以保证其长期可用性。
+atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通过使用 [PlumeImpactor](https://github.com/khcrysalis/PlumeImpactor) 实现侧载，并会自动刷新 App 以保证其长期可用性。它既可以作为 Docker 服务运行在 Linux/OpenWrt 上，也可以作为原生桌面应用运行在 macOS 与 Windows 上。
 
 
 ## 主要功能
 
-* docker 运行 (只支持 Linux/OpenWrt 平台)
+* docker 运行 (Linux/OpenWrt) 或原生桌面应用 (macOS / Windows)
 * 支持 AppleTV 配对
 * 支持自动刷新 app
 * 支持跟踪 GitHub Releases / AltStore 源，手动或自动更新 app
@@ -44,7 +44,7 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 
 ## 安装
 
-> 😔 **只支持 Linux/OpenWrt 系统，不支持 Mac/Windows 系统**
+### Docker（Linux/OpenWrt）
 
 1. Linux/OpenWrt 宿主机需要安装 `avahi-deamon` 服务
    
@@ -82,6 +82,18 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
    docker compose up -d
    ```
 
+### 桌面版（macOS / Windows）
+
+**macOS 15+（推荐，Homebrew）：**
+
+```
+brew install --cask bitxeno/tap/atvloadly
+```
+
+**Windows 10/11（x64 / arm64）：**
+
+从 [Releases](https://github.com/bitxeno/atvloadly/releases) 下载并运行安装包（`.exe`）。
+
 
 ## 使用方法
 
@@ -117,13 +129,17 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
 
 2、找不到 AppleTV
 
-> 请关闭 VPN，并重启 AppleTV，重新进入配对模式，确保在[**工具**]菜单中能发现`_remotepairing-manual-pairing._tcp`类型的设备，并重新配对连接
+> 1. 请关闭 VPN，并重启 AppleTV，重新进入配对模式，确保在[**工具**]菜单中能发现 `_remotepairing-manual-pairing._tcp` 类型的设备，并重新配对连接
 >
-> 可以尝试在 docker-compose.yml 中使用 `privileged: true` 或在 docker run 命令中使用 `--privileged` 替代 `--security-opt seccomp:unconfined`。
+> 2. 尝试重启 `avahi-daemon` 服务
+>
+> 3. 可以尝试在 docker-compose.yml 中使用 `privileged: true` 或在 docker run 命令中使用 `--privileged` 替代 `--security-opt seccomp:unconfined`。
+>
+> 4. 桌面版（macOS / Windows）不依赖 avahi-daemon：请确认 Apple TV 与电脑在同一网络，并允许应用通过本地防火墙使用 mDNS。
 
 3、登陆苹果帐号失败
 
-> 可能触发了苹果的风控，苹果对部分地区登录有限制，可以尝试在设置中添加代理试下。或者新建个帐号再试下。
+> 可能触发了苹果的风控，苹果对部分地区登录有限制。或者新建个帐号再试下。
 
 4、IPA 安装后闪退
 

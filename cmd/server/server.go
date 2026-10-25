@@ -1,16 +1,8 @@
 package server
 
 import (
-	"path/filepath"
-
 	"github.com/bitxeno/atvloadly/internal/app"
-	"github.com/bitxeno/atvloadly/internal/log"
-	"github.com/bitxeno/atvloadly/internal/manager"
-	"github.com/bitxeno/atvloadly/internal/secret"
-	"github.com/bitxeno/atvloadly/internal/service"
-	"github.com/bitxeno/atvloadly/internal/signing"
-	"github.com/bitxeno/atvloadly/internal/task"
-	"github.com/bitxeno/atvloadly/web"
+	"github.com/bitxeno/atvloadly/internal/bootstrap"
 	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
 )
@@ -50,82 +42,20 @@ var (
 )
 
 func action(c *cli.Context) error {
-	// init config
-	debug := c.Bool("debug") || c.Bool("verbose")
-	if c.Bool("debug") || c.Bool("verbose") {
-		debug = true
-	}
-	conf, err := app.InitConfig(c.String("config"), debug)
-	if err != nil {
-		return err
-	}
-	setttings, err := app.InitSettings(conf, debug)
-	if err != nil {
-		return err
-	}
-
-	// init logger
-	if c.Bool("debug") {
-		conf.Log.Level = "debug"
-		conf.Db.Debug = true
-	}
-	if c.Bool("verbose") {
-		conf.Log.Level = "trace"
-		conf.Db.Debug = true
-	}
-	if err := app.InitLogger(conf); err != nil {
-		return err
-	}
-
-	// init i18n
-	app.InitLanguage(setttings.App.Language)
-
-	// init db
-	if err := app.InitDb(conf); err != nil {
-		return err
-	}
-	initSigning(conf)
-	initSecrets(conf)
-	// Staged uploads and downloads abandoned by the install page; the task
-	// scheduler repeats this every hour.
-	if _, err := service.RemoveStaleTempFiles(); err != nil {
-		log.Err(err).Msg("Failed to remove stale staged files")
-	}
-
-	// start jobs
-	_ = task.ScheduleRefreshApps()
-	manager.StartDeviceManager()
-
 	printVersion()
-	port := conf.Server.Port
-	if c.Int("port") > 0 {
-		port = c.Int("port")
-	}
-	return web.Run(conf.Server.ListenAddr, port)
-}
-
-// initSecrets configures the dedicated secret store. A stored GitHub token
-// that cannot be opened only disables authenticated GitHub calls.
-func initSecrets(conf *app.Configuration) {
-	secret.Configure(conf.Secret.KeyFile)
-	if err := app.CheckGitHubToken(); err != nil {
-		log.Warnf("Stored GitHub token cannot be unlocked: %v", err)
-	}
-}
-
-// initSigning configures the external certificate signing mode and removes
-// the signing workspaces left behind by a previous crash. Failures are logged
-// and do not prevent the server from starting.
-func initSigning(conf *app.Configuration) {
-	signing.Configure(conf.Signing.KeyFile, filepath.Join(conf.Server.DataDir, "signing-work"))
-	removed, err := signing.RecoverWorkspaces()
+	_, stop, err := bootstrap.Run(bootstrap.Options{
+		ConfigFile: c.String("config"),
+		Debug:      c.Bool("debug"),
+		Trace:      c.Bool("verbose"),
+		Port:       c.Int("port"),
+	})
 	if err != nil {
-		log.Err(err).Msg("Failed to recover signing workspaces")
-		return
+		return err
 	}
-	if removed > 0 {
-		log.Infof("Removed %d stale signing workspace(s)", removed)
-	}
+	defer stop()
+
+	// The web server serves until the process is interrupted.
+	select {}
 }
 
 func printVersion() {

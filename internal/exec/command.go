@@ -133,6 +133,7 @@ func (c *Cmd) Run() error {
 	log.Debugf(">> %s", c.logLine())
 	cmd := exec.CommandContext(ctx, c.Name, c.Args...)
 	c.setupCmd(cmd)
+	hideWindow(cmd)
 
 	err := cmd.Run()
 	if err != nil {
@@ -157,6 +158,7 @@ func (c *Cmd) CombinedOutput() ([]byte, error) {
 	log.Debugf(">> %s", c.logLine())
 	cmd := exec.CommandContext(ctx, c.Name, c.Args...)
 	c.setupCmd(cmd)
+	hideWindow(cmd)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
