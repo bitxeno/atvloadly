@@ -44,6 +44,7 @@ signing-work/
 
 # Desktop app build output and downloaded plumesign binaries
 desktop/app/build/
+desktop/app/installers/
 desktop/app/resources/*/bin/
 desktop/app/.mygo/
 

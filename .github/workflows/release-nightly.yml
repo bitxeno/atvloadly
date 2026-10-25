@@ -129,9 +129,16 @@ jobs:
           - os: macos-latest
             target: macos
             platforms: darwin/universal
+            # mygo leaves the .app beside the DMG; the DMG already holds it.
+            installers: desktop/app/build/darwin-universal
+            pattern: '*.dmg'
           - os: ubuntu-latest
             target: windows
             platforms: windows/amd64,windows/arm64
+            # mygo leaves atvloadly.exe and its resources beside each Setup;
+            # the Setup already holds them.
+            installers: desktop/app/build
+            pattern: '*Setup*.exe'
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout the repository
@@ -174,11 +181,23 @@ jobs:
           npm install
           npm run build:release -- -platform=${{ matrix.platforms }}
 
+      # Ship only the installers: mygo also leaves the unpackaged app next
+      # to them, which the installer already contains. Copy them outside
+      # build/, so the copy cannot be picked up by the search below.
+      - name: Collect installers
+        run: |
+          set -euo pipefail
+          mkdir -p desktop/app/installers
+          # -exec cp keeps names with spaces (the DMG has one) intact.
+          find ${{ matrix.installers }} -maxdepth 2 -type f -name '${{ matrix.pattern }}' \
+            -exec cp {} desktop/app/installers/ \;
+          ls -la desktop/app/installers/
+
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: desktop-apps-${{ matrix.target }}
-          path: desktop/app/build/
+          path: desktop/app/installers/
           retention-days: 3
 
   dockerhub:
