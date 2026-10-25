@@ -72,11 +72,11 @@ test("iPhone LAN manual IP probes tunnel then submits with manual=true", async (
   assert.equal(submitted.manual, "true", "manual IP must submit manual=true");
 });
 
-test("Tailscale iPhone IP shows the Wi-Fi reminder before connecting", async () => {
-  let probed = 0;
+test("Tailscale iPhone IP connects directly without a reminder dialog", async () => {
+  let probedIp = null;
   let submitted = null;
   const state = loadComponent({
-    discoverTunnelPort: async () => { probed++; return { data: { port: 61234 } }; },
+    discoverTunnelPort: async (ip) => { probedIp = ip; return { data: { port: 61234 } }; },
     importPair: async (fd) => { submitted = fd._d; return {}; },
   });
   state.iphoneIp = "100.64.0.9";
@@ -84,37 +84,11 @@ test("Tailscale iPhone IP shows the Wi-Fi reminder before connecting", async () 
 
   await state.startConnect();
 
-  assert.equal(state.tailscaleDialogVisible, true, "Tailscale IP must show the reminder dialog");
-  assert.equal(probed, 0, "no probing before the reminder is confirmed");
-  assert.equal(submitted, null, "no import before the reminder is confirmed");
-
-  await state.onConfirmTailscale();
-
-  assert.equal(state.tailscaleDialogVisible, false, "confirm closes the reminder");
-  assert.equal(probed, 1, "confirm resumes the connect flow");
-  assert.ok(submitted, "import should be submitted after confirming");
+  assert.equal(probedIp, "100.64.0.9", "Tailscale IP must go straight to tunnel probing");
+  assert.ok(submitted, "import should be submitted");
   assert.equal(submitted.ip, "100.64.0.9");
   assert.equal(submitted.port, 61234);
   assert.equal(submitted.manual, "true");
-});
-
-test("cancelling the Tailscale reminder does not connect", async () => {
-  let probed = 0;
-  let submitted = null;
-  const state = loadComponent({
-    discoverTunnelPort: async () => { probed++; return { data: { port: 61234 } }; },
-    importPair: async (fd) => { submitted = fd._d; return {}; },
-  });
-  state.iphoneIp = "100.64.0.9";
-  state.iphoneDevices = [];
-
-  await state.startConnect();
-  state.onCancelTailscale();
-
-  assert.equal(state.tailscaleDialogVisible, false, "cancel closes the reminder");
-  assert.equal(state.pendingTailscaleConnect, null, "cancel forgets the pending connect");
-  assert.equal(probed, 0, "cancel must not probe");
-  assert.equal(submitted, null, "cancel must not import");
 });
 
 test("iPhone manual IP with no tunnel port does not submit", async () => {
@@ -131,17 +105,3 @@ test("iPhone manual IP with no tunnel port does not submit", async () => {
   assert.equal(submitted, false, "no tunnel port means no import");
 });
 
-test("isTailscaleIP recognises 100.x.x.x addresses only", () => {
-  const state = loadComponent({
-    discoverTunnelPort: async () => ({}),
-    importPair: async () => ({}),
-  });
-
-  assert.equal(state.isTailscaleIP("100.64.0.9"), true);
-  assert.equal(state.isTailscaleIP("100.101.102.103"), true);
-  assert.equal(state.isTailscaleIP(" 100.64.0.9 "), true);
-  assert.equal(state.isTailscaleIP("192.168.1.5"), false);
-  assert.equal(state.isTailscaleIP("10.0.0.1"), false);
-  assert.equal(state.isTailscaleIP("1000.64.0.9"), false);
-  assert.equal(state.isTailscaleIP(""), false);
-});

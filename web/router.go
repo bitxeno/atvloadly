@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/netip"
 	"net/url"
 	"os"
 	"path"
@@ -443,12 +442,14 @@ func route(fi *fiber.App) {
 	// Used by the add-device page to validate a pairing file over the tunnel.
 	api.Get("/pair/tunnel-port", func(c *fiber.Ctx) error {
 		ip := strings.TrimSpace(c.Query("ip"))
-		addr, err := netip.ParseAddr(ip)
-		if err != nil || !addr.Is4() {
+		if !manager.IsManualDeviceAddr(ip) {
 			return c.Status(http.StatusOK).JSON(apiError("invalid ip"))
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		// A full-range sweep over a slow overlay can take longer than the
+		// earlier 20s budget, which cut off scans that would have succeeded;
+		// 30s covers the whole range on a relay path.
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		port, info, err := manager.DiscoverManualTunnelPort(ctx, ip, nil)

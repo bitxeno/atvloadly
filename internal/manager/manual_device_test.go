@@ -194,6 +194,66 @@ func TestPrepareManualDeviceReusesAliveRememberedPort(t *testing.T) {
 	}
 }
 
+// A transient failure on the remembered-port re-check must be retried before
+// escalating to a full-range scan, so one dropped handshake on a slow relay
+// does not cost a multi-second sweep.
+func TestProbeRememberedPortRetriesTransientFailure(t *testing.T) {
+	attempts := 0
+	withRememberedPortProbe(t, func(context.Context, string, uint16) (*PairingServiceInfo, error) {
+		attempts++
+		if attempts < rememberedProbeAttempts {
+			return nil, errors.New("transient handshake timeout")
+		}
+		return &PairingServiceInfo{Port: 49152, Tunnel: true}, nil
+	})
+
+	si, err := probeRememberedPort(context.Background(), "100.65.100.37", 49152)
+	if err != nil {
+		t.Fatalf("expected success after retries, got %v", err)
+	}
+	if si == nil || !si.Tunnel {
+		t.Fatalf("unexpected info: %+v", si)
+	}
+	if attempts != rememberedProbeAttempts {
+		t.Fatalf("attempts = %d, want %d", attempts, rememberedProbeAttempts)
+	}
+}
+
+// A remembered port that answers but is not a tunnel service must exhaust the
+// retries and report failure, letting the caller fall back to a scan.
+func TestProbeRememberedPortFailsWhenNotTunnel(t *testing.T) {
+	attempts := 0
+	withRememberedPortProbe(t, func(context.Context, string, uint16) (*PairingServiceInfo, error) {
+		attempts++
+		return &PairingServiceInfo{Port: 49152, Tunnel: false}, nil
+	})
+
+	if _, err := probeRememberedPort(context.Background(), "100.65.100.37", 49152); err == nil {
+		t.Fatal("expected failure when the port is not a tunnel service")
+	}
+	if attempts != rememberedProbeAttempts {
+		t.Fatalf("attempts = %d, want %d", attempts, rememberedProbeAttempts)
+	}
+}
+
+// An already-cancelled context must not keep retrying.
+func TestProbeRememberedPortHonorsContext(t *testing.T) {
+	attempts := 0
+	withRememberedPortProbe(t, func(context.Context, string, uint16) (*PairingServiceInfo, error) {
+		attempts++
+		return nil, errors.New("timeout")
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if _, err := probeRememberedPort(ctx, "100.65.100.37", 49152); err == nil {
+		t.Fatal("expected error on cancelled context")
+	}
+	if attempts > 1 {
+		t.Fatalf("cancelled context retried: attempts=%d", attempts)
+	}
+}
+
 func TestPrepareManualDeviceErrorKeepsPortZero(t *testing.T) {
 	withTunnelProbe(t, func(context.Context, string, DiscoveryProgress) (uint16, *PairingServiceInfo, error) {
 		return 0, nil, ErrTunnelPortNotFound
@@ -230,4 +290,65 @@ func TestPrepareManualDeviceConcurrentSingleProbe(t *testing.T) {
 	if got := atomic.LoadInt32(&calls); got != 1 {
 		t.Fatalf("concurrent prepare probed %d times, want 1", got)
 	}
+}
+
+func TestIsManualDeviceAddr(t *testing.T) {
+	cases := []struct {
+		ip string
+		ok bool
+	}{
+		{"192.168.1.9", true},     // RFC 1918
+		{"10.0.0.5", true},        // RFC 1918
+		{"172.16.4.4", true},      // RFC 1918
+		{"100.64.0.1", true},      // CGNAT (Tailscale)
+		{"100.65.100.37", true},   // CGNAT (Tailscale)
+		{"100.127.255.254", true}, // CGNAT upper bound
+		{"8.8.8.8", false},        // public
+		{"100.128.0.1", false},    // just outside CGNAT
+		{"127.0.0.1", false},      // loopback
+		{"::1", false},            // IPv6
+		{"not-an-ip", false},      // garbage
+		{"", false},               // empty
+	}
+	for _, c := range cases {
+		if got := IsManualDeviceAddr(c.ip); got != c.ok {
+			t.Errorf("IsManualDeviceAddr(%q) = %v, want %v", c.ip, got, c.ok)
+		}
+	}
+}
+
+func TestWarmManualDevicePortResolves(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	pdir := filepath.Join(dir, ".config", "PlumeImpactor", "pairing_files")
+	if err := os.MkdirAll(pdir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeJSON(t, pdir, "AAA.json", `{"manual":true,"model":"AppleTV11,1","name":"AppleTV","remotepairing_ip":"100.65.100.37","remotepairing_udid":"AAA"}`)
+
+	calls := 0
+	withTunnelProbe(t, func(context.Context, string, DiscoveryProgress) (uint16, *PairingServiceInfo, error) {
+		calls++
+		return 60001, &PairingServiceInfo{Port: 60001, Tunnel: true}, nil
+	})
+
+	dm := newDeviceManager()
+	dm.WarmManualDevicePort("100.65.100.37")
+
+	if calls != 1 {
+		t.Fatalf("warm-up probed %d times, want 1", calls)
+	}
+	devices := dm.GetDevices()
+	if len(devices) != 1 || devices[0].Port != 60001 {
+		t.Fatalf("warm-up did not record the port: %+v", devices)
+	}
+}
+
+func TestWarmManualDevicePortSkipsUnknownIP(t *testing.T) {
+	withTunnelProbe(t, func(context.Context, string, DiscoveryProgress) (uint16, *PairingServiceInfo, error) {
+		t.Fatal("must not probe an unknown device")
+		return 0, nil, nil
+	})
+	dm := newDeviceManager()
+	dm.WarmManualDevicePort("100.65.100.99") // no pairing file for this IP
 }

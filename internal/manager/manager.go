@@ -69,6 +69,14 @@ func ManualPortNeedsResolve(dev *model.Device) bool {
 	return dev.Port == 0 || time.Since(dev.PortResolvedAt) >= manualPortTTL
 }
 
+// WarmManualDevicePort resolves a manual device's tunnel port in the
+// background after its pairing completes, so the first install does not pay
+// for the full-range scan. Failures are logged only; the install page
+// resolves the port on demand.
+func WarmManualDevicePort(ip string) {
+	deviceManager.WarmManualDevicePort(ip)
+}
+
 // GetDeviceInfo queries the device for its lockdown values, including the
 // hardware UniqueDeviceID.
 func GetDeviceInfo(dev *model.Device) (*model.DeviceInfo, error) {

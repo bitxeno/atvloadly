@@ -671,14 +671,8 @@
             "device_placeholder": "例如 192.168.1.205，或从列表选择设备",
             "device_tips": "iPhone 需要先解锁屏幕，才能被发现和连接，支持局域网 IP 地址或 Tailscale IP 地址",
             "upload_label": "上传 Pairing File",
-            "no_device": "未找到 iPhone 隧道服务端口，请确认 iPhone 已解锁且与电脑网络可达（局域网或 Tailscale）。",
-            "submit": "开始连接",
-            "tailscale_wifi": {
-                "title": "通过 Tailscale 连接需使用 Wi-Fi",
-                "content": "当前使用的是 Tailscale IP 地址，iPhone 必须连接 Wi-Fi 才能正常连接，是否继续？",
-                "cancel": "取消",
-                "confirm": "继续"
-            }
+            "no_device": "未找到 iPhone 隧道服务端口。iPhone 需要连接 Wi-Fi 才能正常连接（仅蜂窝网络不可用），并确认已解锁且与电脑网络可达（局域网或 Tailscale）。",
+            "submit": "开始连接"
         },
         "toast": {
             "device_required": "请输入或选择设备 IP 地址",

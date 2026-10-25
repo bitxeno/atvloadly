@@ -65,8 +65,11 @@ const (
 	// Accepted-but-silent listeners (rapportd, the app's own HTTP server on
 	// 127.0.0.1) answer nothing, so a probe against them runs the full probe
 	// timeout. Their handshake response deadline is bounded separately so
-	// they release their probe slot quickly.
-	rpProbeResponseTimeout = 800 * time.Millisecond
+	// they release their probe slot quickly. It still has to cover a real
+	// device's answer over a slow Tailscale relay (single dials measure
+	// 0.3-1.1s under no load), so 1.2s keeps genuine services from being
+	// missed while a silent listener is abandoned soon after.
+	rpProbeResponseTimeout = 1200 * time.Millisecond
 	rpMDNSTimeout          = 1500 * time.Millisecond
 )
 
@@ -74,8 +77,12 @@ const (
 var ErrPairingPortNotFound = errors.New("manual pairing port not found")
 
 // ErrTunnelPortNotFound is returned when no port answers
-// allowsIncomingTunnelConnections.
-var ErrTunnelPortNotFound = errors.New("manual tunnel port not found")
+// allowsIncomingTunnelConnections. iOS only exposes the local developer and
+// lockdown services while an 802.11 Wi-Fi link is active (cellular data does
+// not count), so a battery of correct dials can still find nothing on a device
+// that left Wi-Fi; the message says so, because that is the usual cause when
+// the address itself is reachable.
+var ErrTunnelPortNotFound = errors.New("manual tunnel port not found: the iPhone must be connected to Wi-Fi for the connection to work")
 
 // Discovery stages reported to the caller so the UI can show progress.
 const (

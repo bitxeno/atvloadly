@@ -667,14 +667,8 @@
       "device_placeholder": "t.ex. 192.168.1.205, eller välj en enhet",
       "device_tips": "iPhone måste låsas upp för att kunna hittas och anslutas; stöder en lokal IP-adress eller en Tailscale IP-adress",
       "upload_label": "Ladda upp parkopplingsfil",
-      "no_device": "Kunde inte hitta iPhone-tunneltjänsten. Kontrollera att iPhone är upplåst och nåbar i samma nätverk (eller via Tailscale).",
-      "submit": "Starta anslutning",
-      "tailscale_wifi": {
-        "title": "Wi-Fi krävs för Tailscale",
-        "content": "iPhone är ansluten via Tailscale. iPhone måste vara ansluten till Wi-Fi för att anslutningen ska fungera. Fortsätta?",
-        "cancel": "Avbryt",
-        "confirm": "Fortsätt"
-      }
+      "no_device": "Kunde inte hitta iPhone-tunneltjänsten. iPhone måste vara ansluten till Wi-Fi (endast mobildata fungerar inte); kontrollera att den är upplåst och nåbar i samma nätverk eller via Tailscale.",
+      "submit": "Starta anslutning"
     },
     "toast": {
       "device_required": "Ange eller välj en enhets IP-adress",
