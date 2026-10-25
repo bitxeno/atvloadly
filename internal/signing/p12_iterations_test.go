@@ -16,7 +16,7 @@ import (
 )
 
 // testMaxKDFIterations is the largest iteration count the patched go-pkcs12
-// of third_party/go-pkcs12 derives a key with.
+// of pkg/go-pkcs12 derives a key with.
 const testMaxKDFIterations = 5_000_000
 
 // testKDFIterations is the iteration count of the key derivations the

@@ -101,8 +101,8 @@ require (
 replace github.com/bitxeno/atvloadly/pkg/bom => ./pkg/bom
 
 // go-pkcs12 v0.7.3 derives keys with whatever iteration count the file asks
-// for, so a tiny P12 can pin a CPU indefinitely. third_party/go-pkcs12 is
+// for, so a tiny P12 can pin a CPU indefinitely. pkg/go-pkcs12 is
 // v0.7.3 plus the patch of SSLMate/go-pkcs12#81, which refuses counts above
 // 5,000,000 in every KDF; drop this replace once a release bounds KDF
 // iterations.
-replace software.sslmate.com/src/go-pkcs12 => ./third_party/go-pkcs12
+replace software.sslmate.com/src/go-pkcs12 => ./pkg/go-pkcs12
