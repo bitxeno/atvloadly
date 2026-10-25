@@ -125,8 +125,10 @@ jobs:
       matrix:
         include:
           - os: macos-latest
+            target: macos
             platforms: darwin/universal
           - os: ubuntu-latest
+            target: windows
             platforms: windows/amd64,windows/arm64
     runs-on: ${{ matrix.os }}
     steps:
@@ -174,7 +176,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: desktop-apps-${{ matrix.os }}
+          name: desktop-apps-${{ matrix.target }}
           path: desktop/app/build/
           retention-days: 1
 
@@ -290,13 +292,13 @@ jobs:
       - name: Download macOS artifact
         uses: actions/download-artifact@v8
         with:
-          name: desktop-apps-macos-latest
+          name: desktop-apps-macos
           path: dist
 
       - name: Download Windows artifact
         uses: actions/download-artifact@v8
         with:
-          name: desktop-apps-ubuntu-latest
+          name: desktop-apps-windows
           path: dist
 
       - name: Derive version
@@ -447,6 +449,6 @@ jobs:
         with:
           name: |
             ${{ needs.build.outputs.APP_NAME }}
-            desktop-apps-macos-latest
-            desktop-apps-ubuntu-latest
+            desktop-apps-macos
+            desktop-apps-windows
           failOnError: false
