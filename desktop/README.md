@@ -50,7 +50,7 @@ desktop/
     ├── main.go                  # shell entry: starts the server, tray icon, single instance, opens the browser
     ├── locales.go               # embeds the server catalogs (copied from the root locales/ at build time)
     ├── plumesign.go             # resolves the plumesign resource path (PathResources first, PATH fallback)
-    ├── mygo.config.ts           # mygo CLI config (LSUIElement, buildCommand, resources)
+    ├── mygo.config.ts           # mygo CLI config (LSUIElement, macOS signing, resources)
     ├── package.json             # desktop toolchain (mygo CLI)
     ├── assets/
     │   ├── tray-darwin.svg      # source of the macOS menu bar icon
@@ -100,10 +100,15 @@ desktop app imports only packages that mygo's dependencies do not affect.
 
 **Embedded locales** (the same pattern as the web frontend): the server catalogs live in
 the root `locales/`, embedded by the root `main.go`. The desktop module cannot reach that
-embed, so `buildCommand` (`npm run sync-locales`) copies the root `locales/` into
-`desktop/app/locales/` (gitignored) at build time, `locales.go` embeds that copy, and
-`run()` calls `i18n.Init`. The root layout is unchanged; like web's `src → dist`, the
-source stays at the root and a copy goes into the bundle.
+embed, so the npm scripts run `sync-locales` to copy the root `locales/` into
+`desktop/app/locales/` (gitignored), `locales.go` embeds that copy, and `run()` calls
+`i18n.Init`. The root layout is unchanged; like web's `src → dist`, the source stays at
+the root and a copy goes into the bundle.
+
+The copy has to happen before `mygo build` starts, so it lives in the npm scripts
+(`build`, `build:release`, `dev`) rather than in `buildCommand`: mygo generates the
+TypeScript client with a `go build` of its own and only runs `buildCommand` afterwards,
+which is too late for `//go:embed locales` on a clean checkout.
 
 The menu uses the `tray.*` keys of the same catalogs: at startup it prefers the language
 saved by the web UI and follows the system language on first launch; when the language
