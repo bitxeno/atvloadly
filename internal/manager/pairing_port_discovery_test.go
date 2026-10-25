@@ -147,7 +147,7 @@ func TestDiscoverManualPairingPortFindsPairSetup(t *testing.T) {
 	var stages []string
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	pairPort, _, info, err := discoverManualPairingPort(ctx, "127.0.0.1", port, port, true, func(stage string, _ int) {
+	pairPort, info, err := discoverManualPairingPort(ctx, "127.0.0.1", port, port, true, func(stage string, _ int) {
 		stages = append(stages, stage)
 	})
 	if err != nil {
@@ -165,7 +165,7 @@ func TestDiscoverManualPairingPortNotFound(t *testing.T) {
 	// Nothing listens in this range on 127.0.0.1: expect not found.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_, _, _, err := discoverManualPairingPort(ctx, "127.0.0.1", 1, 1, true, nil)
+	_, _, err := DiscoverManualPairingPort(ctx, "127.0.0.1", nil)
 	if err != ErrPairingPortNotFound {
 		t.Fatalf("want ErrPairingPortNotFound, got %v", err)
 	}
@@ -209,5 +209,43 @@ func TestDiscoverTunnelPortIgnoresPairSetupOnly(t *testing.T) {
 	}
 	if gotPort != 0 {
 		t.Fatalf("pair-setup service must not be picked as tunnel, got port %d", gotPort)
+	}
+}
+
+func TestScanProbedPortsStopsEarlyOnLowPort(t *testing.T) {
+	// The tunnel service sits on the first port of a wide range: the scan
+	// must return without dialing anywhere near the whole range.
+	port, stop := rpMockServer(t, rpTunnelResponse)
+	defer stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	start := time.Now()
+	si := scanProbedPorts(ctx, "127.0.0.1", port, 65535, func(si *PairingServiceInfo) bool {
+		return si.Tunnel
+	}, nil)
+	elapsed := time.Since(start)
+	if si == nil || si.Port != port {
+		t.Fatalf("unexpected result: %+v", si)
+	}
+	// A full 16k-port scan takes seconds; an early win on the first port
+	// finishes in well under a second.
+	if elapsed > 2*time.Second {
+		t.Fatalf("scan did not stop early: took %v", elapsed)
+	}
+}
+
+func TestSkipMDNSForTailnetIPs(t *testing.T) {
+	cases := map[string]bool{
+		"100.65.100.37": true,  // Tailscale CGNAT range
+		"100.100.100.1": true,  // Tailscale control plane range
+		"192.168.1.229": false, // LAN
+		"10.0.0.5":      false,
+		"not-an-ip":     false,
+	}
+	for ip, want := range cases {
+		if got := skipMDNSForIP(ip); got != want {
+			t.Errorf("skipMDNSForIP(%q) = %v, want %v", ip, got, want)
+		}
 	}
 }

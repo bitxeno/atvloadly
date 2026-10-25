@@ -40,7 +40,9 @@
           :aria-label="$t('addDevice.tabs.appletv')"
           @click="selectTab('appletv')"
         >
-          <span class="w-6 h-6"><AppleTVIcon /></span>
+          <span class="w-6 h-6 atv-tab-icon">
+            <AppleTVTabIcon />
+          </span>
           {{ $t("addDevice.tabs.appletv") }}
         </button>
         <button
@@ -52,7 +54,9 @@
           :aria-label="$t('addDevice.tabs.iphone')"
           @click="selectTab('iphone')"
         >
-          <span class="w-6 h-6"><IPhoneIcon /></span>
+          <span class="w-6 h-6 atv-tab-icon">
+            <IPhoneTabIcon />
+          </span>
           {{ $t("addDevice.tabs.iphone") }}
         </button>
       </div>
@@ -309,6 +313,9 @@ export default {
         return;
       }
 
+      await this.connectIPhone(ip);
+    },
+    async connectIPhone(ip) {
       // A discovered device already carries its _remotepairing tunnel port.
       const known = (this.iphoneDevices || []).find((item) => item.ip === ip);
       if (known && known.port) {
@@ -386,8 +393,8 @@ export default {
 
 <script setup>
 import WarningIcon from "@/assets/icons/warning.svg";
-import AppleTVIcon from "@/assets/icons/appletv.svg";
-import IPhoneIcon from "@/assets/icons/iphone.svg";
+import AppleTVTabIcon from "@/assets/icons/appletv-tab.svg";
+import IPhoneTabIcon from "@/assets/icons/iphone-tab.svg";
 </script>
 
 <style lang="postcss" scoped>
@@ -401,6 +408,21 @@ import IPhoneIcon from "@/assets/icons/iphone.svg";
    this only sets the gap to the form below. */
 .atv-connect-mode {
   margin-bottom: 20px;
+}
+
+/* Tab icons are monochrome line glyphs drawn with currentColor: they follow
+   the button's text colour, so selecting a tab (btn-primary) turns them
+   white along with the label. */
+.atv-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+.atv-tab-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 @media (max-width: 640px) {

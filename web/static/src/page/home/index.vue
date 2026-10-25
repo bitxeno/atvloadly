@@ -975,6 +975,14 @@ import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
   background: var(--atv-accent-soft);
   color: var(--atv-accent);
   flex-shrink: 0;
+  transition: background-color .15s ease;
+}
+
+/* The row hover tint is almost the same shade as the badge, so the badge
+   would blend into the background on hover. Deepen it to keep the icon
+   readable while the row is highlighted. */
+.atv-device-row:hover .atv-add-device-icon {
+  background: var(--atv-accent-soft-hover);
 }
 
 .atv-add-device-icon svg {

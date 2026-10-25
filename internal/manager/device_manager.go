@@ -29,12 +29,31 @@ var deviceManager = newDeviceManager()
 // backs up, and godbus leaks one goroutine per undelivered signal.
 const pairingCheckInterval = 60 * time.Second
 
+// cgnatPrefix is the RFC 6598 shared address space (100.64.0.0/10) that
+// mesh-VPN overlays such as Tailscale assign. Devices reachable only through
+// an overlay announce themselves from this range; plumesign connects over it
+// fine, so it is accepted alongside RFC 1918 LAN space.
+var cgnatPrefix = netip.MustParsePrefix("100.64.0.0/10")
+
 // isLanAddr reports whether addr is a private IPv4 address that the
 // plumesign tooling can connect to. Global IPv6 addresses (e.g. an
 // ISP-delegated prefix announced via AAAA) and public addresses are
-// rejected: LAN devices are reached over private IPv4 only.
+// rejected: LAN devices are reached over private IPv4 or over an overlay
+// network such as Tailscale (CGNAT 100.64.0.0/10).
 func isLanAddr(addr netip.Addr) bool {
-	return addr.IsValid() && addr.Is4() && addr.IsPrivate()
+	if !addr.IsValid() || !addr.Is4() {
+		return false
+	}
+	return addr.IsPrivate() || cgnatPrefix.Contains(addr)
+}
+
+// IsManualDeviceAddr reports whether ip is an address a manually added device
+// may use: a private LAN IPv4 or the CGNAT range mesh VPNs assign. Manual
+// entry triggers a full-range TCP scan, so rejecting public addresses keeps
+// the portal from being turned into a scanner for arbitrary hosts.
+func IsManualDeviceAddr(ip string) bool {
+	addr, err := netip.ParseAddr(strings.TrimSpace(ip))
+	return err == nil && isLanAddr(addr)
 }
 
 // pairingCheck identifies one in-flight check so an older check cannot
@@ -551,9 +570,59 @@ func (dm *DeviceManager) loadManualDevicesFromDir(dir string) {
 // reused before it is probed again.
 const manualPortTTL = 60 * time.Second
 
+// manualPortWarmTimeout bounds the post-pairing background port warm-up: long
+// enough for one full-range scan over a slow overlay, short enough not to leak
+// a goroutine forever.
+const manualPortWarmTimeout = 45 * time.Second
+
 // discoverTunnelPortFunc resolves a manual device's _remotepairing tunnel
 // port. It is a variable so tests can replace the network probe.
 var discoverTunnelPortFunc = DiscoverManualTunnelPort
+
+// Remembered-port re-check tuning. The remembered port is the cheap path that
+// avoids a full-range scan, so it must not fail on a healthy device merely
+// because the overlay relay is slow: a single handshake gets the full dial
+// budget as its response deadline (the 800ms scan deadline is too tight for
+// the 0.3-1.1s relay RTT measured in doc/misc/remote-pairing-port-discovery.md)
+// and a transient loss is retried a few times before falling back to a scan.
+const (
+	rememberedProbeAttempts   = 3
+	rememberedProbeBackoff    = 200 * time.Millisecond
+	rememberedProbeRespBudget = rpProbeTimeout
+)
+
+// probeRememberedPortFunc re-checks a remembered tunnel port with a single
+// handshake. It is a variable so tests can replace the network probe.
+var probeRememberedPortFunc = func(ctx context.Context, ip string, port uint16) (*PairingServiceInfo, error) {
+	return probePairingService(ctx, ip, port, rpProbeTimeout, rememberedProbeRespBudget)
+}
+
+// probeRememberedPort retries probeRememberedPortFunc a few times with a short
+// backoff, so one dropped SYN or delayed handshake on a slow relay does not
+// escalate to a multi-second full-range scan. It returns as soon as a probe
+// confirms the port is the tunnel service, or the last error otherwise.
+func probeRememberedPort(ctx context.Context, ip string, port uint16) (*PairingServiceInfo, error) {
+	var lastErr error
+	for attempt := 0; attempt < rememberedProbeAttempts; attempt++ {
+		if attempt > 0 {
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(rememberedProbeBackoff):
+			}
+		}
+		si, err := probeRememberedPortFunc(ctx, ip, port)
+		if err == nil && si != nil && si.Tunnel {
+			return si, nil
+		}
+		if err != nil {
+			lastErr = err
+		} else {
+			lastErr = fmt.Errorf("port %d did not answer as a tunnel service", port)
+		}
+	}
+	return nil, lastErr
+}
 
 // manualPortLock returns the per-device mutex used to serialize port discovery.
 func (dm *DeviceManager) manualPortLock(key string) *sync.Mutex {
@@ -604,6 +673,21 @@ func (dm *DeviceManager) PrepareManualDevice(ctx context.Context, dev *model.Dev
 		}
 	}
 
+	// The tunnel port only changes when the device restarts its services, so
+	// a remembered port usually survives the TTL. Probe it first with a
+	// single handshake (retried a few times, cheap and relay-friendly) before
+	// falling back to the expensive full-range scan.
+	if remembered := dm.rememberedManualPort(dev); remembered != 0 {
+		if si, err := probeRememberedPort(ctx, dev.IP, remembered); err == nil && si != nil && si.Tunnel {
+			dev.Port = remembered
+			dev.PortResolvedAt = time.Now()
+			if dev.UDID != "" {
+				dm.manualDevices.Store(utils.Md5(dev.UDID), *dev)
+			}
+			return nil
+		}
+	}
+
 	port, _, err := discoverTunnelPortFunc(ctx, dev.IP, nil)
 	if err != nil {
 		return fmt.Errorf("manual device tunnel port not found for %s: %w", dev.IP, err)
@@ -614,6 +698,61 @@ func (dm *DeviceManager) PrepareManualDevice(ctx context.Context, dev *model.Dev
 		dm.manualDevices.Store(utils.Md5(dev.UDID), *dev)
 	}
 	return nil
+}
+
+// rememberedManualPort returns the last tunnel port seen for the device, from
+// the caller's copy first, then the shared cache. A port survives in the
+// cache after its TTL expires: it is stale for direct use, but still the
+// best first candidate to re-probe.
+func (dm *DeviceManager) rememberedManualPort(dev *model.Device) uint16 {
+	if dev.Port != 0 {
+		return dev.Port
+	}
+	if dev.UDID == "" {
+		return 0
+	}
+	if cached, ok := dm.manualDevices.Load(utils.Md5(dev.UDID)); ok {
+		c := cached.(model.Device)
+		return c.Port
+	}
+	return 0
+}
+
+// WarmManualDevicePort resolves a manual device's tunnel port in the
+// background right after its pairing completes, so the install page does not
+// pay for the full-range scan on the first install. It looks the device up by
+// IP (the pairing record that makes the scan possible was just written, and
+// the freshly rebuilt manual entry carries its UDID) and runs the same
+// PrepareManualDevice path a foreground install would use. Failures are only
+// logged: the install page resolves the port on demand anyway.
+func (dm *DeviceManager) WarmManualDevicePort(ip string) {
+	ip = strings.TrimSpace(ip)
+	if ip == "" {
+		return
+	}
+	// Reload so the manual entry picks up the pairing record the flow just
+	// wrote (UDID, model, name); without it the scan cannot run.
+	dm.ReloadManualDevices()
+
+	var target *model.Device
+	dm.manualDevices.Range(func(_, v any) bool {
+		dev := v.(model.Device)
+		if dev.IP == ip {
+			target = &dev
+			return false
+		}
+		return true
+	})
+	if target == nil || target.UDID == "" {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), manualPortWarmTimeout)
+	defer cancel()
+	if err := dm.PrepareManualDevice(ctx, target); err != nil {
+		log.Debugf("Manual device %s port warm-up failed: %v", ip, err)
+		return
+	}
+	log.Infof("Manual device %s tunnel port ready: %d", ip, target.Port)
 }
 
 // RemoveManualDevice drops a manual device from memory (after its pairing

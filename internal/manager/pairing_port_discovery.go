@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"sort"
+	"net/netip"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -44,22 +44,45 @@ const (
 	rpPortFirst = 49152
 	rpPortLast  = 65535
 
-	// Tuned from the design doc's measurements: 1024 concurrent dials with a
-	// 250ms timeout scans the whole range in a few seconds without exhausting
-	// local ports.
-	rpDialConcurrency  = 1024
-	rpDialTimeout      = 250 * time.Millisecond
-	rpProbeConcurrency = 16
+	// Tuned against a real device over a Tailscale relay (see
+	// doc/misc/remote-pairing-port-discovery.md): a burst of thousands of
+	// SYNs saturates the relay queue and the open service ports themselves
+	// start timing out, so at 1024+ concurrency most full scans miss the
+	// tunnel port entirely. A small wave (128 dials) keeps the relay
+	// responsive: closed ports answer RST fast and only ~600 of 16k dials
+	// hit the timeout, and every full sweep finds the service. The 1.5s
+	// timeout covers the relay's bursty RTT (single dials measure 0.3-1.1s
+	// under no load), which a 600ms budget cannot. Lowest ports are found
+	// in the first wave thanks to the ascending order and early exit.
+	rpDialConcurrency = 128
+	rpDialTimeout     = 1500 * time.Millisecond
+	// Host-local services inside the range (rapportd, the app's own HTTP
+	// listener) accept connections but never answer the handshake, so they
+	// hold a probe slot until the probe timeout. Keep enough slots that a
+	// handful of silent listeners cannot starve the real service.
+	rpProbeConcurrency = 32
 	rpProbeTimeout     = 2 * time.Second
-	rpMDNSTimeout      = 1500 * time.Millisecond
+	// Accepted-but-silent listeners (rapportd, the app's own HTTP server on
+	// 127.0.0.1) answer nothing, so a probe against them runs the full probe
+	// timeout. Their handshake response deadline is bounded separately so
+	// they release their probe slot quickly. It still has to cover a real
+	// device's answer over a slow Tailscale relay (single dials measure
+	// 0.3-1.1s under no load), so 1.2s keeps genuine services from being
+	// missed while a silent listener is abandoned soon after.
+	rpProbeResponseTimeout = 1200 * time.Millisecond
+	rpMDNSTimeout          = 1500 * time.Millisecond
 )
 
 // ErrPairingPortNotFound is returned when no port answers allowsPairSetup.
 var ErrPairingPortNotFound = errors.New("manual pairing port not found")
 
 // ErrTunnelPortNotFound is returned when no port answers
-// allowsIncomingTunnelConnections.
-var ErrTunnelPortNotFound = errors.New("manual tunnel port not found")
+// allowsIncomingTunnelConnections. iOS only exposes the local developer and
+// lockdown services while an 802.11 Wi-Fi link is active (cellular data does
+// not count), so a battery of correct dials can still find nothing on a device
+// that left Wi-Fi; the message says so, because that is the usual cause when
+// the address itself is reachable.
+var ErrTunnelPortNotFound = errors.New("manual tunnel port not found: the iPhone must be connected to Wi-Fi for the connection to work")
 
 // Discovery stages reported to the caller so the UI can show progress.
 const (
@@ -149,6 +172,14 @@ func parseHandshakeBody(body []byte, port uint16) (*PairingServiceInfo, error) {
 // A nil error with a non-nil result means the port is an RPPairing service;
 // any other outcome (dial error, wrong magic, timeout) returns an error.
 func ProbePairingService(ctx context.Context, ip string, port uint16, timeout time.Duration) (*PairingServiceInfo, error) {
+	return probePairingService(ctx, ip, port, timeout, rpProbeResponseTimeout)
+}
+
+// probePairingService splits the probe budget: timeout bounds the dial (which
+// needs full RTT headroom on overlay networks), responseTimeout bounds the
+// handshake exchange once connected (real devices answer immediately, silent
+// local listeners are abandoned early).
+func probePairingService(ctx context.Context, ip string, port uint16, timeout, responseTimeout time.Duration) (*PairingServiceInfo, error) {
 	dialer := net.Dialer{Timeout: timeout}
 	conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(ip, strconv.Itoa(int(port))))
 	if err != nil {
@@ -156,7 +187,7 @@ func ProbePairingService(ctx context.Context, ip string, port uint16, timeout ti
 	}
 	defer func() { _ = conn.Close() }()
 
-	deadline := time.Now().Add(timeout)
+	deadline := time.Now().Add(responseTimeout)
 	if d, ok := ctx.Deadline(); ok && d.Before(deadline) {
 		deadline = d
 	}
@@ -187,13 +218,6 @@ func ProbePairingService(ctx context.Context, ip string, port uint16, timeout ti
 		return nil, err
 	}
 	return parseHandshakeBody(body, port)
-}
-
-// discoverPairingPortMDNS sends a unicast DNS-SD query to the device's 5353 and
-// returns the manual-pairing SRV port when the device answers. This is the fast
-// path on the same LAN; it fails across overlay networks.
-func discoverPairingPortMDNS(ctx context.Context, ip string, timeout time.Duration) (uint16, bool) {
-	return discoverPortMDNS(ctx, ip, rpManualPairingFQDN, timeout)
 }
 
 // discoverPortMDNS sends a unicast DNS-SD PTR query for fqdn and returns the
@@ -232,94 +256,120 @@ func discoverPortMDNS(ctx context.Context, ip, fqdn string, timeout time.Duratio
 	return 0, false
 }
 
-// scanOpenPorts dials every port in [first,last] and returns the open ones.
-// onProgress receives a monotonically increasing done count for the UI.
-func scanOpenPorts(ctx context.Context, ip string, first, last uint16, concurrency int, dialTimeout time.Duration, onProgress func(done, total int)) []uint16 {
+// scanProbedPorts dials ports in [first,last] in ascending order and probes
+// every open port with the RPPairing handshake as soon as its dial succeeds.
+// The first probed service satisfying pick wins: discovery returns
+// immediately and cancels the remaining work, so services on low ports
+// (the common case, since Darwin allocates ephemeral ports ascending) are
+// found without scanning the rest of the range. It returns nil when the
+// range is exhausted or ctx is cancelled.
+func scanProbedPorts(ctx context.Context, ip string, first, last uint16, pick portMatcher, progress DiscoveryProgress) *PairingServiceInfo {
+	report := func(stage string, pct int) {
+		if progress != nil {
+			progress(stage, pct)
+		}
+	}
+
+	report(DiscoverStageScanning, 0)
+	var (
+		wg       sync.WaitGroup
+		mu       sync.Mutex
+		found    *PairingServiceInfo
+		probed   int64
+		reported int32
+	)
 	total := int(last) - int(first) + 1
-	if total <= 0 {
-		return nil
-	}
+	// Closes when the winner is decided; every goroutine path selects on it
+	// so in-flight work stops promptly.
+	won := make(chan struct{})
+	sem := make(chan struct{}, rpDialConcurrency)
+	// Handshake probes are slower than dials; bound them separately so dials
+	// keep flowing ahead of the probes.
+	probeSem := make(chan struct{}, rpProbeConcurrency)
 
-	var (
-		wg     sync.WaitGroup
-		mu     sync.Mutex
-		open   []uint16
-		done   int64
-		report int32
-	)
-	sem := make(chan struct{}, concurrency)
-
+dialLoop:
 	for port := int(first); port <= int(last); port++ {
-		if ctx.Err() != nil {
-			break
+		select {
+		case <-won:
+			break dialLoop
+		case <-ctx.Done():
+			break dialLoop
+		case sem <- struct{}{}:
 		}
-		sem <- struct{}{}
-		wg.Add(1)
-		go func(p int) {
-			defer wg.Done()
-			defer func() { <-sem }()
-
-			dialer := net.Dialer{Timeout: dialTimeout}
-			conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(ip, strconv.Itoa(p)))
-			if err == nil {
-				_ = conn.Close()
-				mu.Lock()
-				open = append(open, uint16(p))
-				mu.Unlock()
-			}
-
-			n := atomic.AddInt64(&done, 1)
-			if onProgress != nil {
-				pct := int32(n * 100 / int64(total))
-				prev := atomic.LoadInt32(&report)
-				if (pct >= prev+5 || n == int64(total)) && atomic.CompareAndSwapInt32(&report, prev, pct) {
-					onProgress(int(n), total)
-				}
-			}
-		}(port)
-	}
-	wg.Wait()
-
-	sort.Slice(open, func(i, j int) bool { return open[i] < open[j] })
-	return open
-}
-
-// probePorts handshakes every candidate port and returns the RPPairing services.
-func probePorts(ctx context.Context, ip string, ports []uint16, concurrency int, timeout time.Duration) []*PairingServiceInfo {
-	var (
-		wg      sync.WaitGroup
-		mu      sync.Mutex
-		results []*PairingServiceInfo
-	)
-	sem := make(chan struct{}, concurrency)
-	for _, port := range ports {
-		if ctx.Err() != nil {
-			break
-		}
-		sem <- struct{}{}
 		wg.Add(1)
 		go func(p uint16) {
 			defer wg.Done()
 			defer func() { <-sem }()
-			info, err := ProbePairingService(ctx, ip, p, timeout)
-			if err == nil && info != nil {
-				mu.Lock()
-				results = append(results, info)
-				mu.Unlock()
+
+			dialer := net.Dialer{Timeout: rpDialTimeout}
+			conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(ip, strconv.Itoa(int(p))))
+			if err != nil {
+				n := atomic.AddInt64(&probed, 1)
+				reportPct(report, &reported, int(n), total)
+				return
 			}
-		}(port)
+			_ = conn.Close()
+
+			select {
+			case <-won:
+				return
+			case probeSem <- struct{}{}:
+			}
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				defer func() { <-probeSem }()
+
+				si, perr := ProbePairingService(ctx, ip, p, rpProbeTimeout)
+				n := atomic.AddInt64(&probed, 1)
+				reportPct(report, &reported, int(n), total)
+				if perr != nil || si == nil || !pick(si) {
+					return
+				}
+				mu.Lock()
+				if found == nil {
+					found = si
+					close(won)
+				}
+				mu.Unlock()
+			}()
+		}(uint16(port))
 	}
 	wg.Wait()
-	return results
+
+	if ctx.Err() != nil && found == nil {
+		return nil
+	}
+	return found
+}
+
+// reportPct throttles scanning progress to 5% steps; report may be nil.
+func reportPct(report func(string, int), reported *int32, done, total int) {
+	if report == nil || total <= 0 {
+		return
+	}
+	pct := done * 100 / total
+	prev := atomic.LoadInt32(reported)
+	if (int32(pct) >= prev+5 || done == total) && atomic.CompareAndSwapInt32(reported, prev, int32(pct)) {
+		report(DiscoverStageScanning, pct)
+	}
 }
 
 // portMatcher reports whether a handshaked service is the wanted one.
 type portMatcher func(*PairingServiceInfo) bool
 
+// skipMDNSForIP reports whether the unicast mDNS fast path is pointless for
+// ip. Overlay VPNs (Tailscale uses 100.x.x.x CGNAT addresses) cannot answer
+// link-local mDNS, so the 1.5s query would always time out before the scan.
+func skipMDNSForIP(ip string) bool {
+	addr, err := netip.ParseAddr(ip)
+	return err == nil && addr.Is4() && addr.As4()[0] == 100
+}
+
 // discoverPortByService is the testable core shared by the manual-pairing and
-// tunnel discovery: it tries the mDNS fast path (unless skipped) then the
-// two-stage TCP scan over [first,last], returning the first port that satisfies
-// pick.
+// tunnel discovery: it tries the mDNS fast path (unless skipped), then the
+// pipelined ascending scan over [first,last], returning the first port that
+// satisfies pick.
 func discoverPortByService(ctx context.Context, ip, fqdn string, first, last uint16, skipMDNS bool, pick portMatcher, progress DiscoveryProgress) (port uint16, info *PairingServiceInfo, err error) {
 	report := func(stage string, pct int) {
 		if progress != nil {
@@ -327,7 +377,7 @@ func discoverPortByService(ctx context.Context, ip, fqdn string, first, last uin
 		}
 	}
 
-	if !skipMDNS {
+	if !skipMDNS && !skipMDNSForIP(ip) {
 		report(DiscoverStageMDNS, 0)
 		if p, ok := discoverPortMDNS(ctx, ip, fqdn, rpMDNSTimeout); ok {
 			if si, perr := ProbePairingService(ctx, ip, p, rpProbeTimeout); perr == nil && pick(si) {
@@ -337,76 +387,38 @@ func discoverPortByService(ctx context.Context, ip, fqdn string, first, last uin
 		}
 	}
 
-	report(DiscoverStageScanning, 0)
-	open := scanOpenPorts(ctx, ip, first, last, rpDialConcurrency, rpDialTimeout, func(done, total int) {
-		report(DiscoverStageScanning, done*100/total)
-	})
+	if si := scanProbedPorts(ctx, ip, first, last, pick, progress); si != nil {
+		report(DiscoverStageFound, 100)
+		return si.Port, si, nil
+	}
 	if ctx.Err() != nil {
 		return 0, nil, ctx.Err()
-	}
-
-	report(DiscoverStageProbing, 0)
-	for _, si := range probePorts(ctx, ip, open, rpProbeConcurrency, rpProbeTimeout) {
-		if pick(si) {
-			report(DiscoverStageFound, 100)
-			return si.Port, si, nil
-		}
 	}
 
 	report(DiscoverStageFailed, 100)
 	return 0, nil, nil
 }
 
-// discoverManualPairingPort is the manual-pairing variant: it also captures the
-// tunnel port seen during the same scan.
-func discoverManualPairingPort(ctx context.Context, ip string, first, last uint16, skipMDNS bool, progress DiscoveryProgress) (pairPort, tunnelPort uint16, info *PairingServiceInfo, err error) {
-	report := func(stage string, pct int) {
-		if progress != nil {
-			progress(stage, pct)
-		}
-	}
-
-	if !skipMDNS {
-		report(DiscoverStageMDNS, 0)
-		if p, ok := discoverPairingPortMDNS(ctx, ip, rpMDNSTimeout); ok {
-			if si, perr := ProbePairingService(ctx, ip, p, rpProbeTimeout); perr == nil && si.PairSetup {
-				report(DiscoverStageFound, 100)
-				return p, 0, si, nil
-			}
-		}
-	}
-
-	report(DiscoverStageScanning, 0)
-	open := scanOpenPorts(ctx, ip, first, last, rpDialConcurrency, rpDialTimeout, func(done, total int) {
-		report(DiscoverStageScanning, done*100/total)
-	})
-	if ctx.Err() != nil {
-		return 0, 0, nil, ctx.Err()
-	}
-
-	report(DiscoverStageProbing, 0)
-	for _, si := range probePorts(ctx, ip, open, rpProbeConcurrency, rpProbeTimeout) {
-		if si.PairSetup && pairPort == 0 {
-			pairPort = si.Port
-			info = si
-		}
-		if si.Tunnel && tunnelPort == 0 {
-			tunnelPort = si.Port
-		}
-	}
-
-	if pairPort == 0 {
-		report(DiscoverStageFailed, 100)
-		return 0, tunnelPort, nil, ErrPairingPortNotFound
-	}
-	report(DiscoverStageFound, 100)
-	return pairPort, tunnelPort, info, nil
+// discoverManualPairingPort is the manual-pairing variant: it stops at the
+// first service that allows the PIN pair-setup flow.
+func discoverManualPairingPort(ctx context.Context, ip string, first, last uint16, skipMDNS bool, progress DiscoveryProgress) (uint16, *PairingServiceInfo, error) {
+	return discoverPortByService(ctx, ip, rpManualPairingFQDN, first, last, skipMDNS, func(si *PairingServiceInfo) bool {
+		return si.PairSetup
+	}, progress)
 }
 
 // DiscoverManualPairingPort finds the manual-pairing port for a manually
-// specified IP: mDNS unicast fast path, then a full two-stage TCP scan.
-func DiscoverManualPairingPort(ctx context.Context, ip string, progress DiscoveryProgress) (pairPort, tunnelPort uint16, info *PairingServiceInfo, err error) {
-	return discoverManualPairingPort(ctx, ip, rpPortFirst, rpPortLast, false, progress)
+// specified IP: mDNS unicast fast path (unless skipped for overlay IPs), then
+// a pipelined ascending scan that stops at the first pair-setup service.
+func DiscoverManualPairingPort(ctx context.Context, ip string, progress DiscoveryProgress) (pairPort uint16, info *PairingServiceInfo, err error) {
+	pairPort, info, err = discoverManualPairingPort(ctx, ip, rpPortFirst, rpPortLast, false, progress)
+	if err != nil {
+		return 0, nil, err
+	}
+	if pairPort == 0 {
+		return 0, nil, ErrPairingPortNotFound
+	}
+	return pairPort, info, nil
 }
 
 // DiscoverManualTunnelPort finds the _remotepairing tunnel port for a manually

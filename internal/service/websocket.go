@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/netip"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -563,17 +562,17 @@ func HandlePairMessage(c *websocket.Conn) {
 	}
 }
 
-// isManualPairingIP accepts only an IPv4 literal, so a manual pairing request
-// can never be turned into a scan of arbitrary hosts or port ranges.
+// isManualPairingIP accepts only a private LAN or CGNAT IPv4 literal. Manual
+// pairing triggers a full-range TCP scan, so restricting the address keeps a
+// request from being turned into a scan of arbitrary public hosts.
 func isManualPairingIP(ip string) bool {
-	addr, err := netip.ParseAddr(ip)
-	return err == nil && addr.Is4()
+	return manager.IsManualDeviceAddr(ip)
 }
 
 // runPairDiscovery discovers the manual-pairing port of ip and streams progress
 // and the final result to the pair page.
 func runPairDiscovery(ctx context.Context, mgr *manager.WebsocketManager, ip string) {
-	port, tunnelPort, info, err := manager.DiscoverManualPairingPort(ctx, ip, func(stage string, percent int) {
+	port, info, err := manager.DiscoverManualPairingPort(ctx, ip, func(stage string, percent int) {
 		writePairDiscovery(mgr, model.PairingDiscoveryMessage{
 			Kind: "discover", Stage: stage, Percent: percent,
 		})
@@ -586,7 +585,7 @@ func runPairDiscovery(ctx context.Context, mgr *manager.WebsocketManager, ip str
 	}
 	msg := model.PairingDiscoveryMessage{
 		Kind: "discover", Stage: manager.DiscoverStageFound, Percent: 100,
-		Port: port, TunnelPort: tunnelPort,
+		Port: port,
 	}
 	if info != nil {
 		msg.Name = info.DeviceName
@@ -609,6 +608,15 @@ func runPairMessage(mgr *manager.WebsocketManager, pairMgr *manager.PairManager,
 		msg := fmt.Sprintf("ERROR: %s", err.Error())
 		mgr.WriteMessage(msg)
 		return
+	}
+
+	// Pairing wrote this device's pairing record, which is what makes the
+	// tunnel handshake possible. For a manual (e.g. Tailscale) device nothing
+	// re-announces it, so resolve its install port now in the background
+	// while the user heads to the install page: the first install then skips
+	// the full-range scan.
+	if device.Manual {
+		go manager.WarmManualDevicePort(device.IP)
 	}
 }
 

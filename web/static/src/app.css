@@ -16,6 +16,7 @@ html[data-theme="light"] {
   --atv-accent: #255bb4;
   --atv-accent-hover: #19468e;
   --atv-accent-soft: #eaf1fc;
+  --atv-accent-soft-hover: #c9dcf5;
   --atv-danger: #a23e4b;
   --atv-danger-hover: #812d3a;
   --atv-danger-soft: #fff1f1;
@@ -39,6 +40,7 @@ html[data-theme="dark"] {
   --atv-accent: #9bc5fa;
   --atv-accent-hover: #c3ddff;
   --atv-accent-soft: #233953;
+  --atv-accent-soft-hover: #16243a;
   --atv-danger: #ffb2b8;
   --atv-danger-hover: #ffe0e3;
   --atv-danger-soft: #422832;
@@ -141,13 +143,28 @@ html[data-theme="dark"] {
   border-radius: 18px;
   border-collapse: separate;
   border-spacing: 0;
-  overflow: hidden;
   background: var(--atv-surface);
   box-shadow: var(--atv-shadow);
 }
 
 .app-container .main-container .table thead {
   background: var(--atv-surface-alt);
+}
+
+.app-container .main-container .table thead th:first-child {
+  border-top-left-radius: 18px;
+}
+
+.app-container .main-container .table thead th:last-child {
+  border-top-right-radius: 18px;
+}
+
+.app-container .main-container .table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 18px;
+}
+
+.app-container .main-container .table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 18px;
 }
 
 .app-container .main-container .table th {
@@ -428,7 +445,6 @@ html[data-theme="dark"] {
 .app-container .main-container .table {
   border-collapse: separate;
   border-spacing: 0;
-  overflow: hidden;
 }
 
 .app-container .main-container .table thead {

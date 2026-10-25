@@ -675,7 +675,7 @@
       "device_placeholder": "npr. 192.168.1.205, ili izaberite uređaj",
       "device_tips": "iPhone mora biti otključan da bi bio otkriven i povezan; podržana je lokalna IP adresa ili Tailscale IP adresa",
       "upload_label": "Otpremi datoteku za uparivanje",
-      "no_device": "Nije moguće pronaći uslugu tunela iPhone-a. Proverite da li je iPhone otključan i dostupan na istoj mreži (ili preko Tailscale-a).",
+      "no_device": "Nije moguće pronaći uslugu tunela iPhone-a. iPhone mora biti povezan na Wi-Fi (samo mobilni podaci ne rade); proverite da li je otključan i dostupan na istoj mreži ili preko Tailscale-a.",
       "submit": "Započni povezivanje"
     },
     "toast": {

@@ -53,7 +53,26 @@ test("iPhone discovered device submits without manual and without probing", asyn
   assert.equal(submitted.manual, undefined, "discovered device must not send manual");
 });
 
-test("iPhone manual IP probes tunnel then submits with manual=true", async () => {
+test("iPhone LAN manual IP probes tunnel then submits with manual=true", async () => {
+  let probedIp = null;
+  let submitted = null;
+  const state = loadComponent({
+    discoverTunnelPort: async (ip) => { probedIp = ip; return { data: { port: 61234 } }; },
+    importPair: async (fd) => { submitted = fd._d; return {}; },
+  });
+  state.iphoneIp = "192.168.1.50";
+  state.iphoneDevices = [];
+
+  await state.startConnect();
+
+  assert.equal(probedIp, "192.168.1.50", "manual IP must trigger tunnel probing");
+  assert.ok(submitted, "import should be submitted after probing");
+  assert.equal(submitted.ip, "192.168.1.50");
+  assert.equal(submitted.port, 61234);
+  assert.equal(submitted.manual, "true", "manual IP must submit manual=true");
+});
+
+test("Tailscale iPhone IP connects directly without a reminder dialog", async () => {
   let probedIp = null;
   let submitted = null;
   const state = loadComponent({
@@ -65,11 +84,11 @@ test("iPhone manual IP probes tunnel then submits with manual=true", async () =>
 
   await state.startConnect();
 
-  assert.equal(probedIp, "100.64.0.9", "manual IP must trigger tunnel probing");
-  assert.ok(submitted, "import should be submitted after probing");
+  assert.equal(probedIp, "100.64.0.9", "Tailscale IP must go straight to tunnel probing");
+  assert.ok(submitted, "import should be submitted");
   assert.equal(submitted.ip, "100.64.0.9");
   assert.equal(submitted.port, 61234);
-  assert.equal(submitted.manual, "true", "manual IP must submit manual=true");
+  assert.equal(submitted.manual, "true");
 });
 
 test("iPhone manual IP with no tunnel port does not submit", async () => {
@@ -78,10 +97,11 @@ test("iPhone manual IP with no tunnel port does not submit", async () => {
     discoverTunnelPort: async () => ({ data: {} }),
     importPair: async () => { submitted = true; return {}; },
   });
-  state.iphoneIp = "100.64.0.9";
+  state.iphoneIp = "192.168.1.50";
   state.iphoneDevices = [];
 
   await state.startConnect();
 
   assert.equal(submitted, false, "no tunnel port means no import");
 });
+
