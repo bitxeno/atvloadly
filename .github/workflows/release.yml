@@ -96,7 +96,8 @@ jobs:
         uses: bitxeno/changelogithub-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
+          # Any hyphen is a prerelease, matching the Docker latest guard.
+          prerelease: ${{ contains(github.ref_name, '-') }}
           # output-file: ./docs/CHANGELOG.md
           types: |
             feat
@@ -229,6 +230,14 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPOSITORY }}
+          # latest follows stable releases only: a -beta tag moves the beta
+          # channel, never latest. flavor latest=false turns off the implicit
+          # latest that type=ref,event=tag would add for any tag.
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+          flavor: |
+            latest=false
       - name: Build and push Docker images to DockerHub
         uses: docker/build-push-action@v7
         with:
@@ -274,6 +283,12 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
+          # Same rule as DockerHub: only a stable tag moves latest.
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+          flavor: |
+            latest=false
       - name: Build and push Docker images to ghci
         uses: docker/build-push-action@v7
         with:
@@ -349,7 +364,8 @@ jobs:
             ./build/*.tar.gz
             dist/*.dmg
             dist/*Setup*.exe
-          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
+          # Any hyphen is a prerelease, matching the Docker latest guard.
+          prerelease: ${{ contains(github.ref_name, '-') }}
           name: "${{ github.ref_name }} - tvOS 17.4+"
           body: ${{ needs.build.outputs.CHANGELOG }}
           draft: true
@@ -370,6 +386,10 @@ jobs:
       # Cask generation needs the DMG's final checksum, so it runs after the
       # release step. The DMG upload already happened above; only the cask
       # file itself is uploaded here.
+      #
+      # The cask follows the release channel the way Homebrew names them: a
+      # stable tag updates the "atvloadly" cask, a -beta tag updates the
+      # "atvloadly@beta" cask and leaves the stable one alone.
       - name: Generate Homebrew cask
         id: cask
         run: |
@@ -380,14 +400,23 @@ jobs:
           SHA=$(sha256sum "$DMG" | awk '{print $1}')
           echo "DMG_SHA256=$SHA" >> "$GITHUB_OUTPUT"
 
+          # One prerelease channel, as Homebrew names them (google-chrome@beta):
+          # a hyphen in the version means the beta cask.
+          if [[ "$VERSION" == *-* ]]; then
+            TOKEN="atvloadly@beta"
+          else
+            TOKEN="atvloadly"
+          fi
+          echo "CASK_FILE=$TOKEN.rb" >> "$GITHUB_OUTPUT"
+
           # Indentation and the ENV.fetch style follow `brew style --fix`
           # output so the tap repo's cop does not push back (the dshdock
           # cask was validated this way).
-          cat > atvloadly.rb <<RUBY
+          cat > "$TOKEN.rb" <<RUBY
           # typed: strict
           # frozen_string_literal: true
 
-          cask "atvloadly" do
+          cask "$TOKEN" do
             version "$VERSION"
             sha256 "$SHA"
 
@@ -418,18 +447,19 @@ jobs:
             EOS
           end
           RUBY
-          ruby -c atvloadly.rb
+          ruby -c "$TOKEN.rb"
 
       - name: Upload cask to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$GITHUB_REF_NAME" atvloadly.rb --clobber
+        run: gh release upload "$GITHUB_REF_NAME" "${{ steps.cask.outputs.CASK_FILE }}" --clobber
 
       - name: Push cask to Homebrew tap
         env:
           TAP_REPO: ${{ secrets.HOMEBREW_TAP_REPO }}
           TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           VERSION: ${{ steps.version.outputs.VERSION }}
+          CASK_FILE: ${{ steps.cask.outputs.CASK_FILE }}
         # Skip gracefully when the secrets are not configured: the cask is
         # attached to the Release assets and can be copied into the tap
         # manually.
@@ -439,10 +469,10 @@ jobs:
           # Use the Contents API instead of git push: git credentials are
           # picky about OAuth token formats, while the API's Bearer auth
           # plus printing the raw response on failure stays diagnosable.
-          API="https://api.github.com/repos/${TAP_REPO}/contents/Casks/atvloadly.rb"
+          API="https://api.github.com/repos/${TAP_REPO}/contents/Casks/${CASK_FILE}"
           OLD_SHA=$(curl -sf -H "Authorization: Bearer ${TAP_TOKEN}" "$API" | jq -r '.sha // empty') || true
           jq -n --arg message "atvloadly ${VERSION}" \
-                --arg content "$(base64 -w0 atvloadly.rb)" \
+                --arg content "$(base64 -w0 "${CASK_FILE}")" \
                 --arg sha "$OLD_SHA" \
                 '{message: $message, content: $content}
                  + (if $sha == "" then {} else {sha: $sha} end)' > payload.json
