@@ -135,6 +135,18 @@ jobs:
           generate_release_notes: true
           draft: true
 
+      # The action puts `body` before the generated notes, so append the
+      # macOS install note in a second pass to land it at the very end.
+      # The DMG is unsigned (ad hoc), hence the quarantine note.
+      - name: Append macOS install note
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          note=$'\n\n> **macOS install**: the DMG is unsigned. After dragging `atvloadly.app` into Applications, run once:\n> `sudo xattr -dr com.apple.quarantine /Applications/atvloadly.app`'
+          body="$(gh release view "$GITHUB_REF_NAME" --json body -q .body)"
+          gh release edit "$GITHUB_REF_NAME" --notes "${body}${note}"
+
       # Cask generation needs the DMG's final checksum, so it runs after the
       # release step. The DMG upload already happened above; only the cask
       # file itself is uploaded here.
