@@ -101,6 +101,8 @@ func (dm *DeviceManager) Start() {
 	ctx := dm.ctx
 	dm.mu.Unlock()
 
+	dm.startLivenessProbe(ctx)
+
 	// A browser freed because the provider dropped a dead connection ends
 	// runDiscovery. Reconnect and restart discovery instead of leaving the
 	// daemon permanently without device discovery.

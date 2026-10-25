@@ -12,12 +12,18 @@ atvloadly is a Go-based web service for sideloading apps onto Apple TV devices. 
 
 ## Build Commands
 
+The service builds with `CGO_ENABLED=0` (all dependencies are pure Go; lzfse
+decoding goes through the purego-based bitxeno/lzfse-go). The `pkg/bom`
+directory is a self-contained nested Go module (vendored from
+github.com/bitxeno/bom), wired into the main module via a self replace in
+go.mod.
+
 ```bash
 # Build the Go binary
-go build -o atvloadly main.go
+CGO_ENABLED=0 go build -o atvloadly main.go
 
 # Build for specific platform
-GOOS=linux GOARCH=amd64 go build -o build/atvloadly-linux-amd64 main.go
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/atvloadly-linux-amd64 main.go
 
 # Run locally with debug mode
 go run main.go server --config ./doc/config.yaml.example --debug

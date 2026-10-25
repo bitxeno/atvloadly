@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
@@ -51,6 +52,31 @@ func GetDeviceByUDID(udid string) (*model.Device, bool) {
 	return deviceManager.GetDeviceByUDID(udid)
 }
 
+// PrepareManualDevice resolves the dynamic tunnel port of a manual device so
+// that installs, refreshes and screenshots can reach it over RSD. It is a
+// no-op for mDNS-discovered devices.
+func PrepareManualDevice(ctx context.Context, dev *model.Device) error {
+	return deviceManager.PrepareManualDevice(ctx, dev)
+}
+
+// ManualPortNeedsResolve reports whether the next PrepareManualDevice call will
+// probe for a manual device's tunnel port (missing or older than the cache
+// TTL). Used to show a probe prompt before the potentially slow discovery.
+func ManualPortNeedsResolve(dev *model.Device) bool {
+	if dev == nil || !dev.Manual || dev.IP == "" {
+		return false
+	}
+	return dev.Port == 0 || time.Since(dev.PortResolvedAt) >= manualPortTTL
+}
+
+// WarmManualDevicePort resolves a manual device's tunnel port in the
+// background after its pairing completes, so the first install does not pay
+// for the full-range scan. Failures are logged only; the install page
+// resolves the port on demand.
+func WarmManualDevicePort(ip string) {
+	deviceManager.WarmManualDevicePort(ip)
+}
+
 // GetDeviceInfo queries the device for its lockdown values, including the
 // hardware UniqueDeviceID.
 func GetDeviceInfo(dev *model.Device) (*model.DeviceInfo, error) {
@@ -59,6 +85,28 @@ func GetDeviceInfo(dev *model.Device) (*model.DeviceInfo, error) {
 
 func ReloadDevices() {
 	deviceManager.ReloadDevices()
+}
+
+// ReloadManualDevices rebuilds the manual-device list from the pairing files.
+func ReloadManualDevices() {
+	deviceManager.ReloadManualDevices()
+}
+
+// DeleteManualDevice removes a manually added device: its pairing files
+// (<udid>.json and <udid>.plist) and its in-memory entry.
+func DeleteManualDevice(udid string) error {
+	if strings.TrimSpace(udid) == "" {
+		return fmt.Errorf("udid is required")
+	}
+	// Both files belong to the same pairing record: delete them together.
+	for _, ext := range []string{".json", ".plist"} {
+		path := filepath.Join(app.RemotePairingDir(), udid+ext)
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	deviceManager.RemoveManualDevice(utils.Md5(udid))
+	return nil
 }
 
 func ScanDevices() {
@@ -73,6 +121,10 @@ func CheckAfcServiceStatus(udid string) error {
 	device, found := deviceManager.GetDeviceByUDID(udid)
 	if !found {
 		return fmt.Errorf("device not found: %s", udid)
+	}
+	// Manual devices need their tunnel port resolved before the AFC check.
+	if err := PrepareManualDevice(context.Background(), device); err != nil {
+		return err
 	}
 	return deviceManager.CheckAfcServiceStatus(device)
 }

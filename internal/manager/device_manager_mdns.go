@@ -38,6 +38,8 @@ func (dm *DeviceManager) Start() {
 	ctx := dm.ctx
 	dm.mu.Unlock()
 
+	dm.startLivenessProbe(ctx)
+
 	client, err := zeroconf.New().
 		Browse(dm.handleMDNSEvent,
 			zeroconf.NewType(mdnsServiceAppleMobdev2),

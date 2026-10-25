@@ -47,7 +47,7 @@ service.interceptors.response.use(
     if (res.code !== 200) {
       const msg = res.msg ? `${res.msg} (code: ${res.code})` : `Error (code: ${res.code})`;
       if (!response.config.silent) {
-        toast.error(msg, { autoClose: 5000 });
+        toast.error(msg);
       }
       const error = new Error(msg);
       error.result = res;
@@ -58,7 +58,11 @@ service.interceptors.response.use(
   },
   (error) => {
     console.log("err" + error); // for debug
-    toast.error(error.message, { autoClose: 5000 });
+    // `silent: true` callers present the error themselves (also on network
+    // failures such as a timeout), so skip the toast here too.
+    if (!error.config || !error.config.silent) {
+      toast.error(error.message);
+    }
     return Promise.reject(error);
   }
 );

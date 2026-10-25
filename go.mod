@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/betamos/zeroconf v0.1.8-0.20250208023331-d559d61612b7
+	github.com/bitxeno/atvloadly/pkg/bom v0.0.0-00010101000000-000000000000
 	github.com/creasty/defaults v1.5.2
 	github.com/fatih/color v1.9.0
 	github.com/ggwhite/go-masker/v2 v2.1.0
@@ -17,7 +18,6 @@ require (
 	github.com/gookit/event v1.1.2
 	github.com/holoplot/go-avahi v1.0.1
 	github.com/iineva/CgbiPngFix v0.0.0-20210523041253-b8869b346914
-	github.com/iineva/bom v1.0.0
 	github.com/iineva/ipa-server v0.0.0-20210613102156-5a07a87df9a8
 	github.com/json-iterator/go v1.1.12
 	github.com/knadh/koanf v1.5.0
@@ -43,13 +43,14 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
-	github.com/blacktop/lzfse-cgo v1.1.20 // indirect
+	github.com/bitxeno/lzfse-go v0.1.0 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20220106215444-fb4bf637b56d // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/creack/pty v1.1.17 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/ebitengine/purego v0.8.4 // indirect
 	github.com/fasthttp/websocket v1.5.3 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/glebarez/go-sqlite v1.21.2 // indirect
@@ -93,7 +94,11 @@ require (
 	modernc.org/sqlite v1.23.1 // indirect
 )
 
-replace github.com/iineva/bom => github.com/bitxeno/bom v0.0.0-20260929143343-0e05147ba077
+// bom is vendored from github.com/bitxeno/bom (fork of iineva/bom) with its
+// cgo lzfse dependency swapped for the purego bitxeno/lzfse-go, so the whole
+// service builds with CGO_ENABLED=0. The self-replace wires the nested
+// module into the main build.
+replace github.com/bitxeno/atvloadly/pkg/bom => ./pkg/bom
 
 // go-pkcs12 v0.7.3 derives keys with whatever iteration count the file asks
 // for, so a tiny P12 can pin a CPU indefinitely. third_party/go-pkcs12 is

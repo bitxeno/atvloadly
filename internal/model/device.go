@@ -6,13 +6,16 @@ import (
 )
 
 type Device struct {
-	ID                       string           `json:"id"`
-	Name                     string           `json:"name"`
-	ServiceName              string           `json:"service_name"`
-	IP                       string           `json:"ip"`
-	Port                     uint16           `json:"port,omitempty"`
-	MacAddr                  string           `json:"mac_addr"`
-	UDID                     string           `json:"udid"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	ServiceName string `json:"service_name"`
+	IP          string `json:"ip"`
+	Port        uint16 `json:"port,omitempty"`
+	MacAddr     string `json:"mac_addr"`
+	UDID        string `json:"udid"`
+	// Manual marks a device the user entered by IP (not discovered via mDNS).
+	// Its Port is resolved by pairing-port discovery before pairing.
+	Manual                   bool             `json:"manual,omitempty"`
 	Connection               DeviceConnection `json:"connection"`
 	Status                   DeviceStatus     `json:"status"`
 	Enable                   bool             `json:"enable"`
@@ -23,6 +26,9 @@ type Device struct {
 	DeveloperModeStatus      bool             `json:"developer_mode_status"`
 	PersonalizedImageMounted bool             `json:"personalized_image_mounted"`
 	DiscoveryAt              time.Time        `json:"-"`
+	// PortResolvedAt is when a manual device's dynamic tunnel Port was last
+	// discovered. Not serialized: it only guards the in-memory cache.
+	PortResolvedAt time.Time `json:"-"`
 }
 
 func (d *Device) ParseDeviceClass() {

@@ -286,6 +286,19 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiError("device not found"))
 	})
 
+	// Forget a manually added device (pairing files + in-memory entry).
+	api.Post("/devices/:id/manual/delete", func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		device, ok := manager.GetDeviceByID(id)
+		if !ok || device == nil || !device.Manual || device.UDID == "" {
+			return c.Status(http.StatusOK).JSON(apiError("manual device not found"))
+		}
+		if err := service.DeleteManualDevice(device.UDID); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
 	api.Post("/devices/:id/mountimage", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 
@@ -415,13 +428,40 @@ func route(fi *fiber.App) {
 
 		ip := c.FormValue("ip")
 		port := c.FormValue("port")
+		manual := c.FormValue("manual") == "true"
 
 		// Call manager to process the file
-		if err := service.ImportPairingFile(ip, port, data); err != nil {
+		if err := service.ImportPairingFile(ip, port, manual, data); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 
 		return c.Status(http.StatusOK).JSON(apiSuccess("success"))
+	})
+
+	// Discover the _remotepairing tunnel port for a manually entered iPhone IP.
+	// Used by the add-device page to validate a pairing file over the tunnel.
+	api.Get("/pair/tunnel-port", func(c *fiber.Ctx) error {
+		ip := strings.TrimSpace(c.Query("ip"))
+		if !manager.IsManualDeviceAddr(ip) {
+			return c.Status(http.StatusOK).JSON(apiError("invalid ip"))
+		}
+
+		// A full-range sweep over a slow overlay can take longer than the
+		// earlier 20s budget, which cut off scans that would have succeeded;
+		// 30s covers the whole range on a relay path.
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		port, info, err := manager.DiscoverManualTunnelPort(ctx, ip, nil)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		result := map[string]interface{}{"port": port}
+		if info != nil {
+			result["name"] = info.DeviceName
+			result["model"] = info.Model
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(result))
 	})
 
 	api.Post("/upload", func(c *fiber.Ctx) error {

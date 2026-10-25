@@ -251,6 +251,13 @@ export default {
     });
   },
 
+  deleteManualDevice: (id) => {
+    return request({
+      url: `/api/devices/${id}/manual/delete`,
+      method: "post",
+    });
+  },
+
   refreshApp: (id) => {
     return request({
       url: `/api/apps/${id}/refresh`,
@@ -454,6 +461,16 @@ export default {
         "Content-Type": "multipart/form-data",
       },
       data,
+    });
+  },
+  discoverTunnelPort: (ip) => {
+    return request({
+      url: "/api/pair/tunnel-port",
+      method: "get",
+      timeout: 30000,
+      // The caller shows its own toast on failure; skip the interceptor toast.
+      silent: true,
+      params: { ip },
     });
   },
   scanWireless: () => {

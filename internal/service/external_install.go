@@ -292,6 +292,16 @@ func RunExternalInstall(ctx context.Context, installMgr *manager.InstallManager,
 }
 
 func runExternalInstall(ctx context.Context, installMgr *manager.InstallManager, app model.InstalledApp, dev *model.Device, retry bool) (*ExternalInstallResult, error) {
+	// A manual (Tailscale) device has no mDNS-provided tunnel port; resolve it
+	// before preparing/installing so the engine can reach it over RSD.
+	if manager.ManualPortNeedsResolve(dev) {
+		installMgr.WriteLog("Resolving tunnel port for manual device...\n")
+	}
+	if err := manager.PrepareManualDevice(ctx, dev); err != nil {
+		installMgr.WriteLog(err.Error() + "\n")
+		return nil, err
+	}
+
 	ext, err := PrepareExternalInstall(app, dev, installMgr.WriteLog)
 	if err != nil {
 		return nil, err

@@ -9,6 +9,9 @@ const (
 
 	MessageTypePair        = 1
 	MessageTypePairConfirm = 2
+	// Manual-IP pairing: discover the pairing port, then pair with it.
+	MessageTypePairManualDiscover = 3
+	MessageTypePairManualStart    = 4
 )
 
 // Message Websocket Communication data format

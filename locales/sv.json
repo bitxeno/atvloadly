@@ -50,7 +50,6 @@
   },
   "home": {
     "heading": {
-      "pairable_devices": "Enheter som kan parkopplas",
       "paired_devices": "Parkopplade enheter",
       "service_status": "Tjänststatus",
       "installed_app": "Installerade appar"
@@ -82,10 +81,19 @@
       "update_failed": "Installationen av {{version}} misslyckades och görs inte om automatiskt. Använd Uppgradera för att försöka igen."
     },
     "sidebar": {
+      "add_device": {
+        "title": "Lägg till ny enhet",
+        "subtitle": "Anslut AppleTV eller iPhone"
+      },
       "device_status": {
         "pairable": "Kan parkopplas",
         "paired": "Parkopplad",
-        "unpaired": "Inte parkopplad"
+        "unpaired": "Inte parkopplad",
+        "added": "Tillagd",
+        "ip_badge": "IP",
+        "forget": "Ta bort",
+        "forget_confirm": "Bekräfta",
+        "forget_done": "Enheten har glömts"
       },
       "tips": {
         "no_paired_devices": "Inga parkopplade enheter",
@@ -152,6 +160,17 @@
       "pin_incorrect": "Fel PIN-kod",
       "pair_error": "Parkopplingen misslyckades. Se konsolen för mer information.",
       "no_device_found": "Enheten hittades inte. Kontrollera att tjänsten usbmuxd körs."
+    },
+    "manual": {
+      "discovering": "Söker parkopplingsport…",
+      "stage_mdns": "Slår upp parkopplingstjänsten…",
+      "stage_scanning": "Skannar portar… {{percent}}%",
+      "stage_probing": "Verifierar parkopplingstjänsten…",
+      "stage_found": "Parkopplingsport hittad",
+      "stage_failed": "Parkopplingsport hittades inte",
+      "found": "Parkopplingsport: {{port}}",
+      "failed": "Kunde inte hitta parkopplingsporten. Kontrollera att Apple TV:n är i parkopplingsläge.",
+      "retry": "Sök igen"
     },
     "step": {
       "start": {
@@ -626,6 +645,34 @@
     "ssdp": {
       "title": "SSDP-skanner",
       "pairable_label": "Tjänstetyp för parkopplingsbara enheter: _remotepairing-manual-pairing._tcp"
+    }
+  },
+  "addDevice": {
+    "title": "Lägg till ny enhet",
+    "tabs": {
+      "appletv": "Apple TV",
+      "iphone": "iPhone"
+    },
+    "appletv": {
+      "device_label": "Apple TV-enhet",
+      "ip_placeholder": "t.ex. 192.168.1.120",
+      "ip_tips": "Apple TV:n måste vara i parkopplingsläge för att kunna hittas och anslutas; stöder en lokal IP-adress eller en Tailscale IP-adress",
+      "pairing_step1": "Öppna Inställningar → Fjärrkontroller och enheter → Fjärrapp och enheter på Apple TV:n för att gå in i parkopplingsläge.",
+      "pairing_step2": "Uppdatera enhetslistan och välj Apple TV:n, klicka sedan på Starta parkoppling.",
+      "no_device": "IP-adressen matchar ingen hittad Apple TV. Uppdatera listan och välj en enhet.",
+      "submit": "Starta parkoppling"
+    },
+    "iphone": {
+      "device_label": "iPhone-enhet",
+      "device_placeholder": "t.ex. 192.168.1.205, eller välj en enhet",
+      "device_tips": "iPhone måste låsas upp för att kunna hittas och anslutas; stöder en lokal IP-adress eller en Tailscale IP-adress",
+      "upload_label": "Ladda upp parkopplingsfil",
+      "no_device": "Kunde inte hitta iPhone-tunneltjänsten. iPhone måste vara ansluten till Wi-Fi (endast mobildata fungerar inte); kontrollera att den är upplåst och nåbar i samma nätverk eller via Tailscale.",
+      "submit": "Starta anslutning"
+    },
+    "toast": {
+      "device_required": "Ange eller välj en enhets IP-adress",
+      "file_required": "Ladda upp en parkopplingsfil först"
     }
   },
   "laboratory": {

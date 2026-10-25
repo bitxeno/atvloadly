@@ -100,6 +100,10 @@ func MountDeveloperDiskImage(ctx context.Context, id string) error {
 		return fmt.Errorf("mount is only supported on remote paired (RSD) devices")
 	}
 
+	if err := manager.PrepareManualDevice(ctx, device); err != nil {
+		return err
+	}
+
 	mgr := manager.NewScreenshotManager()
 	if _, err := mgr.EnsureMounted(ctx, device); err != nil {
 		return err
@@ -118,6 +122,10 @@ func TakeDeviceScreenshot(ctx context.Context, id string) (string, error) {
 
 	if device.Connection != model.DeviceConnectionRemote {
 		return "", fmt.Errorf("screenshot is only supported on remote paired (RSD) devices")
+	}
+
+	if err := manager.PrepareManualDevice(ctx, device); err != nil {
+		return "", err
 	}
 
 	mgr := manager.NewScreenshotManager()
@@ -268,9 +276,9 @@ func UpdateCoreADI() error {
 	return nil
 }
 
-func ImportPairingFile(ip string, port string, data []byte) error {
+func ImportPairingFile(ip string, port string, manual bool, data []byte) error {
 	// Call manager to process the file
-	if err := manager.ImportPairingFile(ip, port, data); err != nil {
+	if err := manager.ImportPairingFile(ip, port, manual, data); err != nil {
 		return err
 	}
 
@@ -278,4 +286,10 @@ func ImportPairingFile(ip string, port string, data []byte) error {
 	manager.StartDeviceManager()
 
 	return nil
+}
+
+// DeleteManualDevice forgets a manually added device: its pairing files and
+// its in-memory entry are removed.
+func DeleteManualDevice(udid string) error {
+	return manager.DeleteManualDevice(udid)
 }

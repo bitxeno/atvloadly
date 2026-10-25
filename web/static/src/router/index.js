@@ -18,6 +18,30 @@ const routes = [
     ],
   },
   {
+    path: "/add-device",
+    component: () => import("@/page/layout.vue"),
+    children: [
+      {
+        path: "",
+        name: "add-device",
+        component: () => import("@/page/add-device/index.vue"),
+      },
+    ],
+  },
+  {
+    // Manual-IP pairing: the device was typed by IP (e.g. over Tailscale) and
+    // its pairing port is discovered on the page.
+    path: "/pair",
+    component: () => import("@/page/layout.vue"),
+    children: [
+      {
+        path: "",
+        name: "pair-manual",
+        component: () => import("@/page/pair/index.vue"),
+      },
+    ],
+  },
+  {
     path: "/pair/:id",
     component: () => import("@/page/layout.vue"),
     children: [

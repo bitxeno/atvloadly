@@ -50,7 +50,6 @@
     },
     "home": {
         "heading": {
-            "pairable_devices": "待配对设备",
             "paired_devices": "已连接设备",
             "service_status": "服务状态",
             "installed_app": "已安装 Apps"
@@ -82,10 +81,19 @@
             "update_failed": "安装 {{version}} 失败，不会自动重试。请点击“更新”重试。"
         },
         "sidebar": {
+            "add_device": {
+                "title": "添加新设备",
+                "subtitle": "连接 AppleTV 或 iPhone"
+            },
             "device_status": {
                 "pairable": "待配对",
                 "paired": "已连接",
-                "unpaired": "未连接"
+                "unpaired": "未连接",
+                "added": "已添加",
+                "ip_badge": "IP",
+                "forget": "删除",
+                "forget_confirm": "确认",
+                "forget_done": "已忘记设备"
             },
             "tips": {
                 "no_paired_devices": "没有连接设备",
@@ -152,6 +160,17 @@
             "pin_incorrect": "PIN码不正确",
             "pair_error": "配对出错，请到控制台查看详细信息",
             "no_device_found": "找不到设备，请确认 usbmuxd 服务已启动"
+        },
+        "manual": {
+            "discovering": "正在探测配对端口…",
+            "stage_mdns": "正在查找配对服务…",
+            "stage_scanning": "正在扫描端口… {{percent}}%",
+            "stage_probing": "正在校验配对服务…",
+            "stage_found": "已找到配对端口",
+            "stage_failed": "未找到配对端口",
+            "found": "配对端口：{{port}}",
+            "failed": "未找到配对端口，请确认 Apple TV 已进入配对模式。",
+            "retry": "重新探测"
         },
         "step": {
             "start": {
@@ -630,6 +649,34 @@
         "ssdp": {
             "title": "SSDP 扫描器",
             "pairable_label": "可配对设备类型标识：_remotepairing-manual-pairing._tcp"
+        }
+    },
+    "addDevice": {
+        "title": "添加新设备",
+        "tabs": {
+            "appletv": "Apple TV",
+            "iphone": "iPhone"
+        },
+        "appletv": {
+            "device_label": "Apple TV 设备",
+            "ip_placeholder": "例如 192.168.1.120",
+            "ip_tips": "Apple TV 需要进入配对模式，才能被发现和连接，支持局域网 IP 地址或 Tailscale IP 地址",
+            "pairing_step1": "在 Apple TV 上打开「设置 → 遥控器与设备 → 遥控器 App 与设备」，进入配对模式",
+            "pairing_step2": "刷新设备列表并选择该 Apple TV，然后点击「开始配对」",
+            "no_device": "该 IP 未匹配到已发现的 Apple TV，请刷新列表后选择设备。",
+            "submit": "开始配对"
+        },
+        "iphone": {
+            "device_label": "iPhone 设备",
+            "device_placeholder": "例如 192.168.1.205，或从列表选择设备",
+            "device_tips": "iPhone 需要先解锁屏幕，才能被发现和连接，支持局域网 IP 地址或 Tailscale IP 地址",
+            "upload_label": "上传 Pairing File",
+            "no_device": "未找到 iPhone 隧道服务端口。iPhone 需要连接 Wi-Fi 才能正常连接（仅蜂窝网络不可用），并确认已解锁且与电脑网络可达（局域网或 Tailscale）。",
+            "submit": "开始连接"
+        },
+        "toast": {
+            "device_required": "请输入或选择设备 IP 地址",
+            "file_required": "请先上传 Pairing File"
         }
     },
     "laboratory": {

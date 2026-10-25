@@ -16,6 +16,7 @@ html[data-theme="light"] {
   --atv-accent: #255bb4;
   --atv-accent-hover: #19468e;
   --atv-accent-soft: #eaf1fc;
+  --atv-accent-soft-hover: #c9dcf5;
   --atv-danger: #a23e4b;
   --atv-danger-hover: #812d3a;
   --atv-danger-soft: #fff1f1;
@@ -39,6 +40,7 @@ html[data-theme="dark"] {
   --atv-accent: #9bc5fa;
   --atv-accent-hover: #c3ddff;
   --atv-accent-soft: #233953;
+  --atv-accent-soft-hover: #16243a;
   --atv-danger: #ffb2b8;
   --atv-danger-hover: #ffe0e3;
   --atv-danger-soft: #422832;

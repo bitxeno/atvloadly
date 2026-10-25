@@ -1,12 +1,14 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	conf "github.com/bitxeno/atvloadly/internal/app"
@@ -228,6 +230,18 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 	// them until this install finishes.
 	manager.ReserveUploadTempFiles(v.IpaPath, v.Icon)
 	defer manager.ReleaseUploadTempFiles(v.IpaPath, v.Icon)
+
+	// A manual (Tailscale) device has no mDNS-provided tunnel port; resolve it
+	// before installing so the engine can reach the device over RSD.
+	if manager.ManualPortNeedsResolve(dev) {
+		mgr.WriteMessage("Resolving tunnel port for manual device...\n")
+	}
+	if err := manager.PrepareManualDevice(mgr.Context(), dev); err != nil {
+		mgr.WriteMessage(fmt.Sprintf("ERROR: %s", err.Error()))
+		mgr.WriteMessage("\n")
+		mgr.WriteMessage("Installation Failed!")
+		return
+	}
 
 	if v.IsExternalSigning() {
 		runExternalInstallMessage(mgr, installMgr, v, dev)
@@ -471,6 +485,22 @@ func HandlePairMessage(c *websocket.Conn) {
 	})
 	defer pairMgr.Close()
 
+	// At most one manual discovery runs at a time; a new request cancels the
+	// previous one (the page's "retry" button reuses this).
+	var (
+		discoverMu     sync.Mutex
+		discoverCancel context.CancelFunc
+	)
+	cancelDiscovery := func() {
+		discoverMu.Lock()
+		if discoverCancel != nil {
+			discoverCancel()
+			discoverCancel = nil
+		}
+		discoverMu.Unlock()
+	}
+	defer cancelDiscovery()
+
 	for {
 		msg, err := websocketMgr.ReadMessage()
 		if err != nil {
@@ -494,11 +524,82 @@ func HandlePairMessage(c *websocket.Conn) {
 		case model.MessageTypePairConfirm:
 			code := msg.Data
 			pairMgr.Write([]byte(code + "\n"))
+		case model.MessageTypePairManualDiscover:
+			ip := strings.TrimSpace(msg.Data)
+			if !isManualPairingIP(ip) {
+				writePairDiscovery(websocketMgr, model.PairingDiscoveryMessage{
+					Kind: "discover", Stage: manager.DiscoverStageFailed, Percent: 100, Message: "invalid ip",
+				})
+				continue
+			}
+			cancelDiscovery()
+			ctx, cancel := context.WithCancel(websocketMgr.Context())
+			discoverMu.Lock()
+			discoverCancel = cancel
+			discoverMu.Unlock()
+			go runPairDiscovery(ctx, websocketMgr, ip)
+		case model.MessageTypePairManualStart:
+			var req struct {
+				IP   string `json:"ip"`
+				Port uint16 `json:"port"`
+			}
+			if err := json.Unmarshal([]byte(msg.Data), &req); err != nil {
+				websocketMgr.WriteMessage(fmt.Sprintf("ERROR: %s", err.Error()))
+				continue
+			}
+			ip := strings.TrimSpace(req.IP)
+			if !isManualPairingIP(ip) || req.Port == 0 {
+				websocketMgr.WriteMessage("ERROR: invalid manual pairing request")
+				continue
+			}
+			cancelDiscovery()
+			device := model.Device{IP: ip, Port: req.Port, Manual: true, Name: ip}
+			go runPairMessage(websocketMgr, pairMgr, device)
 		default:
 			_ = c.WriteMessage(websocket.TextMessage, []byte("ERROR: invalid message type"))
 			continue
 		}
 	}
+}
+
+// isManualPairingIP accepts only a private LAN or CGNAT IPv4 literal. Manual
+// pairing triggers a full-range TCP scan, so restricting the address keeps a
+// request from being turned into a scan of arbitrary public hosts.
+func isManualPairingIP(ip string) bool {
+	return manager.IsManualDeviceAddr(ip)
+}
+
+// runPairDiscovery discovers the manual-pairing port of ip and streams progress
+// and the final result to the pair page.
+func runPairDiscovery(ctx context.Context, mgr *manager.WebsocketManager, ip string) {
+	port, info, err := manager.DiscoverManualPairingPort(ctx, ip, func(stage string, percent int) {
+		writePairDiscovery(mgr, model.PairingDiscoveryMessage{
+			Kind: "discover", Stage: stage, Percent: percent,
+		})
+	})
+	if err != nil {
+		writePairDiscovery(mgr, model.PairingDiscoveryMessage{
+			Kind: "discover", Stage: manager.DiscoverStageFailed, Percent: 100, Message: err.Error(),
+		})
+		return
+	}
+	msg := model.PairingDiscoveryMessage{
+		Kind: "discover", Stage: manager.DiscoverStageFound, Percent: 100,
+		Port: port,
+	}
+	if info != nil {
+		msg.Name = info.DeviceName
+		msg.Model = info.Model
+	}
+	writePairDiscovery(mgr, msg)
+}
+
+func writePairDiscovery(mgr *manager.WebsocketManager, msg model.PairingDiscoveryMessage) {
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return
+	}
+	mgr.WriteMessage(string(data))
 }
 
 func runPairMessage(mgr *manager.WebsocketManager, pairMgr *manager.PairManager, device model.Device) {
@@ -507,6 +608,15 @@ func runPairMessage(mgr *manager.WebsocketManager, pairMgr *manager.PairManager,
 		msg := fmt.Sprintf("ERROR: %s", err.Error())
 		mgr.WriteMessage(msg)
 		return
+	}
+
+	// Pairing wrote this device's pairing record, which is what makes the
+	// tunnel handshake possible. For a manual (e.g. Tailscale) device nothing
+	// re-announces it, so resolve its install port now in the background
+	// while the user heads to the install page: the first install then skips
+	// the full-range scan.
+	if device.Manual {
+		go manager.WarmManualDevicePort(device.IP)
 	}
 }
 
