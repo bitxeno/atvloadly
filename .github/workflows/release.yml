@@ -230,12 +230,14 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPOSITORY }}
-          # latest follows stable releases only: a -beta tag moves the beta
-          # channel, never latest. flavor latest=false turns off the implicit
-          # latest that type=ref,event=tag would add for any tag.
+          # latest follows stable releases only, beta follows prereleases:
+          # a v0.8.0-beta.1 tag pushes v0.8.0-beta.1 and beta, never latest.
+          # flavor latest=false turns off the implicit latest that
+          # type=ref,event=tag would add for any tag.
           tags: |
             type=ref,event=tag
             type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+            type=raw,value=beta,enable=${{ contains(github.ref_name, '-') }}
           flavor: |
             latest=false
       - name: Build and push Docker images to DockerHub
@@ -283,10 +285,11 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
-          # Same rule as DockerHub: only a stable tag moves latest.
+          # Same rule as DockerHub: latest for stable tags, beta otherwise.
           tags: |
             type=ref,event=tag
             type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+            type=raw,value=beta,enable=${{ contains(github.ref_name, '-') }}
           flavor: |
             latest=false
       - name: Build and push Docker images to ghci
