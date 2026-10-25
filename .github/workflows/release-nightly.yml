@@ -114,6 +114,71 @@ jobs:
           path: build
           retention-days: 1
 
+  # Desktop builds run nightly for smoke coverage only: they land in the run's
+  # artifacts and are never published to a Release. Code signing and the DMG
+  # need macOS (unsigned Go binaries are killed by Apple silicon kernels, and
+  # hdiutil only exists there); Windows builds on ubuntu-latest, where mygo
+  # downloads NSIS itself.
+  desktop:
+    name: Build desktop apps
+    if: ${{needs.check.outputs.require_build == 'true'}}
+    needs: [check]
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            platforms: darwin/universal
+          - os: ubuntu-latest
+            platforms: windows/amd64,windows/arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27.x"
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Build frontend
+        run: cd web/static && npm install && npm run build
+
+      # plumesign binaries are gitignored (desktop/app/resources/*/bin/);
+      # fetch them so the app bundles its signing engine.
+      - name: Fetch plumesign
+        run: desktop/scripts/fetch-plumesign.sh
+
+      # mygo makes the Windows installer with NSIS and only warns when it is
+      # missing (it downloads NSIS itself on Windows, not on Linux).
+      - name: Install NSIS
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq nsis
+
+      - name: Build desktop apps
+        working-directory: desktop/app
+        env:
+          # Nightly builds are artifacts only: a placeholder version keeps the
+          # bundle and DMG names unique per run, and no signing secrets are
+          # passed so the app stays ad hoc signed. build.mjs fills BUILDDATE
+          # with the current time when it is unset.
+          VERSION: 0.0.0-nightly.${{ github.run_number }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          npm install
+          npm run build:release -- -platform=${{ matrix.platforms }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-apps-${{ matrix.os }}
+          path: desktop/app/build/
+          retention-days: 3
+
   dockerhub:
     name: Push to DockerHub
     if: ${{needs.build.outputs.PUSH_DOCKERHUB}}

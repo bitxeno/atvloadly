@@ -7,8 +7,9 @@ import { defineConfig } from "mygo-cli";
 export default defineConfig({
   name: "atvloadly",
   identifier: "com.bitxeno.atvloadly",
-  // CI passes the tag (desktop-vX.Y.Z); the DMG name and Info.plist carry it.
-  version: process.env.VERSION ? process.env.VERSION.replace(/^desktop-v/, "") : "1.0.0",
+  // CI passes the release tag (vX.Y.Z) or a nightly label; the DMG name and
+  // Info.plist carry the bare version.
+  version: process.env.VERSION ? process.env.VERSION.replace(/^v/, "") : "1.0.0",
   buildCommand: "npm run sync-locales",
   // Icon Composer icon; mygo build compiles it with actool (Xcode 26) and
   // falls back to icon.png's .icns when building without Xcode.
