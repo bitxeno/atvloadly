@@ -20,7 +20,7 @@ type P12Identity struct {
 	PrivateKey  crypto.Signer
 }
 
-// Error texts of go-pkcs12 v0.7.3 (with the KDF bound of third_party/go-pkcs12)
+// Error texts of go-pkcs12 v0.7.3 (with the KDF bound of pkg/go-pkcs12)
 // that have no exported sentinel.
 const (
 	pkcs12ErrManyKeys      = "pkcs12: expected exactly one key bag"
