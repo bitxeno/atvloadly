@@ -338,15 +338,31 @@ jobs:
           name: desktop-apps-windows
           path: dist
 
+      # Derives the version and the Homebrew channel once: a tag with a hyphen
+      # is a prerelease and publishes atvloadly@beta, anything else atvloadly.
+      # The install note and the cask generation both read these.
       - name: Derive version
         id: version
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ "$VERSION" == *-* ]]; then
+            CASK_TOKEN="atvloadly@beta"
+          else
+            CASK_TOKEN="atvloadly"
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "CASK_TOKEN=$CASK_TOKEN" >> "$GITHUB_OUTPUT"
+          echo "CASK_FILE=$CASK_TOKEN.rb" >> "$GITHUB_OUTPUT"
+          echo "CASK_REF=bitxeno/tap/$CASK_TOKEN" >> "$GITHUB_OUTPUT"
 
       - name: Compress server builds
         run: cd ./build && for i in *; do tar -czf $i.tar.gz $i; done && cd ..
 
-      # mygo names the universal DMG "atvloadly <version>.dmg" (with a space);
-      # rename to the dash form the cask and checksums reference.
+      # mygo names the artifacts with spaces: "atvloadly <version>.dmg" and
+      # "atvloadly Setup <version> <arch>.exe". Rename them to a dash form, so
+      # the download name needs no quoting, and the cask references the DMG
+      # under the name it checksums.
       - name: Normalize desktop artifact names
         run: |
           set -euo pipefail
@@ -358,6 +374,17 @@ jobs:
             exit 1
           fi
           mv "$DMG" "dist/atvloadly-$VERSION.dmg"
+
+          # Each "atvloadly Setup <version> <arch>.exe" becomes
+          # "atvloadly-<version>-<arch>-setup.exe". -print0 keeps names with
+          # spaces intact through the loop.
+          find dist -maxdepth 1 -type f -name 'atvloadly Setup *.exe' -print0 |
+            while IFS= read -r -d '' setup; do
+              name="$(basename "$setup")"
+              arch="${name#atvloadly Setup "$VERSION" }"
+              arch="${arch%.exe}"
+              mv "$setup" "dist/atvloadly-$VERSION-$arch-setup.exe"
+            done
           ls -la dist
 
       - name: Create release
@@ -366,7 +393,7 @@ jobs:
           files: |
             ./build/*.tar.gz
             dist/*.dmg
-            dist/*Setup*.exe
+            dist/*-setup.exe
           # Any hyphen is a prerelease, matching the Docker latest guard.
           prerelease: ${{ contains(github.ref_name, '-') }}
           name: "${{ github.ref_name }} - tvOS 17.4+"
@@ -375,8 +402,9 @@ jobs:
           fail_on_unmatched_files: true
 
       # The action puts `body` before the generated notes, so append the
-      # macOS install note in a second pass to land it at the very end.
-      # The DMG is unsigned (ad hoc), hence the quarantine note.
+      # macOS install note in a second pass to land it at the very end. The
+      # brew line comes first, then the DMG fallback: the DMG is unsigned
+      # (ad hoc), hence the quarantine step.
       - name: Append macOS install note
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -384,7 +412,7 @@ jobs:
           set -euo pipefail
           # -R, because this job never checks the repository out: gh has no
           # other way to know which repository the release lives in.
-          note=$'\n\n> **macOS install**: the DMG is unsigned. After dragging `atvloadly.app` into Applications, run once:\n> `sudo xattr -dr com.apple.quarantine /Applications/atvloadly.app`'
+          note="$(printf '\n\n> **macOS install**\n>\n> Homebrew: `brew install --cask %s`\n>\n> Or download the DMG, drag `atvloadly.app` into Applications, then run once:\n> `sudo xattr -dr com.apple.quarantine /Applications/atvloadly.app`' "${{ steps.version.outputs.CASK_REF }}")"
           body="$(gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --json body -q .body)"
           gh release edit "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --notes "${body}${note}"
 
@@ -405,14 +433,7 @@ jobs:
           SHA=$(sha256sum "$DMG" | awk '{print $1}')
           echo "DMG_SHA256=$SHA" >> "$GITHUB_OUTPUT"
 
-          # One prerelease channel, as Homebrew names them (google-chrome@beta):
-          # a hyphen in the version means the beta cask.
-          if [[ "$VERSION" == *-* ]]; then
-            TOKEN="atvloadly@beta"
-          else
-            TOKEN="atvloadly"
-          fi
-          echo "CASK_FILE=$TOKEN.rb" >> "$GITHUB_OUTPUT"
+          TOKEN="${{ steps.version.outputs.CASK_TOKEN }}"
 
           # Indentation and the ENV.fetch style follow `brew style --fix`
           # output so the tap repo's cop does not push back (the dshdock
@@ -457,14 +478,14 @@ jobs:
       - name: Upload cask to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$GITHUB_REF_NAME" "${{ steps.cask.outputs.CASK_FILE }}" -R "$GITHUB_REPOSITORY" --clobber
+        run: gh release upload "$GITHUB_REF_NAME" "${{ steps.version.outputs.CASK_FILE }}" -R "$GITHUB_REPOSITORY" --clobber
 
       - name: Push cask to Homebrew tap
         env:
           TAP_REPO: ${{ secrets.HOMEBREW_TAP_REPO }}
           TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           VERSION: ${{ steps.version.outputs.VERSION }}
-          CASK_FILE: ${{ steps.cask.outputs.CASK_FILE }}
+          CASK_FILE: ${{ steps.version.outputs.CASK_FILE }}
         # Skip gracefully when the secrets are not configured: the cask is
         # attached to the Release assets and can be copied into the tap
         # manually.
