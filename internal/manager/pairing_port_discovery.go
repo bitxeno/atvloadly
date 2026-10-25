@@ -84,6 +84,15 @@ var ErrPairingPortNotFound = errors.New("manual pairing port not found")
 // the address itself is reachable.
 var ErrTunnelPortNotFound = errors.New("manual tunnel port not found: the iPhone must be connected to Wi-Fi for the connection to work")
 
+// ErrDeviceUnreachable is returned when every dial in the port scan timed out
+// without a single response. A reachable host answers at least one port (an
+// open port accepts, a closed port refuses/RSTs), so a range where nothing
+// ever answers means the address is not responding at all — for example a
+// Tailscale peer whose client is not connected. Reporting this instead of
+// "port not found" tells the user the real cause: the device is offline, not
+// that its service moved.
+var ErrDeviceUnreachable = errors.New("device is unreachable: check that the device is online and, for Tailscale, that its client is connected")
+
 // Discovery stages reported to the caller so the UI can show progress.
 const (
 	DiscoverStageMDNS     = "mdns"
@@ -256,14 +265,43 @@ func discoverPortMDNS(ctx context.Context, ip, fqdn string, timeout time.Duratio
 	return 0, false
 }
 
+// scanDialFunc dials one port and returns a nil error when the port is open.
+// A non-nil error distinguishes a refusal/reset (the host answered) from a
+// timeout (it did not). Replaceable so tests never dial real endpoints.
+var scanDialFunc = func(ctx context.Context, ip string, port uint16, timeout time.Duration) error {
+	dialer := net.Dialer{Timeout: timeout}
+	conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(ip, strconv.Itoa(int(port))))
+	if err != nil {
+		return err
+	}
+	_ = conn.Close()
+	return nil
+}
+
+// unreachableAbortAfter is how many dials must complete with zero responses
+// before the scan concludes the address is offline and stops. One full
+// concurrent wave (rpDialConcurrency) is enough: a reachable host answers
+// within the first round trip — an open port accepts and a closed port
+// refuses/RSTs — while an offline overlay peer (Tailscale client not
+// connected) drops every SYN until each dial times out. Aborting after one
+// silent wave turns a multi-second sweep into a ~1.5s failure without risking
+// a false "unreachable" on a live host.
+const unreachableAbortAfter = rpDialConcurrency
+
 // scanProbedPorts dials ports in [first,last] in ascending order and probes
 // every open port with the RPPairing handshake as soon as its dial succeeds.
 // The first probed service satisfying pick wins: discovery returns
 // immediately and cancels the remaining work, so services on low ports
 // (the common case, since Darwin allocates ephemeral ports ascending) are
-// found without scanning the rest of the range. It returns nil when the
-// range is exhausted or ctx is cancelled.
-func scanProbedPorts(ctx context.Context, ip string, first, last uint16, pick portMatcher, progress DiscoveryProgress) *PairingServiceInfo {
+// found without scanning the rest of the range.
+//
+// It returns nil when the range is exhausted or ctx is cancelled, plus
+// hostAnswered: whether any dial got a response at all (an open port accepted,
+// or a closed port refused/RSTed). A live host answers at least one port, so
+// hostAnswered == false after a full sweep means the address is offline rather
+// than merely lacking the service — the caller turns that into
+// ErrDeviceUnreachable instead of "port not found".
+func scanProbedPorts(ctx context.Context, ip string, first, last uint16, pick portMatcher, progress DiscoveryProgress) (*PairingServiceInfo, bool) {
 	report := func(stage string, pct int) {
 		if progress != nil {
 			progress(stage, pct)
@@ -272,28 +310,50 @@ func scanProbedPorts(ctx context.Context, ip string, first, last uint16, pick po
 
 	report(DiscoverStageScanning, 0)
 	var (
-		wg       sync.WaitGroup
-		mu       sync.Mutex
-		found    *PairingServiceInfo
-		probed   int64
-		reported int32
+		wg        sync.WaitGroup
+		mu        sync.Mutex
+		found     *PairingServiceInfo
+		probed    int64
+		reported  int32
+		answered  int32
+		dialed    int64
+		abortOnce sync.Once
 	)
 	total := int(last) - int(first) + 1
 	// Closes when the winner is decided; every goroutine path selects on it
 	// so in-flight work stops promptly.
 	won := make(chan struct{})
+	// Closes when the address is proven offline (one silent wave of dials);
+	// the derived scanCtx cancels the in-flight dials so wg.Wait returns at
+	// once instead of waiting out their timeouts.
+	unreachable := make(chan struct{})
+	scanCtx, stopScan := context.WithCancel(ctx)
+	defer stopScan()
 	sem := make(chan struct{}, rpDialConcurrency)
 	// Handshake probes are slower than dials; bound them separately so dials
 	// keep flowing ahead of the probes.
 	probeSem := make(chan struct{}, rpProbeConcurrency)
 
-dialLoop:
+	// noteDialDone runs after every completed dial and aborts the sweep once a
+	// full wave has produced no response at all.
+	noteDialDone := func() {
+		if atomic.AddInt64(&dialed, 1) >= unreachableAbortAfter && atomic.LoadInt32(&answered) == 0 {
+			abortOnce.Do(func() {
+				close(unreachable)
+				stopScan()
+			})
+		}
+	}
+
+dials:
 	for port := int(first); port <= int(last); port++ {
 		select {
 		case <-won:
-			break dialLoop
+			break dials
+		case <-unreachable:
+			break dials
 		case <-ctx.Done():
-			break dialLoop
+			break dials
 		case sem <- struct{}{}:
 		}
 		wg.Add(1)
@@ -301,17 +361,22 @@ dialLoop:
 			defer wg.Done()
 			defer func() { <-sem }()
 
-			dialer := net.Dialer{Timeout: rpDialTimeout}
-			conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(ip, strconv.Itoa(int(p))))
-			if err != nil {
+			if err := scanDialFunc(scanCtx, ip, p, rpDialTimeout); err != nil {
+				// A non-timeout error (refused/reset) still proves the host
+				// is up; a timeout does not. Dials cancelled by our own abort
+				// prove nothing, so ignore them.
+				if !isTimeout(err) && !errors.Is(err, context.Canceled) {
+					atomic.StoreInt32(&answered, 1)
+				}
 				n := atomic.AddInt64(&probed, 1)
 				reportPct(report, &reported, int(n), total)
+				noteDialDone()
 				return
 			}
-			_ = conn.Close()
-
+			atomic.StoreInt32(&answered, 1)
 			select {
 			case <-won:
+				noteDialDone()
 				return
 			case probeSem <- struct{}{}:
 			}
@@ -333,14 +398,23 @@ dialLoop:
 				}
 				mu.Unlock()
 			}()
+			noteDialDone()
 		}(uint16(port))
 	}
 	wg.Wait()
 
+	hostAnswered := atomic.LoadInt32(&answered) == 1
 	if ctx.Err() != nil && found == nil {
-		return nil
+		return nil, hostAnswered
 	}
-	return found
+	return found, hostAnswered
+}
+
+// isTimeout reports whether err is a dial timeout (the host did not answer) as
+// opposed to a refusal or reset (the host answered and rejected the dial).
+func isTimeout(err error) bool {
+	var nerr net.Error
+	return errors.As(err, &nerr) && nerr.Timeout()
 }
 
 // reportPct throttles scanning progress to 5% steps; report may be nil.
@@ -387,12 +461,22 @@ func discoverPortByService(ctx context.Context, ip, fqdn string, first, last uin
 		}
 	}
 
-	if si := scanProbedPorts(ctx, ip, first, last, pick, progress); si != nil {
+	si, hostAnswered := scanProbedPorts(ctx, ip, first, last, pick, progress)
+	if si != nil {
 		report(DiscoverStageFound, 100)
 		return si.Port, si, nil
 	}
 	if ctx.Err() != nil {
 		return 0, nil, ctx.Err()
+	}
+	// Nothing answered the whole range. A reachable host answers at least one
+	// port (accept or refuse/RST), so a silent sweep means the address itself
+	// is offline — report that rather than a misleading "port not found". The
+	// tunnel port is dynamic, so this is decided from the scan's own dials,
+	// never from a fixed port that may simply not be the one in use.
+	if !hostAnswered {
+		report(DiscoverStageFailed, 100)
+		return 0, nil, ErrDeviceUnreachable
 	}
 
 	report(DiscoverStageFailed, 100)

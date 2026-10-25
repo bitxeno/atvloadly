@@ -194,6 +194,26 @@ func TestPrepareManualDeviceReusesAliveRememberedPort(t *testing.T) {
 	}
 }
 
+// When the remembered port does not answer and the address itself is
+// unreachable (Tailscale client not connected), the full scan reports
+// ErrDeviceUnreachable and PrepareManualDevice surfaces it, rather than
+// swallowing it into a generic "port not found".
+func TestPrepareManualDeviceReportsUnreachable(t *testing.T) {
+	withTunnelProbe(t, func(context.Context, string, DiscoveryProgress) (uint16, *PairingServiceInfo, error) {
+		return 0, nil, ErrDeviceUnreachable
+	})
+	withRememberedPortProbe(t, func(context.Context, string, uint16) (*PairingServiceInfo, error) {
+		return nil, errors.New("no answer")
+	})
+
+	dm := newDeviceManager()
+	dev := model.Device{IP: "100.65.100.37", UDID: "AAA", Manual: true, Port: 49152, PortResolvedAt: time.Now().Add(-2 * manualPortTTL)}
+	err := dm.PrepareManualDevice(context.Background(), &dev)
+	if !errors.Is(err, ErrDeviceUnreachable) {
+		t.Fatalf("want ErrDeviceUnreachable, got %v", err)
+	}
+}
+
 // A transient failure on the remembered-port re-check must be retried before
 // escalating to a full-range scan, so one dropped handshake on a slow relay
 // does not cost a multi-second sweep.

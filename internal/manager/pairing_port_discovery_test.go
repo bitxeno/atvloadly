@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -221,7 +223,7 @@ func TestScanProbedPortsStopsEarlyOnLowPort(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	start := time.Now()
-	si := scanProbedPorts(ctx, "127.0.0.1", port, 65535, func(si *PairingServiceInfo) bool {
+	si, _ := scanProbedPorts(ctx, "127.0.0.1", port, 65535, func(si *PairingServiceInfo) bool {
 		return si.Tunnel
 	}, nil)
 	elapsed := time.Since(start)
@@ -247,5 +249,113 @@ func TestSkipMDNSForTailnetIPs(t *testing.T) {
 		if got := skipMDNSForIP(ip); got != want {
 			t.Errorf("skipMDNSForIP(%q) = %v, want %v", ip, got, want)
 		}
+	}
+}
+
+// stubScanDial controls the per-port dial outcome so the scan's reachability
+// bookkeeping can be tested without real sockets: open ports accept, and every
+// other port fails with the given error (refused or timeout).
+func stubScanDial(t *testing.T, openPorts []uint16, otherErr func() error) {
+	t.Helper()
+	prev := scanDialFunc
+	open := make(map[uint16]bool, len(openPorts))
+	for _, p := range openPorts {
+		open[p] = true
+	}
+	scanDialFunc = func(ctx context.Context, ip string, port uint16, timeout time.Duration) error {
+		if open[port] {
+			return nil
+		}
+		return otherErr()
+	}
+	t.Cleanup(func() { scanDialFunc = prev })
+}
+
+// A sweep where every dial is refused (RST) still proves the host is up: the
+// scan reports hostAnswered and the caller returns "port not found", not
+// unreachable.
+func TestScanProbedPortsRefusedMeansHostAnswered(t *testing.T) {
+	stubScanDial(t, nil, func() error { return &net.OpError{Err: errors.New("connection refused")} })
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	si, answered := scanProbedPorts(ctx, "100.65.100.37", rpPortFirst, rpPortFirst+8, func(*PairingServiceInfo) bool {
+		return false
+	}, nil)
+	if si != nil {
+		t.Fatalf("no service should be found, got %+v", si)
+	}
+	if !answered {
+		t.Fatal("refused dials prove the host answered")
+	}
+}
+
+// A sweep where every dial times out means the host is offline: hostAnswered
+// stays false.
+func TestScanProbedPortsAllTimeoutsMeansUnreachable(t *testing.T) {
+	stubScanDial(t, nil, func() error {
+		return &net.OpError{Err: &timeoutError{}}
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, answered := scanProbedPorts(ctx, "100.65.100.37", rpPortFirst, rpPortFirst+8, func(*PairingServiceInfo) bool {
+		return false
+	}, nil)
+	if answered {
+		t.Fatal("a host that never answers must not count as reachable")
+	}
+}
+
+// timeoutError is a net.Error whose Timeout() is true, mirroring a dial that
+// silently drops the SYN.
+type timeoutError struct{}
+
+func (timeoutError) Error() string   { return "i/o timeout" }
+func (timeoutError) Timeout() bool   { return true }
+func (timeoutError) Temporary() bool { return true }
+
+// discoverPortByService turns an all-timeout sweep into ErrDeviceUnreachable so
+// the caller reports an offline device instead of a misleading "port not found".
+func TestDiscoverPortByServiceReportsUnreachable(t *testing.T) {
+	stubScanDial(t, nil, func() error { return &net.OpError{Err: &timeoutError{}} })
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, _, err := discoverPortByService(ctx, "100.65.100.37", rpTunnelFQDN, rpPortFirst, rpPortFirst+8, true, func(si *PairingServiceInfo) bool {
+		return si.Tunnel
+	}, nil)
+	if !errors.Is(err, ErrDeviceUnreachable) {
+		t.Fatalf("want ErrDeviceUnreachable, got %v", err)
+	}
+}
+
+// An offline host (every dial times out) must abort after roughly one silent
+// wave instead of sweeping the whole 16k-port range, so the user learns the
+// device is unreachable quickly.
+func TestScanProbedPortsAbortsEarlyWhenUnreachable(t *testing.T) {
+	var dials int64
+	prev := scanDialFunc
+	scanDialFunc = func(context.Context, string, uint16, time.Duration) error {
+		atomic.AddInt64(&dials, 1)
+		return &net.OpError{Err: &timeoutError{}}
+	}
+	t.Cleanup(func() { scanDialFunc = prev })
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	start := time.Now()
+	si, answered := scanProbedPorts(ctx, "100.65.100.37", rpPortFirst, rpPortLast, func(*PairingServiceInfo) bool {
+		return true
+	}, nil)
+	if si != nil {
+		t.Fatalf("no service expected, got %+v", si)
+	}
+	if answered {
+		t.Fatal("all-timeout host must not be reported as reachable")
+	}
+	if elapsed := time.Since(start); elapsed > 2*time.Second {
+		t.Fatalf("offline sweep should abort early, took %v", elapsed)
+	}
+	// It must not have dialed anywhere near the full range.
+	if got := atomic.LoadInt64(&dials); got > int64(unreachableAbortAfter)+int64(rpDialConcurrency) {
+		t.Fatalf("dialed %d ports, expected ~%d", got, unreachableAbortAfter)
 	}
 }
