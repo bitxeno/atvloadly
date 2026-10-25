@@ -1,166 +1,195 @@
 # atvloadly Desktop (mygo + menu bar)
 
-atvloadly 桌面版：用 [mygo](https://github.com/egoist/mygo)（菜单栏壳）+ 复用现有 Go
-server 作为本地后端，支持 macOS 12+ 与 Windows 10/11（x64 / arm64）。
+The desktop build of atvloadly: a [mygo](https://github.com/egoist/mygo) menu bar
+shell around the existing Go server, which it reuses as a local backend. Supports
+macOS 12+ and Windows 10/11 (x64 / arm64).
 
-## 总体架构
+## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  atvloadly.app / atvloadly.exe（mygo 单二进制 + 嵌入前端）    │
-│                                                              │
-│  ┌──────────────────────┐      ┌──────────────────────────┐  │
-│  │ 菜单栏 / 通知区域    │      │ 内嵌 atvloadly server     │  │
-│  │ 浏览器 / 日志 / 退出 │      │ （现有 Fiber web/ 层，    │  │
-│  └──────────┬───────────┘      │  复用 internal/* 全部业务 │  │
-│             │                  └────────────┬─────────────┘  │
-│             │ 默认浏览器 HTTP               │                │
-│             ▼                               ▼                │
-│   http://127.0.0.1:<port>/      ┌─────────────────────────┐  │
-│                                 │ plumesign（随包分发）   │  │
-│                                 │ resources 按平台打包，  │  │
-│                                 │ 构建时下载并签名        │  │
-│                                 └─────────────────────────┘  │
-└──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  atvloadly.app / atvloadly.exe (one mygo binary + embedded frontend)         │
+│ ┌────────────────────────────┐      ┌──────────────────────────────────────┐ │
+│ │ Menu bar / tray            │      │ embedded atvloadly server            │ │
+│ │ Browser / Log / Quit       │      │ (existing Fiber web/ layer,          │ │
+│ └──────────────┬─────────────┘      │ reuses all of internal/*)            │ │
+│                │                    └──────────────────┬───────────────────┘ │
+│                │ default browser HTTP                  │                     │
+│                ▼                                       ▼                     │
+│  http://127.0.0.1:<port>/           ┌──────────────────────────────────────┐ │
+│                                     │ plumesign (shipped in the app)       │ │
+│                                     │ resources packed per platform,       │ │
+│                                     │ downloaded and signed at build       │ │
+│                                     └──────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**设计原则：最大复用，最小包装。** 桌面壳只做三件事：
+**Design principle: maximum reuse, minimum wrapping.** The shell does three things:
 
-1. 启动现有 server（复用 `cmd/server` 的引导顺序：config → settings → logger → i18n →
-   db → signing → secrets → tasks → device manager），监听 `127.0.0.1:<随机空闲端口>`；
-2. 在菜单栏 / 任务栏通知区域驻留图标，菜单提供"打开浏览器"、"打开日志文件"与"退出程序"（文案随界面语言本地化）；
-3. 启动后用默认浏览器打开 `http://127.0.0.1:<port>/`；退出时优雅停机。
+1. Starts the existing server (reusing the boot order of `cmd/server`: config → settings
+   → logger → i18n → db → signing → secrets → tasks → device manager) on
+   `127.0.0.1:<random free port>`;
+2. Keeps an icon in the menu bar / notification area, with a menu holding "Open in
+   Browser", "Open Log File" and "Quit" (localized in the UI language);
+3. Opens `http://127.0.0.1:<port>/` in the default browser once started, and shuts
+   down gracefully on quit.
 
-没有应用主窗口：macOS 不出现在 Dock（`LSUIElement`），Windows 不显示任务栏窗口按钮。
-不使用 `mygo.Bind` 的 typed IPC —— 前端仍走 HTTP API + WebSocket（`/ws/install`、
-`/ws/pair`、`/ws/login`），代码零改动；不重写 UI，直接复用 Vue 3 前端（`web/static`）。
+There is no main window: the app stays out of the Dock on macOS (`LSUIElement`) and
+shows no taskbar button on Windows. It does not use `mygo.Bind` typed IPC — the
+frontend keeps using the HTTP API and WebSockets (`/ws/install`, `/ws/pair`,
+`/ws/login`), so no code changes there; the Vue 3 frontend in `web/static` is reused
+as is instead of being rewritten.
 
-### 目录结构
+### Layout
 
 ```
 desktop/
-├── README.md                    # 本文件（开发方案）
+├── README.md                    # this file (the design)
 └── app/
-    ├── go.mod                   # 独立 module（mygo 需要 Go 1.27+，见关键决策 #2）
-    ├── main.go                  # 桌面壳入口：起 server、菜单栏图标、单实例、打开浏览器
-    ├── locales.go               # 内嵌服务端文案（构建时从仓库根 locales/ 复制）
-    ├── plumesign.go             # plumesign 资源路径解析（PathResources 优先，PATH 回退）
-    ├── mygo.config.ts           # mygo CLI 配置（LSUIElement、buildCommand、resources）
-    ├── package.json             # 桌面壳工具链（mygo CLI）
+    ├── go.mod                   # separate module (mygo needs Go 1.27+, see decision #2)
+    ├── main.go                  # shell entry: starts the server, tray icon, single instance, opens the browser
+    ├── locales.go               # embeds the server catalogs (copied from the root locales/ at build time)
+    ├── plumesign.go             # resolves the plumesign resource path (PathResources first, PATH fallback)
+    ├── mygo.config.ts           # mygo CLI config (LSUIElement, buildCommand, resources)
+    ├── package.json             # desktop toolchain (mygo CLI)
     ├── assets/
-    │   ├── tray-darwin.svg      # macOS 菜单栏图标源文件
-    │   ├── tray-darwin.png      # 由 SVG 栅格化的黑色透明模板图
-    │   └── tray-windows.png     # 通知区域图标，取自 resources/icon.png
+    │   ├── tray-darwin.svg      # source of the macOS menu bar icon
+    │   ├── tray-darwin.png      # black-on-transparent template rasterized from the SVG
+    │   └── tray-windows.png     # notification area icon, taken from resources/icon.png
     └── resources/
-        ├── icon.png             # 桌面应用图标（1024×1024，由 AppIcon.icon 渲染）
-        ├── darwin/bin/plumesign          # macOS universal（构建时脚本下载）
+        ├── icon.png             # app icon (1024×1024, rendered from AppIcon.icon)
+        ├── darwin/bin/plumesign          # macOS universal (downloaded by the build script)
         └── windows-amd64/bin/plumesign.exe
 ```
 
-### 关键决策
+### Key decisions
 
-| # | 决策 | 理由 |
-|---|------|------|
-| 1 | **壳 + 内嵌 server，而非 Bind IPC 重写** | `internal/*`（install manager、device manager、WS 登录/配对/进度）全部复用，前端零改动，风险最小 |
-| 2 | **独立 `desktop/app/go.mod`** | 根 module 是 go 1.25，mygo 需要 Go 1.27+；隔离后不影响主服务构建与 CI，server 代码通过引用根包复用（见下"复用方式"） |
-| 3 | **随机端口 + 127.0.0.1 回环** | 不与用户机器已占用端口冲突；桌面版不对外提供服务 |
-| 4 | **plumesign 打进 resources** | mygo 的 platform resources 机制自动按平台打包，`mygo build` 会把 resources 里的可执行文件连带签名，macOS Gatekeeper / Windows SmartScreen 才会放行 |
-| 5 | **配置/数据放用户目录** | 桌面应用没有容器 `/data`；默认 `~/Library/Application Support/atvloadly`（macOS）/ `%APPDATA%\atvloadly`（Windows），启动时注入 `server.work_dir` |
+| # | Decision | Rationale |
+|---|----------|-----------|
+| 1 | **Shell + embedded server, not a Bind IPC rewrite** | `internal/*` (install manager, device manager, WS login/pair/progress) is reused whole, the frontend needs no changes, and the risk stays low |
+| 2 | **A separate `desktop/app/go.mod`** | The root module is go 1.25 and mygo needs Go 1.27+; isolating it keeps the main service build and CI untouched, while server code is reused by importing the root packages (see "How the server is reused") |
+| 3 | **Random port + 127.0.0.1 loopback** | Never collides with a port the user already uses; the desktop build serves nothing to the network |
+| 4 | **plumesign packed into resources** | mygo's platform resources mechanism packages it per platform, and `mygo build` signs the executables along with the app, which is what lets macOS Gatekeeper / Windows SmartScreen through |
+| 5 | **Config and data in the user directory** | A desktop app has no container `/data`; defaults to `~/Library/Application Support/atvloadly` (macOS) / `%APPDATA%\atvloadly` (Windows), with `server.work_dir` injected at startup |
 
-> plumesign 上游 release 目前只附了 Linux 包；上游 release workflow 已包含 macOS/Windows
-> 构建目标（`plumesign-macos-universal`、`plumesign-windows-*.exe`），按计划补发即可。
-> 不阻塞桌面壳开发：本地开发用 PATH 里的 plumesign 回退路径。
+> The upstream plumesign release currently ships Linux packages only; its release
+> workflow already has the macOS/Windows targets (`plumesign-macos-universal`,
+> `plumesign-windows-*.exe`), so they only need to be published. This does not block
+> the shell: local development falls back to plumesign on the PATH.
 
-## 复用方式（关键技术点）
+## How the server is reused (the key technique)
 
-现有 server 启动逻辑在 `cmd/server/server.go` 的 `action()` 中，是 cli 命令的一部分，
-不能直接 import（根 module 与 desktop module 分离）。两种做法：
+The existing startup logic lives in `action()` in `cmd/server/server.go`, part of a CLI
+command, so it cannot be imported directly (the root and desktop modules are separate).
+Two approaches:
 
-- **方案 A（推荐）：提取引导函数。** 把 `action()` 里的初始化序列提取为根 module 的
-  `internal/app` 或独立 `internal/bootstrap` 包，暴露
-  `bootstrap.Run(conf) (net.Listener, stop func(), err)`。`cmd/server` 与
-  `desktop/app` 都调用它。桌面壳改动收敛为一次重构 + 一个新包。
-  - 难点：`web.Run` 目前自己 `fiber.Listen(addr:port)`。需要加一个接受
-    `net.Listener` 的入口（fiber 支持 `app.Listener(ln)`），以便绑定随机端口。
-- **方案 B（兜底）：复制引导序列。** desktop module 里写一份精简 bootstrap。
-  代码重复，且两处引导会漂移。仅在方案 A 遇到跨 module 编译问题时退回。
+- **Option A (chosen): extract a bootstrap function.** The initialization sequence in
+  `action()` became the root module's `internal/bootstrap` package, exposing
+  `bootstrap.Run(opts) (addr string, stop func(), err error)`. Both `cmd/server` and
+  `desktop/app` call it, so the shell's footprint is one refactor plus one new package.
+  - The tricky part: `web.Run` used to call `fiber.Listen(addr:port)` itself. It now has
+    an entry point that takes a `net.Listener` (fiber supports `app.Listener(ln)`), so
+    the shell can bind a random port.
+- **Option B (fallback): copy the boot sequence.** Write a slim bootstrap inside the
+  desktop module. It duplicates code and the two boot paths drift apart; only fall back
+  to it if Option A hits a cross-module compile problem.
 
-跨 module 引用：`desktop/app/go.mod` 中用 `replace` + 相对路径指向仓库根 module，
-或用 `go.work`（本地）/ `go.mod` 的 `replace`（CI 与发布构建）。根 module 继续以
-go 1.25 语义构建，desktop 只 import 未被 mygo 依赖影响的包。
+Cross-module reference: `desktop/app/go.mod` points at the root module with a `replace`
+and a relative path. The root module keeps building with go 1.25 semantics, and the
+desktop app imports only packages that mygo's dependencies do not affect.
 
-**locales 内嵌**（与 web 前端同一模式）：服务端文案在根 `locales/`，由根 `main.go`
-embed；desktop module 够不到根 main 的 embed，因此构建时由 `buildCommand`
-（`npm run sync-locales`）把根 `locales/` 拷进 `desktop/app/locales/`（gitignore），
-`locales.go` embed 这份副本，`run()` 里调 `i18n.Init`。根目录结构不动；
-目录结构如 web 的 `src → dist` 一样，源在根、副本进包。
+**Embedded locales** (the same pattern as the web frontend): the server catalogs live in
+the root `locales/`, embedded by the root `main.go`. The desktop module cannot reach that
+embed, so `buildCommand` (`npm run sync-locales`) copies the root `locales/` into
+`desktop/app/locales/` (gitignored) at build time, `locales.go` embeds that copy, and
+`run()` calls `i18n.Init`. The root layout is unchanged; like web's `src → dist`, the
+source stays at the root and a copy goes into the bundle.
 
-菜单文案使用同一份 locales 的 `tray.*` 键：启动时优先使用 Web UI 已保存的语言，
-首次启动跟随系统语言；Web UI 切换语言后，`i18n.OnLanguageChanged` 回调会重建菜单。
+The menu uses the `tray.*` keys of the same catalogs: at startup it prefers the language
+saved by the web UI and follows the system language on first launch; when the language
+changes in the web UI, the `i18n.OnLanguageChanged` callback rebuilds the menu.
 
-### 桌面版需要处理的服务端差异
+### Server differences the desktop build handles
 
-| 差异点 | 现状 | 桌面版处理 |
-|--------|------|-----------|
-| 设备发现（mDNS） | `device_manager_mdns.go`（`//go:build !linux`）已用纯 Go zeroconf | 无需改动；Windows/macOS 直接可用 |
-| lockdown 目录 | `app.LockdownDir()` 已按平台处理 | 无需改动 |
-| 配置文件 | `config.yaml`（koanf） | 桌面版不要求用户写 yaml：启动时生成默认配置到用户数据目录 |
-| 日志 | lumberjack 文件 + stdout | 写到用户数据目录的 `app.log`，菜单"打开日志文件"用默认编辑器打开 |
-| 子进程控制台窗口 | Windows GUI 程序执行控制台子进程会弹出黑窗 | `internal/exec` 统一加 `HideWindow` + `CREATE_NO_WINDOW`，plumesign 全部调用静默 |
+| Difference | Current state | Desktop handling |
+|------------|---------------|------------------|
+| Device discovery (mDNS) | `device_manager_mdns.go` (`//go:build !linux`) already uses pure-Go zeroconf | No change needed; works on Windows/macOS directly |
+| Lockdown directory | `app.LockdownDir()` already handles each platform | No change needed |
+| Config file | `config.yaml` (koanf) | The desktop build does not make users write YAML: it generates a default config into the user data directory at startup |
+| Logging | lumberjack file + stdout | Written to `app.log` in the user data directory; "Open Log File" opens it in the default editor |
+| Console windows of child processes | A Windows GUI program running a console child pops up a black window | `internal/exec` sets `HideWindow` + `CREATE_NO_WINDOW` everywhere, so every plumesign call is silent |
 
-## 开发流程
+## Development
 
-前提：本地 `go` 1.27+（desktop module）、`npm`、plumesign 在 PATH（开发模式回退）。
+Prerequisites: a local `go` 1.27+ (for the desktop module), `npm`, and plumesign on the
+PATH (the development fallback).
 
 ```sh
 cd desktop/app
 npm install
-npm run dev             # mygo dev：构建并启动桌面壳（驻留菜单栏 + 打开浏览器）
+npm run dev             # mygo dev: builds and starts the shell (menu bar + opens the browser)
 ```
 
-### 构建
+### Build
 
 ```sh
 cd desktop/app
-npm run build           # 开发用：无版本注入
+npm run build           # development: no version injection
 VERSION=1.0.0 COMMIT=abc BUILDDATE="2026-01-01 00:00:00" npm run build:release
-# build:release 生成 version_gen.go（gitignore）注入 internal/app/build 的
-# Version/Commit/BuildDate/Mode —— mygo build 自组 -ldflags 会覆盖 GOFLAGS
-# 传入的 -X，所以走生成文件而非 ldflags（与 xgo -ldflags 注入等效）。
+# build:release generates version_gen.go (gitignored) to inject Version/Commit/
+# BuildDate/Mode into internal/app/build — mygo build composes its own -ldflags,
+# which would override -X passed through GOFLAGS, so this goes through a
+# generated file instead (equivalent to xgo's -ldflags injection).
 ```
 
-签名发布需要：macOS Developer ID + notarytool 凭据；Windows 代码签名证书。
-`mygo.config.ts` 中按环境变量注入（`MACOS_SIGNING_IDENTITY` 等），本地构建自动
-ad-hoc 签名。
+A signed release needs a macOS Developer ID plus notarytool credentials, and a Windows
+code signing certificate. `mygo.config.ts` injects them from environment variables
+(`MACOS_SIGNING_IDENTITY` and friends); local builds sign ad hoc.
 
-实现备注：
+### macOS install (the DMG is unsigned)
 
-- **纯 Go 构建**：bom 已 vendor 进 `pkg/` 并把 lzfse 换成 purego 的
-  `bitxeno/lzfse-go`，全依赖无 cgo，`CGO_ENABLED=0` 即可编译任意平台目标；
-  任意 runner 都能交叉出全部平台包。
-- **DMG 与外置盘**：`hdiutil attach` 在外置 USB 盘（APFS）上挂载被拒；DMG 创建需
-  在内置盘工作区运行，或用 `-skip-dmg` 只出 .app。
-- **mygo generate 副作用**：`mygo generate` 会运行主程序来写 TS client；本壳无
-  Bind，main 里检测 `MYGO_GENERATE` 直接返回，避免 generate 时把服务跑起来。
+The DMG is unsigned. After dragging `atvloadly.app` into Applications, run once:
 
-### plumesign 集成
+```sh
+sudo xattr -dr com.apple.quarantine /Applications/atvloadly.app
+```
 
-- **下载**：`scripts/fetch-plumesign.sh`（构建前执行）从 PlumeImpactor release 下载
-  `plumesign-macos-universal.tar.gz`（解包后同时供 darwin-arm64 与 darwin-amd64，
-  mygo build 自动 lipo）与 `plumesign-windows-x86_64.exe`，放进
-  `desktop/app/resources/<platform>/bin/`（.gitignore，不入库）。上游未发布的资产
-  （当前缺 windows-arm64）逐项警告并继续。
-- **路径解析**：现有 `internal/exec`、manager 代码用 `"plumesign"` 裸命令名，桌面壳在
-  进程启动时把 `PathResources/bin` 加入 `PATH` 环境变量（子进程继承），业务代码零改动。
-  已在 `env -i` 干净环境下端到端验证：打包 app 的 `check/afc` 接口成功执行 bundle 内
-  的 plumesign 2.7.1-patch.5；未打包（go run）回退系统 PATH。
+The recursive `-dr` matters: the bundled `plumesign` carries the quarantine flag too, and
+the system kills it at run time if it is left behind.
 
-## 开发里程碑
+Implementation notes:
 
-| 里程碑 | 内容 | 验收 |
-|--------|------|------|
-| M1 桌面壳跑通 ✅ | 独立 go.mod、bootstrap 提取、内嵌 server + 默认浏览器加载回环地址 | macOS 打包 app 启动：浏览器显示完整前端，mDNS 发现设备，回环 200 |
-| M2 图标 + plumesign + 单实例 ✅ | Icon Composer 图标（Liquid Glass）、plumesign 随包分发、单实例锁 | 菜单栏显示图标；bundle 内签名 plumesign 进 PATH；二次启动在已有实例中打开浏览器 |
-| M3 发布打磨 ✅ | 版本号注入（version_gen.go）、CI（desktop-release.yml：macOS universal 签名公证 + Windows NSIS，desktop-v* tag 触发） | `npm run build:release` 后 `/api/version` 报告注入版本；CI 待真实 tag 验证 |
-| M4 菜单栏常驻 ✅ | 去掉主窗口，macOS `LSUIElement` + Windows 通知区域图标；单击图标显示"打开浏览器 / 打开日志文件 / 退出程序" | 双击运行后自动打开浏览器且无主窗口；退出菜单停止内嵌 server 并结束进程 |
-| M5 Windows 打磨 ✅ | Windows 应用/通知区域图标取自 `AppIcon.icon` 的渲染；plumesign 子进程不再弹出控制台窗口 | 任务栏与通知区域显示 App 图标；配对、安装等操作全程无黑窗 |
+- **Pure-Go build**: bom is vendored into `pkg/` and lzfse goes through the purego-based
+  `bitxeno/lzfse-go`, so no dependency needs cgo and `CGO_ENABLED=0` compiles every
+  target; any runner can cross-build all platform packages.
+- **DMG and external drives**: `hdiutil attach` refuses to mount on an external USB
+  (APFS) drive; create the DMG from a workspace on the internal disk, or use `-skip-dmg`
+  to produce only the `.app`.
+- **`mygo generate` side effect**: `mygo generate` runs the main program to write the TS
+  client; this shell binds nothing, so `main` returns early when it sees `MYGO_GENERATE`
+  and the service never starts during generate.
+
+### plumesign integration
+
+- **Download**: `scripts/fetch-plumesign.sh` (run before the build) downloads
+  `plumesign-macos-universal.tar.gz` (unpacked for both darwin-arm64 and darwin-amd64,
+  which `mygo build` lipos together) and `plumesign-windows-x86_64.exe` from the
+  PlumeImpactor release into `desktop/app/resources/<platform>/bin/` (gitignored, not
+  committed). Assets upstream has not published yet (currently windows-arm64) warn
+  individually and the build continues.
+- **Path resolution**: the existing `internal/exec` and manager code call the bare
+  `"plumesign"` command; at startup the shell prepends `PathResources/bin` to the `PATH`
+  environment variable (inherited by child processes), so the business code needs no
+  changes. Verified end to end under a clean `env -i`: the packaged app's `check/afc`
+  endpoint ran the bundled plumesign 2.7.1-patch.5; unpackaged (`go run`) falls back to
+  the system PATH.
+
+## Milestones
+
+| Milestone | Scope | Acceptance |
+|-----------|-------|------------|
+| M1 shell runs ✅ | Separate go.mod, extracted bootstrap, embedded server + default browser on the loopback address | Packaged macOS app starts: the browser shows the full frontend, mDNS finds devices, loopback answers 200 |
+| M2 icon + plumesign + single instance ✅ | Icon Composer icon (Liquid Glass), plumesign shipped in the bundle, single-instance lock | Menu bar shows the icon; the signed plumesign inside the bundle is on the PATH; a second launch opens the browser in the running instance |
+| M3 release polish ✅ | Version injection (version_gen.go), CI (`desktop-release.yml`: macOS universal signing + notarization, Windows NSIS, triggered by a `desktop-v*` tag) | After `npm run build:release`, `/api/version` reports the injected version; CI awaits a real tag to verify |
+| M4 menu bar resident ✅ | Drop the main window, macOS `LSUIElement` + Windows notification area icon; clicking the icon shows "Open in Browser / Open Log File / Quit" | Double-clicking opens the browser with no main window; Quit stops the embedded server and ends the process |
+| M5 Windows polish ✅ | The Windows app/notification area icon comes from the rendered `AppIcon.icon`; plumesign child processes no longer pop a console window | Taskbar and notification area show the app icon; pairing, installing and the rest never flash a black window |
