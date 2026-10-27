@@ -56,8 +56,14 @@ func run() error {
 	initI18n()
 
 	// The service shares the desktop app's identity: data lives in the app's
-	// user data directory instead of ~/.config/<binary name>.
-	app.SetAppDataDir(dataDir())
+	// user data directory instead of ~/.config/<binary name>. Its existing
+	// config.yaml stores server.port alongside the other server settings.
+	appDataDir := dataDir()
+	app.SetAppDataDir(appDataDir)
+	configPath := desktopConfigPath(appDataDir)
+	if err := ensureDesktopConfig(configPath); err != nil {
+		return err
+	}
 
 	// Plumesign ships inside the app bundle; make it the plumesign the
 	// managers exec.
@@ -67,7 +73,7 @@ func run() error {
 		_ = os.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	}
 
-	url, stop, err := startService()
+	url, stop, err := startService(configPath)
 	if err != nil {
 		return err
 	}
@@ -105,7 +111,7 @@ func run() error {
 			Icon:           trayIcon(),
 			IconIsTemplate: runtime.GOOS == "darwin",
 			ToolTip:        appName,
-			Menu:           trayMenu(url, logPath),
+			Menu:           trayMenu(url, logPath, configPath),
 		})
 		if err != nil {
 			fatal(fmt.Errorf("no menu bar icon: %w", err))
@@ -113,7 +119,7 @@ func run() error {
 		// The web UI saves the language it shows; relabel the menu as it
 		// changes.
 		i18n.OnLanguageChanged(func(string) {
-			tray.SetMenu(trayMenu(url, logPath))
+			tray.SetMenu(trayMenu(url, logPath, configPath))
 		})
 		if runtime.GOOS == "windows" {
 			// The notification area opens TrayOptions.Menu on right-click;
@@ -121,7 +127,10 @@ func run() error {
 			// click a taskbar icon.
 			tray.OnClick(func() { tray.PopUpMenu() })
 		}
-		mygo.App.OnWillQuit(func(*mygo.QuitEvent) { tray.Destroy() })
+		mygo.App.OnWillQuit(func(*mygo.QuitEvent) {
+			closePortDialog()
+			tray.Destroy()
+		})
 
 		// The service is up: the launch lands in the browser.
 		openBrowser(url)
@@ -130,10 +139,11 @@ func run() error {
 }
 
 // trayMenu builds the menu bar menu in the language the app shows.
-func trayMenu(url, logPath string) *mygo.Menu {
+func trayMenu(url, logPath, configPath string) *mygo.Menu {
 	return mygo.NewMenu([]*mygo.MenuItem{
 		{Label: i18n.Localize("tray.open_browser"), Click: func(*mygo.MenuItem, *mygo.Window) { openBrowser(url) }},
 		{Label: i18n.Localize("tray.open_log"), Click: func(*mygo.MenuItem, *mygo.Window) { openLogFile(logPath) }},
+		{Label: i18n.Localize("tray.server_port"), Click: func(*mygo.MenuItem, *mygo.Window) { openPortDialog(configPath) }},
 		mygo.Separator(),
 		{Role: mygo.RoleQuit, Label: i18n.Localize("tray.quit")},
 	})
@@ -156,10 +166,10 @@ func openLogFile(path string) {
 	}
 }
 
-// startService starts the atvloadly service on a random loopback port and
+// startService starts the atvloadly service on the given loopback port and
 // returns its URL. stop releases the port and stops the background jobs.
-func startService() (url string, stop func(), err error) {
-	addr, stop, err := bootstrap.Run(bootstrap.Options{Port: -1})
+func startService(configPath string) (url string, stop func(), err error) {
+	addr, stop, err := bootstrap.Run(bootstrap.Options{ConfigFile: configPath, ListenAddr: "127.0.0.1"})
 	if err != nil {
 		return "", nil, err
 	}

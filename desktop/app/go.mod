@@ -5,6 +5,7 @@ go 1.27.1
 require (
 	github.com/bitxeno/atvloadly v0.0.0
 	github.com/egoist/mygo v0.6.3
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -28,6 +29,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.6-0.20220405070650-99c79f7041fc // indirect
 	github.com/go-resty/resty/v2 v2.6.0 // indirect
 	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible // indirect
+	github.com/go-text/typesetting v0.3.5 // indirect
 	github.com/godbus/dbus/v5 v5.0.4 // indirect
 	github.com/gofiber/contrib/websocket v1.0.0 // indirect
 	github.com/gofiber/fiber/v2 v2.52.5 // indirect
@@ -77,7 +79,6 @@ require (
 	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/tools v0.51.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/gorm v1.25.7 // indirect
 	howett.net/plist v1.0.1 // indirect
 	modernc.org/libc v1.22.5 // indirect

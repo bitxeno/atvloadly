@@ -3,6 +3,14 @@
   "tray": {
     "open_browser": "Öppna i webbläsare",
     "open_log": "Öppna loggfil",
+    "server_port": "Ändra serverport",
+    "server_port_dialog_title": "Ändra serverport",
+    "server_port_dialog_message": "Ange en TCP-port (1–65535). Nuvarande port: {{.port}}. Starta om appen för att ändringen ska börja gälla.",
+    "server_port_dialog_field": "Port",
+    "server_port_dialog_save": "Spara",
+    "server_port_dialog_cancel": "Avbryt",
+    "server_port_dialog_saved": "Serverporten har sparats. Starta om appen för att ändringen ska börja gälla.",
+    "server_port_dialog_invalid": "Ange en giltig TCP-port mellan 1 och 65535.",
     "quit": "Avsluta"
   },
   "common": {

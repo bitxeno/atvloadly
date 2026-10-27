@@ -3,6 +3,14 @@
   "tray": {
     "open_browser": "Отвори у прегледачу",
     "open_log": "Отвори датотеку евиденције",
+    "server_port": "Промени порт сервера",
+    "server_port_dialog_title": "Промена порта сервера",
+    "server_port_dialog_message": "Унесите TCP порт (1–65535). Тренутни порт: {{.port}}. Поново покрените апликацију да би промена ступила на снагу.",
+    "server_port_dialog_field": "Порт",
+    "server_port_dialog_save": "Сачувај",
+    "server_port_dialog_cancel": "Откажи",
+    "server_port_dialog_saved": "Порт сервера је сачуван. Поново покрените апликацију да би промена ступила на снагу.",
+    "server_port_dialog_invalid": "Унесите важећи TCP порт између 1 и 65535.",
     "quit": "Изађи"
   },
   "common": {

@@ -3,6 +3,15 @@
     "tray": {
         "open_browser": "Open in Browser",
         "open_log": "Open Log File",
+        "server_port": "Change Server Port",
+        "server_port_dialog_title": "Change Server Port",
+        "server_port_dialog_message": "Enter a TCP port (1–65535). Current port: {{.port}}. Restart the app for the change to take effect.",
+        "server_port_dialog_field": "Port",
+        "server_port_dialog_save": "Save",
+        "server_port_dialog_cancel": "Cancel",
+        "server_port_dialog_saved": "The server port was saved. Restart the app for the change to take effect.",
+        "server_port_dialog_invalid": "Enter a valid TCP port between 1 and 65535.",
+        "server_port_dialog_save_error": "Could not save the server port.",
         "quit": "Quit"
     },
     "common": {
