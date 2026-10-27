@@ -3,6 +3,18 @@
   "tray": {
     "open_browser": "Öppna i webbläsare",
     "open_log": "Öppna loggfil",
+    "open_at_login": "Öppna vid inloggning",
+    "settings": "Inställningar",
+    "settings_title": "Inställningar",
+    "settings_description": "Ändringar börjar gälla efter att appen startats om.",
+    "settings_port_label": "Serverport",
+    "settings_lan_label": "Tillåt åtkomst från LAN",
+    "settings_lan_help": "Tillåt även anslutningar från det lokala nätverket (IPv4).",
+    "settings_save": "Spara",
+    "settings_cancel": "Avbryt",
+    "settings_saved": "Inställningarna har sparats. Starta om appen för att tillämpa dem.",
+    "settings_invalid_port": "Ange en giltig TCP-port mellan 1 och 65535.",
+    "settings_save_error": "Det gick inte att spara inställningarna.",
     "quit": "Avsluta"
   },
   "common": {

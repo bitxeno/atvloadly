@@ -3,6 +3,18 @@
     "tray": {
         "open_browser": "打开浏览器",
         "open_log": "打开日志文件",
+        "open_at_login": "开机时启动",
+        "settings": "设置",
+        "settings_title": "设置",
+        "settings_description": "修改后需重启程序生效。",
+        "settings_port_label": "服务端口",
+        "settings_lan_label": "允许局域网访问",
+        "settings_lan_help": "同时接受本局域网（IPv4）内的连接。",
+        "settings_save": "保存",
+        "settings_cancel": "取消",
+        "settings_saved": "设置已保存，重启程序后生效。",
+        "settings_invalid_port": "请输入 1 到 65535 之间的有效 TCP 端口。",
+        "settings_save_error": "保存设置失败。",
         "quit": "退出程序"
     },
     "common": {

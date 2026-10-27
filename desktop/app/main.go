@@ -12,10 +12,12 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/bootstrap"
 	"github.com/bitxeno/atvloadly/internal/i18n"
+	logx "github.com/bitxeno/atvloadly/internal/log"
 	"github.com/egoist/mygo"
 )
 
@@ -56,8 +58,15 @@ func run() error {
 	initI18n()
 
 	// The service shares the desktop app's identity: data lives in the app's
-	// user data directory instead of ~/.config/<binary name>.
-	app.SetAppDataDir(dataDir())
+	// user data directory instead of ~/.config/<binary name>. Its existing
+	// config.yaml stores server.port and server.listen_addr.
+	appDataDir := dataDir()
+	app.SetAppDataDir(appDataDir)
+	configPath := desktopConfigPath(appDataDir)
+	desktop, err := loadDesktopSettings(configPath)
+	if err != nil {
+		return err
+	}
 
 	// Plumesign ships inside the app bundle; make it the plumesign the
 	// managers exec.
@@ -67,10 +76,11 @@ func run() error {
 		_ = os.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	}
 
-	url, stop, err := startService()
+	_, stop, err := startService(configPath)
 	if err != nil {
 		return err
 	}
+	url := "http://" + loopbackListenAddr + ":" + strconv.Itoa(desktop.Port) + "/"
 
 	// Quit stops the service; a crash exit leaves it to the process exit.
 	defer func() { stop() }()
@@ -105,15 +115,15 @@ func run() error {
 			Icon:           trayIcon(),
 			IconIsTemplate: runtime.GOOS == "darwin",
 			ToolTip:        appName,
-			Menu:           trayMenu(url, logPath),
 		})
 		if err != nil {
 			fatal(fmt.Errorf("no menu bar icon: %w", err))
 		}
+		setTrayMenu(tray, url, logPath, configPath)
 		// The web UI saves the language it shows; relabel the menu as it
 		// changes.
 		i18n.OnLanguageChanged(func(string) {
-			tray.SetMenu(trayMenu(url, logPath))
+			setTrayMenu(tray, url, logPath, configPath)
 		})
 		if runtime.GOOS == "windows" {
 			// The notification area opens TrayOptions.Menu on right-click;
@@ -121,22 +131,43 @@ func run() error {
 			// click a taskbar icon.
 			tray.OnClick(func() { tray.PopUpMenu() })
 		}
-		mygo.App.OnWillQuit(func(*mygo.QuitEvent) { tray.Destroy() })
+		mygo.App.OnWillQuit(func(*mygo.QuitEvent) {
+			closeSettingsDialog()
+			tray.Destroy()
+		})
 
-		// The service is up: the launch lands in the browser.
-		openBrowser(url)
+		// Launching at login starts the service quietly in the tray. A
+		// manual launch opens the browser after the service is ready.
+		if !mygo.App.WasOpenedAtLogin() {
+			openBrowser(url)
+		}
 	})
 	return mygo.App.Run()
 }
 
-// trayMenu builds the menu bar menu in the language the app shows.
-func trayMenu(url, logPath string) *mygo.Menu {
-	return mygo.NewMenu([]*mygo.MenuItem{
+// setTrayMenu builds the tray menu and reflects the system autostart state.
+func setTrayMenu(tray *mygo.Tray, url, logPath, configPath string) {
+	menu := mygo.NewMenu([]*mygo.MenuItem{
 		{Label: i18n.Localize("tray.open_browser"), Click: func(*mygo.MenuItem, *mygo.Window) { openBrowser(url) }},
 		{Label: i18n.Localize("tray.open_log"), Click: func(*mygo.MenuItem, *mygo.Window) { openLogFile(logPath) }},
+		{Label: i18n.Localize("tray.settings"), Click: func(*mygo.MenuItem, *mygo.Window) { openSettingsDialog(configPath) }},
+		mygo.Separator(),
+		{
+			ID:      "open-at-login",
+			Label:   i18n.Localize("tray.open_at_login"),
+			Type:    mygo.MenuItemCheckbox,
+			Checked: mygo.App.OpenAtLogin(),
+			Click: func(item *mygo.MenuItem, _ *mygo.Window) {
+				if err := mygo.App.SetOpenAtLogin(item.IsChecked()); err != nil {
+					logx.Err(err).Msg("Failed to update open-at-login setting")
+					item.SetChecked(!item.IsChecked())
+				}
+			},
+		},
 		mygo.Separator(),
 		{Role: mygo.RoleQuit, Label: i18n.Localize("tray.quit")},
 	})
+	tray.SetMenu(menu)
 }
 
 // openBrowser opens url with the default browser.
@@ -156,10 +187,10 @@ func openLogFile(path string) {
 	}
 }
 
-// startService starts the atvloadly service on a random loopback port and
-// returns its URL. stop releases the port and stops the background jobs.
-func startService() (url string, stop func(), err error) {
-	addr, stop, err := bootstrap.Run(bootstrap.Options{Port: -1})
+// startService starts the atvloadly service on the configured address and
+// returns its URL. stop releases the listener and stops the background jobs.
+func startService(configPath string) (url string, stop func(), err error) {
+	addr, stop, err := bootstrap.Run(bootstrap.Options{ConfigFile: configPath})
 	if err != nil {
 		return "", nil, err
 	}

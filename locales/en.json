@@ -3,6 +3,18 @@
     "tray": {
         "open_browser": "Open in Browser",
         "open_log": "Open Log File",
+        "open_at_login": "Open at Login",
+        "settings": "Settings",
+        "settings_title": "Settings",
+        "settings_description": "Changes take effect after restarting the app.",
+        "settings_port_label": "Server Port",
+        "settings_lan_label": "Allow LAN Access",
+        "settings_lan_help": "Also accept connections from this local network (IPv4).",
+        "settings_save": "Save",
+        "settings_cancel": "Cancel",
+        "settings_saved": "Settings saved. Restart the app to apply them.",
+        "settings_invalid_port": "Enter a valid TCP port between 1 and 65535.",
+        "settings_save_error": "Could not save the settings.",
         "quit": "Quit"
     },
     "common": {

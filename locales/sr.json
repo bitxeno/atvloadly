@@ -3,6 +3,18 @@
   "tray": {
     "open_browser": "Отвори у прегледачу",
     "open_log": "Отвори датотеку евиденције",
+    "open_at_login": "Покрени при пријављивању",
+    "settings": "Подешавања",
+    "settings_title": "Подешавања",
+    "settings_description": "Промене ступају на снагу након поновног покретања апликације.",
+    "settings_port_label": "Порт сервера",
+    "settings_lan_label": "Дозволи приступ са LAN мреже",
+    "settings_lan_help": "Прихвати и везе из локалне мреже (IPv4).",
+    "settings_save": "Сачувај",
+    "settings_cancel": "Откажи",
+    "settings_saved": "Подешавања су сачувана. Поново покрените апликацију да би се применила.",
+    "settings_invalid_port": "Унесите важећи TCP порт између 1 и 65535.",
+    "settings_save_error": "Чување подешавања није успело.",
     "quit": "Изађи"
   },
   "common": {
