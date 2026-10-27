@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/bootstrap"
@@ -58,11 +59,12 @@ func run() error {
 
 	// The service shares the desktop app's identity: data lives in the app's
 	// user data directory instead of ~/.config/<binary name>. Its existing
-	// config.yaml stores server.port alongside the other server settings.
+	// config.yaml stores server.port and server.listen_addr.
 	appDataDir := dataDir()
 	app.SetAppDataDir(appDataDir)
 	configPath := desktopConfigPath(appDataDir)
-	if err := ensureDesktopConfig(configPath); err != nil {
+	desktop, err := loadDesktopSettings(configPath)
+	if err != nil {
 		return err
 	}
 
@@ -74,10 +76,11 @@ func run() error {
 		_ = os.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	}
 
-	url, stop, err := startService(configPath)
+	_, stop, err := startService(configPath)
 	if err != nil {
 		return err
 	}
+	url := "http://" + loopbackListenAddr + ":" + strconv.Itoa(desktop.Port) + "/"
 
 	// Quit stops the service; a crash exit leaves it to the process exit.
 	defer func() { stop() }()
@@ -129,7 +132,7 @@ func run() error {
 			tray.OnClick(func() { tray.PopUpMenu() })
 		}
 		mygo.App.OnWillQuit(func(*mygo.QuitEvent) {
-			closePortDialog()
+			closeSettingsDialog()
 			tray.Destroy()
 		})
 
@@ -147,7 +150,7 @@ func setTrayMenu(tray *mygo.Tray, url, logPath, configPath string) {
 	menu := mygo.NewMenu([]*mygo.MenuItem{
 		{Label: i18n.Localize("tray.open_browser"), Click: func(*mygo.MenuItem, *mygo.Window) { openBrowser(url) }},
 		{Label: i18n.Localize("tray.open_log"), Click: func(*mygo.MenuItem, *mygo.Window) { openLogFile(logPath) }},
-		{Label: i18n.Localize("tray.server_port"), Click: func(*mygo.MenuItem, *mygo.Window) { openPortDialog(configPath) }},
+		{Label: i18n.Localize("tray.settings"), Click: func(*mygo.MenuItem, *mygo.Window) { openSettingsDialog(configPath) }},
 		mygo.Separator(),
 		{
 			ID:      "open-at-login",
@@ -184,10 +187,10 @@ func openLogFile(path string) {
 	}
 }
 
-// startService starts the atvloadly service on the given loopback port and
-// returns its URL. stop releases the port and stops the background jobs.
+// startService starts the atvloadly service on the configured address and
+// returns its URL. stop releases the listener and stops the background jobs.
 func startService(configPath string) (url string, stop func(), err error) {
-	addr, stop, err := bootstrap.Run(bootstrap.Options{ConfigFile: configPath, ListenAddr: "127.0.0.1"})
+	addr, stop, err := bootstrap.Run(bootstrap.Options{ConfigFile: configPath})
 	if err != nil {
 		return "", nil, err
 	}
