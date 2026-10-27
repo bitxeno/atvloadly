@@ -68,6 +68,8 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
 
    The `/var/run/dbus` and `/var/run/avahi-daemon` of the host machine need to be shared with the docker container for use.
 
+   If Avahi is not installed on the host (for example a manual-IP / Tailscale deployment that adds every device by IP address), atvloadly disables automatic discovery instead of retrying Avahi; manually paired devices keep working.
+
    If you want to use the HOST network and want to modify the listening port, you can add environment variables to container:
 
    ```

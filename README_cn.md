@@ -69,6 +69,8 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
    
    宿主机的 `/var/run/dbus` 和`/var/run/avahi-daemon` 需要共享给 docker 容器使用
 
+   如果宿主机未安装 Avahi（例如通过手动 IP / Tailscale 部署、以 IP 地址添加全部设备），atvloadly 会禁用自动发现而不是反复重试 Avahi；手动配对的设备仍可正常使用。
+
    假如你想使用 HOST 网络环境，想修改监听端口，可以给容器添加环境变量：
 
    ```
