@@ -49,6 +49,20 @@ type Configuration struct {
 		// Empty means <work_dir>/keys/secret-store.key.
 		KeyFile string `koanf:"key_file" json:"key_file"`
 	} `koanf:"secret" json:"secret"`
+
+	// Zeroconf enables mDNS device discovery: Avahi on Linux, the built-in
+	// zeroconf browser elsewhere. Set it false to run without any discovery —
+	// e.g. a manual-IP / Tailscale deployment that adds every device by IP —
+	// in which case neither Avahi nor the zeroconf browser starts. It is set
+	// from the config file, the ZEROCONF_ENABLED environment variable, or the
+	// --zeroconf flag (in that order of precedence), not from the Web UI.
+	Zeroconf bool `koanf:"zeroconf" json:"zeroconf" default:"true"`
+}
+
+// ZeroconfEnabled reports whether mDNS device discovery is enabled. It is safe
+// to call before InitConfig: a nil Config keeps discovery enabled by default.
+func ZeroconfEnabled() bool {
+	return Config == nil || Config.Zeroconf
 }
 
 func SideloadDataDir() string {
