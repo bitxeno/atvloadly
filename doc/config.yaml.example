@@ -2,6 +2,11 @@ server:
   work_dir: /data
 log:
   log_file: /data/app.log
+# Enable mDNS device discovery (Avahi on Linux). Set to false to start neither
+# Avahi nor the built-in zeroconf browser, e.g. when every device is added by
+# IP address over Tailscale. Can also be set with ZEROCONF_ENABLED=false or
+# the --zeroconf=false command-line flag. Default: true
+# zeroconf: true
 # signing:
 #   # Deployment key sealing the private keys of imported signing identities
 #   # (external certificate mode). Default: <work_dir>/keys/signing-identity.key

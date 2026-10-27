@@ -84,7 +84,7 @@
         </div>
       </div>
 
-      <div class="atv-service-status">
+      <div class="atv-service-status" v-if="services.length > 0">
         <h4 class="mb-2">{{ $t("home.heading.service_status") }}</h4>
         <div class="flex flex-col w-full border-opacity-50">
           <div

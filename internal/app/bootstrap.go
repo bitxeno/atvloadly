@@ -1,7 +1,9 @@
 package app
 
 import (
+	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/bitxeno/atvloadly/internal/cfg"
 	"github.com/bitxeno/atvloadly/internal/db"
@@ -35,6 +37,16 @@ func InitConfig(path string, debug bool) (*Configuration, error) {
 	}
 	if configuration.Secret.KeyFile == "" {
 		configuration.Secret.KeyFile = filepath.Join(configuration.Server.DataDir, "keys", "secret-store.key")
+	}
+	// ZEROCONF_ENABLED overrides the config file so containers can toggle
+	// device discovery without editing config.yaml. An invalid value is
+	// ignored, keeping the configured/default value.
+	if v := os.Getenv("ZEROCONF_ENABLED"); v != "" {
+		if enabled, err := strconv.ParseBool(v); err == nil {
+			configuration.Zeroconf = enabled
+		} else {
+			log.Warnf("Ignoring invalid ZEROCONF_ENABLED=%q, want true or false", v)
+		}
 	}
 	Config = &configuration
 

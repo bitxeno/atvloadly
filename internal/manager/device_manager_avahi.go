@@ -92,6 +92,27 @@ func (p *avahiServerProvider) get() (*avahi.Server, error) {
 	return server, nil
 }
 
+// avahiAvailable returns the shared Avahi server when an Avahi daemon is
+// actually reachable on this host, and an error otherwise. It is a variable so
+// tests can simulate a host without Avahi.
+//
+// Discovery depends on the host's system D-Bus and avahi-daemon sockets
+// (/var/run/dbus, /var/run/avahi-daemon). Connecting to the bus alone is not
+// enough: a container may mount D-Bus while avahi-daemon is not running, in
+// which case ServerNew still succeeds and the failure only shows up on the
+// first call. GetAPIVersion is a cheap call that fails unless the daemon is
+// present, so it detects both a missing D-Bus socket and a missing daemon.
+var avahiAvailable = func() (*avahi.Server, error) {
+	server, err := avahiDaemon.get()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := server.GetAPIVersion(); err != nil {
+		return nil, fmt.Errorf("avahi daemon not reachable: %v", err)
+	}
+	return server, nil
+}
+
 // 需要依赖socket套接字：
 // /var/run/dbus
 // /var/run/avahi-daemon
@@ -101,16 +122,32 @@ func (dm *DeviceManager) Start() {
 	ctx := dm.ctx
 	dm.mu.Unlock()
 
-	dm.startLivenessProbe(ctx)
-
-	// A browser freed because the provider dropped a dead connection ends
-	// runDiscovery. Reconnect and restart discovery instead of leaving the
-	// daemon permanently without device discovery.
+	// Discovery needs the host's Avahi/D-Bus sockets. When they are absent — a
+	// manual-IP / Tailscale deployment that reaches every device over the
+	// network — retrying would only repeat "Avahi server unavailable" in the
+	// logs every few seconds (issue #235). Give up until the next Start instead
+	// of starting discovery at all. Manually paired devices keep working.
+	//
+	// Once discovery has connected, a dropped connection is retried: that is a
+	// daemon restart, not a host that never had Avahi.
+	connected := false
 	for {
-		server, err := avahiDaemon.get()
+		server, err := avahiAvailable()
 		if err != nil {
+			if !connected {
+				log.Warnf("Avahi not available, mDNS discovery disabled: %v", err)
+				return
+			}
 			log.Err(err).Msg("Avahi server unavailable")
 		} else {
+			if !connected {
+				connected = true
+				dm.startLivenessProbe(ctx)
+			}
+
+			// A browser freed because the provider dropped a dead connection
+			// ends runDiscovery. Reconnect and restart discovery instead of
+			// leaving the daemon permanently without device discovery.
 			stopped := dm.runDiscovery(ctx, server)
 			if ctx.Err() != nil {
 				log.Info("Avahi discovery stopped")

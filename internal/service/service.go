@@ -54,6 +54,12 @@ func ValidateCustomName(name string) error {
 func GetServiceStatus() []model.ServiceStatus {
 	status := []model.ServiceStatus{}
 
+	// Discovery is disabled: neither Avahi nor the mDNS browser runs, so there
+	// is no discovery service to report. An empty list hides the module.
+	if !app.ZeroconfEnabled() {
+		return status
+	}
+
 	if runtime.GOOS == "linux" {
 		proc := "avahi-daemon"
 		_, err := os.Stat(avahiDaemonPid)
