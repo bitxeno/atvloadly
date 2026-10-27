@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -12,6 +13,22 @@ import (
 
 	"github.com/bitxeno/atvloadly/internal/model"
 )
+
+// setSideloadDataDir points the PlumeImpactor data directory at a temp dir for
+// the current OS and returns its pairing_files directory. It mirrors the
+// engine's own resolution (%APPDATA% on Windows, $XDG_CONFIG_HOME elsewhere),
+// so the tests do not depend on the developer's real config directory.
+func setSideloadDataDir(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	if runtime.GOOS == "windows" {
+		t.Setenv("APPDATA", filepath.Join(dir, "AppData", "Roaming"))
+		return filepath.Join(dir, "AppData", "Roaming", "PlumeImpactor", "pairing_files")
+	}
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, ".config"))
+	return filepath.Join(dir, ".config", "PlumeImpactor", "pairing_files")
+}
 
 func writeJSON(t *testing.T, dir, name, content string) {
 	t.Helper()
@@ -62,9 +79,7 @@ func TestManualDeviceDedupedByDiscovered(t *testing.T) {
 }
 
 func TestDeleteManualDeviceRemovesBothFiles(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	pdir := filepath.Join(dir, ".config", "PlumeImpactor", "pairing_files")
+	pdir := setSideloadDataDir(t)
 	if err := os.MkdirAll(pdir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -338,9 +353,7 @@ func TestIsManualDeviceAddr(t *testing.T) {
 }
 
 func TestWarmManualDevicePortResolves(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	pdir := filepath.Join(dir, ".config", "PlumeImpactor", "pairing_files")
+	pdir := setSideloadDataDir(t)
 	if err := os.MkdirAll(pdir, 0o755); err != nil {
 		t.Fatal(err)
 	}
