@@ -4,6 +4,7 @@
         "open_browser": "打开浏览器",
         "open_log": "打开日志文件",
         "server_port": "修改服务端口",
+        "open_at_login": "开机时启动",
         "server_port_dialog_title": "修改服务端口",
         "server_port_dialog_message": "请输入 TCP 端口（1–65535）。当前端口：{{.port}}。修改后需要重启程序生效。",
         "server_port_dialog_field": "端口",

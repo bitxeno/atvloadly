@@ -4,6 +4,7 @@
     "open_browser": "Öppna i webbläsare",
     "open_log": "Öppna loggfil",
     "server_port": "Ändra serverport",
+    "open_at_login": "Öppna vid inloggning",
     "server_port_dialog_title": "Ändra serverport",
     "server_port_dialog_message": "Ange en TCP-port (1–65535). Nuvarande port: {{.port}}. Starta om appen för att ändringen ska börja gälla.",
     "server_port_dialog_field": "Port",

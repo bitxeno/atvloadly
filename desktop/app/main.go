@@ -16,6 +16,7 @@ import (
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/bootstrap"
 	"github.com/bitxeno/atvloadly/internal/i18n"
+	logx "github.com/bitxeno/atvloadly/internal/log"
 	"github.com/egoist/mygo"
 )
 
@@ -111,15 +112,15 @@ func run() error {
 			Icon:           trayIcon(),
 			IconIsTemplate: runtime.GOOS == "darwin",
 			ToolTip:        appName,
-			Menu:           trayMenu(url, logPath, configPath),
 		})
 		if err != nil {
 			fatal(fmt.Errorf("no menu bar icon: %w", err))
 		}
+		setTrayMenu(tray, url, logPath, configPath)
 		// The web UI saves the language it shows; relabel the menu as it
 		// changes.
 		i18n.OnLanguageChanged(func(string) {
-			tray.SetMenu(trayMenu(url, logPath, configPath))
+			setTrayMenu(tray, url, logPath, configPath)
 		})
 		if runtime.GOOS == "windows" {
 			// The notification area opens TrayOptions.Menu on right-click;
@@ -132,21 +133,38 @@ func run() error {
 			tray.Destroy()
 		})
 
-		// The service is up: the launch lands in the browser.
-		openBrowser(url)
+		// Launching at login starts the service quietly in the tray. A
+		// manual launch opens the browser after the service is ready.
+		if !mygo.App.WasOpenedAtLogin() {
+			openBrowser(url)
+		}
 	})
 	return mygo.App.Run()
 }
 
-// trayMenu builds the menu bar menu in the language the app shows.
-func trayMenu(url, logPath, configPath string) *mygo.Menu {
-	return mygo.NewMenu([]*mygo.MenuItem{
+// setTrayMenu builds the tray menu and reflects the system autostart state.
+func setTrayMenu(tray *mygo.Tray, url, logPath, configPath string) {
+	menu := mygo.NewMenu([]*mygo.MenuItem{
 		{Label: i18n.Localize("tray.open_browser"), Click: func(*mygo.MenuItem, *mygo.Window) { openBrowser(url) }},
 		{Label: i18n.Localize("tray.open_log"), Click: func(*mygo.MenuItem, *mygo.Window) { openLogFile(logPath) }},
 		{Label: i18n.Localize("tray.server_port"), Click: func(*mygo.MenuItem, *mygo.Window) { openPortDialog(configPath) }},
 		mygo.Separator(),
+		{
+			ID:      "open-at-login",
+			Label:   i18n.Localize("tray.open_at_login"),
+			Type:    mygo.MenuItemCheckbox,
+			Checked: mygo.App.OpenAtLogin(),
+			Click: func(item *mygo.MenuItem, _ *mygo.Window) {
+				if err := mygo.App.SetOpenAtLogin(item.IsChecked()); err != nil {
+					logx.Err(err).Msg("Failed to update open-at-login setting")
+					item.SetChecked(!item.IsChecked())
+				}
+			},
+		},
+		mygo.Separator(),
 		{Role: mygo.RoleQuit, Label: i18n.Localize("tray.quit")},
 	})
+	tray.SetMenu(menu)
 }
 
 // openBrowser opens url with the default browser.

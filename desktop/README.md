@@ -29,8 +29,9 @@ macOS 12+ and Windows 10/11 (x64 / arm64).
 1. Starts the existing server (reusing the boot order of `cmd/server`: config → settings
    → logger → i18n → db → signing → secrets → tasks → device manager) on
    `127.0.0.1:5533` by default;
-2. Keeps an icon in the menu bar / notification area, with a menu holding "Open in
-   Browser", "Open Log File", a MyGo-native "Change Server Port" window and "Quit" (localized in the UI language);
+2. Keeps an icon in the menu bar / notification area, with localized "Open in Browser",
+   "Open Log File", "Change Server Port", "Open at Login" and "Quit" actions; the port
+   editor is a MyGo-native window;
 3. Opens `http://127.0.0.1:<port>/` in the default browser once started, and shuts
    down gracefully on quit. The port is stored in `server.port` in the app data
    directory's `config.yaml`; restart the app for changes to take effect.
@@ -71,8 +72,9 @@ desktop/
 | 1 | **Shell + embedded server, not a Bind IPC rewrite** | `internal/*` (install manager, device manager, WS login/pair/progress) is reused whole, the frontend needs no changes, and the risk stays low |
 | 2 | **A separate `desktop/app/go.mod`** | The root module is go 1.25 and mygo needs Go 1.27+; isolating it keeps the main service build and CI untouched, while server code is reused by importing the root packages (see "How the server is reused") |
 | 3 | **Port 5533 + 127.0.0.1 loopback** | Predictable local URL; users can set `server.port` through the MyGo-native tray window; the desktop build serves nothing to the network |
-| 4 | **plumesign packed into resources** | mygo's platform resources mechanism packages it per platform, and `mygo build` signs the executables along with the app, which is what lets macOS Gatekeeper / Windows SmartScreen through |
-| 5 | **Config and data in the user directory** | A desktop app has no container `/data`; defaults to `~/Library/Application Support/atvloadly` (macOS) / `%APPDATA%\atvloadly` (Windows), with `server.work_dir` injected at startup |
+| 4 | **Open at Login** | The tray checkbox uses MyGo's native per-platform login-item integration; login-launched instances stay in the tray without opening a browser, and macOS 13+ may require approval in System Settings |
+| 5 | **plumesign packed into resources** | mygo's platform resources mechanism packages it per platform, and `mygo build` signs the executables along with the app, which is what lets macOS Gatekeeper / Windows SmartScreen through |
+| 6 | **Config and data in the user directory** | A desktop app has no container `/data`; defaults to `~/Library/Application Support/atvloadly` (macOS) / `%APPDATA%\atvloadly` (Windows), with `server.work_dir` injected at startup |
 
 > The upstream plumesign release currently ships Linux packages only; its release
 > workflow already has the macOS/Windows targets (`plumesign-macos-universal`,

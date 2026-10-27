@@ -4,6 +4,7 @@
     "open_browser": "Otvori u pregledaču",
     "open_log": "Otvori datoteku evidencije",
     "server_port": "Promeni port servera",
+    "open_at_login": "Pokreni pri prijavljivanju",
     "server_port_dialog_title": "Promena porta servera",
     "server_port_dialog_message": "Unesite TCP port (1–65535). Trenutni port: {{.port}}. Ponovo pokrenite aplikaciju da bi promena stupila na snagu.",
     "server_port_dialog_field": "Port",

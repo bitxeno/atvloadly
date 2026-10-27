@@ -4,6 +4,7 @@
         "open_browser": "Open in Browser",
         "open_log": "Open Log File",
         "server_port": "Change Server Port",
+        "open_at_login": "Open at Login",
         "server_port_dialog_title": "Change Server Port",
         "server_port_dialog_message": "Enter a TCP port (1–65535). Current port: {{.port}}. Restart the app for the change to take effect.",
         "server_port_dialog_field": "Port",
