@@ -33,6 +33,9 @@ type Options struct {
 	Port int
 	// ListenAddr overrides conf.Server.ListenAddr.
 	ListenAddr string
+	// Zeroconf overrides conf.Zeroconf (mDNS device discovery) when set; nil
+	// keeps the value from the config file or ZEROCONF_ENABLED.
+	Zeroconf *bool
 	// DataDir overrides conf.Server.DataDir, the directory holding the
 	// database, settings, keys and logs; empty keeps the configured dir.
 	DataDir string
@@ -48,6 +51,11 @@ func Run(opts Options) (addr string, stop func(), err error) {
 	}
 	if opts.DataDir != "" {
 		conf.Server.DataDir = opts.DataDir
+	}
+	// The command-line flag has the highest precedence over the config file
+	// and ZEROCONF_ENABLED, both of which InitConfig already applied.
+	if opts.Zeroconf != nil {
+		conf.Zeroconf = *opts.Zeroconf
 	}
 	settings, err := app.InitSettings(conf, opts.Debug)
 	if err != nil {

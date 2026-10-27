@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/utils"
 )
@@ -21,6 +22,12 @@ func ScanServices(ctx context.Context, callback func(serviceType string, name st
 func StartDeviceManager() {
 	// 如果之前已启动，先停止
 	StopDeviceManager()
+	// Zeroconf disabled: no Avahi or mDNS discovery at all. Manually paired
+	// devices are still loaded from the pairing files on each ReloadDevices.
+	if !app.ZeroconfEnabled() {
+		log.Info("Zeroconf discovery disabled by configuration")
+		return
+	}
 	go deviceManager.Start()
 }
 

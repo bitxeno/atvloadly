@@ -12,6 +12,7 @@
         "server_port_dialog_cancel": "取消",
         "server_port_dialog_saved": "端口已保存，重启程序后生效。",
         "server_port_dialog_invalid": "请输入 1 到 65535 之间的有效 TCP 端口。",
+        "server_port_dialog_save_error": "无法保存服务端口。",
         "quit": "退出程序"
     },
     "common": {

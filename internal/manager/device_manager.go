@@ -792,7 +792,13 @@ func (dm *DeviceManager) CheckDevicePaired(identifier string, authTag string) (*
 // context: when ctx is cancelled (e.g. the device disconnects), the
 // plumesign subprocess is killed and the goroutine returns promptly.
 func (dm *DeviceManager) CheckDevicePairedContext(ctx context.Context, identifier string, authTag string) (*model.RemoteDevice, error) {
-	if !utils.ExistFiles(app.RemotePairingDir(), "*.plist") {
+	pairingDir := app.RemotePairingDir()
+	if !utils.ExistFiles(pairingDir, "*.plist") {
+		// A remote-pairing device can only be added once plumesign has written
+		// its pairing file here. Log the directory so a path mismatch (e.g. the
+		// engine writing under %APPDATA% while atvloadly reads ~/.config) is
+		// visible instead of silently leaving the device undiscovered.
+		log.Debugf("no pairing files in %s, skipping pairing check for %s", pairingDir, identifier)
 		return nil, nil
 	}
 
@@ -803,6 +809,7 @@ func (dm *DeviceManager) CheckDevicePairedContext(ctx context.Context, identifie
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
+		log.Debugf("find-pairing failed for %s: %v: %s", identifier, err, strings.TrimSpace(string(data)))
 		return nil, err
 	}
 

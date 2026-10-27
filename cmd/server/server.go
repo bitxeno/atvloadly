@@ -20,6 +20,14 @@ var (
 			Usage:   "Load configuration from `FILE`",
 		},
 		&cli.BoolFlag{
+			Name:  "zeroconf",
+			Usage: "Enable mDNS device discovery (Avahi on Linux); overrides the config file and ZEROCONF_ENABLED",
+			// Value mirrors the config default so --help is not misleading;
+			// IsSet in action() still distinguishes "not passed" (keep the
+			// config/env value) from an explicit --zeroconf=false.
+			Value: true,
+		},
+		&cli.BoolFlag{
 			Name:    "debug",
 			Aliases: []string{"vv"},
 			Usage:   "Enable debug output",
@@ -43,11 +51,17 @@ var (
 
 func action(c *cli.Context) error {
 	printVersion()
+	var zeroconf *bool
+	if c.IsSet("zeroconf") {
+		v := c.Bool("zeroconf")
+		zeroconf = &v
+	}
 	_, stop, err := bootstrap.Run(bootstrap.Options{
 		ConfigFile: c.String("config"),
 		Debug:      c.Bool("debug"),
 		Trace:      c.Bool("verbose"),
 		Port:       c.Int("port"),
+		Zeroconf:   zeroconf,
 	})
 	if err != nil {
 		return err

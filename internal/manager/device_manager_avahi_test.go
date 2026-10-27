@@ -3,7 +3,11 @@
 package manager
 
 import (
+	"errors"
 	"testing"
+	"time"
+
+	"github.com/holoplot/go-avahi"
 )
 
 // TestAvahiBrowsersCloseFreesBrowsersOnce covers the crash reported as
@@ -55,5 +59,33 @@ func TestAvahiBrowsersRejectsBrowserAfterClose(t *testing.T) {
 
 	if browsers.track(func() { t.Error("must not free a browser after Close") }) {
 		t.Fatal("browser created after Close should be rejected")
+	}
+}
+
+// TestStartSkipsDiscoveryWhenAvahiUnavailable covers issue #235: on a host
+// without Avahi/D-Bus (manual-IP / Tailscale deployments) Start must not keep
+// retrying the connection. It should give up immediately instead of logging
+// "Avahi server unavailable" every few seconds.
+func TestStartSkipsDiscoveryWhenAvahiUnavailable(t *testing.T) {
+	orig := avahiAvailable
+	avahiAvailable = func() (*avahi.Server, error) {
+		return nil, errors.New("cannot get system bus: no such file or directory")
+	}
+	t.Cleanup(func() { avahiAvailable = orig })
+
+	dm := newDeviceManager()
+
+	done := make(chan struct{})
+	go func() {
+		dm.Start()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Start returned without ever running discovery.
+	case <-time.After(2 * time.Second):
+		dm.Stop()
+		t.Fatal("Start did not return when Avahi was unavailable")
 	}
 }

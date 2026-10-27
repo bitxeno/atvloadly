@@ -12,6 +12,7 @@
     "server_port_dialog_cancel": "Откажи",
     "server_port_dialog_saved": "Порт сервера је сачуван. Поново покрените апликацију да би промена ступила на снагу.",
     "server_port_dialog_invalid": "Унесите важећи TCP порт између 1 и 65535.",
+    "server_port_dialog_save_error": "Чување порта сервера није успело.",
     "quit": "Изађи"
   },
   "common": {
