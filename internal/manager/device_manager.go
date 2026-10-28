@@ -522,7 +522,8 @@ func (dm *DeviceManager) loadManualDevicesFromDir(dir string) {
 		previous.Store(k, v)
 		return true
 	})
-	dm.manualDevices = sync.Map{}
+	// Clear is safe with concurrent readers; replacing a used sync.Map is not.
+	dm.manualDevices.Clear()
 	matches, err := filepath.Glob(filepath.Join(dir, "*.json"))
 	if err != nil {
 		log.Err(err).Msg("Failed to list pairing files")
