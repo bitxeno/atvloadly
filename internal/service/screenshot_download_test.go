@@ -50,7 +50,6 @@ func TestDecodeScreenshotDownloadRejectsInvalidPayloads(t *testing.T) {
 	}
 }
 
-
 func TestDecodeScreenshotDownloadRejectsOversizedBeforeDecoding(t *testing.T) {
 	// An oversized malformed upload should hit the size cap, not be decoded
 	// in full before reporting an invalid base64 payload.
