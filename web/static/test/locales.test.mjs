@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const localeDirectory = new URL("../../../locales/", import.meta.url);
@@ -68,4 +68,84 @@ test("every bundled locale matches the English key and placeholder contract", ()
       );
     }
   }
+});
+
+
+const serbianCyrillicToLatin = {
+  а: "a", б: "b", в: "v", г: "g", д: "d", ђ: "đ", е: "e",
+  ж: "ž", з: "z", и: "i", ј: "j", к: "k", л: "l", љ: "lj",
+  м: "m", н: "n", њ: "nj", о: "o", п: "p", р: "r", с: "s",
+  т: "t", ћ: "ć", у: "u", ф: "f", х: "h", ц: "c", ч: "č",
+  џ: "dž", ш: "š",
+};
+
+function transliterateSerbian(message) {
+  return [...message].map((letter) => {
+    const latin = serbianCyrillicToLatin[letter.toLowerCase()];
+    if (!latin) return letter;
+    return letter === letter.toUpperCase()
+      ? latin[0].toUpperCase() + latin.slice(1)
+      : latin;
+  }).join("");
+}
+
+test("Serbian Cyrillic and Latin translations remain equivalent", () => {
+  const cyrillic = flattenLocale(loadLocale("sr"));
+  const latin = flattenLocale(loadLocale("sr-Latn"));
+
+  for (const [key, message] of cyrillic) {
+    if (key === "language") continue; // The locale identifiers differ by design.
+    assert.equal(
+      transliterateSerbian(message),
+      latin.get(key),
+      `Serbian script variants diverge at ${key}`,
+    );
+  }
+});
+
+test("README pages link all supported languages and both logo themes", () => {
+  const readmes = [
+    ["README.md", "English"],
+    ["README_sv.md", "Svenska"],
+    ["README_cn.md", "中文"],
+    ["README_sr.md", "Српски (ћирилица)"],
+    ["README_sr_Latn.md", "Srpski (latinica)"],
+  ];
+  const english = readFileSync(new URL("../../../README.md", import.meta.url), "utf8");
+  const headingCount = (document) => [...document.matchAll(/^#{2,3} /gm)].length;
+
+  for (const [file, label] of readmes) {
+    const document = readFileSync(new URL(`../../../${file}`, import.meta.url), "utf8");
+    const navigation = [...document.matchAll(/<div align="center">([\s\S]*?)<\/div>/g)].at(-1)?.[1];
+    assert.ok(navigation, `${file} is missing the language menu`);
+    assert.ok(navigation.includes(label), `${file} has no own language label`);
+    for (const [target, name] of readmes) {
+      if (target !== file) {
+        assert.ok(
+          navigation.includes(`[${name}](./${target})`),
+          `${file} does not link to ${target}`,
+        );
+      }
+    }
+    for (const [, destination] of document.matchAll(/\[[^\]]+\]\((\.[^\s)]+)\)/g)) {
+      assert.ok(
+        existsSync(new URL(`../../../${destination.replace(/^\.\//, "")}`, import.meta.url)),
+        `${file} has a broken relative link to ${destination}`,
+      );
+    }
+    assert.ok(document.includes('srcset="./doc/preview/logo_dark.svg"'), `${file}: dark logo missing`);
+    assert.ok(document.includes('src="./doc/preview/logo.svg"'), `${file}: light logo missing`);
+    if (file.startsWith("README_sr")) {
+      assert.equal(headingCount(document), headingCount(english), `${file}: incomplete sections`);
+    }
+  }
+});
+
+test("Swedish distinguishes signing renewal from version updates", () => {
+  const sv = loadLocale("sv");
+  assert.equal(sv.home.table.button.refresh, "Förnya");
+  assert.equal(sv.home.table.button.update, "Uppdatera");
+  assert.equal(sv.settings.refresh.title, "Automatisk appförnyelse");
+  // Other UI refresh actions do not renew signing and keep their original label.
+  assert.equal(sv.install.screenshot.button.refresh, "Uppdatera");
 });

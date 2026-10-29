@@ -24,15 +24,15 @@
     }
   },
   "notify": {
-    "title": "[{{.name}}] Automatisk uppdatering misslyckades",
+    "title": "[{{.name}}] Automatisk förnyelse misslyckades",
     "content": "Konto: {{.account}}\nFel: {{.error}}",
-    "batch_title": "atvloadly: automatisk uppdatering misslyckades",
+    "batch_title": "atvloadly: automatisk förnyelse misslyckades",
     "batch_content": "{{.name}}: {{.error}}\n\n",
     "update_title": "atvloadly: nya appversioner",
     "update_available": "{{.name}}: {{.version}} finns tillgänglig\n",
-    "update_attention": "{{.name}}: uppgraderingen kräver åtgärd: {{.error}}\n",
-    "update_installed_title": "atvloadly: appar uppgraderade",
-    "update_installed": "{{.name}} har uppgraderats till {{.version}}\n"
+    "update_attention": "{{.name}}: uppdateringen kräver åtgärd: {{.error}}\n",
+    "update_installed_title": "atvloadly: appar uppdaterade",
+    "update_installed": "{{.name}} har uppdaterats till {{.version}}\n"
   },
   "nav": {
     "settings": "Inställningar",
@@ -81,10 +81,10 @@
       }
     },
     "toast": {
-      "refresh_app_started": "Uppdatering av {{name}} har startat",
+      "refresh_app_started": "Förnyelse av {{name}} har startat",
       "installing_app": "Installerar {{name}}…",
       "reinstall_app_started": "Ominstallation av {{name}} har startat",
-      "update_started": "Uppgradering av {{name}} till {{version}} har startat",
+      "update_started": "Uppdatering av {{name}} till {{version}} har startat",
       "updates_available": "Nya versioner tillgängliga: {{count}}",
       "check_errors": "Källor som inte kunde kontrolleras: {{count}}",
       "check_done": "Alla följda appar har den senaste versionen"
@@ -95,7 +95,7 @@
       "auto": "Auto",
       "available": "{{version}} tillgänglig",
       "check_updates": "Sök efter nya versioner",
-      "update_failed": "Installationen av {{version}} misslyckades och görs inte om automatiskt. Använd Uppgradera för att försöka igen."
+      "update_failed": "Installationen av {{version}} misslyckades och görs inte om automatiskt. Använd Uppdatera för att försöka igen."
     },
     "sidebar": {
       "add_device": {
@@ -110,10 +110,10 @@
         "ip_badge": "IP",
         "forget": "Ta bort",
         "forget_confirm": "Bekräfta",
-        "forget_done": "Enheten har glömts"
+        "forget_done": "Enheten har tagits bort"
       },
       "tips": {
-        "no_paired_devices": "Inga parkopplade enheter",
+        "no_paired_devices": "Inga anslutna enheter",
         "how_pair_device": "På Apple TV: öppna Inställningar → Fjärrkontroller och enheter → Fjärrapp och enheter för att starta parkopplingen."
       }
     },
@@ -145,10 +145,10 @@
         "days": "För {{num}} dagar sedan"
       },
       "button": {
-        "refresh": "Uppdatera",
+        "refresh": "Förnya",
         "delete": "Ta bort",
         "reinstall": "Installera om",
-        "update": "Uppgradera",
+        "update": "Uppdatera",
         "more": "Mer",
         "confirm_delete": "Bekräfta borttagning"
       },
@@ -157,13 +157,13 @@
         "account_invalid": "Det finns ett problem med kontot. Kontrollera loggarna och åtgärda felet.",
         "certificate_limit": "Apple-ID:t har nått gränsen för antalet certifikat. Ingen app installerades och inget certifikat återkallades. Öppna appen på installationssidan och välj vilket certifikat som får återkallas.",
         "no_data": "Inga uppgifter",
-        "footer": "Som standard uppdateras appar automatiskt mellan kl. 03 och 06 när mindre än ett dygn återstår till utgångsdatumet. Appar som är kopplade till en GitHub- eller AltStore-källa kontrolleras i bakgrunden efter nya versioner; automatiska uppgraderingar installeras under samma tidsperiod.",
+        "footer": "Som standard förnyas appars signering automatiskt mellan kl. 03 och 06 när mindre än ett dygn återstår till utgångsdatumet. Appar som är kopplade till en GitHub- eller AltStore-källa kontrolleras i bakgrunden efter nya versioner; automatiska versionsuppdateringar installeras under samma tidsperiod.",
         "footer_external": "Appar som signerats med ett externt certifikat uppdateras aldrig automatiskt: de slutar fungera när certifikatet eller provisioneringsprofilen går ut. En ominstallation med samma certifikat och profil förlänger inte det datumet: byt profil (eller importera en ny signeringsidentitet om certifikatet går ut först) och installera sedan om appen.",
         "reinstall_external": "En ominstallation med samma certifikat och provisioneringsprofil förlänger inte giltighetstiden. Byt profil (eller använd en ny signeringsidentitet) och installera sedan om appen för att förlänga den.",
         "signing_identity_error": "Signeringsidentiteten (certifikat, privat nyckel eller provisioneringsprofil) är ogiltig eller inte kompatibel. Kontrollera loggen och identiteten under Konton.",
         "signing_error": "Signeringen misslyckades eller den signerade appen klarade inte verifieringen. Se loggen för mer information.",
         "transport_error": "Det gick inte att nå enheten, eller så avvisade den installationen. Se loggen för mer information.",
-        "refresh_failed": "Uppdateringen misslyckades. Se loggen för mer information."
+        "refresh_failed": "Förnyelsen misslyckades. Se loggen för mer information."
       },
       "signing": {
         "external_badge": "Externt certifikat",
@@ -249,7 +249,7 @@
       "source": {
         "label": "Källa:",
         "url_placeholder": {
-          "github": "ägare/repo eller https://github.com/ägare/repo",
+          "github": "owner/repo eller https://github.com/owner/repo",
           "altstore": "https://example.com/apps.json"
         },
         "fetch": "Hämta",
@@ -271,7 +271,7 @@
           "tips": "AltStore-appar följs via sin paketidentifierare."
         },
         "auto_update": "Installera nya versioner automatiskt",
-        "auto_update_tips": "Nya versioner installeras under tidsintervallet för automatisk appuppdatering, även om appen inte behöver uppdateras än. De signeras med samma konto eller signeringsidentitet.",
+        "auto_update_tips": "Nya versioner installeras under tidsintervallet för automatisk appförnyelse, även om appen ännu inte behöver förnyas. De signeras med samma konto eller signeringsidentitet.",
         "select_build": "Hämta källan och välj en IPA att installera.",
         "choose_saved_app_tips": "Dina sparade källor innehåller flera appar. Välj den som ska installeras.",
         "saved": {
@@ -312,7 +312,7 @@
       "custom_name": {
         "label": "Appnamn:",
         "placeholder": "Lämna tomt för att behålla appens namn",
-        "tips": "Byter namn på appen på hemskärmen. Paketidentifieraren ändras inte, så appen ersätts fortfarande vid uppdatering."
+        "tips": "Byter namn på appen på hemskärmen. Paketidentifieraren ändras inte, så appen ersätts fortfarande vid förnyelse."
       },
       "password": {
         "label": "Apple-lösenord:"
@@ -425,16 +425,16 @@
       }
     },
     "refresh": {
-      "title": "Automatisk appuppdatering",
+      "title": "Automatisk appförnyelse",
       "toggle": {
         "label": "Aktivera"
       },
       "iphone_toggle": {
-        "label": "Automatisk uppdatering på iPhone",
-        "tips": "Uppdatering på iPhone begränsas inte av det inställda tidsintervallet. Ett uppdateringsförsök görs när iPhone är ansluten till Wi-Fi."
+        "label": "Automatisk förnyelse på iPhone",
+        "tips": "Förnyelse på iPhone begränsas inte av det inställda tidsintervallet. Ett förnyelseförsök görs när iPhone är ansluten till Wi-Fi."
       },
       "mode": {
-        "label": "Uppdateringsläge",
+        "label": "Förnyelseläge",
         "day_before_expired": "En dag före utgångsdatum",
         "custom": "Anpassat"
       },
@@ -446,7 +446,7 @@
       },
       "run_time": {
         "label": "Tidsintervall för körning",
-        "format_tips": "Linux crontab-format; begränsas av uppdateringsläget"
+        "format_tips": "Linux crontab-format; begränsas av förnyelseläget"
       },
       "button": {
         "submit": "Spara"
@@ -467,8 +467,8 @@
         "configured_placeholder": "Konfigurerad - ange ett nytt värde för att ersätta",
         "clear": "Ta bort"
       },
-      "tips": "Appar som installerats från ett GitHub-repo eller en AltStore-källa kontrolleras i bakgrunden, och du aviseras om nya versioner när aviseringar är aktiverade. Automatiska uppgraderingar installeras under tidsintervallet för automatisk appuppdatering, även om appen inte behöver uppdateras än. GitHub tillåter 60 oautentiserade förfrågningar per timme.",
-      "task_disabled": "Automatisk appuppdatering är avstängd: nya versioner upptäcks fortfarande, men uppgraderingar installeras inte automatiskt.",
+      "tips": "Appar som installerats från ett GitHub-repo eller en AltStore-källa kontrolleras i bakgrunden, och du aviseras om nya versioner när aviseringar är aktiverade. Automatiska versionsuppdateringar installeras under tidsintervallet för automatisk appförnyelse, även om appen ännu inte behöver förnyas. GitHub tillåter 60 oautentiserade förfrågningar per timme.",
+      "task_disabled": "Automatisk appförnyelse är avstängd: nya versioner upptäcks fortfarande, men versionsuppdateringar installeras inte automatiskt.",
       "button": {
         "submit": "Spara"
       }
@@ -539,7 +539,10 @@
     }
   },
   "account": {
-    "status_labels": {"valid": "Giltigt", "invalid": "Ogiltigt"},
+    "status_labels": {
+      "valid": "Giltigt",
+      "invalid": "Ogiltigt"
+    },
     "select_account": "Välj konto",
     "select_placeholder": "Välj ett konto",
     "table": {
@@ -699,14 +702,14 @@
       "step2": "Ladda ned <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a>, anslut din iPhone och exportera en parkopplingsfil i läget <b>RPPairing</b>.",
       "step3": "Använd idevice_pair för att aktivera trådlös felsökning.",
       "step4": "Kontrollera att din iPhone går att hitta under <a href=\"/#/tools\" class=\"link\">Verktyg</a>.",
-      "step5": "Automatisk uppdatering på iPhone är inte garanterat tillförlitlig. Enheten måste vara upplåst för att fjärruppdatering ska fungera korrekt.",
-      "step6": "Uppdatering fungerar bara i det lokala nätverket: den kan inte uppdateras korrekt via VPN eller Tailscale."
+      "step5": "Automatisk förnyelse på iPhone är inte garanterat tillförlitlig. Enheten måste vara upplåst för att fjärrförnyelse ska fungera korrekt.",
+      "step6": "Förnyelse fungerar bara i det lokala nätverket: den fungerar inte korrekt via VPN eller Tailscale."
     },
     "form": {
       "device_label": "Välj motsvarande enhet",
       "device_placeholder": "Välj en enhet",
       "device_unlock": "Din iPhone måste vara upplåst för att hittas",
-      "refresh": "Uppdatera",
+      "refresh": "Förnya",
       "refresh_devices": "Uppdatera enhetslistan",
       "upload_label": "Ladda upp parkopplingsfil",
       "submit": "Skicka"
