@@ -1,7 +1,6 @@
 package service
 
 import (
-	"archive/zip"
 	"context"
 	"errors"
 	"fmt"
@@ -187,7 +186,11 @@ func SetLanguage(lang string) {
 
 // UpdateCoreADI downloads the latest Apple Music APK and saves it to DataDir/PlumeImpactor/lib
 func UpdateCoreADI() error {
-	// Determine package arch used inside the APK zip
+	// Serialize updates so concurrent requests cannot install different
+	// revisions of the library pair.
+	coreADIUpdateMu.Lock()
+	defer coreADIUpdateMu.Unlock()
+
 	pkgArch := "x86_64"
 	if runtime.GOARCH == "arm64" {
 		pkgArch = "arm64-v8a"
@@ -198,9 +201,7 @@ func UpdateCoreADI() error {
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != stdhttp.StatusOK {
 		return fmt.Errorf("download failed, status: %d", resp.StatusCode)
 	}
@@ -209,75 +210,26 @@ func UpdateCoreADI() error {
 	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
 		return fmt.Errorf("create tmp dir failed: %w", err)
 	}
-	tmpPath := filepath.Join(tmpDir, "applemusic.apk")
-
-	tmpOut, err := os.Create(tmpPath)
+	tmpOut, err := os.CreateTemp(tmpDir, "applemusic-*.apk")
 	if err != nil {
 		return fmt.Errorf("create temp file failed: %w", err)
 	}
-	if _, err := io.Copy(tmpOut, resp.Body); err != nil {
-		_ = tmpOut.Close()
-		return fmt.Errorf("save temp file failed: %w", err)
-	}
-	_ = tmpOut.Close()
+	tmpPath := tmpOut.Name()
+	defer func() { _ = os.Remove(tmpPath) }()
 
-	defer func() {
-		_ = os.Remove(tmpPath)
-	}()
-
-	// open zip and extract specific lib files
-	zr, err := zip.OpenReader(tmpPath)
-	if err != nil {
-		return fmt.Errorf("open apk zip failed: %w", err)
+	_, copyErr := io.Copy(tmpOut, resp.Body)
+	closeErr := tmpOut.Close()
+	if copyErr != nil {
+		return fmt.Errorf("save temp file failed: %w", copyErr)
 	}
-	defer func() {
-		_ = zr.Close()
-	}()
+	if closeErr != nil {
+		return fmt.Errorf("close temp file failed: %w", closeErr)
+	}
 
 	destDir := filepath.Join(app.Config.Server.DataDir, "PlumeImpactor", "lib", pkgArch)
-	if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
-		return fmt.Errorf("create dir failed: %w", err)
+	if err := installCoreADILibraries(tmpPath, destDir, pkgArch); err != nil {
+		return err
 	}
-
-	targets := map[string]string{
-		filepath.ToSlash(filepath.Join("lib", pkgArch, "libstoreservicescore.so")): "libstoreservicescore.so",
-		filepath.ToSlash(filepath.Join("lib", pkgArch, "libCoreADI.so")):           "libCoreADI.so",
-	}
-
-	for _, f := range zr.File {
-		name := f.Name
-		// normalize slashes
-		name = filepath.ToSlash(name)
-		if destName, ok := targets[name]; ok {
-			rc, err := f.Open()
-			if err != nil {
-				return fmt.Errorf("open zip entry failed: %w", err)
-			}
-			dstPath := filepath.Join(destDir, destName)
-			outf, err := os.Create(dstPath)
-			if err != nil {
-				_ = rc.Close()
-				return fmt.Errorf("create dest file failed: %w", err)
-			}
-			if _, err := io.Copy(outf, rc); err != nil {
-				_ = rc.Close()
-				_ = outf.Close()
-				return fmt.Errorf("copy entry failed: %w", err)
-			}
-			_ = rc.Close()
-			_ = outf.Close()
-			delete(targets, name)
-		}
-	}
-
-	if len(targets) > 0 {
-		missing := []string{}
-		for k := range targets {
-			missing = append(missing, k)
-		}
-		return fmt.Errorf("missing files in apk: %v", missing)
-	}
-
 	log.Infof("Update CoreADI success. path: %s", destDir)
 	return nil
 }
