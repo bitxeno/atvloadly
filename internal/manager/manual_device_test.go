@@ -60,6 +60,33 @@ func TestLoadManualDevicesFromDir(t *testing.T) {
 	}
 }
 
+func TestLoadManualDevicesConcurrentReaders(t *testing.T) {
+	dir := t.TempDir()
+	writeJSON(t, dir, "AAA.json", `{"manual":true,"model":"iPhone14,4","name":"Phone","remotepairing_ip":"100.65.100.37","remotepairing_udid":"AAA"}`)
+
+	dm := newDeviceManager()
+	dm.loadManualDevicesFromDir(dir)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 200; i++ {
+			dm.loadManualDevicesFromDir(dir)
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 200; i++ {
+			_ = dm.GetDevices()
+		}
+	}()
+	wg.Wait()
+	if got := dm.GetDevices(); len(got) != 1 {
+		t.Fatalf("want 1 manual device after reload, got %d", len(got))
+	}
+}
+
 func TestManualDeviceDedupedByDiscovered(t *testing.T) {
 	dir := t.TempDir()
 	writeJSON(t, dir, "AAA.json", `{"manual":true,"model":"iPhone14,4","name":"Phone","remotepairing_ip":"100.65.100.37","remotepairing_udid":"AAA"}`)
