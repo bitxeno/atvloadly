@@ -3,6 +3,7 @@ package manager
 import (
 	"errors"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/bitxeno/atvloadly/internal/exec"
@@ -26,6 +27,62 @@ func ResetAnisette(email string) error {
 	}
 	log.Infof("Reset anisette data for %s", email)
 	return nil
+}
+
+// RemoveAnisette deletes an account's Anisette data directory through the
+// engine. It is used for data left behind by an account that no longer exists
+// in the account list: there is no account to re-login for, so the leftover
+// data is deleted outright instead of reset.
+func RemoveAnisette(email string) error {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return errors.New("account email is required")
+	}
+
+	if _, err := exec.NewCommand("plumesign", "anisette", "remove", "-u", email).CombinedOutput(); err != nil {
+		log.Err(err).Msgf("Error removing anisette data for %s", email)
+		return err
+	}
+	log.Infof("Removed anisette data for %s", email)
+	return nil
+}
+
+// AnisetteAccount is one account that has Anisette data stored on disk. The
+// engine provisions this data per account, and a failed login can leave data
+// behind for an account that is no longer in the account list, so the engine's
+// anisette list — not the account list — decides which accounts can be reset.
+type AnisetteAccount struct {
+	Email  string `json:"email"`
+	Name   string `json:"name"`
+	TeamID string `json:"team_id"`
+	// Orphan is true when the account is not in the account list (accounts.json).
+	// Its data is leftover from a failed or removed login, so it can only be
+	// deleted, not reset.
+	Orphan bool `json:"orphan"`
+}
+
+// AnisetteAccounts lists the accounts that have Anisette data stored, by asking
+// the engine. Unlike the account list, this includes accounts whose login
+// failed but whose data directory still exists; those are marked orphaned so
+// the caller knows they can only be deleted.
+func AnisetteAccounts() ([]AnisetteAccount, error) {
+	output, err := exec.NewCommand("plumesign", "anisette", "list").CombinedOutput()
+	if err != nil {
+		log.Err(err).Msg("Error listing anisette accounts")
+		return nil, err
+	}
+	accounts := parseAnisetteAccounts(string(output))
+
+	known := map[string]bool{}
+	if stored, err := accountManager.GetAccounts(); err == nil {
+		for email := range stored.Accounts {
+			known[email] = true
+		}
+	}
+	for i := range accounts {
+		accounts[i].Orphan = !known[accounts[i].Email]
+	}
+	return accounts, nil
 }
 
 // AnisetteServerState is the anisette server the engine provisions against,
@@ -110,4 +167,59 @@ func parseAnisetteServer(output string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// anisetteAccountRow splits one row of `plumesign anisette list` on runs of two
+// or more spaces. The table aligns its columns with spaces, but a value such as
+// the NAME field can itself contain a single space, so only a run of spaces is
+// treated as the column separator. This keeps the email intact even when a name
+// contains spaces.
+var anisetteAccountRow = regexp.MustCompile(`\s{2,}`)
+
+// parseAnisetteAccounts reads the fixed-width table printed by
+// `plumesign anisette list`:
+//
+//	Accounts with Anisette data:
+//	ACCOUNT                           NAME                  TEAM ID
+//	user@example.com                  wu                    8245MZ34WA
+//	other@example.com                 -                     -
+//
+// The first line is a heading and the second is the column header; the rest are
+// rows. A blank NAME or TEAM ID is printed as "-", which is normalized to empty.
+// An account is kept as long as its email column is non-empty, so data left
+// behind by a failed login still appears.
+func parseAnisetteAccounts(output string) []AnisetteAccount {
+	accounts := []AnisetteAccount{}
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimRight(line, "\r")
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		fields := anisetteAccountRow.Split(strings.TrimSpace(line), -1)
+		// Skip the heading and the column header: a data row starts with an
+		// email, which always contains "@".
+		if len(fields) < 1 || !strings.Contains(fields[0], "@") {
+			continue
+		}
+
+		account := AnisetteAccount{Email: strings.TrimSpace(fields[0])}
+		if len(fields) > 1 {
+			account.Name = normalizeAnisetteCell(fields[1])
+		}
+		if len(fields) > 2 {
+			account.TeamID = normalizeAnisetteCell(fields[2])
+		}
+		accounts = append(accounts, account)
+	}
+	return accounts
+}
+
+// normalizeAnisetteCell trims a cell and maps the engine's "-" placeholder for
+// an empty value to an empty string.
+func normalizeAnisetteCell(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "-" {
+		return ""
+	}
+	return value
 }

@@ -437,9 +437,24 @@ export default {
       data,
     });
   },
+  removeAnisette: (data) => {
+    return request({
+      url: "/api/settings/remove/anisette",
+      method: "post",
+      timeout: 30000,
+      data,
+    });
+  },
   getAnisetteServer: () => {
     return request({
       url: "/api/settings/anisette/server",
+      method: "get",
+      timeout: 30000,
+    });
+  },
+  getAnisetteAccounts: () => {
+    return request({
+      url: "/api/settings/anisette/accounts",
       method: "get",
       timeout: 30000,
     });
