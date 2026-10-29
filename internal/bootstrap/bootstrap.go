@@ -7,9 +7,11 @@ package bootstrap
 import (
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 
 	"github.com/bitxeno/atvloadly/internal/app"
+	"github.com/bitxeno/atvloadly/internal/diagnostics"
 	"github.com/bitxeno/atvloadly/internal/log"
 	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/secret"
@@ -108,6 +110,18 @@ func Run(opts Options) (addr string, stop func(), err error) {
 	if err != nil {
 		return "", nil, err
 	}
+	// CPU profiling for long-running idle-CPU investigations (e.g. #132) is
+	// disabled by default and only reachable from inside the container.
+	stopProfiling := func() {}
+	if os.Getenv("ATVLOADLY_PPROF") == "1" {
+		stop, profileErr := diagnostics.StartCPUProfileServer()
+		if profileErr != nil {
+			log.Warnf("Local CPU profiler unavailable: %v", profileErr)
+		} else {
+			stopProfiling = stop
+			log.Info("Local CPU profiler listening on 127.0.0.1:6060")
+		}
+	}
 	serving := make(chan struct{})
 	go func() {
 		defer close(serving)
@@ -119,6 +133,7 @@ func Run(opts Options) (addr string, stop func(), err error) {
 	stopped := make(chan struct{})
 	go func() {
 		<-stopped
+		stopProfiling()
 		manager.StopDeviceManager()
 		_ = listener.Close()
 		<-serving
