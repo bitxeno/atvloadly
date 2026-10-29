@@ -226,11 +226,17 @@
                       >
                     </div>
                     <div class="flex flex-wrap items-center gap-1 atv-source-line">
-                      <span class="badge badge-info badge-sm max-w-full" v-if="item.source.latest_build_id">
+                      <button
+                        type="button"
+                        class="badge badge-info badge-sm max-w-full atv-source-badge"
+                        v-if="item.source.latest_build_id"
+                        :title="$t('home.source.manage')"
+                        @click="openSourceDialog(item)"
+                      >
                         <span class="truncate">{{
                           $t("home.source.available", { version: item.source.latest_version })
                         }}</span>
-                      </span>
+                      </button>
                       <button
                         v-else-if="item.source.kind"
                         type="button"
@@ -1204,6 +1210,19 @@ import TrashIcon from "@/assets/icons/trash.svg";
   color: var(--atv-success-text);
   background: var(--atv-success-soft);
   border-color: var(--atv-success-border);
+}
+
+/* The "X available" badge opens the source dialog, so it should read as a
+   clickable control rather than a static label. */
+.atv-source-line .atv-source-badge {
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.atv-source-line .atv-source-badge:hover,
+.atv-source-line .atv-source-badge:focus-visible {
+  background: var(--atv-surface-hover);
+  border-color: var(--atv-success-text);
 }
 
 :deep(.popper) {
