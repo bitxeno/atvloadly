@@ -531,36 +531,54 @@
             <span class="label-text">{{ $t('settings.advanced.reset_anisette') }}</span>
           </label>
           <div class="form-item-content">
-            <div v-if="anisetteAccounts.length === 0" class="alert alert-warning atv-warning text-sm">
-              <span class="whitespace-normal">{{ $t('settings.advanced.reset_anisette_empty') }}</span>
-            </div>
-            <div v-else class="join w-full atv-join-row">
-              <select
-                v-model="advanced.anisetteEmail"
-                class="select select-bordered join-item flex-1 min-w-0"
-                :disabled="advanced.anisetteLoading"
-              >
-                <option value="" disabled selected>
-                  {{ $t('settings.advanced.reset_anisette_select') }}
-                </option>
-                <option v-for="account in anisetteAccounts" :key="account.email" :value="account.email">
-                  {{ account.email }}
-                </option>
-              </select>
-              <Popper placement="top" arrow="true">
-                <template #content="{ close }">
-                  <div class="flex flex-col gap-y-2">
-                    <div class="py-2">{{ $t('settings.advanced.reset_anisette_confirm', { email: advanced.anisetteEmail }) }}</div>
-                    <div class="flex gap-x-2 justify-end items-center">
-                      <a class="link link-primary link-hover" @click="close">{{ $t('settings.advanced.cancel') }}</a>
-                      <button class="btn btn-primary" @click.prevent="confirmResetAnisette(close)">{{ $t('settings.advanced.confirm') }}</button>
-                    </div>
-                  </div>
-                </template>
-                <button type="button" class="btn btn-error join-item" :disabled="advanced.anisetteLoading || !advanced.anisetteEmail">
-                  <span class="loading loading-spinner" v-show="advanced.anisetteLoading"></span>{{ $t('settings.advanced.reset') }}
-                </button>
-              </Popper>
+            <div class="flex flex-col gap-y-2 min-w-0">
+              <div class="atv-saved-source atv-anisette-account" v-for="account in anisetteAccounts" :key="account.email">
+                <div class="flex flex-col min-w-0">
+                  <span class="font-semibold break-words">{{ account.email }}</span>
+                  <span class="text-xs text-base-content/70 break-all">{{ account.team_id || '-' }}</span>
+                </div>
+                <div class="flex items-center gap-x-2 shrink-0">
+                  <Popper placement="top" arrow="true" v-if="!account.orphan">
+                    <template #content="{ close }">
+                      <div class="flex flex-col gap-y-2 max-w-xs">
+                        <div class="py-2 text-left break-normal break-words">
+                          {{ $t('settings.advanced.reset_anisette_confirm', { email: account.email }) }}
+                        </div>
+                        <div class="flex gap-x-2 justify-end items-center">
+                          <a class="link link-primary link-hover" @click="close">{{ $t('settings.advanced.cancel') }}</a>
+                          <button type="button" class="btn btn-primary btn-xs" @click="confirmResetAnisette(account.email, close)">
+                            {{ $t('settings.advanced.confirm') }}
+                          </button>
+                        </div>
+                      </div>
+                    </template>
+                    <button type="button" class="btn atv-action atv-action--danger" :disabled="advanced.anisetteLoading">
+                      <span class="loading loading-spinner loading-xs" v-show="isAnisetteBusy(account.email)"></span>{{ $t('settings.advanced.reset') }}
+                    </button>
+                  </Popper>
+                  <Popper placement="top" arrow="true" v-else>
+                    <template #content="{ close }">
+                      <div class="flex flex-col gap-y-2 max-w-xs">
+                        <div class="py-2 text-left break-normal break-words">
+                          {{ $t('settings.advanced.remove_anisette_confirm', { email: account.email }) }}
+                        </div>
+                        <div class="flex gap-x-2 justify-end items-center">
+                          <a class="link link-primary link-hover" @click="close">{{ $t('settings.advanced.cancel') }}</a>
+                          <button type="button" class="btn btn-primary btn-xs" @click="confirmRemoveAnisette(account.email, close)">
+                            {{ $t('settings.advanced.confirm') }}
+                          </button>
+                        </div>
+                      </div>
+                    </template>
+                    <button type="button" class="btn atv-action atv-action--danger" :disabled="advanced.anisetteLoading">
+                      <span class="loading loading-spinner loading-xs" v-show="isAnisetteBusy(account.email)"></span>{{ $t('settings.advanced.delete') }}
+                    </button>
+                  </Popper>
+                </div>
+              </div>
+              <span class="text-sm text-base-content/70" v-if="!anisetteAccounts.length">{{
+                $t('settings.advanced.reset_anisette_empty')
+              }}</span>
             </div>
           </div>
         </div>
@@ -612,7 +630,7 @@ export default {
       advanced: {
         adiLoading: false,
         anisetteLoading: false,
-        anisetteEmail: "",
+        anisetteLoadingEmail: "",
         anisetteServer: "",
         savedAnisetteServer: "",
         serverLoading: false,
@@ -814,14 +832,11 @@ export default {
     },
 
     fetchAnisetteAccounts() {
-      // Anisette data is provisioned per account, so a reset needs the account
-      // to reset.
-      api.getAccounts().then((res) => {
-        const accounts = res.data || {};
-        this.anisetteAccounts = Object.keys(accounts).map((key) => accounts[key]);
-        if (!this.anisetteAccounts.some((a) => a.email === this.advanced.anisetteEmail)) {
-          this.advanced.anisetteEmail = "";
-        }
+      // Read the accounts straight from the engine's anisette list, not the
+      // account list: a failed login can leave Anisette data behind for an
+      // account that is no longer listed, and that data still needs a reset.
+      api.getAnisetteAccounts().then((res) => {
+        this.anisetteAccounts = res.data || [];
       });
     },
 
@@ -870,16 +885,21 @@ export default {
         });
     },
 
-    confirmResetAnisette(close) {
+    isAnisetteBusy(email) {
+      return this.advanced.anisetteLoading && this.advanced.anisetteLoadingEmail === email;
+    },
+
+    confirmResetAnisette(email, close) {
       let _this = this;
       close && close();
-      if (!_this.advanced.anisetteEmail) return;
+      if (!email) return;
 
       _this.advanced.anisetteLoading = true;
-      api.resetAnisette({ email: _this.advanced.anisetteEmail })
+      _this.advanced.anisetteLoadingEmail = email;
+      api.resetAnisette({ email })
         .then((res) => {
           if (res.data) {
-            toast.success(this.$t('settings.advanced.toast.reset_success', { email: _this.advanced.anisetteEmail }));
+            toast.success(this.$t('settings.advanced.toast.reset_success', { email }));
           } else {
             toast.error(this.$t('settings.advanced.toast.reset_failed'));
           }
@@ -890,6 +910,34 @@ export default {
         })
         .finally(() => {
           _this.advanced.anisetteLoading = false;
+          _this.advanced.anisetteLoadingEmail = "";
+        });
+    },
+
+    confirmRemoveAnisette(email, close) {
+      let _this = this;
+      close && close();
+      if (!email) return;
+
+      _this.advanced.anisetteLoading = true;
+      _this.advanced.anisetteLoadingEmail = email;
+      api.removeAnisette({ email })
+        .then((res) => {
+          if (res.data) {
+            toast.success(this.$t('settings.advanced.toast.remove_success', { email }));
+            // Drop the row: its data is gone, so it no longer belongs here.
+            _this.anisetteAccounts = _this.anisetteAccounts.filter((a) => a.email !== email);
+          } else {
+            toast.error(this.$t('settings.advanced.toast.remove_failed'));
+          }
+        })
+        .catch((err) => {
+          // request.js already shows the error.
+          console.error(err);
+        })
+        .finally(() => {
+          _this.advanced.anisetteLoading = false;
+          _this.advanced.anisetteLoadingEmail = "";
         });
     },
 
@@ -1026,6 +1074,15 @@ form {
   padding: 10px 12px;
   border: 1px solid var(--atv-border);
   border-radius: 12px;
+}
+
+/* The anisette account row carries two actions, so stack them under the
+   account on a narrow screen instead of squeezing the email. */
+@media (max-width: 640px) {
+  .atv-anisette-account {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 /* Keep the input and action button of a join row fused like the install page. */

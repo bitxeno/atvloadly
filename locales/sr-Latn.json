@@ -518,13 +518,14 @@
       "update_coreadi_confirm": "Da li ste sigurni da želite da ažurirate CoreADI biblioteke?",
       "anisette_server": "Anisette server",
       "anisette_server_default_tag": "Podrazumevani",
-      "anisette_server_tips": "Ostavite prazno za podrazumevani server. Promena servera čini postojeće Anisette podatke nevažećim; resetujte nalog ako zahtevi počnu da otkazuju.",
+      "anisette_server_tips": "Ostavite prazno za podrazumevani server. Ako zahtevi i dalje ne uspevaju nakon promene servera, pokušajte da resetujete ili obrišete Anisette podatke naloga.",
       "save": "Sačuvaj",
-      "reset_anisette": "Resetuj Anisette podatke",
-      "reset_anisette_select": "Izaberite nalog",
-      "reset_anisette_empty": "Anisette podaci se resetuju po nalogu. Prvo dodajte Apple ID nalog.",
+      "reset_anisette": "Anisette podaci",
+      "reset_anisette_empty": "Nijedan nalog nema sačuvane Anisette podatke.",
       "reset_anisette_confirm": "Da li ste sigurni da želite da resetujete Anisette podatke za {{email}}? Novi identitet uređaja biće kreiran pri sledećem korišćenju, pa se nalog mora ponovo prijaviti.",
+      "remove_anisette_confirm": "Ovaj nalog više nije prijavljen. Da li ste sigurni da želite da obrišete njegove preostale Anisette podatke?",
       "reset": "Resetuj",
+      "delete": "Obriši",
       "cancel": "Otkaži",
       "confirm": "Potvrdi",
       "toast": {
@@ -533,6 +534,8 @@
         "failed": "Ažuriranje nije uspelo",
         "reset_success": "Anisette podaci za {{email}} su resetovani",
         "reset_failed": "Resetovanje nije uspelo",
+        "remove_success": "Anisette podaci za {{email}} su obrisani",
+        "remove_failed": "Brisanje nije uspelo",
         "server_success": "Anisette server je sačuvan",
         "server_failed": "Čuvanje Anisette servera nije uspelo"
       }

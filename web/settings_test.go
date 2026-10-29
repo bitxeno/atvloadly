@@ -250,3 +250,90 @@ func TestResetAnisetteRouteRejectsMissingAccount(t *testing.T) {
 		t.Errorf("the engine was run without an account (stat err = %v)", err)
 	}
 }
+
+// The anisette account list comes from the engine, so an account whose login
+// failed but whose data still exists is offered for reset, marked orphaned when
+// it is absent from accounts.json.
+func TestAnisetteAccountsRouteReadsEngineList(t *testing.T) {
+	// Isolate the engine's data directory so a real accounts.json is not read.
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(t.TempDir(), ".config"))
+	engineDir := t.TempDir()
+	script := "#!/bin/sh\n" +
+		"cat <<'EOF'\n" +
+		"Accounts with Anisette data:\n" +
+		"ACCOUNT                           NAME                  TEAM ID\n" +
+		"orphan@example.com                -                     -\n" +
+		"EOF\n" +
+		"exit 0\n"
+	if err := os.WriteFile(filepath.Join(engineDir, "plumesign"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", engineDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	server, _ := newTestServer(t)
+	resp, err := server.Test(httptest.NewRequest(http.MethodGet, "/api/settings/anisette/accounts", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result struct {
+		Code int `json:"code"`
+		Data []struct {
+			Email  string `json:"email"`
+			Name   string `json:"name"`
+			TeamID string `json:"team_id"`
+			Orphan bool   `json:"orphan"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatalf("decode %q: %v", body, err)
+	}
+	if result.Code != 200 {
+		t.Fatalf("code = %d, body %q", result.Code, body)
+	}
+	if len(result.Data) != 1 {
+		t.Fatalf("got %d accounts, want 1: %+v", len(result.Data), result.Data)
+	}
+	if result.Data[0].Email != "orphan@example.com" {
+		t.Errorf("email = %q, want orphan@example.com", result.Data[0].Email)
+	}
+	if !result.Data[0].Orphan {
+		t.Error("an account absent from accounts.json was not marked orphaned")
+	}
+}
+
+// Deleting leftover anisette data for an orphaned account runs the engine's
+// remove command for that account.
+func TestRemoveAnisetteRouteRunsEngineCommandForAccount(t *testing.T) {
+	engineDir := t.TempDir()
+	record := filepath.Join(engineDir, "args")
+	script := "#!/bin/sh\n" +
+		"printf '%s\\n' \"$@\" > " + record + "\n" +
+		"exit 0\n"
+	if err := os.WriteFile(filepath.Join(engineDir, "plumesign"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", engineDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	server, _ := newTestServer(t)
+	req := httptest.NewRequest(http.MethodPost, "/api/settings/remove/anisette", strings.NewReader(`{"email":"orphan@example.com"}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := server.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = decodeAPI(t, resp)
+
+	data, err := os.ReadFile(record)
+	if err != nil {
+		t.Fatalf("the engine was not run: %v", err)
+	}
+	want := "anisette remove -u orphan@example.com"
+	if got := strings.Join(strings.Fields(string(data)), " "); got != want {
+		t.Errorf("arguments = %q, want %q", got, want)
+	}
+}

@@ -521,13 +521,14 @@
                 "update_coreadi_confirm": "确认要下载并更新 CoreADI 库文件吗？",
                 "anisette_server": "Anisette 服务器",
                 "anisette_server_default_tag": "默认",
-                "anisette_server_tips": "留空使用默认服务器。更换服务器后已有的 Anisette 数据会失效；如请求开始失败，请重置对应帐号。",
+                "anisette_server_tips": "留空使用默认服务器。如果更换服务器后还是请求失败，请尝试重置/删除对应帐号的 Anisette 数据。",
                 "save": "保存",
-                "reset_anisette": "重置 Anisette 数据",
-                "reset_anisette_select": "请选择帐号",
-                "reset_anisette_empty": "Anisette 数据按帐号重置，请先添加 Apple ID 帐号。",
+                "reset_anisette": "Anisette 数据",
+                "reset_anisette_empty": "没有保存 Anisette 数据的帐号。",
                 "reset_anisette_confirm": "确认要重置 {{email}} 的 Anisette 数据吗？下次使用该帐号时将生成新的设备身份，需要重新登录。",
+                "remove_anisette_confirm": "该帐号已不在登录列表中，确认要删除它残留的 Anisette 数据吗？",
                 "reset": "重置",
+                "delete": "删除",
                 "cancel": "取消",
                 "confirm": "确认",
                 "toast": {
@@ -536,6 +537,8 @@
                     "failed": "更新失败",
                     "reset_success": "已重置 {{email}} 的 Anisette 数据",
                     "reset_failed": "重置失败",
+                    "remove_success": "已删除 {{email}} 的 Anisette 数据",
+                    "remove_failed": "删除失败",
                     "server_success": "Anisette 服务器已保存",
                     "server_failed": "保存 Anisette 服务器失败"
                 }

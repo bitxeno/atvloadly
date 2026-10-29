@@ -518,13 +518,14 @@
       "update_coreadi_confirm": "Vill du verkligen uppdatera CoreADI-biblioteken?",
       "anisette_server": "Anisette-server",
       "anisette_server_default_tag": "Standard",
-      "anisette_server_tips": "Lämna tomt för att använda standardservern. Byt av server gör befintlig Anisette-data ogiltig; återställ kontot om anropen börjar misslyckas.",
+      "anisette_server_tips": "Lämna tomt för att använda standardservern. Om anropen fortfarande misslyckas efter att du bytt server, försök återställa eller ta bort kontots Anisette-data.",
       "save": "Spara",
-      "reset_anisette": "Återställ Anisette-data",
-      "reset_anisette_select": "Välj ett konto",
-      "reset_anisette_empty": "Anisette-data återställs per konto. Lägg till ett Apple ID-konto först.",
+      "reset_anisette": "Anisette-data",
+      "reset_anisette_empty": "Inget konto har sparad Anisette-data.",
       "reset_anisette_confirm": "Vill du verkligen återställa Anisette-data för {{email}}? En ny enhetsidentitet skapas vid nästa användning, så kontot måste logga in igen.",
+      "remove_anisette_confirm": "Det här kontot är inte längre inloggat. Vill du ta bort dess kvarvarande Anisette-data?",
       "reset": "Återställ",
+      "delete": "Ta bort",
       "cancel": "Avbryt",
       "confirm": "Bekräfta",
       "toast": {
@@ -533,6 +534,8 @@
         "failed": "Uppdateringen misslyckades",
         "reset_success": "Anisette-data för {{email}} har återställts",
         "reset_failed": "Återställningen misslyckades",
+        "remove_success": "Anisette-data för {{email}} har tagits bort",
+        "remove_failed": "Borttagningen misslyckades",
         "server_success": "Anisette-servern har sparats",
         "server_failed": "Det gick inte att spara Anisette-servern"
       }

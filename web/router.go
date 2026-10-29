@@ -887,6 +887,17 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))
 	})
 
+	// The accounts that have Anisette data stored, read from the engine. This
+	// is the source for the reset list, so data left behind by a failed login
+	// (an account missing from the account list) can still be reset.
+	api.Get("/settings/anisette/accounts", func(c *fiber.Ctx) error {
+		accounts, err := manager.AnisetteAccounts()
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(accounts))
+	})
+
 	// Reset one account's Anisette data through the engine; a new device
 	// identity is generated the next time that account is used.
 	api.Post("/settings/reset/anisette", func(c *fiber.Ctx) error {
@@ -901,6 +912,25 @@ func route(fi *fiber.App) {
 		}
 		if err := manager.ResetAnisette(req.Email); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError("reset failed: " + err.Error()))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(true))
+	})
+
+	// Delete one account's leftover Anisette data directory through the engine.
+	// Used for an account no longer in the account list, where a reset (which
+	// regenerates a device identity on next login) does not apply.
+	api.Post("/settings/remove/anisette", func(c *fiber.Ctx) error {
+		var req struct {
+			Email string `json:"email"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("Invalid argument"))
+		}
+		if strings.TrimSpace(req.Email) == "" {
+			return c.Status(http.StatusOK).JSON(apiError("email is required"))
+		}
+		if err := manager.RemoveAnisette(req.Email); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError("remove failed: " + err.Error()))
 		}
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))
 	})

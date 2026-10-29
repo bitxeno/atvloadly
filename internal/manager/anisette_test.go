@@ -61,6 +61,121 @@ func TestResetAnisetteReportsEngineFailure(t *testing.T) {
 	}
 }
 
+// fakeAnisetteListEngine puts a plumesign on PATH that prints table on stdout
+// for `anisette list` and exits with exitCode.
+func fakeAnisetteListEngine(t *testing.T, table string, exitCode string) {
+	t.Helper()
+	dir := t.TempDir()
+	script := "#!/bin/sh\n" +
+		"cat <<'EOF'\n" + table + "\nEOF\n" +
+		"exit " + exitCode + "\n"
+	if err := os.WriteFile(filepath.Join(dir, "plumesign"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+// The engine's anisette list is the source of reset targets, so accounts whose
+// login failed but whose data directory still exists must show up here even
+// though they are absent from the account list. Empty NAME/TEAM ID ("-") is
+// normalized to an empty value, and an account missing from accounts.json is
+// marked orphaned.
+func TestAnisetteAccountsParsesEngineList(t *testing.T) {
+	dataDir := setSideloadDataDir(t)
+	plumeDir := filepath.Dir(dataDir)
+	if err := os.MkdirAll(plumeDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeJSON(t, plumeDir, "accounts.json",
+		`{"accounts":{"user@example.com":{"email":"user@example.com","team_id":"8245MZ34WA"}}}`)
+	fakeAnisetteListEngine(t, `Accounts with Anisette data:
+ACCOUNT                           NAME                  TEAM ID
+user@example.com                  wu                    8245MZ34WA
+orphan@example.com                -                     -`, "0")
+
+	accounts, err := AnisetteAccounts()
+	if err != nil {
+		t.Fatalf("AnisetteAccounts() error = %v", err)
+	}
+
+	if len(accounts) != 2 {
+		t.Fatalf("got %d accounts, want 2: %+v", len(accounts), accounts)
+	}
+	if accounts[0].Email != "user@example.com" || accounts[0].Name != "wu" || accounts[0].TeamID != "8245MZ34WA" {
+		t.Errorf("first account = %+v", accounts[0])
+	}
+	if accounts[0].Orphan {
+		t.Error("an account in accounts.json was marked orphaned")
+	}
+	if accounts[1].Email != "orphan@example.com" {
+		t.Errorf("orphan account email = %q, want orphan@example.com", accounts[1].Email)
+	}
+	if accounts[1].Name != "" || accounts[1].TeamID != "" {
+		t.Errorf("orphan account placeholders not normalized: %+v", accounts[1])
+	}
+	if !accounts[1].Orphan {
+		t.Error("an account missing from accounts.json was not marked orphaned")
+	}
+}
+
+// Deleting leftover anisette data for an account no longer in the list runs the
+// engine's remove command for that account.
+func TestRemoveAnisetteRunsEngineCommandForAccount(t *testing.T) {
+	record := fakeAnisetteEngine(t, "0")
+
+	if err := RemoveAnisette("orphan@example.com"); err != nil {
+		t.Fatalf("RemoveAnisette() error = %v", err)
+	}
+
+	want := "anisette remove -u orphan@example.com"
+	if got := strings.Join(recordedArgs(t, record), " "); got != want {
+		t.Errorf("arguments = %q, want %q", got, want)
+	}
+}
+
+// A blank account names no Anisette data, so remove is rejected before any
+// command runs.
+func TestRemoveAnisetteRequiresAccount(t *testing.T) {
+	record := fakeAnisetteEngine(t, "0")
+
+	if err := RemoveAnisette("   "); err == nil {
+		t.Fatal("RemoveAnisette() error = nil, want an error")
+	}
+
+	if _, err := os.Stat(record); !os.IsNotExist(err) {
+		t.Errorf("the engine was run for a blank account (stat err = %v)", err)
+	}
+}
+
+// A failing engine surfaces its error instead of an empty list that would hide
+// the problem.
+func TestAnisetteAccountsReportsEngineFailure(t *testing.T) {
+	fakeAnisetteListEngine(t, "Accounts with Anisette data:", "1")
+
+	if _, err := AnisetteAccounts(); err == nil {
+		t.Fatal("AnisetteAccounts() error = nil, want an error")
+	}
+}
+
+// A NAME that contains a single space stays in one column; only runs of two or
+// more spaces separate the columns.
+func TestParseAnisetteAccountsKeepsSingleSpaceInName(t *testing.T) {
+	table := `Accounts with Anisette data:
+ACCOUNT                           NAME                  TEAM ID
+user@example.com                  John Doe              8245MZ34WA`
+
+	accounts := parseAnisetteAccounts(table)
+	if len(accounts) != 1 {
+		t.Fatalf("got %d accounts, want 1: %+v", len(accounts), accounts)
+	}
+	if accounts[0].Name != "John Doe" {
+		t.Errorf("name = %q, want %q", accounts[0].Name, "John Doe")
+	}
+	if accounts[0].TeamID != "8245MZ34WA" {
+		t.Errorf("team id = %q, want %q", accounts[0].TeamID, "8245MZ34WA")
+	}
+}
+
 // The engine reports the active anisette server on stdout with a log prefix;
 // the manager picks the URL out of that line.
 func TestAnisetteServerReadsEngineOutput(t *testing.T) {
