@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -17,7 +18,10 @@ const screenshotDownloadMaxBytes = 8 << 20
 // a real http(s) response, so the client posts the preview it is already
 // showing and the browser saves exactly that image.
 func DecodeScreenshotDownload(encoded string) ([]byte, error) {
-	data, err := base64.StdEncoding.DecodeString(strings.TrimSpace(encoded))
+	// Decode at most one byte over the limit. DecodeString would allocate
+	// based on the entire input before checking the maximum size.
+	decoder := base64.NewDecoder(base64.StdEncoding, strings.NewReader(strings.TrimSpace(encoded)))
+	data, err := io.ReadAll(io.LimitReader(decoder, screenshotDownloadMaxBytes+1))
 	if err != nil {
 		return nil, errors.New("screenshot data is not valid base64")
 	}

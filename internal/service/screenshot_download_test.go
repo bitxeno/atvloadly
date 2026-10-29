@@ -50,6 +50,34 @@ func TestDecodeScreenshotDownloadRejectsInvalidPayloads(t *testing.T) {
 	}
 }
 
+func TestDecodeScreenshotDownloadRejectsOversizedBeforeDecoding(t *testing.T) {
+	// An oversized malformed upload should hit the size cap, not be decoded
+	// in full before reporting an invalid base64 payload.
+	encoded := strings.Repeat("A", base64.StdEncoding.EncodedLen(screenshotDownloadMaxBytes)+4) + "!"
+	_, err := DecodeScreenshotDownload(encoded)
+	if err == nil || !strings.Contains(err.Error(), "too large") {
+		t.Fatalf("error = %v, want size limit error", err)
+	}
+}
+
+func TestDecodeScreenshotDownloadAcceptsMaximumSize(t *testing.T) {
+	encoded := base64.StdEncoding.EncodeToString(jpegFixture(screenshotDownloadMaxBytes))
+	got, err := DecodeScreenshotDownload(encoded)
+	if err != nil || len(got) != screenshotDownloadMaxBytes {
+		t.Fatalf("decoded size = %d, error = %v", len(got), err)
+	}
+}
+
+func TestDecodeScreenshotDownloadAcceptsLineWrappedBase64(t *testing.T) {
+	data := jpegFixture(128)
+	encoded := base64.StdEncoding.EncodeToString(data)
+	encoded = encoded[:64] + "\r\n" + encoded[64:]
+	got, err := DecodeScreenshotDownload(encoded)
+	if err != nil || !bytes.Equal(got, data) {
+		t.Fatalf("wrapped base64 round trip error = %v", err)
+	}
+}
+
 func TestIsJPEG(t *testing.T) {
 	if !isJPEG(jpegFixture(8)) {
 		t.Fatal("expected the JPEG fixture to be recognized")
