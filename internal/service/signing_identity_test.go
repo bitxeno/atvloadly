@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/db"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/signing"
@@ -15,6 +16,13 @@ import (
 // openTestStore opens a fresh migrated database as the global store.
 func openTestStore(t *testing.T) {
 	t.Helper()
+	// Signing identity tests also delete app rows, which must have a
+	// configured storage root even when their IPA paths are empty.
+	previousConfig := app.Config
+	app.Config = &app.Configuration{}
+	app.Config.Server.DataDir = t.TempDir()
+	t.Cleanup(func() { app.Config = previousConfig })
+
 	store := db.Open(db.Config{Path: t.TempDir(), FileName: "test.db"})
 	if err := store.AutoMigrate(&model.InstalledApp{}, &model.SigningIdentity{}); err != nil {
 		t.Fatalf("migrate: %v", err)

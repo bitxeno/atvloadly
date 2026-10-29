@@ -72,3 +72,40 @@ func TestDeleteAppOnlyRemovesOwnedDirectory(t *testing.T) {
 		})
 	}
 }
+
+func TestDeleteAppWithoutStorageRootKeepsRecord(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		nilConfig bool
+	}{
+		{name: "nil config", nilConfig: true},
+		{name: "empty data directory"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			setupTestDB(t)
+			dataDir := app.Config.Server.DataDir
+
+			record := &model.InstalledApp{IpaName: "Keep"}
+			if err := db.Store().Create(record).Error; err != nil {
+				t.Fatal(err)
+			}
+			ownedFile := writeTestFile(t, filepath.Join(dataDir, "ipa", fmt.Sprintf("%d", record.ID), "app.ipa"))
+
+			if tc.nilConfig {
+				app.Config = nil
+			} else {
+				app.Config.Server.DataDir = ""
+			}
+			deleted, err := DeleteApp(record.ID)
+			if err == nil || deleted {
+				t.Fatalf("DeleteApp with missing storage root = %t, %v; want error without deletion", deleted, err)
+			}
+			if _, err := GetApp(record.ID); err != nil {
+				t.Fatalf("app record was deleted: %v", err)
+			}
+			if _, err := os.Stat(ownedFile); err != nil {
+				t.Fatalf("app files were altered: %v", err)
+			}
+		})
+	}
+}
