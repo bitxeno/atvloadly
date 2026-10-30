@@ -1,33 +1,37 @@
 <p align="center">
-  <img width="500" src="./doc/preview/logo.svg">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./doc/preview/logo_dark.svg">
+    <img width="500" src="./doc/preview/logo.svg" alt="atvloadly">
+  </picture>
 </p>
 
 
 <div align="center">
 
-[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt%20%7C%20macos%20%7C%20windows-989898)](https://github.com/bitxeno/atvloadly/internal/releases)
+[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt%20%7C%20macos%20%7C%20windows-989898)](https://github.com/bitxeno/atvloadly/releases)
 [![release](https://img.shields.io/docker/v/bitxeno/atvloadly?label=docker%20latest&sort=semver)](https://hub.docker.com/r/bitxeno/atvloadly)
 [![Docker Image Size](https://img.shields.io/docker/image-size/bitxeno/atvloadly)](https://hub.docker.com/r/bitxeno/atvloadly)
 [![Docker Pulls](https://img.shields.io/docker/pulls/bitxeno/atvloadly)](https://hub.docker.com/r/bitxeno/atvloadly)
-[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/internal/blob/master/LICENSE)
+[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/blob/master/LICENSE)
 
 </div>
 
 <div align="center">
 
-[English](./README.md) | Svenska | [中文](./README_cn.md)
+[English](./README.md) | Svenska | [中文](./README_cn.md) | [Српски (ћирилица)](./README_sr.md) | [Srpski (latinica)](./README_sr_Latn.md)
 
 </div>
 
-atvloadly är en webbtjänst för sideloading av appar på Apple TV. Den använder [Impactor](https://github.com/claration/Impactor) som underliggande teknik för sideloading och uppdaterar automatiskt apparna för att de ska fortsätta vara tillgängliga. Den kan köras som Docker-tjänst på Linux/OpenWrt eller som en inbyggd skrivbordsapp på macOS och Windows.
+atvloadly är en webbtjänst för sideloading av appar på Apple TV. Den använder [Impactor](https://github.com/claration/Impactor) som underliggande teknik och förnyar automatiskt apparnas signering för att de ska fortsätta vara tillgängliga. Den kan köras som Docker-tjänst på Linux/OpenWrt eller som en inbyggd skrivbordsapp på macOS och Windows.
 
 ## Funktioner
 
 * Körs i Docker (Linux/OpenWrt) eller som inbyggd skrivbordsapp (macOS / Windows)
 * Stöd för parkoppling med Apple TV
-* Stöd för automatisk appuppdatering
+* Stöd för automatisk förnyelse av appars signering
 * Stöd för att följa GitHub Releases / AltStore-källor med manuella eller automatiska appuppdateringar
 * Stöd för flera Apple ID-konton
+* Stöd för signering med eget certifikat (P12 + provisioneringsprofil), utan Apple-ID
 * Stöd för flera språk (i18n)
 * Stöd för att installera en app under ett anpassat paket-ID (Apple ID eller P12), bredvid den ursprungliga appen
 
@@ -67,6 +71,10 @@ atvloadly är en webbtjänst för sideloading av appar på Apple TV. Den använd
 
    Värdsystemets `/var/run/dbus` och `/var/run/avahi-daemon` måste delas med Docker-containern.
 
+   Om Avahi inte finns installerat (exempelvis när enheter läggs till manuellt via IP eller genom Tailscale) stänger atvloadly av automatisk enhetsidentifiering i stället för att försöka ansluta upprepade gånger. Manuellt parkopplade enheter fungerar fortfarande.
+
+   För att uttryckligen stänga av enhetsidentifieringen kan du ange `zeroconf: false` i `config.yaml`, miljövariabeln `ZEROCONF_ENABLED=false` eller kommandoradsargumentet `--zeroconf=false`. När identifieringen är avstängd startas varken Avahi eller den inbyggda zeroconf-identifieringen, och servicestatusen visas inte på startsidan. Prioritetsordning: `--zeroconf` > `ZEROCONF_ENABLED` > `config.yaml`.
+
    Om du vill använda host-nätverk och ändra lyssningsport kan följande miljövariabel läggas till i containern:
 
    ```
@@ -96,8 +104,8 @@ Ladda ner och kör installationsprogrammet (`.exe`) från [Releases](https://git
 
 ### Förberedelser (mycket viktigt‼️)
 
-1. Ett separat Apple ID för installation
-> Både gratis- och utvecklarkonton fungerar. **Använd av säkerhetsskäl inte ditt vanliga Apple ID för installation. Skapa ett separat konto för detta.**
+1. Ett separat Apple-ID för installation
+> Både gratis- och utvecklarkonton fungerar. **Använd av säkerhetsskäl inte ditt vanliga Apple-ID för installation. Skapa ett separat konto för detta.** Ett gratis Apple-ID har ett begränsat antal signeringscertifikat som delas med andra sideloadingverktyg. Om gränsen har nåtts återkallar atvloadly inte något certifikat automatiskt. På installationssidan kan du välja vilket certifikat som eventuellt får återkallas.
 
 2. En telefon eller annan enhet för tvåfaktorsautentisering
 > atvloadly måste auktoriseras som en betrodd enhet och emulerar då en MacBook. Vid inloggning skickar Apple en verifieringskod till kontots registrerade telefonnummer eller till en enhet som redan är inloggad med installationskontot. Godkänn och verifiera när koden visas.
@@ -109,6 +117,16 @@ Ladda ner och kör installationsprogrammet (`.exe`) från [Releases](https://git
 3. Klicka på `AppleTV` för att öppna parkopplingssidan och slutför parkopplingen.
 4. Efter lyckad parkoppling går du tillbaka till startsidan där den anslutna `AppleTV`-enheten visas.
 5. Klicka på den anslutna `AppleTV`-enheten för att öppna installationssidan, välj IPA-filen som ska sideloadas och klicka på `Installera`.
+
+### Signering med externt certifikat (P12)
+
+Om du redan har ett kodsigneringscertifikat kan du importera en `.p12`-fil (med tillhörande lösenord, som kan vara tomt) och en matchande `.mobileprovision`-profil. För Apple TV måste det vara en **tvOS-profil** som innehåller enhetens UDID. Välj sedan **Externt certifikat** på installationssidan. Inget Apple-ID behövs eller används i detta läge.
+
+Appar som signeras med ett externt certifikat förnyas inte automatiskt. De upphör att fungera när certifikatet eller provisioneringsprofilen går ut, beroende på vilket som inträffar först. Att installera om med samma certifikat och profil förlänger inte giltighetstiden. Efter att profilen eller signeringsidentiteten bytts ut måste appen installeras om eller uppdateras för att den nya giltighetstiden ska tillämpas. Appar kan installeras från och följa GitHub Releases eller AltStore-källor; uppdateringar signeras med samma identitet.
+
+Privata nycklar lagras krypterat med hjälp av en nyckelfil (`signing.key_file`, som standard `/data/keys/signing-identity.key`). Säkerhetskopiera den tillsammans med databasen. atvloadly saknar inbyggd autentisering och bör endast användas på ett betrott nätverk.
+
+[>> Guide för externa certifikat (på engelska)](./doc/external-certificate.md)
 
 ## Vanliga frågor
 

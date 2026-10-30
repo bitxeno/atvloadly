@@ -1,21 +1,24 @@
 <p align="center">
-  <img width="500" src="./doc/preview/logo.svg">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./doc/preview/logo_dark.svg">
+    <img width="500" src="./doc/preview/logo.svg" alt="atvloadly">
+  </picture>
 </p>
 
 
 <div align="center">
 
-[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt%20%7C%20macos%20%7C%20windows-989898)](https://github.com/bitxeno/atvloadly/internal/releases)
+[![platform](https://img.shields.io/badge/platform-linux%20%7C%20openwrt%20%7C%20macos%20%7C%20windows-989898)](https://github.com/bitxeno/atvloadly/releases)
 [![release](https://img.shields.io/docker/v/bitxeno/atvloadly?label=docker%20latest&sort=semver)](https://hub.docker.com/r/bitxeno/atvloadly)
 [![Docker Image Size](https://img.shields.io/docker/image-size/bitxeno/atvloadly)](https://hub.docker.com/r/bitxeno/atvloadly)
 [![Docker Pulls](https://img.shields.io/docker/pulls/bitxeno/atvloadly)](https://hub.docker.com/r/bitxeno/atvloadly)
-[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/internal/blob/master/LICENSE)
+[![license](https://img.shields.io/github/license/bitxeno/atvloadly)](https://github.com/bitxeno/atvloadly/blob/master/LICENSE)
 
 </div>
 
 <div align="center">
 
-English | [Svenska](./README_sv.md) | [中文](./README_cn.md)
+English | [Svenska](./README_sv.md) | [中文](./README_cn.md) | [Српски (ћирилица)](./README_sr.md) | [Srpski (latinica)](./README_sr_Latn.md)
 
 </div>
 
@@ -45,7 +48,7 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
 
 ### Docker (Linux/OpenWrt)
 
-1. The Linux/OpenWrt host needs to install `avahi-deamon`.
+1. The Linux/OpenWrt host needs to install `avahi-daemon`.
    
    **OpenWrt：**
    ```
