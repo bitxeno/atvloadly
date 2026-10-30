@@ -185,13 +185,15 @@ Implementation notes:
   `plumesign-macos-universal.tar.gz` (unpacked for both darwin-arm64 and darwin-amd64,
   which `mygo build` lipos together) and `plumesign-windows-x86_64.exe` from the
   PlumeImpactor release into `desktop/app/resources/<platform>/bin/` (gitignored, not
-  committed). Assets upstream has not published yet (currently windows-arm64) warn
-  individually and the build continues.
+  committed). The release version is read from the `Dockerfile` download URL, so the
+  desktop bundle tracks the server image automatically; set `PLUMESIGN_VERSION` to
+  override it for a one-off build. Assets upstream has not published yet (currently
+  windows-arm64) warn individually and the build continues.
 - **Path resolution**: the existing `internal/exec` and manager code call the bare
   `"plumesign"` command; at startup the shell prepends `PathResources/bin` to the `PATH`
   environment variable (inherited by child processes), so the business code needs no
   changes. Verified end to end under a clean `env -i`: the packaged app's `check/afc`
-  endpoint ran the bundled plumesign 2.7.1-patch.5; unpackaged (`go run`) falls back to
+  endpoint ran the bundled plumesign; unpackaged (`go run`) falls back to
   the system PATH.
 
 ## Milestones

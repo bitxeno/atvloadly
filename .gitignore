@@ -46,6 +46,7 @@ signing-work/
 desktop/app/build/
 desktop/app/installers/
 desktop/app/resources/*/bin/
+desktop/app/resources/.plumesign-version
 desktop/app/.mygo/
 
 # The desktop app embeds a build-time copy of the root locales/
