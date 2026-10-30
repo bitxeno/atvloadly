@@ -296,11 +296,19 @@ func UpdateAppRefreshResult(app model.InstalledApp) error {
 }
 
 func DeleteApp(id uint) (bool, error) {
-	if v, err := GetApp(id); err == nil {
+	if _, err := GetApp(id); err == nil {
+		// Refuse deletion when storage ownership cannot be established.
+		// Otherwise an empty data directory would resolve relative to the
+		// process working directory instead of the configured app storage.
+		if conf.Config == nil || conf.Config.Server.DataDir == "" {
+			return false, errors.New("app data directory is not configured")
+		}
 		if result := db.Store().Delete(&model.InstalledApp{}, id); result.Error != nil {
 			return false, result.Error
 		}
-		ipaDir := filepath.Dir(v.IpaPath)
+		// Only the app's own storage directory is ours to remove. The saved
+		// IPA path may be empty, remote or point to an unrelated file.
+		ipaDir := filepath.Join(conf.Config.Server.DataDir, "ipa", fmt.Sprintf("%d", id))
 		_ = os.RemoveAll(ipaDir)
 	}
 
