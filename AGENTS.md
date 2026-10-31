@@ -26,7 +26,7 @@ CGO_ENABLED=0 go build -o atvloadly main.go
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/atvloadly-linux-amd64 main.go
 
 # Run locally with debug mode
-go run main.go server --config ./doc/config.yaml.example --debug
+go run main.go server --config ./docs/config.yaml.example --debug
 
 # Run with hot reload (requires air)
 air

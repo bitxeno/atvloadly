@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./doc/preview/logo_dark.svg">
-    <img width="500" src="./doc/preview/logo.svg" alt="atvloadly">
+    <source media="(prefers-color-scheme: dark)" srcset="../preview/logo_dark.svg">
+    <img width="500" src="../preview/logo.svg" alt="atvloadly">
   </picture>
 </p>
 
@@ -17,7 +17,7 @@
 
 <div align="center">
 
-[English](./README.md) | [Svenska](./README_sv.md) | [中文](./README_cn.md) | [Српски (ћирилица)](./README_sr.md) | Srpski (latinica)
+[English](../../README.md) | [Svenska](README_sv.md) | [中文](README_cn.md) | [Српски (ћирилица)](README_sr.md) | Srpski (latinica)
 
 </div>
 
@@ -37,10 +37,10 @@ atvloadly je veb-servis za instaliranje IPA aplikacija na Apple TV bez App Store
 ## Snimci ekrana
 
 <p align="center">
-  <img width="600" src="./doc/preview/home_en.png" alt="Početna stranica atvloadly">
+  <img width="600" src="../preview/home_en.png" alt="Početna stranica atvloadly">
 </p>
 <p align="center">
-  <img width="600" src="./doc/preview/install_en.png" alt="Instalacija aplikacije">
+  <img width="600" src="../preview/install_en.png" alt="Instalacija aplikacije">
 </p>
 
 ## Instalacija
@@ -122,7 +122,7 @@ Aplikacije potpisane spoljnim sertifikatom ne obnavljaju se automatski. Ističu 
 
 Privatni ključevi se čuvaju šifrovani pomoću ključa za instalaciju (`signing.key_file`, podrazumevano `/data/keys/signing-identity.key`). Sačuvajte rezervnu kopiju ovog ključa zajedno sa bazom podataka. atvloadly nema ugrađenu autentifikaciju, zato ga koristite samo na pouzdanoj mreži.
 
-[Detaljno uputstvo za spoljne sertifikate (na engleskom)](./doc/external-certificate.md)
+[Detaljno uputstvo za spoljne sertifikate (na engleskom)](../external-certificate.md)
 
 ## Česta pitanja
 

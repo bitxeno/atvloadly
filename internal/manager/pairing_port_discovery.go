@@ -18,7 +18,7 @@ import (
 )
 
 // Discovery of the Apple device Remote Pairing service when only the IP is
-// known (manual entry / Tailscale). See doc/misc/remote-pairing-port-discovery.md.
+// known (manual entry / Tailscale). See docs/misc/remote-pairing-port-discovery.md.
 //
 // The manual-pairing port runs the PIN flow (allowsPairSetup); it is dynamic
 // and never 62078 (that is lockdownd). This file only probes ports, it never
@@ -45,7 +45,7 @@ const (
 	rpPortLast  = 65535
 
 	// Tuned against a real device over a Tailscale relay (see
-	// doc/misc/remote-pairing-port-discovery.md): a burst of thousands of
+	// docs/misc/remote-pairing-port-discovery.md): a burst of thousands of
 	// SYNs saturates the relay queue and the open service ports themselves
 	// start timing out, so at 1024+ concurrency most full scans miss the
 	// tunnel port entirely. A small wave (128 dials) keeps the relay

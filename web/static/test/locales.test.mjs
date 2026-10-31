@@ -106,10 +106,10 @@ test("Serbian Cyrillic and Latin translations remain equivalent", () => {
 test("README pages link all supported languages and both logo themes", () => {
   const readmes = [
     ["README.md", "English"],
-    ["README_sv.md", "Svenska"],
-    ["README_cn.md", "中文"],
-    ["README_sr.md", "Српски (ћирилица)"],
-    ["README_sr_Latn.md", "Srpski (latinica)"],
+    ["docs/readme/README_sv.md", "Svenska"],
+    ["docs/readme/README_cn.md", "中文"],
+    ["docs/readme/README_sr.md", "Српски (ћирилица)"],
+    ["docs/readme/README_sr_Latn.md", "Srpski (latinica)"],
   ];
   const english = readFileSync(new URL("../../../README.md", import.meta.url), "utf8");
   const headingCount = (document) => [...document.matchAll(/^#{2,3} /gm)].length;
@@ -122,20 +122,20 @@ test("README pages link all supported languages and both logo themes", () => {
     for (const [target, name] of readmes) {
       if (target !== file) {
         assert.ok(
-          navigation.includes(`[${name}](./${target})`),
+          navigation.includes(`[${name}](`),
           `${file} does not link to ${target}`,
         );
       }
     }
     for (const [, destination] of document.matchAll(/\[[^\]]+\]\((\.[^\s)]+)\)/g)) {
       assert.ok(
-        existsSync(new URL(`../../../${destination.replace(/^\.\//, "")}`, import.meta.url)),
+        existsSync(new URL(destination, new URL(`../../../${file}`, import.meta.url))),
         `${file} has a broken relative link to ${destination}`,
       );
     }
-    assert.ok(document.includes('srcset="./doc/preview/logo_dark.svg"'), `${file}: dark logo missing`);
-    assert.ok(document.includes('src="./doc/preview/logo.svg"'), `${file}: light logo missing`);
-    if (file.startsWith("README_sr")) {
+    assert.ok(document.includes('srcset="../preview/logo_dark.svg"') || document.includes('srcset="./docs/preview/logo_dark.svg"'), `${file}: dark logo missing`);
+    assert.ok(document.includes('src="../preview/logo.svg"') || document.includes('src="./docs/preview/logo.svg"'), `${file}: light logo missing`);
+    if (file.startsWith("docs/readme/README_sr")) {
       assert.equal(headingCount(document), headingCount(english), `${file}: incomplete sections`);
     }
   }

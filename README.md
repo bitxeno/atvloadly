@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./doc/preview/logo_dark.svg">
-    <img width="500" src="./doc/preview/logo.svg" alt="atvloadly">
+    <source media="(prefers-color-scheme: dark)" srcset="./docs/preview/logo_dark.svg">
+    <img width="500" src="./docs/preview/logo.svg" alt="atvloadly">
   </picture>
 </p>
 
@@ -18,7 +18,7 @@
 
 <div align="center">
 
-English | [Svenska](./README_sv.md) | [中文](./README_cn.md) | [Српски (ћирилица)](./README_sr.md) | [Srpski (latinica)](./README_sr_Latn.md)
+English | [Svenska](docs/readme/README_sv.md) | [中文](docs/readme/README_cn.md) | [Српски (ћирилица)](docs/readme/README_sr.md) | [Srpski (latinica)](docs/readme/README_sr_Latn.md)
 
 </div>
 
@@ -38,10 +38,10 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
 ## Screenshots
 
 <p align="center">
-  <img width="600" src="./doc/preview/home_en.png">
+  <img width="600" src="./docs/preview/home_en.png">
 </p>
 <p align="center">
-  <img width="600" src="./doc/preview/install_en.png">
+  <img width="600" src="./docs/preview/install_en.png">
 </p>
 
 ## Installation
@@ -126,7 +126,7 @@ If you already own a code signing certificate, you can import its `.p12` (with i
 
 The private keys are stored encrypted with a deployment key file (`signing.key_file`, default `/data/keys/signing-identity.key`): back it up together with the database. atvloadly has no authentication, so keep it on a trusted network.
 
-[>> External certificate guide](./doc/external-certificate.md)
+[>> External certificate guide](./docs/external-certificate.md)
 
 ## FAQ
 
