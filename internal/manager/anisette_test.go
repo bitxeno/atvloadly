@@ -91,15 +91,16 @@ func TestAnisetteAccountsParsesEngineList(t *testing.T) {
 	fakeAnisetteListEngine(t, `Accounts with Anisette data:
 ACCOUNT                           NAME                  TEAM ID
 user@example.com                  wu                    8245MZ34WA
-orphan@example.com                -                     -`, "0")
+orphan@example.com                -                     -
+8478ef9a3673f48ff6840ac7c86c519a  -                     -`, "0")
 
 	accounts, err := AnisetteAccounts()
 	if err != nil {
 		t.Fatalf("AnisetteAccounts() error = %v", err)
 	}
 
-	if len(accounts) != 2 {
-		t.Fatalf("got %d accounts, want 2: %+v", len(accounts), accounts)
+	if len(accounts) != 3 {
+		t.Fatalf("got %d accounts, want 3: %+v", len(accounts), accounts)
 	}
 	if accounts[0].Email != "user@example.com" || accounts[0].Name != "wu" || accounts[0].TeamID != "8245MZ34WA" {
 		t.Errorf("first account = %+v", accounts[0])
@@ -115,6 +116,14 @@ orphan@example.com                -                     -`, "0")
 	}
 	if !accounts[1].Orphan {
 		t.Error("an account missing from accounts.json was not marked orphaned")
+	}
+	// The engine prints the anisette directory hash as the ACCOUNT when the
+	// data cannot be mapped back to an account; the row must still be listed.
+	if accounts[2].Email != "8478ef9a3673f48ff6840ac7c86c519a" {
+		t.Errorf("hash-identified row email = %q", accounts[2].Email)
+	}
+	if !accounts[2].Orphan {
+		t.Error("a hash-identified row was not marked orphaned")
 	}
 }
 

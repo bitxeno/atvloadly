@@ -183,22 +183,30 @@ var anisetteAccountRow = regexp.MustCompile(`\s{2,}`)
 //	ACCOUNT                           NAME                  TEAM ID
 //	user@example.com                  wu                    8245MZ34WA
 //	other@example.com                 -                     -
+//	8478ef9a3673f48ff6840ac7c86c519a  -                     -
 //
 // The first line is a heading and the second is the column header; the rest are
 // rows. A blank NAME or TEAM ID is printed as "-", which is normalized to empty.
-// An account is kept as long as its email column is non-empty, so data left
-// behind by a failed login still appears.
+// The ACCOUNT column is the email when the engine can map the data back to an
+// account, or the anisette directory hash when it cannot (data left behind by a
+// failed login); every data row is kept.
 func parseAnisetteAccounts(output string) []AnisetteAccount {
 	accounts := []AnisetteAccount{}
+	headerSeen := false
 	for _, line := range strings.Split(output, "\n") {
 		line = strings.TrimRight(line, "\r")
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
 		fields := anisetteAccountRow.Split(strings.TrimSpace(line), -1)
-		// Skip the heading and the column header: a data row starts with an
-		// email, which always contains "@".
-		if len(fields) < 1 || !strings.Contains(fields[0], "@") {
+		if len(fields) < 1 {
+			continue
+		}
+		// Skip everything up to and including the column header.
+		if !headerSeen {
+			if fields[0] == "ACCOUNT" {
+				headerSeen = true
+			}
 			continue
 		}
 
