@@ -687,6 +687,10 @@
             "submit": "开始配对"
         },
         "iphone": {
+            "warning1": "确保 iPhone 已开启开发者模式，系统版本为 iOS 17.4+",
+            "warning2": "使用 <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a> 导出 RPPairing 模式的 Pairing File 并开启 Wireless Debugging",
+            "warning3": "iPhone 自动刷新不保证稳定性，iPhone 需要解锁后才能正常远程刷新",
+            "warning4": "通过 Tailscale IP 连接需要接入 Wi-Fi",
             "device_label": "iPhone 设备",
             "device_placeholder": "例如 192.168.1.205，或从列表选择设备",
             "device_tips": "iPhone 需要先解锁屏幕，才能被发现和连接，支持局域网 IP 地址或 Tailscale IP 地址",
