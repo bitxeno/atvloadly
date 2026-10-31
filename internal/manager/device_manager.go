@@ -584,7 +584,7 @@ var discoverTunnelPortFunc = DiscoverManualTunnelPort
 // avoids a full-range scan, so it must not fail on a healthy device merely
 // because the overlay relay is slow: a single handshake gets the full dial
 // budget as its response deadline (the 800ms scan deadline is too tight for
-// the 0.3-1.1s relay RTT measured in doc/misc/remote-pairing-port-discovery.md)
+// the 0.3-1.1s relay RTT measured in docs/misc/remote-pairing-port-discovery.md)
 // and a transient loss is retried a few times before falling back to a scan.
 const (
 	rememberedProbeAttempts   = 3

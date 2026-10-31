@@ -686,6 +686,10 @@
       "submit": "Starta parkoppling"
     },
     "iphone": {
+      "warning1": "Se till att utvecklarläget är aktiverat på iPhone och att systemversionen är iOS 17.4+.",
+      "warning2": "Använd <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a> för att exportera parkopplingsfilen i RPPairing-läge och aktivera Wireless Debugging.",
+      "warning3": "Automatisk uppdatering på iPhone är inte garanterat stabil; iPhone måste vara upplåst för att fjärruppdatering ska fungera.",
+      "warning4": "Anslutning via en Tailscale IP-adress kräver att iPhone är ansluten till Wi-Fi.",
       "device_label": "iPhone-enhet",
       "device_placeholder": "t.ex. 192.168.1.205, eller välj en enhet",
       "device_tips": "iPhone måste låsas upp för att kunna hittas och anslutas; stöder en lokal IP-adress eller en Tailscale IP-adress",

@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./doc/preview/logo_dark.svg">
-    <img width="500" src="./doc/preview/logo.svg" alt="atvloadly">
+    <source media="(prefers-color-scheme: dark)" srcset="../preview/logo_dark.svg">
+    <img width="500" src="../preview/logo.svg" alt="atvloadly">
   </picture>
 </p>
 
@@ -18,7 +18,7 @@
 
 <div align="center">
 
-[English](./README.md) | Svenska | [中文](./README_cn.md) | [Српски (ћирилица)](./README_sr.md) | [Srpski (latinica)](./README_sr_Latn.md)
+[English](../../README.md) | Svenska | [中文](README_cn.md) | [Српски (ћирилица)](README_sr.md) | [Srpski (latinica)](README_sr_Latn.md)
 
 </div>
 
@@ -38,10 +38,10 @@ atvloadly är en webbtjänst för sideloading av appar på Apple TV. Den använd
 ## Skärmbilder
 
 <p align="center">
-  <img width="600" src="./doc/preview/home_en.png">
+  <img width="600" src="../preview/home_en.png">
 </p>
 <p align="center">
-  <img width="600" src="./doc/preview/install_en.png">
+  <img width="600" src="../preview/install_en.png">
 </p>
 
 ## Installation
@@ -126,7 +126,7 @@ Appar som signeras med ett externt certifikat förnyas inte automatiskt. De upph
 
 Privata nycklar lagras krypterat med hjälp av en nyckelfil (`signing.key_file`, som standard `/data/keys/signing-identity.key`). Säkerhetskopiera den tillsammans med databasen. atvloadly saknar inbyggd autentisering och bör endast användas på ett betrott nätverk.
 
-[>> Guide för externa certifikat (på engelska)](./doc/external-certificate.md)
+[>> Guide för externa certifikat (på engelska)](../external-certificate.md)
 
 ## Vanliga frågor
 

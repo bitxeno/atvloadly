@@ -68,7 +68,7 @@ RUN cd /tmp && rm -rf ./*.deb && rm -rf ./*.tar.gz && rm -rf ./*.zip && rm -rf .
 
 # The add command will automatically decompress the file.
 RUN mkdir -p /keep
-COPY ./doc/config.yaml.example /keep/config.yaml
+COPY ./docs/config.yaml.example /keep/config.yaml
 COPY ./build/${APP_NAME}-${TARGETOS}-${TARGETARCH} /usr/bin/${APP_NAME}
 RUN chmod +x /usr/bin/${APP_NAME}
 
@@ -79,7 +79,7 @@ RUN rm -rf /var/lib/lockdown && mkdir -p /data/lockdown && ln -s /data/lockdown 
 
 # Generate startup script
 # Prevent repeated crashes from filling /data with core dumps (#116).
-COPY ./doc/scripts/usbmuxd /etc/init.d/usbmuxd
+COPY ./docs/scripts/usbmuxd /etc/init.d/usbmuxd
 RUN chmod +x /etc/init.d/usbmuxd
 RUN printf '#!/bin/sh \n\n\
 

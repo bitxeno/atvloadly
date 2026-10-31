@@ -686,6 +686,10 @@
       "submit": "Započni uparivanje"
     },
     "iphone": {
+      "warning1": "Uverite se da je režim programera uključen na iPhone-u i da je verzija sistema iOS 17.4+.",
+      "warning2": "Koristite <a href=\"https://github.com/jkcoxson/idevice_pair\" target=\"_blank\" class=\"link\">idevice_pair</a> da izvezete datoteku za uparivanje u RPPairing režimu i omogućite Wireless Debugging.",
+      "warning3": "Automatsko osvežavanje na iPhone-u nije garantovano stabilno; iPhone mora biti otključan da bi daljinsko osvežavanje radilo.",
+      "warning4": "Povezivanje preko Tailscale IP adrese zahteva da iPhone bude povezan na Wi-Fi.",
       "device_label": "iPhone uređaj",
       "device_placeholder": "npr. 192.168.1.205, ili izaberite uređaj",
       "device_tips": "iPhone mora biti otključan da bi bio otkriven i povezan; podržana je lokalna IP adresa ili Tailscale IP adresa",

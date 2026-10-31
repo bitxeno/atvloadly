@@ -18,10 +18,10 @@
       </div>
       <div class="text-left">
         <ul class="list-disc pl-6 space-y-1 text-left">
-          <li class="text-sm">{{ $t("laboratory.tips.step1") }}</li>
-          <li class="text-sm" v-html="$t('laboratory.tips.step2')"></li>
-          <li class="text-sm">{{ $t("laboratory.tips.step3") }}</li>
-          <li class="text-sm">{{ $t("laboratory.tips.step5") }}</li>
+          <li class="text-sm">{{ $t("addDevice.iphone.warning1") }}</li>
+          <li class="text-sm" v-html="$t('addDevice.iphone.warning2')"></li>
+          <li class="text-sm">{{ $t("addDevice.iphone.warning3") }}</li>
+          <li class="text-sm">{{ $t("addDevice.iphone.warning4") }}</li>
         </ul>
       </div>
     </div>

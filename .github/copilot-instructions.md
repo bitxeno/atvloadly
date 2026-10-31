@@ -38,7 +38,7 @@ atvloadly is a web service for sideloading apps on Apple TV, built with Go + Fib
 
 ### Local Execution
 ```bash
-go run main.go server --config ./doc/config.yaml.example --debug
+go run main.go server --config ./docs/config.yaml.example --debug
 ```
 
 ### Build
