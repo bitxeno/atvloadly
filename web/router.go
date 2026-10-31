@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -599,37 +600,10 @@ func route(fi *fiber.App) {
 			manager.CleanUploadTempFiles(ipaPath)
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
-		if len(devices) == 0 {
+		selectedDevice, err := selectInstallDevice(devices, deviceID)
+		if err != nil {
 			manager.CleanUploadTempFiles(ipaPath)
-			return c.Status(http.StatusOK).JSON(apiError("no available devices found"))
-		}
-
-		var selectedDevice model.Device
-		if deviceID != "" {
-			found := false
-			for _, d := range devices {
-				if d.ID == deviceID {
-					selectedDevice = d
-					found = true
-					break
-				}
-			}
-			if !found {
-				manager.CleanUploadTempFiles(ipaPath)
-				return c.Status(http.StatusOK).JSON(apiError("device_id not found: " + deviceID))
-			}
-		} else {
-			atvDevices := []model.Device{}
-			for _, d := range devices {
-				if d.DeviceClass == string(model.DeviceClassAppleTV) {
-					atvDevices = append(atvDevices, d)
-				}
-			}
-			if len(atvDevices) == 0 {
-				manager.CleanUploadTempFiles(ipaPath)
-				return c.Status(http.StatusOK).JSON(apiError("no Apple TV devices found"))
-			}
-			selectedDevice = atvDevices[0]
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 
 		appModel := model.InstalledApp{
@@ -982,6 +956,33 @@ func route(fi *fiber.App) {
 		}
 	})
 
+}
+
+// selectInstallDevice picks the install target: the device with deviceID, or
+// the only available device when deviceID is empty. Several devices without
+// a deviceID is refused rather than guessed.
+func selectInstallDevice(devices []model.Device, deviceID string) (model.Device, error) {
+	if len(devices) == 0 {
+		return model.Device{}, fmt.Errorf("no available devices found")
+	}
+	if deviceID != "" {
+		for _, d := range devices {
+			if d.ID == deviceID {
+				return d, nil
+			}
+		}
+		return model.Device{}, fmt.Errorf("device_id not found: %s", deviceID)
+	}
+	if len(devices) == 1 {
+		return devices[0], nil
+	}
+
+	choices := make([]string, 0, len(devices))
+	for _, d := range devices {
+		choices = append(choices, fmt.Sprintf("%s (%s, %s)", d.ID, d.Name, d.DeviceClass))
+	}
+	sort.Strings(choices)
+	return model.Device{}, fmt.Errorf("several devices are available, device_id is required: %s", strings.Join(choices, ", "))
 }
 
 // removeUploadArtifacts removes the temp files of already parsed uploads in a
