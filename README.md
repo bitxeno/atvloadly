@@ -71,10 +71,6 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
 
    The `/var/run/dbus` and `/var/run/avahi-daemon` of the host machine need to be shared with the docker container for use.
 
-   If Avahi is not installed on the host (for example a manual-IP / Tailscale deployment that adds every device by IP address), atvloadly disables automatic discovery instead of retrying Avahi; manually paired devices keep working.
-
-   To turn off discovery explicitly, set `zeroconf: false` in `config.yaml`, `ZEROCONF_ENABLED=false` in the environment, or pass `--zeroconf=false` on the command line. With discovery off, neither Avahi nor the built-in zeroconf browser starts, and the service-status module is hidden on the home page. Precedence: `--zeroconf` > `ZEROCONF_ENABLED` > `config.yaml`.
-
    If you want to use the HOST network and want to modify the listening port, you can add environment variables to container:
 
    ```

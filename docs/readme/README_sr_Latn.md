@@ -70,10 +70,6 @@ atvloadly je veb-servis za instaliranje IPA aplikacija na Apple TV bez App Store
 
    Direktorijume `/var/run/dbus` i `/var/run/avahi-daemon` sa računara treba deliti sa kontejnerom.
 
-   Ako Avahi nije instaliran (na primer pri ručnom dodavanju uređaja po IP adresi ili kroz Tailscale), atvloadly isključuje automatsko otkrivanje umesto stalnih pokušaja povezivanja. Ručno upareni uređaji ostaju dostupni.
-
-   Automatsko otkrivanje možete isključiti pomoću `zeroconf: false` u `config.yaml`, promenljive okruženja `ZEROCONF_ENABLED=false` ili argumenta `--zeroconf=false`. Kada je otkrivanje isključeno, ne pokreću se ni Avahi ni ugrađeni zeroconf preglednik, a modul statusa servisa nije prikazan na početnoj stranici. Redosled prioriteta: `--zeroconf` > `ZEROCONF_ENABLED` > `config.yaml`.
-
    Ako koristite mrežni režim hosta i želite drugi port, postavite promenljivu okruženja:
 
    ```sh

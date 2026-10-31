@@ -71,10 +71,6 @@ atvloadly är en webbtjänst för sideloading av appar på Apple TV. Den använd
 
    Värdsystemets `/var/run/dbus` och `/var/run/avahi-daemon` måste delas med Docker-containern.
 
-   Om Avahi inte finns installerat (exempelvis när enheter läggs till manuellt via IP eller genom Tailscale) stänger atvloadly av automatisk enhetsidentifiering i stället för att försöka ansluta upprepade gånger. Manuellt parkopplade enheter fungerar fortfarande.
-
-   För att uttryckligen stänga av enhetsidentifieringen kan du ange `zeroconf: false` i `config.yaml`, miljövariabeln `ZEROCONF_ENABLED=false` eller kommandoradsargumentet `--zeroconf=false`. När identifieringen är avstängd startas varken Avahi eller den inbyggda zeroconf-identifieringen, och servicestatusen visas inte på startsidan. Prioritetsordning: `--zeroconf` > `ZEROCONF_ENABLED` > `config.yaml`.
-
    Om du vill använda host-nätverk och ändra lyssningsport kan följande miljövariabel läggas till i containern:
 
    ```

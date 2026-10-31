@@ -55,3 +55,4 @@ desktop/app/locales/
 # Stray go build binary
 desktop/app/desktop
 version_gen.go
+docs/todo/
