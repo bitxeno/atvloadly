@@ -5,6 +5,7 @@ import zh_cn from "@locales/zh_cn.json";
 import sv from "@locales/sv.json";
 import sr from "@locales/sr.json";
 import srLatn from "@locales/sr-Latn.json";
+import ru from "@locales/ru.json";
 
 i18next.use(LanguageDetector).init({
   //   debug: true,
@@ -34,6 +35,10 @@ i18next.use(LanguageDetector).init({
     "sr-Latn": {
       name: "Srpski (latinica)",
       translation: srLatn,
+    },
+    ru: {
+      name: "Русский",
+      translation: ru,
     },
   },
 });
