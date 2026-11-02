@@ -18,7 +18,7 @@
 
 <div align="center">
 
-[English](../../README.md) | [Svenska](README_sv.md) | 中文 | [Српски (ћирилица)](README_sr.md) | [Srpski (latinica)](README_sr_Latn.md)
+[English](../../README.md) | [Svenska](README_sv.md) | 中文 | [Српски (ћирилица)](README_sr.md) | [Srpski (latinica)](README_sr_Latn.md) | [Русский](README_ru.md)
 
 </div>
 
