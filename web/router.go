@@ -90,6 +90,21 @@ func route(fi *fiber.App) {
 		}
 		return c.Status(http.StatusOK).SendFile(icon, false)
 	})
+	fi.Get("/apps/:id/custom-icon", func(c *fiber.Ctx) error {
+		id := utils.MustParseInt(c.Params("id"))
+
+		t, err := service.GetApp(uint(id))
+		if err != nil {
+			return c.Status(http.StatusNotFound).SendString(err.Error())
+		}
+
+		// Only the custom icon stored with an installed app is served.
+		icon, err := service.ResolveStoredCustomIconPath(t.CustomIconPath)
+		if err != nil {
+			return c.Status(http.StatusNotFound).SendString("")
+		}
+		return c.Status(http.StatusOK).SendFile(icon, false)
+	})
 	fi.Get("/apps/:id/log", func(c *fiber.Ctx) error {
 		id := utils.MustParseInt(c.Params("id"))
 
@@ -512,16 +527,33 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiSuccess(result))
 	})
 
+	api.Post("/custom-icon/upload", func(c *fiber.Ctx) error {
+		icon, err := readSigningUpload(c, "file", "custom icon", service.MaxCustomIconUploadSize)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiSigningError(err))
+		}
+		path, err := service.SaveCustomIconUpload(icon)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiSigningError(err))
+		}
+		return c.Status(http.StatusOK).JSON(apiSuccess(map[string]string{"path": path}))
+	})
+
 	api.Post("/install", func(c *fiber.Ctx) error {
 		account := strings.TrimSpace(c.FormValue("account"))
 		ipaURL := strings.TrimSpace(c.FormValue("url"))
 		deviceID := strings.TrimSpace(c.FormValue("device_id"))
 		customName := strings.TrimSpace(c.FormValue("custom_name"))
 		customIdentifier := strings.TrimSpace(c.FormValue("custom_identifier"))
+		customIconPath := strings.TrimSpace(c.FormValue("custom_icon_path"))
 		removeExt := c.FormValue("remove_extensions") == "true"
 
 		if err := service.ValidateCustomName(customName); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		customIconPath, err := service.ResolveCustomIconPath(customIconPath)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(apiSigningError(err))
 		}
 
 		signingMode := model.SigningMode(strings.TrimSpace(c.FormValue("signing_mode")))
@@ -596,13 +628,13 @@ func route(fi *fiber.App) {
 		manager.ReloadDevices()
 		devices, err := manager.GetDevices()
 		if err != nil {
-			// The uploaded file never reaches a task: clean it here.
-			manager.CleanUploadTempFiles(ipaPath)
+			// The uploaded files never reach a task: clean them here.
+			manager.CleanUploadTempFiles(ipaPath, customIconPath)
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 		selectedDevice, err := selectInstallDevice(devices, deviceID)
 		if err != nil {
-			manager.CleanUploadTempFiles(ipaPath)
+			manager.CleanUploadTempFiles(ipaPath, customIconPath)
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 
@@ -620,12 +652,13 @@ func route(fi *fiber.App) {
 			SigningIdentityID:        signingIdentityID,
 			AllowMissingEntitlements: allowMissingEntitlements,
 			CustomIdentifier:         customIdentifier,
+			CustomIconPath:           customIconPath,
 		}
 
 		if task.StartInstallApps([]model.InstalledApp{appModel}, true) == 0 {
 			// Nothing was queued (duplicate or full queue): the uploaded
-			// file has no task to clean it.
-			manager.CleanUploadTempFiles(ipaPath)
+			// files have no task to clean them.
+			manager.CleanUploadTempFiles(ipaPath, customIconPath)
 			return c.Status(http.StatusOK).JSON(apiError("install task was not queued, please retry"))
 		}
 
@@ -638,6 +671,7 @@ func route(fi *fiber.App) {
 			"signing_mode":        signingMode,
 			"signing_identity_id": signingIdentityID,
 			"custom_identifier":   customIdentifier,
+			"custom_icon_path":    customIconPath,
 		}))
 	})
 

@@ -67,6 +67,7 @@ type installOperationKey struct {
 	// without it is two different apps, so both may be queued at once.
 	CustomIdentifier string
 	CustomName       string
+	CustomIconPath   string
 	RemoveExtensions bool
 	SourceKind       string
 	SourceURL        string
@@ -283,13 +284,13 @@ func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool, batchI
 		// The queued upload waits in the upload temp directory until its
 		// turn; mark it so the stale-file sweep keeps it until the task
 		// is done.
-		manager.ReserveUploadTempFiles(v.IpaPath, v.Icon)
+		manager.ReserveUploadTempFiles(v.IpaPath, v.Icon, v.CustomIconPath)
 		return true
 	default:
 		t.InstallingApps.Delete(key)
 		// The task is dropped before any install runs: clean a local
 		// upload now, since no later stage will see it.
-		manager.CleanUploadTempFiles(v.IpaPath, v.Icon)
+		manager.CleanUploadTempFiles(v.IpaPath, v.Icon, v.CustomIconPath)
 		log.Warnf("The install queue is full, skip task: %s", v.IpaName)
 		return false
 	}
@@ -307,6 +308,7 @@ func installKey(v model.InstalledApp) installOperationKey {
 		BundleIdentifier: v.BundleIdentifier,
 		CustomIdentifier: v.CustomIdentifier,
 		CustomName:       v.CustomName,
+		CustomIconPath:   v.CustomIconPath,
 		RemoveExtensions: v.RemoveExtensions,
 		SourceKind:       v.Source.Kind,
 		SourceURL:        v.Source.URL,
@@ -345,16 +347,16 @@ func (t *Task) tryInstallApp(item TaskItem) {
 	if err != nil {
 		log.Err(err).Msgf("Prepare ipa path failed: %s", item.App.IpaName)
 		// No install runs, so nothing else will clean a local upload.
-		manager.CleanUploadTempFiles(item.App.IpaPath, item.App.Icon)
-		manager.ReleaseUploadTempFiles(item.App.IpaPath, item.App.Icon)
+		manager.CleanUploadTempFiles(item.App.IpaPath, item.App.Icon, item.App.CustomIconPath)
+		manager.ReleaseUploadTempFiles(item.App.IpaPath, item.App.Icon, item.App.CustomIconPath)
 		t.handleInstallFailure(item, item.App, err)
 		return
 	}
 	v := *resolvedApp
-	// The resolved IPA and icon may be fresh downloads in the upload temp
-	// directory; keep the stale-file sweep away from them while the
-	// install runs.
-	manager.ReserveUploadTempFiles(v.IpaPath, v.Icon)
+	// The resolved IPA, display icon and custom icon may be fresh uploads in
+	// the upload temp directory; keep the stale-file sweep away from them
+	// while the install runs.
+	manager.ReserveUploadTempFiles(v.IpaPath, v.Icon, v.CustomIconPath)
 	if v.IsExternalSigning() {
 		// RunExternalInstall releases its own lease before the record is
 		// saved. DeleteSigningIdentity refuses a delete without force only
@@ -365,27 +367,28 @@ func (t *Task) tryInstallApp(item TaskItem) {
 	}
 	// The downloaded or uploaded files of a new installation or an update,
 	// before SaveApp moves them. A reinstallation uses the files of its record,
-	// which must stay.
-	var uploadedIPA, uploadedIcon string
+	// which must stay. The custom icon is copied into the record on success,
+	// so its upload is cleaned too.
+	var uploadedIPA, uploadedIcon, uploadedCustomIcon string
 	if v.ID == 0 || update {
-		uploadedIPA, uploadedIcon = v.IpaPath, v.Icon
+		uploadedIPA, uploadedIcon, uploadedCustomIcon = v.IpaPath, v.Icon, v.CustomIconPath
 	}
 
 	log.Infof("Start installing ipa: %s", v.IpaName)
 	installMgr := manager.NewInstallManager()
 	// SaveApp replaces the temp paths with permanent ones on success. Clean
 	// the originals as well so the snapshot taken here is authoritative.
-	origIpaPath, origIcon := v.IpaPath, v.Icon
+	origIpaPath, origIcon, origCustomIcon := v.IpaPath, v.Icon, v.CustomIconPath
 	defer func() {
 		installMgr.SaveLog(v.ID)
 		if v.IsExternalSigning() {
 			// Never the global temporary files: other installations may use them.
-			service.CleanExternalUpload(uploadedIPA, uploadedIcon)
+			service.CleanExternalUpload(uploadedIPA, uploadedIcon, uploadedCustomIcon)
 		} else {
-			installMgr.CleanTempFiles(origIpaPath, origIcon, v.IpaPath, v.Icon)
+			installMgr.CleanTempFiles(origIpaPath, origIcon, origCustomIcon, v.IpaPath, v.Icon, v.CustomIconPath)
 		}
 		// Drop the ownership marks of the queue-time and the resolved paths.
-		manager.ReleaseUploadTempFiles(item.App.IpaPath, item.App.Icon, origIpaPath, origIcon)
+		manager.ReleaseUploadTempFiles(item.App.IpaPath, item.App.Icon, item.App.CustomIconPath, origIpaPath, origIcon, origCustomIcon)
 		installMgr.Close()
 	}()
 	result, err := t.runInternal(v, refresh, installMgr)
@@ -615,6 +618,7 @@ func (t *Task) runInternal(v model.InstalledApp, refresh bool, installMgr *manag
 		IpaPath:          v.IpaPath,
 		CustomName:       v.CustomName,
 		CustomIdentifier: v.CustomIdentifier,
+		CustomIconPath:   v.CustomIconPath,
 		RemoveExtensions: v.RemoveExtensions,
 		RefreshMode:      refresh,
 	})

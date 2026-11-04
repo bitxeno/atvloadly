@@ -59,6 +59,7 @@ function page(upload = async () => [{ name: "app.ipa", path: "/tmp/app.ipa" }], 
   }
   Object.defineProperty(state, "canInstall", { configurable: true, get: () => component.computed.canInstall.call(state) });
   Object.defineProperty(state, "customIdentifierPlaceholder", { configurable: true, get: () => component.computed.customIdentifierPlaceholder.call(state) });
+  Object.defineProperty(state, "customIconPreview", { configurable: true, get: () => component.computed.customIconPreview.call(state) });
   Object.assign(state, {
     isExternal: false, installMode: "link", ipaUrl: "https://example.com/app.ipa",
     device: { connection: "RPPairing" }, reportStream: createSigningReportStream(),
@@ -403,4 +404,37 @@ test("previews the bundle identifier of a selected source build", async () => {
     build: { id: "1", name: "App", bundle_id: "com.example.source", version: "1.0" },
   });
   assert.equal(state.customIdentifierPlaceholder, "com.example.source");
+});
+
+// The custom icon path chosen on the install page is sent with the install
+// request, so the engine receives --custom-icon.
+test("submits the chosen custom icon path", async () => {
+  const { state, sockets } = page();
+  state.form.custom_icon_path = "/tmp/custom_icon_1.png";
+  const pending = state.onSubmit();
+  sockets[0].open();
+  await pending;
+
+  const sent = JSON.parse(sockets[0].sent[0].d);
+  assert.equal(sent.custom_icon_path, "/tmp/custom_icon_1.png");
+});
+
+// The custom icon of an earlier installation of the chosen app is prefilled,
+// so it persists on the next install (including a source update) without the
+// user having to pick it again.
+test("prefills the custom icon of the recommended app", () => {
+  const { state } = page();
+  state.accounts = [{ email: "user@example.com", status: "valid" }];
+  state.prefilled = { custom_name: "", custom_identifier: "", custom_icon_path: "" };
+  state.recommendAccount({
+    signing_mode: "apple_id",
+    account: "user@example.com",
+    custom_name: "My App",
+    custom_identifier: "app.custom",
+    custom_icon_path: "/data/ipa/1/custom-icon.png",
+    ID: 1,
+  });
+  assert.equal(state.form.custom_icon_path, "/data/ipa/1/custom-icon.png");
+  assert.equal(state.customIconStoredId, 1);
+  assert.equal(state.customIconPreview, "/apps/1/custom-icon");
 });

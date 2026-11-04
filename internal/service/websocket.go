@@ -158,6 +158,11 @@ func validateInstallRequest(v *model.InstalledApp) error {
 		}
 		v.IpaPath = resolved
 	}
+	customIcon, err := ResolveCustomIconPath(v.CustomIconPath)
+	if err != nil {
+		return err
+	}
+	v.CustomIconPath = customIcon
 	v.SignedBundleIdentifier = ""
 	return nil
 }
@@ -225,11 +230,11 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		v.Icon = result.IconPath
 	}
 
-	// The IPA and icon of an interactive install wait in the upload temp
-	// directory while it runs; mark them so the stale-file sweep keeps
-	// them until this install finishes.
-	manager.ReserveUploadTempFiles(v.IpaPath, v.Icon)
-	defer manager.ReleaseUploadTempFiles(v.IpaPath, v.Icon)
+	// The IPA, display icon and custom icon of an interactive install wait in
+	// the upload temp directory while it runs; mark them so the stale-file
+	// sweep keeps them until this install finishes.
+	manager.ReserveUploadTempFiles(v.IpaPath, v.Icon, v.CustomIconPath)
+	defer manager.ReleaseUploadTempFiles(v.IpaPath, v.Icon, v.CustomIconPath)
 
 	// A manual (Tailscale) device has no mDNS-provided tunnel port; resolve it
 	// before installing so the engine can reach the device over RSD.
@@ -256,6 +261,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		IpaPath:                 ipaPath,
 		CustomName:              v.CustomName,
 		CustomIdentifier:        v.CustomIdentifier,
+		CustomIconPath:          v.CustomIconPath,
 		RemoveExtensions:        v.RemoveExtensions,
 		RefreshMode:             false,
 		RevokeCertificateSerial: v.RevokeCertificateSerial,
@@ -273,7 +279,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 			mgr.WriteMessage("Installation Failed!")
 			return
 		}
-		installMgr.CleanTempFiles(v.IpaPath, v.Icon)
+		installMgr.CleanTempFiles(v.IpaPath, v.Icon, v.CustomIconPath)
 		msg := fmt.Sprintf("ERROR: %s", err.Error())
 		mgr.WriteMessage(msg)
 		mgr.WriteMessage("\n")
@@ -293,7 +299,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 
 		app, err := SaveApp(v)
 		if err != nil {
-			installMgr.CleanTempFiles(v.IpaPath, v.Icon)
+			installMgr.CleanTempFiles(v.IpaPath, v.Icon, v.CustomIconPath)
 			msg := fmt.Sprintf("ERROR: save app to db failed. %s", err.Error())
 			mgr.WriteMessage(msg)
 			mgr.WriteMessage("\n")
@@ -305,9 +311,10 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		}
 	}
 
-	// SaveApp moves the temp files to their permanent location on success,
-	// so cleaning the original paths is a no-op in that case.
-	installMgr.CleanTempFiles(v.IpaPath, v.Icon)
+	// SaveApp moves the IPA and display icon to their permanent location on
+	// success, and copies the custom icon there, so cleaning the original
+	// paths is a no-op or removes the leftover upload in that case.
+	installMgr.CleanTempFiles(v.IpaPath, v.Icon, v.CustomIconPath)
 }
 
 // runExternalInstallMessage signs and installs v with its external signing
@@ -316,7 +323,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 // cancelled by the install page records nothing. Only the upload files of v
 // are cleaned up.
 func runExternalInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.InstallManager, v model.InstalledApp, dev *model.Device) {
-	defer CleanExternalUpload(v.IpaPath, v.Icon)
+	defer CleanExternalUpload(v.IpaPath, v.Icon, v.CustomIconPath)
 	// RunExternalInstall releases its own lease before the record is saved.
 	// DeleteSigningIdentity refuses a delete without force only while a lease
 	// is held or an installed app uses the identity, so this lease covers the

@@ -61,6 +61,10 @@ type InstallOptions struct {
 	// under, in both signing modes; empty keeps the bundle identifiers of the
 	// IPA. The app is a different app on the device for each identifier.
 	CustomIdentifier string
+	// CustomIconPath is an image file passed to the engine as --custom-icon.
+	// Empty keeps the icons of the IPA. Stored with the installed app so a
+	// refresh or source update signs with the same icon.
+	CustomIconPath   string
 	RemoveExtensions bool
 	RefreshMode      bool
 	// SigningMode selects how the app is signed; empty means SigningModeAppleID.
@@ -260,6 +264,13 @@ func buildInstallArgs(opts InstallOptions, provisionPath string) []string {
 	// flag (see buildExternalInstallArgs).
 	if opts.CustomIdentifier != "" {
 		args = append(args, "--custom-identifier="+opts.CustomIdentifier)
+	}
+
+	// Replaces the app icons with the user's image. Attached to its flag
+	// like the custom identifier: clap reads a separate value starting with
+	// '-' as a flag.
+	if opts.CustomIconPath != "" {
+		args = append(args, "--custom-icon="+opts.CustomIconPath)
 	}
 
 	// The engine revokes nothing unless handed this one-shot authorization,

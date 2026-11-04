@@ -103,6 +103,58 @@ func TestStartAppleIDPassesCustomIdentifier(t *testing.T) {
 	}
 }
 
+// A stored custom icon is passed to the engine on every Apple ID install,
+// including a refresh: the stored IPA still carries its original icons, so
+// without the flag the app would be refreshed with those instead.
+func TestStartAppleIDPassesCustomIcon(t *testing.T) {
+	const udid = "TEST-DEVICE-UDID"
+	for _, tt := range []struct {
+		name    string
+		refresh bool
+		icon    string
+	}{
+		{name: "install with custom icon", icon: "/data/ipa/1/custom-icon.png"},
+		{name: "refresh with custom icon", icon: "/data/ipa/1/custom-icon.png", refresh: true},
+		{name: "install without custom icon"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			record := fakeAppleIDEngine(t)
+			setupAppleIDInstall(t, udid)
+
+			mgr := NewInstallManager()
+			defer mgr.Close()
+
+			if err := mgr.Start(context.Background(), InstallOptions{
+				UDID:           udid,
+				Account:        "user@example.com",
+				IpaPath:        "app.ipa",
+				CustomIconPath: tt.icon,
+				RefreshMode:    tt.refresh,
+			}); err != nil {
+				t.Fatalf("install failed: %v", err)
+			}
+
+			data, err := os.ReadFile(record)
+			if err != nil {
+				t.Fatalf("the signing engine was not run: %v", err)
+			}
+			args := strings.Split(strings.TrimRight(string(data), "\n"), "\n")
+			joined := strings.Join(args, " ")
+
+			if tt.icon == "" {
+				if strings.Contains(joined, "--custom-icon") {
+					t.Fatalf("no custom icon was requested but the engine got %q", joined)
+				}
+			} else if !containsArg(args, "--custom-icon="+tt.icon) {
+				t.Fatalf("engine args %q do not contain the custom icon", joined)
+			}
+			if gotRefresh := containsArg(args, "--refresh"); gotRefresh != tt.refresh {
+				t.Fatalf("--refresh present = %v, want %v (%q)", gotRefresh, tt.refresh, joined)
+			}
+		})
+	}
+}
+
 func containsArg(args []string, want string) bool {
 	for _, a := range args {
 		if a == want {

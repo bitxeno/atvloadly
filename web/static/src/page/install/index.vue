@@ -239,6 +239,46 @@
             </div>
 
             <div class="form-control">
+              <label class="label" for="install-custom-icon">
+                <span class="label-text">{{ $t("install.form.custom_icon.label") }}</span>
+                <div class="tooltip" :data-tip="$t('install.form.custom_icon.tips')">
+                  <div class="w-4 h-4 text-secondary-content"><HelpIcon /></div>
+                </div>
+              </label>
+              <div class="flex items-center gap-x-3">
+                <div class="w-14 h-14 shrink-0 rounded-lg border border-base-300 overflow-hidden bg-base-200 flex items-center justify-center">
+                  <img
+                    v-if="customIconPreview"
+                    :src="customIconPreview"
+                    :alt="$t('install.form.custom_icon.preview_alt')"
+                    class="w-full h-full object-cover"
+                  />
+                  <span v-else class="text-xs opacity-50">{{ $t("install.form.custom_icon.empty") }}</span>
+                </div>
+                <input
+                  id="install-custom-icon"
+                  type="file"
+                  class="file-input file-input-bordered w-full"
+                  accept="image/png,image/jpeg,image/gif"
+                  :disabled="loading"
+                  @change="onCustomIconChange"
+                />
+              </div>
+              <div v-if="customIconName" class="flex items-center gap-x-2 mt-1">
+                <span class="label-text-alt truncate">{{ customIconName }}</span>
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-xs"
+                  :disabled="loading"
+                  @click="clearCustomIcon"
+                >
+                  {{ $t("install.form.custom_icon.remove") }}
+                </button>
+              </div>
+              <span v-if="customIconError" class="label-text-alt text-error mt-1">{{ customIconError }}</span>
+            </div>
+
+            <div class="form-control">
               <label class="label cursor-pointer justify-between items-center gap-x-4">
                 <div class="flex items-center">
                   <span class="label-text">{{
@@ -637,8 +677,20 @@ export default {
         // of the IPA. Synced on change, not on input, so that the compatibility
         // check runs once per edit.
         custom_identifier: "",
+        // Path of the custom app icon uploaded to the server. Empty keeps the
+        // icons of the IPA. A prefilled path is a stored icon of an installed
+        // app and is reused on the next install.
+        custom_icon_path: "",
         auto_update: false,
       },
+      // Preview of the chosen or prefilled custom icon, and its upload state.
+      customIconFile: null,
+      customIconObjectURL: "",
+      customIconName: "",
+      customIconError: "",
+      // Record whose prefilled custom icon is being displayed. It is cleared
+      // once the user picks a new image or removes the choice.
+      customIconStoredId: 0,
       log: {
         newcontent : "",
         output: "",
@@ -715,6 +767,17 @@ export default {
         this.signing.check?.plan?.main_bundle_id ||
         this.$t("install.form.custom_identifier.placeholder");
     },
+    // A freshly picked file is previewed from an object URL; a prefilled icon
+    // of an installed app is served by its record.
+    customIconPreview() {
+      if (this.customIconObjectURL) {
+        return this.customIconObjectURL;
+      }
+      if (this.form.custom_icon_path && this.customIconStoredId) {
+        return `/apps/${this.customIconStoredId}/custom-icon`;
+      }
+      return "";
+    },
     // The waivable issues stay in the plan, downgraded to warnings, while
     // the option is on: the toggle stays visible whenever it matters.
     showAllowMissingEntitlements() {
@@ -776,9 +839,9 @@ export default {
     // Source build of the external IPA prepared or being prepared; empty for
     // an uploaded file.
     this.externalIpaKey = "";
-    // Custom name and bundle identifier prefilled from an earlier
+    // Custom name, bundle identifier and custom icon prefilled from an earlier
     // installation of the chosen app; empty when nothing was prefilled.
-    this.prefilled = { custom_name: "", custom_identifier: "" };
+    this.prefilled = { custom_name: "", custom_identifier: "", custom_icon_path: "" };
     this.reportStream = createSigningReportStream();
 
     this.fetchData();
@@ -788,6 +851,7 @@ export default {
     // release it so its guards return before opening a socket or sending.
     this.releaseAttempt();
     this.stopUpdateLog();
+    this.releaseCustomIconObjectURL();
     // Drops the external IPA, including one still being uploaded or
     // downloaded, unless a running installation owns it.
     this.cancelExternalIpa();
@@ -1123,6 +1187,16 @@ export default {
         if (isStale()) {
           return;
         }
+        // A newly picked icon is uploaded before the install request; the
+        // icon prefilled from an installed app is already stored on the server.
+        // Guarded so an install without a new icon opens its socket without
+        // an extra await, keeping the previous attempt's lifecycle intact.
+        if (_this.customIconFile) {
+          await _this.uploadCustomIcon(isStale);
+          if (isStale()) {
+            return;
+          }
+        }
         // Connect the install socket only when ready to send the install
         // request. Uploading a large IPA leaves the socket idle for minutes
         // with zero traffic, and reverse proxies or routers close idle
@@ -1148,6 +1222,7 @@ export default {
             custom_name: _this.form.custom_name.trim(),
             remove_extensions: _this.form.remove_extensions,
             custom_identifier: _this.form.custom_identifier,
+            custom_icon_path: _this.form.custom_icon_path,
             signing_mode: _this.signing.mode,
             signing_identity_id: external ? Number(_this.signing.identityId) : 0,
             allow_missing_entitlements: external && _this.signing.allowMissingEntitlements,
@@ -1261,6 +1336,76 @@ export default {
         }
       }
     },
+    // onCustomIconChange previews a newly picked image locally. The file is
+    // uploaded when the install is submitted, so a form the user never sends
+    // leaves nothing on the server.
+    onCustomIconChange(e) {
+      const file = e.target.files?.[0];
+      this.customIconError = "";
+      this.releaseCustomIconObjectURL();
+      if (!file) {
+        this.customIconFile = null;
+        this.customIconName = "";
+        // Clearing the input drops the prefilled choice too.
+        if (this.prefilled.custom_icon_path &&
+            this.form.custom_icon_path === this.prefilled.custom_icon_path) {
+          this.form.custom_icon_path = "";
+          this.prefilled.custom_icon_path = "";
+          this.customIconStoredId = 0;
+        }
+        return;
+      }
+      this.customIconFile = file;
+      this.customIconName = file.name;
+      this.customIconObjectURL = URL.createObjectURL(file);
+      // A picked image supersedes the icon prefilled from an installed app.
+      this.customIconStoredId = 0;
+      this.prefilled.custom_icon_path = "";
+      e.target.value = "";
+    },
+    releaseCustomIconObjectURL() {
+      if (this.customIconObjectURL) {
+        URL.revokeObjectURL(this.customIconObjectURL);
+        this.customIconObjectURL = "";
+      }
+    },
+    clearCustomIcon() {
+      this.releaseCustomIconObjectURL();
+      this.customIconFile = null;
+      this.customIconName = "";
+      this.customIconError = "";
+      this.form.custom_icon_path = "";
+      this.customIconStoredId = 0;
+      this.prefilled.custom_icon_path = "";
+      const input = document.getElementById("install-custom-icon");
+      if (input) input.value = "";
+    },
+    // uploadCustomIcon sends the picked image to the server and stores the
+    // returned path in the install request. A prefilled path needs no upload.
+    async uploadCustomIcon(isStale) {
+      if (!this.customIconFile) {
+        return;
+      }
+      const formData = new FormData();
+      formData.append("file", this.customIconFile);
+      try {
+        const path = await api.uploadCustomIcon(formData);
+        if (isStale()) {
+          return;
+        }
+        this.form.custom_icon_path = path;
+        this.customIconError = "";
+      } catch (err) {
+        if (isStale()) {
+          return;
+        }
+        this.customIconError = this.codeText(
+          err?.result?.data?.code,
+          err?.message || err?.result?.msg,
+        );
+        throw err;
+      }
+    },
     async onFileChange(e) {
       this.files = e.target.files;
       this.recommendedAccount = "";
@@ -1339,6 +1484,7 @@ export default {
       // the one installed without it: reusing the identifier reinstalls the
       // app the user picked instead of creating a second one.
       this.prefill("custom_identifier", app.custom_identifier);
+      this.prefillCustomIcon(app);
       return true;
     },
     // recommendIdentity preselects the identity that signed an earlier
@@ -1357,7 +1503,22 @@ export default {
       this.signing.identityId = identity.id;
       this.prefill("custom_name", app.custom_name);
       this.prefill("custom_identifier", app.custom_identifier);
+      this.prefillCustomIcon(app);
       return true;
+    },
+    // prefillCustomIcon reuses the custom icon of an earlier installation of
+    // the chosen app. The stored path is submitted as-is; the preview is
+    // served from the record of that app.
+    prefillCustomIcon(app) {
+      if (!app.custom_icon_path || this.customIconFile) {
+        return;
+      }
+      this.releaseCustomIconObjectURL();
+      this.form.custom_icon_path = app.custom_icon_path;
+      this.prefilled.custom_icon_path = app.custom_icon_path;
+      this.customIconStoredId = app.ID;
+      this.customIconName = this.$t("install.form.custom_icon.saved");
+      this.customIconError = "";
     },
     // prefill sets a form field to the value of an earlier installation of
     // the same app and remembers it, so that choosing another IPA or build
@@ -1376,6 +1537,13 @@ export default {
           this.form[field] = "";
         }
         this.prefilled[field] = "";
+      }
+      // A prefilled icon belongs to the previous IPA or build: drop its
+      // preview and label. An icon the user picked for this form stays.
+      if (!this.customIconFile) {
+        this.releaseCustomIconObjectURL();
+        this.customIconName = "";
+        this.customIconStoredId = 0;
       }
     },
     validateForm(id) {

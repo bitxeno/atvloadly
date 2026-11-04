@@ -58,6 +58,11 @@ func TestBuildExternalInstallArgs(t *testing.T) {
 			opts: InstallOptions{UDID: "DEVICE", IP: "192.0.2.10", Port: 49152, IpaPath: "/data/tmp/app.ipa", CustomName: "-My App", External: withHyphenValues},
 			want: []string{"sign-rsd", "--package", "/data/tmp/app.ipa", "--pem", "/ws/cert.pem", "/ws/key.pem", "--provision", "/ws/profile.mobileprovision", "--register-and-install", "--ip", "192.0.2.10", "--port", "49152", "--pairing-file", "/pairing/DEVICE.plist", "--udid", "DEVICE", "--output", "/ws/signed.ipa", "--custom-identifier=-beta.example.app", "--custom-name=-My App"},
 		},
+		{
+			name: "custom icon",
+			opts: InstallOptions{UDID: "DEVICE", IpaPath: "/data/tmp/app.ipa", CustomIconPath: "/data/ipa/1/custom-icon.png", External: testExternalSigning()},
+			want: []string{"sign", "--package", "/data/tmp/app.ipa", "--pem", "/ws/cert.pem", "/ws/key.pem", "--provision", "/ws/profile.mobileprovision", "--register-and-install", "--udid", "DEVICE", "--output", "/ws/signed.ipa", "--custom-icon=/data/ipa/1/custom-icon.png"},
+		},
 	}
 
 	for _, tt := range tests {
