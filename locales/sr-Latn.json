@@ -315,11 +315,9 @@
         "tips": "Menja naziv aplikacije na početnom ekranu. Identifikator paketa ostaje nepromenjen, pa će aplikacija i dalje biti zamenjena pri osvežavanju."
       },
       "custom_icon": {
-        "label": "Ikonica aplikacije:",
-        "tips": "Menja ikonicu aplikacije na početnom ekranu. Slika se čuva uz aplikaciju i koristi se pri svakom osvežavanju i ažuriranju.",
-        "empty": "Nema ikonice",
-        "remove": "Ukloni",
-        "saved": "Sačuvana ikonica",
+        "tips": "Menja ikonicu aplikacije na početnom ekranu. Kliknite da izaberete sliku (PNG, JPEG ili GIF); čuva se uz aplikaciju i koristi se pri svakom osvežavanju i ažuriranju.",
+        "choose": "Izaberi ikonicu",
+        "remove": "Ukloni ikonicu",
         "preview_alt": "Prilagođena ikonica aplikacije"
       },
       "password": {

@@ -315,11 +315,9 @@
         "tips": "Byter namn på appen på hemskärmen. Paketidentifieraren ändras inte, så appen ersätts fortfarande vid förnyelse."
       },
       "custom_icon": {
-        "label": "Appikon:",
-        "tips": "Byter appens ikon på hemskärmen. Bilden sparas med appen och används igen vid varje förnyelse och uppdatering.",
-        "empty": "Ingen ikon",
-        "remove": "Ta bort",
-        "saved": "Sparad anpassad ikon",
+        "tips": "Byt ut appens ikon på hemskärmen. Klicka för att välja en bild (PNG, JPEG eller GIF); den sparas med appen och används igen vid varje förnyelse och uppdatering.",
+        "choose": "Välj ikon",
+        "remove": "Ta bort ikon",
         "preview_alt": "Anpassad appikon"
       },
       "password": {

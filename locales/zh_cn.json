@@ -316,12 +316,10 @@
                 "tips": "修改主屏幕上显示的应用名称。Bundle Identifier 保持不变，刷新时仍会覆盖原应用。"
             },
             "custom_icon": {
-                "label": "应用图标：",
-                "tips": "替换主屏幕上显示的应用图标。图片会与应用记录一起保存，刷新和更新时会继续使用。",
-                "empty": "无图标",
-                "remove": "移除",
-                "saved": "已保存的自定义图标",
-                "preview_alt": "自定义应用图标"
+              "tips": "替换主屏幕上显示的应用图标。点击选择图片（PNG、JPEG 或 GIF），图片会与应用记录一起保存，刷新和更新时继续使用。",
+              "choose": "选择图标",
+              "remove": "删除图标",
+              "preview_alt": "自定义应用图标"
             },
             "password": {
                 "label": "Apple密码:"

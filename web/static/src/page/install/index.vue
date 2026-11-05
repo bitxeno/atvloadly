@@ -200,19 +200,69 @@
             </div>
 
             <div class="form-control">
-              <label class="label">
-                <span class="label-text">{{ $t("install.form.custom_name.label") }}</span>
-                <div class="tooltip" :data-tip="$t('install.form.custom_name.tips')">
-                  <div class="w-4 h-4 text-secondary-content"><HelpIcon /></div>
+              <div class="flex items-end gap-x-4">
+                <!-- Custom app icon: a clickable swatch on the left, with a
+                     remove badge on its top-right corner once an image is
+                     chosen. The file input stays hidden; the swatch opens it. -->
+                <div class="shrink-0">
+                  <div class="relative">
+                    <button
+                      type="button"
+                      class="block w-16 h-16 rounded-2xl border border-base-300 overflow-hidden bg-base-200 flex items-center justify-center transition-colors hover:border-primary"
+                      :disabled="loading"
+                      :title="$t('install.form.custom_icon.tips')"
+                      :aria-label="$t('install.form.custom_icon.choose')"
+                      @click="openCustomIconPicker"
+                    >
+                      <img
+                        v-if="customIconPreview"
+                        :src="customIconPreview"
+                        :alt="$t('install.form.custom_icon.preview_alt')"
+                        class="w-full h-full object-cover"
+                      />
+                      <span v-else class="w-6 h-6 text-base-content/40"><PlusIcon /></span>
+                    </button>
+                    <button
+                      v-if="hasCustomIcon"
+                      type="button"
+                      class="absolute -top-2 -right-2 flex items-center justify-center w-6 h-6 rounded-full bg-base-300 text-base-content border border-base-100 shadow hover:bg-error hover:text-error-content transition-colors"
+                      :disabled="loading"
+                      :title="$t('install.form.custom_icon.remove')"
+                      :aria-label="$t('install.form.custom_icon.remove')"
+                      @click.stop="clearCustomIcon"
+                    >
+                      <span class="w-3.5 h-3.5"><DismissIcon /></span>
+                    </button>
+                  </div>
+                  <input
+                    id="install-custom-icon"
+                    ref="customIconInput"
+                    type="file"
+                    class="hidden"
+                    accept="image/png,image/jpeg,image/gif"
+                    :disabled="loading"
+                    @change="onCustomIconChange"
+                  />
                 </div>
-              </label>
-              <input
-                type="text"
-                class="input input-bordered w-full"
-                maxlength="64"
-                :placeholder="$t('install.form.custom_name.placeholder')"
-                v-model="form.custom_name"
-              />
+
+                <div class="flex-1 min-w-0">
+                  <label class="label pt-0" for="install-custom-name">
+                    <span class="label-text">{{ $t("install.form.custom_name.label") }}</span>
+                    <div class="tooltip" :data-tip="$t('install.form.custom_name.tips')">
+                      <div class="w-4 h-4 text-secondary-content"><HelpIcon /></div>
+                    </div>
+                  </label>
+                  <input
+                    id="install-custom-name"
+                    type="text"
+                    class="input input-bordered w-full"
+                    maxlength="64"
+                    :placeholder="$t('install.form.custom_name.placeholder')"
+                    v-model="form.custom_name"
+                  />
+                </div>
+              </div>
+              <span v-if="customIconError" class="label-text-alt text-error mt-1">{{ customIconError }}</span>
             </div>
 
             <div class="form-control">
@@ -236,46 +286,6 @@
                 :placeholder="customIdentifierPlaceholder"
                 v-model.lazy.trim="form.custom_identifier"
               />
-            </div>
-
-            <div class="form-control">
-              <label class="label" for="install-custom-icon">
-                <span class="label-text">{{ $t("install.form.custom_icon.label") }}</span>
-                <div class="tooltip" :data-tip="$t('install.form.custom_icon.tips')">
-                  <div class="w-4 h-4 text-secondary-content"><HelpIcon /></div>
-                </div>
-              </label>
-              <div class="flex items-center gap-x-3">
-                <div class="w-14 h-14 shrink-0 rounded-lg border border-base-300 overflow-hidden bg-base-200 flex items-center justify-center">
-                  <img
-                    v-if="customIconPreview"
-                    :src="customIconPreview"
-                    :alt="$t('install.form.custom_icon.preview_alt')"
-                    class="w-full h-full object-cover"
-                  />
-                  <span v-else class="text-xs opacity-50">{{ $t("install.form.custom_icon.empty") }}</span>
-                </div>
-                <input
-                  id="install-custom-icon"
-                  type="file"
-                  class="file-input file-input-bordered w-full"
-                  accept="image/png,image/jpeg,image/gif"
-                  :disabled="loading"
-                  @change="onCustomIconChange"
-                />
-              </div>
-              <div v-if="customIconName" class="flex items-center gap-x-2 mt-1">
-                <span class="label-text-alt truncate">{{ customIconName }}</span>
-                <button
-                  type="button"
-                  class="btn btn-ghost btn-xs"
-                  :disabled="loading"
-                  @click="clearCustomIcon"
-                >
-                  {{ $t("install.form.custom_icon.remove") }}
-                </button>
-              </div>
-              <span v-if="customIconError" class="label-text-alt text-error mt-1">{{ customIconError }}</span>
             </div>
 
             <div class="form-control">
@@ -686,7 +696,6 @@ export default {
       // Preview of the chosen or prefilled custom icon, and its upload state.
       customIconFile: null,
       customIconObjectURL: "",
-      customIconName: "",
       customIconError: "",
       // Record whose prefilled custom icon is being displayed. It is cleared
       // once the user picks a new image or removes the choice.
@@ -777,6 +786,11 @@ export default {
         return `/apps/${this.customIconStoredId}/custom-icon`;
       }
       return "";
+    },
+    // hasCustomIcon reports whether an icon is currently chosen, which shows
+    // the remove badge on the swatch.
+    hasCustomIcon() {
+      return !!(this.customIconFile || this.form.custom_icon_path);
     },
     // The waivable issues stay in the plan, downgraded to warnings, while
     // the option is on: the toggle stays visible whenever it matters.
@@ -1336,6 +1350,14 @@ export default {
         }
       }
     },
+    // openCustomIconPicker opens the hidden file input when the swatch is
+    // clicked.
+    openCustomIconPicker() {
+      if (this.loading) {
+        return;
+      }
+      this.$refs.customIconInput?.click();
+    },
     // onCustomIconChange previews a newly picked image locally. The file is
     // uploaded when the install is submitted, so a form the user never sends
     // leaves nothing on the server.
@@ -1345,7 +1367,6 @@ export default {
       this.releaseCustomIconObjectURL();
       if (!file) {
         this.customIconFile = null;
-        this.customIconName = "";
         // Clearing the input drops the prefilled choice too.
         if (this.prefilled.custom_icon_path &&
             this.form.custom_icon_path === this.prefilled.custom_icon_path) {
@@ -1356,7 +1377,6 @@ export default {
         return;
       }
       this.customIconFile = file;
-      this.customIconName = file.name;
       this.customIconObjectURL = URL.createObjectURL(file);
       // A picked image supersedes the icon prefilled from an installed app.
       this.customIconStoredId = 0;
@@ -1372,7 +1392,6 @@ export default {
     clearCustomIcon() {
       this.releaseCustomIconObjectURL();
       this.customIconFile = null;
-      this.customIconName = "";
       this.customIconError = "";
       this.form.custom_icon_path = "";
       this.customIconStoredId = 0;
@@ -1517,7 +1536,6 @@ export default {
       this.form.custom_icon_path = app.custom_icon_path;
       this.prefilled.custom_icon_path = app.custom_icon_path;
       this.customIconStoredId = app.ID;
-      this.customIconName = this.$t("install.form.custom_icon.saved");
       this.customIconError = "";
     },
     // prefill sets a form field to the value of an earlier installation of
@@ -1539,10 +1557,9 @@ export default {
         this.prefilled[field] = "";
       }
       // A prefilled icon belongs to the previous IPA or build: drop its
-      // preview and label. An icon the user picked for this form stays.
+      // preview. An icon the user picked for this form stays.
       if (!this.customIconFile) {
         this.releaseCustomIconObjectURL();
-        this.customIconName = "";
         this.customIconStoredId = 0;
       }
     },
@@ -1897,6 +1914,8 @@ import FolderOpenIcon from "@/assets/icons/folder-open.svg";
 import LinkIcon from "@/assets/icons/link.svg";
 import SettingsIcon from "@/assets/icons/settings.svg";
 import GithubIcon from "@/assets/icons/github.svg";
+import PlusIcon from "@/assets/icons/plus.svg";
+import DismissIcon from "@/assets/icons/dismiss.svg";
 </script>
   
   <style scoped>

@@ -316,12 +316,10 @@
                 "tips": "Renames the app on the home screen. The bundle identifier is unchanged, so the app is still replaced on refresh."
             },
             "custom_icon": {
-                "label": "App Icon:",
-                "tips": "Replaces the app icon on the home screen. The image is stored with the app and reused on every refresh and update.",
-                "empty": "No icon",
-                "remove": "Remove",
-                "saved": "Saved custom icon",
-                "preview_alt": "Custom app icon"
+              "tips": "Replace the app icon on the home screen. Click to choose an image (PNG, JPEG or GIF); it is stored with the app and reused on every refresh and update.",
+              "choose": "Choose an icon",
+              "remove": "Remove icon",
+              "preview_alt": "Custom app icon"
             },
             "password": {
                 "label": "Apple Password:"
