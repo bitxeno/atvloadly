@@ -317,6 +317,7 @@
       "custom_icon": {
         "tips": "Menja ikonicu aplikacije na početnom ekranu. Kliknite da izaberete sliku (PNG, JPEG ili GIF); čuva se uz aplikaciju i koristi se pri svakom osvežavanju i ažuriranju.",
         "choose": "Izaberi ikonicu",
+        "empty": "Nema ikonice",
         "remove": "Ukloni ikonicu",
         "preview_alt": "Prilagođena ikonica aplikacije"
       },

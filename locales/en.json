@@ -318,6 +318,7 @@
             "custom_icon": {
               "tips": "Replace the app icon on the home screen. Click to choose an image (PNG, JPEG or GIF); it is stored with the app and reused on every refresh and update.",
               "choose": "Choose an icon",
+              "empty": "No icon",
               "remove": "Remove icon",
               "preview_alt": "Custom app icon"
             },

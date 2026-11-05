@@ -220,7 +220,7 @@
                         :alt="$t('install.form.custom_icon.preview_alt')"
                         class="w-full h-full object-cover"
                       />
-                      <span v-else class="w-6 h-6 text-base-content/40"><PlusIcon /></span>
+                      <span v-else class="px-1 text-xs leading-tight text-center text-base-content/50">{{ $t("install.form.custom_icon.empty") }}</span>
                     </button>
                     <button
                       v-if="hasCustomIcon"
@@ -1914,7 +1914,6 @@ import FolderOpenIcon from "@/assets/icons/folder-open.svg";
 import LinkIcon from "@/assets/icons/link.svg";
 import SettingsIcon from "@/assets/icons/settings.svg";
 import GithubIcon from "@/assets/icons/github.svg";
-import PlusIcon from "@/assets/icons/plus.svg";
 import DismissIcon from "@/assets/icons/dismiss.svg";
 </script>
   

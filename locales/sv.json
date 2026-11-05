@@ -317,6 +317,7 @@
       "custom_icon": {
         "tips": "Byt ut appens ikon på hemskärmen. Klicka för att välja en bild (PNG, JPEG eller GIF); den sparas med appen och används igen vid varje förnyelse och uppdatering.",
         "choose": "Välj ikon",
+        "empty": "Ingen ikon",
         "remove": "Ta bort ikon",
         "preview_alt": "Anpassad appikon"
       },
