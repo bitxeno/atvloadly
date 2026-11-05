@@ -203,8 +203,9 @@
               <div class="flex items-end gap-x-4">
                 <!-- Custom app icon: a clickable swatch on the left, with a
                      remove badge on its top-right corner once an image is
-                     chosen. The file input stays hidden; the swatch opens it. -->
-                <div class="shrink-0">
+                     chosen. The file input stays hidden; the swatch opens it.
+                     Only iOS devices (iPhone/iPad) support a custom icon. -->
+                <div v-if="supportsCustomIcon" class="shrink-0">
                   <div class="relative">
                     <button
                       type="button"
@@ -792,6 +793,12 @@ export default {
     hasCustomIcon() {
       return !!(this.customIconFile || this.form.custom_icon_path);
     },
+    // supportsCustomIcon reports whether the target device takes a custom app
+    // icon. Only iOS devices (iPhone/iPad) do; Apple TV ignores it, so the
+    // picker is hidden there.
+    supportsCustomIcon() {
+      return this.isIPhone(this.device);
+    },
     // The waivable issues stay in the plan, downgraded to warnings, while
     // the option is on: the toggle stays visible whenever it matters.
     showAllowMissingEntitlements() {
@@ -1205,7 +1212,7 @@ export default {
         // icon prefilled from an installed app is already stored on the server.
         // Guarded so an install without a new icon opens its socket without
         // an extra await, keeping the previous attempt's lifecycle intact.
-        if (_this.customIconFile) {
+        if (_this.customIconFile && _this.supportsCustomIcon) {
           await _this.uploadCustomIcon(isStale);
           if (isStale()) {
             return;
@@ -1236,7 +1243,7 @@ export default {
             custom_name: _this.form.custom_name.trim(),
             remove_extensions: _this.form.remove_extensions,
             custom_identifier: _this.form.custom_identifier,
-            custom_icon_path: _this.form.custom_icon_path,
+            custom_icon_path: _this.supportsCustomIcon ? _this.form.custom_icon_path : "",
             signing_mode: _this.signing.mode,
             signing_identity_id: external ? Number(_this.signing.identityId) : 0,
             allow_missing_entitlements: external && _this.signing.allowMissingEntitlements,
@@ -1529,7 +1536,8 @@ export default {
     // the chosen app. The stored path is submitted as-is; the preview is
     // served from the record of that app.
     prefillCustomIcon(app) {
-      if (!app.custom_icon_path || this.customIconFile) {
+      // Only iOS devices take a custom icon; Apple TV ignores it.
+      if (!this.supportsCustomIcon || !app.custom_icon_path || this.customIconFile) {
         return;
       }
       this.releaseCustomIconObjectURL();
