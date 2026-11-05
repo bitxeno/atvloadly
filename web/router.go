@@ -99,7 +99,7 @@ func route(fi *fiber.App) {
 		}
 
 		// Only the custom icon stored with an installed app is served.
-		icon, err := service.ResolveStoredCustomIconPath(t.CustomIconPath)
+		icon, err := service.ResolveAppIconPath(t.CustomIconPath)
 		if err != nil {
 			return c.Status(http.StatusNotFound).SendString("")
 		}

@@ -130,14 +130,6 @@ func ResolveCustomIconPath(path string) (string, error) {
 	return resolved, nil
 }
 
-// ResolveStoredCustomIconPath returns the symlink-free path of the custom icon
-// recorded on an installed app when it is a regular file inside the installed
-// apps directory (<DataDir>/ipa); anything else is an error. It is the custom
-// icon counterpart of ResolveAppIconPath.
-func ResolveStoredCustomIconPath(icon string) (string, error) {
-	return resolvePathWithin(icon, filepath.Join(conf.Config.Server.DataDir, "ipa"))
-}
-
 // storeCustomIcon persists the user-chosen icon of app into saveDir and
 // returns the path to record. The icon is copied rather than moved because the
 // same upload can be referenced by several install requests and the temp-file
