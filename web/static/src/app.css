@@ -1039,6 +1039,13 @@ html[data-theme="dark"] {
   padding: 18px 20px;
   box-shadow: none;
 }
+.app-container .atv-update-banner {
+  background: var(--atv-accent-soft);
+  border: 1px solid var(--atv-border);
+  border-radius: 18px;
+  padding: 14px 20px;
+  box-shadow: none;
+}
 .app-container .badge-warning {
   background: var(--atv-warning-bg);
   border: 1px solid var(--atv-warning-border);

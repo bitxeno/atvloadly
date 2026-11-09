@@ -32,7 +32,9 @@
     "update_available": "{{.name}}: {{.version}} finns tillgänglig\n",
     "update_attention": "{{.name}}: uppdateringen kräver åtgärd: {{.error}}\n",
     "update_installed_title": "atvloadly: appar uppdaterade",
-    "update_installed": "{{.name}} har uppdaterats till {{.version}}\n"
+    "update_installed": "{{.name}} har uppdaterats till {{.version}}\n",
+    "release_title": "atvloadly {{.version}} finns tillgänglig",
+    "release_content": "Du kör {{.current}}.\n{{.url}}"
   },
   "nav": {
     "settings": "Inställningar",
@@ -66,6 +68,11 @@
     "fail": "Misslyckades"
   },
   "home": {
+    "release_banner": {
+      "message": "atvloadly {{version}} finns tillgänglig. Du kör {{current}}.",
+      "view": "Visa version",
+      "dismiss": "Stäng"
+    },
     "heading": {
       "paired_devices": "Parkopplade enheter",
       "service_status": "Tjänststatus",

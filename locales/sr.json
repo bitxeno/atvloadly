@@ -32,7 +32,9 @@
     "update_available": "{{.name}}: доступна је верзија {{.version}}\n",
     "update_attention": "{{.name}}: ажурирање захтева пажњу: {{.error}}\n",
     "update_installed_title": "atvloadly: апликације су ажуриране",
-    "update_installed": "{{.name}}: ажурирано на верзију {{.version}}\n"
+    "update_installed": "{{.name}}: ажурирано на верзију {{.version}}\n",
+    "release_title": "Доступан је atvloadly {{.version}}",
+    "release_content": "Користите верзију {{.current}}.\n{{.url}}"
   },
   "nav": {
     "settings": "Подешавања",
@@ -66,6 +68,11 @@
     "fail": "Неуспешно"
   },
   "home": {
+    "release_banner": {
+      "message": "Доступан је atvloadly {{version}}. Користите верзију {{current}}.",
+      "view": "Прикажи издање",
+      "dismiss": "Одбаци"
+    },
     "heading": {
       "paired_devices": "Упарени уређаји",
       "service_status": "Статус услуге",

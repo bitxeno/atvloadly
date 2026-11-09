@@ -32,7 +32,9 @@
         "update_available": "{{.name}}: доступна версия {{.version}}\n",
         "update_attention": "{{.name}}: обновление требует внимания: {{.error}}\n",
         "update_installed_title": "atvloadly: приложения обновлены",
-        "update_installed": "{{.name}} обновлено до версии {{.version}}\n"
+        "update_installed": "{{.name}} обновлено до версии {{.version}}\n",
+        "release_title": "Доступна atvloadly {{.version}}",
+        "release_content": "Установлена версия {{.current}}.\n{{.url}}"
     },
     "nav": {
         "settings": "Настройки",
@@ -66,6 +68,11 @@
         "fail": "Не удалось"
     },
     "home": {
+        "release_banner": {
+            "message": "Доступна atvloadly {{version}}. Установлена версия {{current}}.",
+            "view": "Открыть релиз",
+            "dismiss": "Скрыть"
+        },
         "heading": {
             "paired_devices": "Сопряжённые устройства",
             "service_status": "Статус службы",

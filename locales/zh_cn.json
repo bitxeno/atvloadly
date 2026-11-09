@@ -32,7 +32,9 @@
         "update_available": "{{.name}}：新版本 {{.version}} 可用\n",
         "update_attention": "{{.name}}：更新需要处理：{{.error}}\n",
         "update_installed_title": "atvloadly：应用已更新",
-        "update_installed": "{{.name}} 已更新到 {{.version}}\n"
+        "update_installed": "{{.name}} 已更新到 {{.version}}\n",
+        "release_title": "atvloadly {{.version}} 已发布",
+        "release_content": "当前版本：{{.current}}\n{{.url}}"
     },
     "nav": {
         "settings": "设置",
@@ -66,6 +68,11 @@
         "fail": "失败"
     },
     "home": {
+        "release_banner": {
+            "message": "atvloadly {{version}} 已发布，当前版本为 {{current}}。",
+            "view": "查看发布",
+            "dismiss": "忽略"
+        },
         "heading": {
             "paired_devices": "已连接设备",
             "service_status": "服务状态",

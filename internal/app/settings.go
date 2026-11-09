@@ -41,6 +41,9 @@ type SettingsConfiguration struct {
 		// GetGitHubToken and write it with Set/DeleteGitHubToken. The
 		// settings API only reports whether a token is configured.
 		GitHubToken string `koanf:"github_token" json:"github_token"`
+		// NotifiedRelease is the atvloadly release tag already notified, so
+		// each new release is notified once across restarts.
+		NotifiedRelease string `koanf:"notified_release" json:"notified_release"`
 	} `koanf:"update" json:"update"`
 	Notification struct {
 		Enabled  bool   `koanf:"enabled" json:"enabled"`

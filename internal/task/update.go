@@ -10,6 +10,7 @@ import (
 	"github.com/bitxeno/atvloadly/internal/manager"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/notify"
+	"github.com/bitxeno/atvloadly/internal/release"
 	"github.com/bitxeno/atvloadly/internal/service"
 )
 
@@ -26,6 +27,13 @@ func (t *Task) CheckUpdates() {
 	res := service.CheckSourceUpdates(installedApps)
 	log.Infof("Update check finished: %d update(s) available.", len(res.Updates))
 	sendSourceNotices(res.Notices)
+}
+
+// CheckRelease checks GitHub for a new atvloadly release.
+func CheckRelease() {
+	if err := release.Check(); err != nil {
+		log.Err(err).Msg("Failed to check for a new atvloadly release")
+	}
 }
 
 // canInstallUpdate reports whether an update of v can be installed now.

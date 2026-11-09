@@ -34,6 +34,7 @@ require (
 	github.com/smallstep/pkcs7 v0.2.3
 	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/image v0.41.0
+	golang.org/x/mod v0.35.0
 	golang.org/x/text v0.37.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gorm.io/gorm v1.25.7
@@ -82,7 +83,6 @@ require (
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	golang.org/x/crypto v0.50.0 // indirect
-	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
