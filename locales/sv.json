@@ -15,7 +15,9 @@
     "settings_saved": "Inställningarna har sparats. Starta om appen för att tillämpa dem.",
     "settings_invalid_port": "Ange en giltig TCP-port mellan 1 och 65535.",
     "settings_save_error": "Det gick inte att spara inställningarna.",
-    "quit": "Avsluta"
+    "quit": "Avsluta",
+    "update_available": "Uppdatering tillgänglig: {{.version}}",
+    "update_notification": "Du kör {{.current}}. Klicka för att visa versionen."
   },
   "common": {
     "loading": "Laddar…",
@@ -466,6 +468,10 @@
         "off": "Av",
         "every_hour": "Varje timme",
         "every_hours": "Var {{num}}:e timme"
+      },
+      "release_notify": {
+        "label": "Nya versioner av atvloadly",
+        "tips": "Meddela när en ny version av atvloadly släpps. Använder aviseringskanalen ovan, och i skrivbordsappen en systemavisering."
       },
       "github_token": {
         "label": "GitHub-token",

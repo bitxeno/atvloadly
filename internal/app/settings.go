@@ -44,6 +44,8 @@ type SettingsConfiguration struct {
 		// NotifiedRelease is the atvloadly release tag already notified, so
 		// each new release is notified once across restarts.
 		NotifiedRelease string `koanf:"notified_release" json:"notified_release"`
+		// ReleaseNotify enables the notification of new atvloadly releases.
+		ReleaseNotify bool `koanf:"release_notify" json:"release_notify" default:"true"`
 	} `koanf:"update" json:"update"`
 	Notification struct {
 		Enabled  bool   `koanf:"enabled" json:"enabled"`
@@ -131,6 +133,7 @@ func printRedactedSettings() {
 		"task": Settings.Task,
 		"update": map[string]any{
 			"check_interval": Settings.Update.CheckInterval,
+			"release_notify": Settings.Update.ReleaseNotify,
 			"github_token":   redactSecret(Settings.Update.GitHubToken),
 		},
 		"notification": map[string]any{

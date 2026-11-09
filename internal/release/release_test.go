@@ -52,21 +52,29 @@ func TestCheckNotifiesOncePerRelease(t *testing.T) {
 	apiBaseURL = server.URL
 	app.Settings = &app.SettingsConfiguration{}
 	app.Settings.Notification.Enabled = true
+	app.Settings.Update.ReleaseNotify = true
 	app.Version.Version = "v0.8.2"
 
-	var sent []string
+	var sent, checks, handled []string
 	sendNotification = func(title, message string) error {
 		sent = append(sent, title)
 		return nil
 	}
+	oldChecked, oldAnnounced := checked, announced
+	defer func() { checked, announced = oldChecked, oldAnnounced }()
+	OnCheck(func(info Info) { checks = append(checks, info.Latest) })
+	OnNewRelease(func(info Info) { handled = append(handled, info.Latest) })
 
 	for i := 0; i < 2; i++ {
 		if err := Check(); err != nil {
 			t.Fatalf("Check() error = %v", err)
 		}
 	}
-	if len(sent) != 1 {
-		t.Fatalf("sent %d notifications, want 1", len(sent))
+	if len(sent) != 1 || len(handled) != 1 {
+		t.Fatalf("sent %d notifications and %d new-release calls, want 1 each", len(sent), len(handled))
+	}
+	if len(checks) != 2 {
+		t.Fatalf("got %d check calls, want 2", len(checks))
 	}
 	if got := app.Settings.Update.NotifiedRelease; got != "v0.9.0" {
 		t.Fatalf("NotifiedRelease = %q, want v0.9.0", got)
@@ -75,5 +83,24 @@ func TestCheckNotifiesOncePerRelease(t *testing.T) {
 	info := Latest()
 	if !info.Available || info.Latest != "v0.9.0" || info.Current != "v0.8.2" {
 		t.Fatalf("Latest() = %+v", info)
+	}
+}
+
+func TestAnnounceSkippedWhenDisabled(t *testing.T) {
+	oldSend, oldSettings := sendNotification, app.Settings
+	defer func() { sendNotification, app.Settings = oldSend, oldSettings }()
+	app.Settings = &app.SettingsConfiguration{}
+	app.Settings.Notification.Enabled = true
+	app.Settings.Update.ReleaseNotify = false
+
+	calls := 0
+	sendNotification = func(string, string) error { calls++; return nil }
+	announce(Info{Latest: "v0.9.0", Available: true}, []func(Info){func(Info) { calls++ }})
+
+	if calls != 0 {
+		t.Fatalf("got %d notifications while release notifications are disabled", calls)
+	}
+	if app.Settings.Update.NotifiedRelease != "" {
+		t.Fatalf("NotifiedRelease = %q, want it unset so enabling later still notifies", app.Settings.Update.NotifiedRelease)
 	}
 }

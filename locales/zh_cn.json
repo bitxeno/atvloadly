@@ -15,7 +15,9 @@
         "settings_saved": "设置已保存，重启程序后生效。",
         "settings_invalid_port": "请输入 1 到 65535 之间的有效 TCP 端口。",
         "settings_save_error": "保存设置失败。",
-        "quit": "退出程序"
+        "quit": "退出程序",
+        "update_available": "有可用更新：{{.version}}",
+        "update_notification": "当前版本：{{.current}}。点击查看发布。"
     },
     "common": {
         "loading": "加载中...",
@@ -468,6 +470,10 @@
                 "off": "关闭",
                 "every_hour": "每小时",
                 "every_hours": "每 {{num}} 小时"
+            },
+            "release_notify": {
+                "label": "atvloadly 新版本",
+                "tips": "atvloadly 发布新版本时发送通知。使用上方的通知渠道，桌面应用还会显示系统通知。"
             },
             "github_token": {
                 "label": "GitHub Token",

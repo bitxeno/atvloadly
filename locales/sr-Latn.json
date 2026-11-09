@@ -15,7 +15,9 @@
     "settings_saved": "Podešavanja su sačuvana. Ponovo pokrenite aplikaciju da bi se primenila.",
     "settings_invalid_port": "Unesite važeći TCP port između 1 i 65535.",
     "settings_save_error": "Čuvanje podešavanja nije uspelo.",
-    "quit": "Izađi"
+    "quit": "Izađi",
+    "update_available": "Dostupno ažuriranje: {{.version}}",
+    "update_notification": "Koristite verziju {{.current}}. Kliknite da prikažete izdanje."
   },
   "common": {
     "loading": "Učitavanje...",
@@ -466,6 +468,10 @@
         "off": "Isključeno",
         "every_hour": "Svakog sata",
         "every_hours": "Svakih {{num}} sati"
+      },
+      "release_notify": {
+        "label": "Nova izdanja atvloadly-ja",
+        "tips": "Obavesti kada izađe nova verzija atvloadly-ja. Koristi kanal obaveštenja iznad, a u desktop aplikaciji sistemsko obaveštenje."
       },
       "github_token": {
         "label": "GitHub token",
