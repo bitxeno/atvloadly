@@ -18,7 +18,7 @@
 
 <div align="center">
 
-English | [Svenska](docs/readme/README_sv.md) | [中文](docs/readme/README_cn.md) | [Српски (ћирилица)](docs/readme/README_sr.md) | [Srpski (latinica)](docs/readme/README_sr_Latn.md) | [Русский](docs/readme/README_ru.md)
+English | [Svenska](docs/readme/README_sv.md) | [中文](docs/readme/README_cn.md) | [Српски (ћирилица)](docs/readme/README_sr.md) | [Srpski (latinica)](docs/readme/README_sr_Latn.md) | [Русский](docs/readme/README_ru.md) | [Tiếng Việt](docs/readme/README_vi.md)
 
 </div>
 
