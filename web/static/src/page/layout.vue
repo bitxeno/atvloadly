@@ -137,6 +137,7 @@
     </header>
 
     <div class="main-container">
+      <UpdateBanner v-if="$route.name === 'home'" />
       <router-view />
     </div>
 
@@ -338,6 +339,7 @@ import KofiIcon from "@/assets/icons/kofi.svg";
 import ToolsIcon from "@/assets/icons/tools.svg";
 import FlaskIcon from "@/assets/icons/flask.svg";
 import HelpIcon from "@/assets/icons/help.svg";
+import UpdateBanner from "@/components/UpdateBanner.vue";
 </script>
 
 <style lang="postcss" scoped>

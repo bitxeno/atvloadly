@@ -15,7 +15,9 @@
     "settings_saved": "Подешавања су сачувана. Поново покрените апликацију да би се применила.",
     "settings_invalid_port": "Унесите важећи TCP порт између 1 и 65535.",
     "settings_save_error": "Чување подешавања није успело.",
-    "quit": "Изађи"
+    "quit": "Изађи",
+    "update_available": "Доступно ажурирање: {{.version}}",
+    "update_notification": "Користите верзију {{.current}}. Кликните да прикажете издање."
   },
   "common": {
     "loading": "Учитавање...",
@@ -32,7 +34,9 @@
     "update_available": "{{.name}}: доступна је верзија {{.version}}\n",
     "update_attention": "{{.name}}: ажурирање захтева пажњу: {{.error}}\n",
     "update_installed_title": "atvloadly: апликације су ажуриране",
-    "update_installed": "{{.name}}: ажурирано на верзију {{.version}}\n"
+    "update_installed": "{{.name}}: ажурирано на верзију {{.version}}\n",
+    "release_title": "Доступан је atvloadly {{.version}}",
+    "release_content": "Користите верзију {{.current}}.\n{{.url}}"
   },
   "nav": {
     "settings": "Подешавања",
@@ -66,6 +70,11 @@
     "fail": "Неуспешно"
   },
   "home": {
+    "release_banner": {
+      "message": "Доступан је atvloadly {{version}}. Користите верзију {{current}}.",
+      "view": "Прикажи издање",
+      "dismiss": "Одбаци"
+    },
     "heading": {
       "paired_devices": "Упарени уређаји",
       "service_status": "Статус услуге",
@@ -459,6 +468,10 @@
         "off": "Искључено",
         "every_hour": "Сваког сата",
         "every_hours": "Сваких {{num}} сати"
+      },
+      "release_notify": {
+        "label": "Нова издања atvloadly-ја",
+        "tips": "Обавести када изађе нова верзија atvloadly-ја. Користи канал обавештења изнад, а у десктоп апликацији системско обавештење."
       },
       "github_token": {
         "label": "GitHub токен",

@@ -21,6 +21,7 @@ import (
 	mcpserver "github.com/bitxeno/atvloadly/internal/mcp"
 	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/notify"
+	"github.com/bitxeno/atvloadly/internal/release"
 	"github.com/bitxeno/atvloadly/internal/service"
 	"github.com/bitxeno/atvloadly/internal/signing"
 	"github.com/bitxeno/atvloadly/internal/signing/appcheck"
@@ -118,6 +119,9 @@ func route(fi *fiber.App) {
 	})
 	api.Get("/version", func(c *fiber.Ctx) error {
 		return c.Status(http.StatusOK).JSON(apiSuccess(app.Version))
+	})
+	api.Get("/version/latest", func(c *fiber.Ctx) error {
+		return c.Status(http.StatusOK).JSON(apiSuccess(release.Latest()))
 	})
 	api.Get("/settings", func(c *fiber.Ctx) error {
 		return c.Status(http.StatusOK).JSON(apiSuccess(safeSettings()))

@@ -89,6 +89,10 @@ func Run(opts Options) (addr string, stop func(), err error) {
 	// start jobs
 	_ = task.ScheduleRefreshApps()
 	manager.StartDeviceManager()
+	// The scheduler repeats the release check with the update check interval.
+	if app.Settings.Update.CheckInterval > 0 {
+		go task.CheckRelease()
+	}
 
 	port := conf.Server.Port
 	if opts.Port > 0 {

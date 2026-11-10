@@ -15,7 +15,9 @@
         "settings_saved": "Настройки сохранены. Перезапустите приложение, чтобы применить их.",
         "settings_invalid_port": "Укажите корректный TCP-порт от 1 до 65535.",
         "settings_save_error": "Не удалось сохранить настройки.",
-        "quit": "Выход"
+        "quit": "Выход",
+        "update_available": "Доступно обновление: {{.version}}",
+        "update_notification": "Установлена версия {{.current}}. Нажмите, чтобы открыть релиз."
     },
     "common": {
         "loading": "Загрузка...",
@@ -32,7 +34,9 @@
         "update_available": "{{.name}}: доступна версия {{.version}}\n",
         "update_attention": "{{.name}}: обновление требует внимания: {{.error}}\n",
         "update_installed_title": "atvloadly: приложения обновлены",
-        "update_installed": "{{.name}} обновлено до версии {{.version}}\n"
+        "update_installed": "{{.name}} обновлено до версии {{.version}}\n",
+        "release_title": "Доступна atvloadly {{.version}}",
+        "release_content": "Установлена версия {{.current}}.\n{{.url}}"
     },
     "nav": {
         "settings": "Настройки",
@@ -66,6 +70,11 @@
         "fail": "Не удалось"
     },
     "home": {
+        "release_banner": {
+            "message": "Доступна atvloadly {{version}}. Установлена версия {{current}}.",
+            "view": "Открыть релиз",
+            "dismiss": "Скрыть"
+        },
         "heading": {
             "paired_devices": "Сопряжённые устройства",
             "service_status": "Статус службы",
@@ -460,6 +469,10 @@
                 "off": "Выключена",
                 "every_hour": "Каждый час",
                 "every_hours": "Каждые {{num}} ч"
+            },
+            "release_notify": {
+                "label": "Новые версии atvloadly",
+                "tips": "Уведомлять о выходе новой версии atvloadly. Используется канал уведомлений выше, а в настольном приложении — системное уведомление."
             },
             "github_token": {
                 "label": "GitHub Token",

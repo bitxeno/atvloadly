@@ -76,18 +76,28 @@ func run() error {
 		_ = os.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	}
 
+	url := "http://" + loopbackListenAddr + ":" + strconv.Itoa(desktop.Port) + "/"
+	// The tray exists once the app is ready; the service checks for
+	// releases from its start, so a check can finish before.
+	var tray *mygo.Tray
+	var logPath string
+	watchReleases(func() {
+		if tray != nil {
+			setTrayMenu(tray, url, logPath, configPath)
+		}
+	})
+
 	_, stop, err := startService(configPath)
 	if err != nil {
 		return err
 	}
-	url := "http://" + loopbackListenAddr + ":" + strconv.Itoa(desktop.Port) + "/"
 
 	// Quit stops the service; a crash exit leaves it to the process exit.
 	defer func() { stop() }()
 
 	// The service chooses the log file while starting: the data directory's
 	// app.log unless config.yaml says otherwise.
-	logPath := app.Config.Log.LogFile
+	logPath = app.Config.Log.LogFile
 
 	mygo.App.SetName(appName)
 	mygo.App.SetVersion(app.Version.Version)
@@ -110,7 +120,8 @@ func run() error {
 			}
 		}
 
-		tray, err := mygo.NewTray(mygo.TrayOptions{
+		var err error
+		tray, err = mygo.NewTray(mygo.TrayOptions{
 			ID:             appName,
 			Icon:           trayIcon(),
 			IconIsTemplate: runtime.GOOS == "darwin",
@@ -147,7 +158,7 @@ func run() error {
 
 // setTrayMenu builds the tray menu and reflects the system autostart state.
 func setTrayMenu(tray *mygo.Tray, url, logPath, configPath string) {
-	menu := mygo.NewMenu([]*mygo.MenuItem{
+	menu := mygo.NewMenu(append(updateMenuItems(), []*mygo.MenuItem{
 		{Label: i18n.Localize("tray.open_browser"), Click: func(*mygo.MenuItem, *mygo.Window) { openBrowser(url) }},
 		{Label: i18n.Localize("tray.open_log"), Click: func(*mygo.MenuItem, *mygo.Window) { openLogFile(logPath) }},
 		{Label: i18n.Localize("tray.settings"), Click: func(*mygo.MenuItem, *mygo.Window) { openSettingsDialog(configPath) }},
@@ -166,7 +177,7 @@ func setTrayMenu(tray *mygo.Tray, url, logPath, configPath string) {
 		},
 		mygo.Separator(),
 		{Role: mygo.RoleQuit, Label: i18n.Localize("tray.quit")},
-	})
+	}...))
 	tray.SetMenu(menu)
 }
 

@@ -125,6 +125,10 @@ func (t *Task) RunSchedule() error {
 			t.c = nil
 			return err
 		}
+		if _, err := t.c.AddFunc(updateCheckSpec(hours), CheckRelease); err != nil {
+			t.c = nil
+			return err
+		}
 	}
 	// The install page stages uploads and source downloads that only it
 	// releases; an abandoned page leaves them behind.

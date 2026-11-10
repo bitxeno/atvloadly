@@ -291,6 +291,26 @@
         <div class="form-item">
           <label class="form-item-label">
             <span class="label-text">{{
+              $t("settings.update.release_notify.label")
+            }}</span>
+          </label>
+          <div class="flex flex-col grow">
+            <input
+              type="checkbox"
+              class="toggle toggle-success"
+              v-model="settings.update.release_notify"
+            />
+            <label class="label">
+              <span class="label-text-alt whitespace-normal">{{
+                $t("settings.update.release_notify.tips")
+              }}</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-item">
+          <label class="form-item-label">
+            <span class="label-text">{{
               $t("settings.update.github_token.label")
             }}</span>
           </label>
@@ -613,6 +633,7 @@ export default {
         task: {},
         update: {
           check_interval: 6,
+          release_notify: true,
         },
         notification: {
           type: "bark",
@@ -712,6 +733,7 @@ export default {
     saveUpdate() {
       const payload = {
         check_interval: this.settings.update.check_interval,
+        release_notify: this.settings.update.release_notify,
       };
       // Only a non-empty input replaces the token; an empty one keeps it.
       // Removal is done through the delete button instead.

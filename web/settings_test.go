@@ -337,3 +337,28 @@ func TestRemoveAnisetteRouteRunsEngineCommandForAccount(t *testing.T) {
 		t.Errorf("arguments = %q, want %q", got, want)
 	}
 }
+
+func TestSaveUpdateSettingsReleaseNotify(t *testing.T) {
+	setupGithubTokenSettings(t, "ghp_1234567890abcdef1234567890ab")
+	app.Settings.Update.ReleaseNotify = true
+	server, _ := newTestServer(t)
+
+	post := func(body string) {
+		req := httptest.NewRequest(http.MethodPost, "/api/settings/update", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := server.Test(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = decodeAPI(t, resp)
+	}
+
+	post(`{"check_interval":6,"release_notify":false}`)
+	if app.Settings.Update.ReleaseNotify {
+		t.Fatal("release_notify=false did not disable release notifications")
+	}
+	post(`{"check_interval":6}`)
+	if app.Settings.Update.ReleaseNotify {
+		t.Fatal("an absent release_notify changed the setting")
+	}
+}
