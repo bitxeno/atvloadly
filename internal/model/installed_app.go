@@ -29,8 +29,13 @@ type InstalledApp struct {
 	Version          string         `json:"version"`
 	RemoveExtensions bool           `json:"remove_extensions"`
 	CustomName       string         `json:"custom_name,omitempty"`
-	Enabled          bool           `json:"enabled,omitempty"`
-	Source           AppSource      `gorm:"embedded;embeddedPrefix:source_" json:"source"`
+	// CustomIconPath is the image file passed to the engine as --custom-icon.
+	// Unlike Icon (the display icon extracted from the IPA), this is a user
+	// choice: it is stored with the record and reused on every reinstallation
+	// or source update so the custom icon persists.
+	CustomIconPath string    `gorm:"column:custom_icon_path" json:"custom_icon_path,omitempty"`
+	Enabled        bool      `json:"enabled,omitempty"`
+	Source         AppSource `gorm:"embedded;embeddedPrefix:source_" json:"source"`
 
 	// SigningMode is empty for records created before signing modes existed;
 	// use EffectiveSigningMode to read it.

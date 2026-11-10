@@ -155,6 +155,9 @@ func buildExternalInstallArgs(opts InstallOptions) []string {
 	if opts.CustomName != "" {
 		args = append(args, "--custom-name="+opts.CustomName)
 	}
+	if opts.CustomIconPath != "" {
+		args = append(args, "--custom-icon="+opts.CustomIconPath)
+	}
 	return args
 }
 

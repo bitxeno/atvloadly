@@ -234,6 +234,27 @@ export default {
     });
   },
 
+  // uploadCustomIcon sends one image to the server and resolves with the path
+  // of the normalized PNG that the install request submits.
+  uploadCustomIcon: (data) => {
+    return new Promise((resolve, reject) => {
+      request({
+        url: "/api/custom-icon/upload",
+        method: "post",
+        timeout: 300000,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        data,
+      }).then((res) => {
+        resolve(res.data.path);
+      })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  },
+
   getAppList: (params) => {
     return request({
       url: "/api/apps",

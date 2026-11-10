@@ -31,6 +31,9 @@ type appListItem struct {
 	// records can share BundleIdentifier and differ only by this value: they
 	// are two different apps on the device.
 	CustomIdentifier string `json:"custom_identifier,omitempty"`
+	// CustomIconPath is the custom app icon stored with the record and reused
+	// on every refresh; empty means the app keeps the icons of the IPA.
+	CustomIconPath string `json:"custom_icon_path,omitempty"`
 	// SigningIdentityID is the external signing identity of the app.
 	SigningIdentityID uint `json:"signing_identity_id,omitempty"`
 	// AutoRefresh reports whether the scheduled refresh renews the app; apps
@@ -93,6 +96,7 @@ func toAppListItem(app model.InstalledApp) appListItem {
 		IsExpired:         app.IsExpired(),
 		SigningMode:       app.EffectiveSigningMode(),
 		CustomIdentifier:  app.CustomIdentifier,
+		CustomIconPath:    app.CustomIconPath,
 		SigningIdentityID: app.SigningIdentityID,
 		AutoRefresh:       !app.IsExternalSigning(),
 	}

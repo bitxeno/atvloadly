@@ -323,6 +323,13 @@
         "placeholder": "Lämna tomt för att behålla appens namn",
         "tips": "Byter namn på appen på hemskärmen. Paketidentifieraren ändras inte, så appen ersätts fortfarande vid förnyelse."
       },
+      "custom_icon": {
+        "tips": "Byt ut appens ikon på hemskärmen. Klicka för att välja en bild (PNG, JPEG eller GIF); den sparas med appen och används igen vid varje förnyelse och uppdatering.",
+        "choose": "Välj ikon",
+        "empty": "Ingen ikon",
+        "remove": "Ta bort ikon",
+        "preview_alt": "Anpassad appikon"
+      },
       "password": {
         "label": "Apple-lösenord:"
       },
@@ -912,6 +919,7 @@
       "device_not_provisioned": "Enheten finns inte med i provisioneringsprofilen.",
       "ipa_invalid": "IPA-filen är ogiltig eller kan inte läsas.",
       "ipa_path_rejected": "IPA-filen är inte en uppladdad eller installerad IPA. Ladda upp den igen.",
+      "custom_icon_invalid": "Den anpassade appikonen är inte en läsbar bild. Ladda upp en PNG-, JPEG- eller GIF-bild igen.",
       "nested_bundles_not_signed": "En app som ligger inuti en annan app kan inte signeras med provisioneringsprofilen.",
       "bundle_identifier_rewritten": "Paket-ID:t ändras till det anpassade paket-ID:t; apptilläggens paket-ID:n följer med.",
       "extension_removed": "Ett tillägg tas bort från appen.",

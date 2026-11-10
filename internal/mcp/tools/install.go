@@ -26,6 +26,7 @@ type installAppInput struct {
 	SigningIdentityID uint   `json:"signing_identity_id,omitempty" jsonschema:"Optional imported signing identity ID: signs with that external certificate and provisioning profile instead of an Apple account. Omit account_id when set"`
 	RemoveExtensions  bool   `json:"remove_extensions,omitempty" jsonschema:"Optional remove app extensions while installing"`
 	CustomIdentifier  string `json:"custom_identifier,omitempty" jsonschema:"Optional bundle identifier to install the app under, with either signing method. The IPA main bundle identifier is replaced by it in the app and its extensions. Omit to keep the IPA bundle identifiers. Installing the same IPA with and without it puts two different apps on the device and creates two records"`
+	CustomIconPath    string `json:"custom_icon_path,omitempty" jsonschema:"Optional path of an uploaded custom app icon (from POST /api/custom-icon/upload). It is stored with the app and reused on every refresh and update"`
 }
 
 type installDeviceOption struct {
@@ -79,6 +80,7 @@ func registerInstallApp(server *sdkmcp.Server) {
 			"Apps signed with an external certificate are not refreshed automatically and expire with their signing identity. " +
 			"Either signing method keeps the IPA bundle identifiers unless custom_identifier is set; with an external certificate the provisioning profile decides the application identifier. " +
 			"Installing the same IPA with and without custom_identifier installs two different apps on the device. " +
+			"To set a custom app icon, upload an image with POST /api/custom-icon/upload and pass its returned path as custom_icon_path; it is stored with the app and reused on every refresh and update. " +
 			"After app install task is queued, call get_install_status to track progress.",
 	}, handleInstallApp)
 }
@@ -102,6 +104,10 @@ func handleInstallApp(_ context.Context, _ *sdkmcp.CallToolRequest, input instal
 			return nil, installAppOutput{}, signingToolError(err)
 		}
 	}
+	customIconPath, err := service.ResolveCustomIconPath(input.CustomIconPath)
+	if err != nil {
+		return nil, installAppOutput{}, signingToolError(err)
+	}
 
 	selectedDevice, deviceOptions, needDeviceChoice, err := resolveDeviceSelection(strings.TrimSpace(input.DeviceID))
 	if err != nil {
@@ -115,7 +121,7 @@ func handleInstallApp(_ context.Context, _ *sdkmcp.CallToolRequest, input instal
 		}, nil
 	}
 
-	appModel := newInstallRecord(input, *selectedDevice, customIdentifier)
+	appModel := newInstallRecord(input, *selectedDevice, customIdentifier, customIconPath)
 	output := installAppOutput{
 		Status:         "installing",
 		Message:        "Install task queued to task.StartInstallApps.",
@@ -176,8 +182,9 @@ func handleInstallApp(_ context.Context, _ *sdkmcp.CallToolRequest, input instal
 
 // newInstallRecord builds the installed app record queued for device. The
 // signing mode and identity are filled in by the caller; the custom identifier
-// applies to either signing method, so it is recorded here for both.
-func newInstallRecord(input installAppInput, device installDeviceOption, customIdentifier string) model.InstalledApp {
+// and custom icon apply to either signing method, so they are recorded here
+// for both.
+func newInstallRecord(input installAppInput, device installDeviceOption, customIdentifier, customIconPath string) model.InstalledApp {
 	return model.InstalledApp{
 		IpaName:          ipaFileNameFromURL(strings.TrimSpace(input.IpaURL)),
 		IpaPath:          strings.TrimSpace(input.IpaURL),
@@ -187,6 +194,7 @@ func newInstallRecord(input installAppInput, device installDeviceOption, customI
 		Enabled:          true,
 		RemoveExtensions: input.RemoveExtensions,
 		CustomIdentifier: customIdentifier,
+		CustomIconPath:   customIconPath,
 	}
 }
 

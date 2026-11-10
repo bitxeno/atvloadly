@@ -3,6 +3,8 @@ package web
 import (
 	"bytes"
 	"encoding/json"
+	"image"
+	"image/png"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -15,6 +17,7 @@ import (
 	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/db"
 	"github.com/bitxeno/atvloadly/internal/model"
+	"github.com/bitxeno/atvloadly/internal/service"
 	"github.com/bitxeno/atvloadly/internal/signing"
 	"github.com/bitxeno/atvloadly/internal/task"
 	"github.com/gofiber/fiber/v2"
@@ -264,6 +267,99 @@ func TestInstallAcceptsAppleIDCustomIdentifier(t *testing.T) {
 	}
 	if data != nil && data.Code == signing.CodeCustomIdentifierInvalid {
 		t.Fatalf("a valid custom identifier was refused: %+v", data)
+	}
+}
+
+// The custom icon upload endpoint decodes the image, normalizes it to PNG and
+// returns a path inside the upload directory that /api/install accepts.
+func TestCustomIconUpload(t *testing.T) {
+	server, dataDir := newTestServer(t)
+
+	img := image.NewRGBA(image.Rect(0, 0, 8, 8))
+	var pngData bytes.Buffer
+	if err := png.Encode(&pngData, img); err != nil {
+		t.Fatal(err)
+	}
+
+	var body bytes.Buffer
+	form := multipart.NewWriter(&body)
+	part, err := form.CreateFormFile("file", "icon.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = part.Write(pngData.Bytes())
+	_ = form.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/custom-icon/upload", &body)
+	req.Header.Set("Content-Type", form.FormDataContentType())
+	resp, err := server.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	var result struct {
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
+		Data struct {
+			Path string `json:"path"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Code != 200 {
+		t.Fatalf("code = %d, msg = %q, want 200", result.Code, result.Msg)
+	}
+	path := result.Data.Path
+	if path == "" || filepath.Dir(path) != filepath.Join(dataDir, "tmp") {
+		t.Fatalf("the returned icon path is not an upload: %q", path)
+	}
+	if _, err := service.ResolveCustomIconPath(path); err != nil {
+		t.Fatalf("the uploaded icon is not accepted by the install API: %v", err)
+	}
+}
+
+// A non-image upload is refused with a stable signing code and stores nothing.
+func TestCustomIconUploadRejectsNonImage(t *testing.T) {
+	server, dataDir := newTestServer(t)
+
+	var body bytes.Buffer
+	form := multipart.NewWriter(&body)
+	part, err := form.CreateFormFile("file", "icon.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = part.Write([]byte("not an image"))
+	_ = form.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/custom-icon/upload", &body)
+	req.Header.Set("Content-Type", form.FormDataContentType())
+	resp, err := server.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	var result struct {
+		Code int             `json:"code"`
+		Data json.RawMessage `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Code != -1 {
+		t.Fatalf("code = %d, want -1", result.Code)
+	}
+	var data *SigningErrorData
+	if err := json.Unmarshal(result.Data, &data); err != nil {
+		t.Fatal(err)
+	}
+	if data == nil || data.Code != signing.CodeCustomIconInvalid {
+		t.Fatalf("signing code = %+v, want %q", data, signing.CodeCustomIconInvalid)
+	}
+	if entries, _ := os.ReadDir(filepath.Join(dataDir, "tmp")); len(entries) != 0 {
+		t.Fatalf("the refused upload was kept: %v", entries)
 	}
 }
 

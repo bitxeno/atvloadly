@@ -111,6 +111,11 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 
 		// 把 ipa/icon 移动到 ipa 保存目录
 		saveDir := filepath.Join(conf.Config.Server.DataDir, "ipa", fmt.Sprintf("%d", app.ID))
+		// A custom icon is a user choice, not an artifact of the IPA: store it
+		// with the record so the next refresh or source update signs with it
+		// again. An empty choice clears it; an invalid path keeps the previous
+		// icon rather than silently losing it.
+		cur.CustomIconPath = storeCustomIcon(app.CustomIconPath, saveDir, cur.CustomIconPath)
 		if cur.IpaPath != "" {
 			ipaPath := filepath.Join(saveDir, "app.ipa")
 			if err := os.Rename(cur.IpaPath, ipaPath); err != nil {
@@ -138,6 +143,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 			"signing_identity_id":        cur.SigningIdentityID,
 			"signed_bundle_identifier":   cur.SignedBundleIdentifier,
 			"custom_identifier":          cur.CustomIdentifier,
+			"custom_icon_path":           cur.CustomIconPath,
 			"allow_missing_entitlements": cur.AllowMissingEntitlements,
 		}
 		// The record is keyed by the app on the device, which another IPA can
@@ -162,9 +168,11 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 		now := time.Now()
 		app.Enabled = true
 		app.InstalledDate = &now
-		// The client provided icon is recorded only once moved.
+		// The client provided icons are recorded only once moved or stored.
 		icon := app.Icon
+		customIcon := app.CustomIconPath
 		app.Icon = ""
+		app.CustomIconPath = ""
 		if result := db.Store().Create(&app); result.Error != nil {
 			return nil, result.Error
 		}
@@ -183,9 +191,11 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 			}
 		}
 		app.Icon = storeAppIcon(icon, saveDir, "")
+		app.CustomIconPath = storeCustomIcon(customIcon, saveDir, "")
 		updateData := map[string]any{
-			"ipa_path": app.IpaPath,
-			"icon":     app.Icon,
+			"ipa_path":         app.IpaPath,
+			"icon":             app.Icon,
+			"custom_icon_path": app.CustomIconPath,
 		}
 		if result := db.Store().Model(&app).Updates(updateData); result.Error != nil {
 			return nil, result.Error

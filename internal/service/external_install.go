@@ -130,15 +130,15 @@ func resolvePathWithin(path string, roots ...string) (string, error) {
 	return "", errors.New("outside the allowed directories")
 }
 
-// CleanExternalUpload removes the uploaded IPA and icon consumed by an
-// external certificate installation when they still are regular files inside
-// the upload directory (<DataDir>/tmp). Anything else is left alone, notably
-// the IPA and icon of an installed app, which SaveApp moved into its record
-// directory. Unlike InstallManager.CleanTempFiles, it never removes files of
-// other installations.
-func CleanExternalUpload(ipaPath, iconPath string) {
+// CleanExternalUpload removes the uploaded IPA, display icon and custom icon
+// consumed by an external certificate installation when they still are regular
+// files inside the upload directory (<DataDir>/tmp). Anything else is left
+// alone, notably the IPA and icons of an installed app, which SaveApp moved
+// into its record directory. Unlike InstallManager.CleanTempFiles, it never
+// removes files of other installations.
+func CleanExternalUpload(paths ...string) {
 	uploadDir := filepath.Join(conf.Config.Server.DataDir, "tmp")
-	for _, path := range []string{ipaPath, iconPath} {
+	for _, path := range paths {
 		resolved, err := resolvePathWithin(path, uploadDir)
 		if err != nil {
 			continue
@@ -314,6 +314,7 @@ func runExternalInstall(ctx context.Context, installMgr *manager.InstallManager,
 		Port:             dev.Port,
 		IpaPath:          ext.IpaPath,
 		CustomName:       app.CustomName,
+		CustomIconPath:   app.CustomIconPath,
 		RemoveExtensions: app.RemoveExtensions,
 		SigningMode:      model.SigningModeExternalCertificate,
 		External:         ext.Signing(),

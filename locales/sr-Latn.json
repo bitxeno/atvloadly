@@ -323,6 +323,13 @@
         "placeholder": "Ostavite prazno da zadržite originalni naziv aplikacije",
         "tips": "Menja naziv aplikacije na početnom ekranu. Identifikator paketa ostaje nepromenjen, pa će aplikacija i dalje biti zamenjena pri osvežavanju."
       },
+      "custom_icon": {
+        "tips": "Menja ikonicu aplikacije na početnom ekranu. Kliknite da izaberete sliku (PNG, JPEG ili GIF); čuva se uz aplikaciju i koristi se pri svakom osvežavanju i ažuriranju.",
+        "choose": "Izaberi ikonicu",
+        "empty": "Nema ikonice",
+        "remove": "Ukloni ikonicu",
+        "preview_alt": "Prilagođena ikonica aplikacije"
+      },
       "password": {
         "label": "Apple lozinka:"
       },
@@ -912,6 +919,7 @@
       "device_not_provisioned": "Ovaj uređaj nije uključen u provisioning profil.",
       "ipa_invalid": "IPA datoteka nije važeća ili je nije moguće pročitati.",
       "ipa_path_rejected": "IPA datoteka nije otpremljena niti instalirana IPA datoteka. Otpremite je ponovo.",
+      "custom_icon_invalid": "Prilagođena ikonica aplikacije nije čitljiva slika. Otpremite ponovo PNG, JPEG ili GIF sliku.",
       "nested_bundles_not_signed": "Aplikaciju ugnežđenu unutar druge aplikacije nije moguće potpisati provisioning profilom.",
       "bundle_identifier_rewritten": "Identifikator paketa biće promenjen u prilagođeni identifikator; identifikatori ekstenzija aplikacije pratiće tu promenu.",
       "extension_removed": "Ekstenzija će biti uklonjena iz aplikacije.",

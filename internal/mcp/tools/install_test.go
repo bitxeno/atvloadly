@@ -98,7 +98,7 @@ func TestNewInstallRecordKeepsCustomIdentifier(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := newInstallRecord(tt.input, device, tt.customIdentifier)
+			got := newInstallRecord(tt.input, device, tt.customIdentifier, "")
 			if got.CustomIdentifier != tt.want {
 				t.Fatalf("custom identifier = %q, want %q", got.CustomIdentifier, tt.want)
 			}

@@ -146,6 +146,16 @@ account's App ID quota), and a refresh re-signs the app under the identifier
 recorded with it. The two records are keyed by the identifier the app is
 installed under, so they refresh, expire and reinstall independently.
 
+**Custom app icon** (optional): pick a PNG, JPEG or GIF image on the install
+page, or upload one with `POST /api/custom-icon/upload` and pass the returned
+`path` as `custom_icon_path`. The image is normalized to PNG and stored with the
+installed app, and the signing engine receives it as `--custom-icon` in both
+signing modes. Because it is part of the record, every refresh, reinstall and
+source update reuses the same icon. An invalid or unreadable image is refused
+(`custom_icon_invalid`); leave the field empty to keep the icons of the IPA, and
+remove the icon on the install page to clear a stored choice. The stored icon is
+served by `GET /apps/:id/custom-icon`.
+
 **Remove extensions** (optional): removes every app extension before signing.
 Extensions are never removed unless you enable it; the plan lists the removed
 extensions.
@@ -331,7 +341,8 @@ files, invalid install parameters) and other failures have `data: null`.
 | `POST /api/signing/identities/:id/profile` | multipart `profile` | identity |
 | `POST /api/signing/identities/:id/delete` | JSON `{"force": false}` | `true` |
 | `POST /api/signing/identities/:id/check` | JSON `{"ipa_path", "udid", "remove_extensions", "allow_missing_entitlements", "custom_identifier"}` | `{plan, blocking}` |
-| `POST /api/install` | existing form + `signing_mode=external_certificate`, `signing_identity_id`, `allow_missing_entitlements`, `custom_identifier` | as before |
+| `POST /api/custom-icon/upload` | multipart `file` (PNG, JPEG or GIF image) | `{"path"}` of the normalized PNG |
+| `POST /api/install` | existing form + `signing_mode=external_certificate`, `signing_identity_id`, `allow_missing_entitlements`, `custom_identifier`, `custom_icon_path` | as before |
 | `POST /api/sources/download` | JSON `{"kind", "url", "build_id"}` of a source build | IPA file `{name, path, icon, bundle_identifier, version}` |
 
 `POST /api/sources/download` downloads the build of the source into the upload
@@ -340,12 +351,14 @@ message. Its failures have `data: null`.
 
 `custom_identifier` is optional (empty keeps the bundle identifiers of the IPA)
 and accepted with either signing mode; it is validated before the install is
-queued. The same fields are
+queued. `custom_icon_path` is optional too and accepted with either signing
+mode; it is the path returned by `/api/custom-icon/upload` or the stored path
+of an installed app. The same fields are
 accepted in the install message of the `/ws/install` WebSocket (`signing_mode`,
 `signing_identity_id`, `remove_extensions`, `allow_missing_entitlements`,
-`custom_identifier`) and, except `allow_missing_entitlements`, by the MCP
+`custom_identifier`, `custom_icon_path`) and, except `allow_missing_entitlements`, by the MCP
 `install_app` tool (`signing_identity_id`, `remove_extensions`,
-`custom_identifier`). With an external certificate, the install message also
+`custom_identifier`, `custom_icon_path`). With an external certificate, the install message also
 accepts `source` (`kind`, `url`, `filter`, `prerelease`, `auto_update`,
 `build_id`): with a local `ipa_path` returned by `/api/sources/download`, the
 server records the build and signs that file; with a remote one, it downloads

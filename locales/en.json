@@ -324,6 +324,13 @@
                 "placeholder": "Leave blank to keep the app's own name",
                 "tips": "Renames the app on the home screen. The bundle identifier is unchanged, so the app is still replaced on refresh."
             },
+            "custom_icon": {
+              "tips": "Replace the app icon on the home screen. Click to choose an image (PNG, JPEG or GIF); it is stored with the app and reused on every refresh and update.",
+              "choose": "Choose an icon",
+              "empty": "No icon",
+              "remove": "Remove icon",
+              "preview_alt": "Custom app icon"
+            },
             "password": {
                 "label": "Apple Password:"
             },
@@ -913,6 +920,7 @@
             "device_not_provisioned": "This device is not included in the provisioning profile.",
             "ipa_invalid": "The IPA file is invalid or cannot be read.",
             "ipa_path_rejected": "The IPA file is not an uploaded or installed IPA. Upload it again.",
+            "custom_icon_invalid": "The custom app icon is not a readable image. Upload a PNG, JPEG or GIF image again.",
             "nested_bundles_not_signed": "An app nested inside another app cannot be signed with the provisioning profile.",
             "bundle_identifier_rewritten": "The bundle identifier will be changed to the custom identifier; the identifiers of the app extensions follow it.",
             "extension_removed": "An extension will be removed from the app.",
