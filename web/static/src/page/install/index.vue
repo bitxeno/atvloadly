@@ -201,11 +201,11 @@
 
             <div class="form-control">
               <div class="flex items-end gap-x-4">
-                <!-- Custom app icon: a clickable swatch on the left, with a
+                <!-- Custom app icon: a clickable swatch on the right, with a
                      remove badge on its top-right corner once an image is
                      chosen. The file input stays hidden; the swatch opens it.
                      Only iOS devices (iPhone/iPad) support a custom icon. -->
-                <div v-if="supportsCustomIcon" class="shrink-0">
+                <div v-if="supportsCustomIcon" class="order-2 shrink-0">
                   <div class="relative">
                     <button
                       type="button"
@@ -246,7 +246,7 @@
                   />
                 </div>
 
-                <div class="flex-1 min-w-0">
+                <div class="order-1 flex-1 min-w-0">
                   <label class="label pt-0" for="install-custom-name">
                     <span class="label-text">{{ $t("install.form.custom_name.label") }}</span>
                     <div class="tooltip" :data-tip="$t('install.form.custom_name.tips')">
