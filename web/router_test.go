@@ -363,6 +363,46 @@ func TestCustomIconUploadRejectsNonImage(t *testing.T) {
 	}
 }
 
+// The app icon route shows the custom icon when one is stored, and falls back
+// to the IPA icon when the custom icon is missing.
+func TestAppIconPrefersCustomIcon(t *testing.T) {
+	server, dataDir := newTestServer(t)
+	saveDir := filepath.Join(dataDir, "ipa", "1")
+	original := writeFile(t, filepath.Join(saveDir, "app.png"), "original icon")
+	custom := writeFile(t, filepath.Join(saveDir, "custom-icon.png"), "custom icon")
+
+	tests := []struct {
+		name       string
+		customIcon string
+		wantBody   string
+	}{
+		{name: "custom icon", customIcon: custom, wantBody: "custom icon"},
+		{name: "missing custom icon falls back", customIcon: filepath.Join(saveDir, "gone.png"), wantBody: "original icon"},
+		{name: "no custom icon", wantBody: "original icon"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			record := model.InstalledApp{IpaName: "Test", Icon: original, CustomIconPath: tt.customIcon}
+			if err := db.Store().Create(&record).Error; err != nil {
+				t.Fatal(err)
+			}
+			url := "/apps/" + strconv.FormatUint(uint64(record.ID), 10) + "/icon"
+			resp, err := server.Test(httptest.NewRequest(http.MethodGet, url, nil))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = resp.Body.Close() }()
+			body, _ := io.ReadAll(resp.Body)
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("status = %d, want 200", resp.StatusCode)
+			}
+			if string(body) != tt.wantBody {
+				t.Fatalf("body = %q, want %q", body, tt.wantBody)
+			}
+		})
+	}
+}
+
 func TestTTYRouteIsNotRegistered(t *testing.T) {
 	server := fiber.New()
 	route(server)

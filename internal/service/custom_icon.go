@@ -16,7 +16,9 @@ import (
 
 	conf "github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/log"
+	"github.com/bitxeno/atvloadly/internal/model"
 	"github.com/bitxeno/atvloadly/internal/signing"
+	"golang.org/x/image/draw"
 )
 
 const (
@@ -28,6 +30,11 @@ const (
 	// so a small compressed file cannot expand into a huge bitmap.
 	maxCustomIconDimension = 4096
 	maxCustomIconPixels    = 16 << 20
+
+	// maxStoredCustomIconDimension bounds the PNG kept on disk. An app icon is
+	// only ever shown at a few hundred pixels and plumesign resizes it again,
+	// so larger uploads are downscaled without changing their aspect ratio.
+	maxStoredCustomIconDimension = 1024
 
 	// customIconFileName is the name of the custom icon stored with an
 	// installed app. Every upload is normalized to PNG, so the engine always
@@ -48,6 +55,7 @@ func SaveCustomIconUpload(data []byte) (string, error) {
 		return "", signing.Wrap(signing.ClassSigning, signing.CodeCustomIconInvalid, err,
 			"the custom icon is not a readable PNG, JPEG or GIF image")
 	}
+	img = fitCustomIcon(img)
 
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, img); err != nil {
@@ -70,6 +78,31 @@ func SaveCustomIconUpload(data []byte) (string, error) {
 		return "", fmt.Errorf("failed to save the custom icon: %w", err)
 	}
 	return dst, nil
+}
+
+// fitCustomIcon downscales an oversized upload to
+// maxStoredCustomIconDimension while preserving its aspect ratio. It never
+// enlarges a small icon.
+func fitCustomIcon(img image.Image) image.Image {
+	b := img.Bounds()
+	w, h := b.Dx(), b.Dy()
+	if w <= maxStoredCustomIconDimension && h <= maxStoredCustomIconDimension {
+		return img
+	}
+	scale := float64(maxStoredCustomIconDimension) / float64(w)
+	if r := float64(maxStoredCustomIconDimension) / float64(h); r < scale {
+		scale = r
+	}
+	dw, dh := int(float64(w)*scale), int(float64(h)*scale)
+	if dw < 1 {
+		dw = 1
+	}
+	if dh < 1 {
+		dh = 1
+	}
+	dst := image.NewRGBA(image.Rect(0, 0, dw, dh))
+	draw.CatmullRom.Scale(dst, dst.Bounds(), img, b, draw.Over, nil)
+	return dst
 }
 
 // decodeCustomIcon decodes one uploaded icon after checking its dimensions, so
@@ -128,6 +161,19 @@ func ResolveCustomIconPath(path string) (string, error) {
 			"the custom icon is not a readable image")
 	}
 	return resolved, nil
+}
+
+// ResolveAppDisplayIconPath returns the icon to show for an installed app: the
+// user's custom icon when one is stored, otherwise the icon extracted from the
+// IPA. A stored custom icon whose file is missing or unreadable falls back to
+// the IPA icon, so a stale record never leaves the UI with a broken image.
+func ResolveAppDisplayIconPath(app model.InstalledApp) (string, error) {
+	if app.CustomIconPath != "" {
+		if path, err := resolvePathWithin(app.CustomIconPath, filepath.Join(conf.Config.Server.DataDir, "ipa")); err == nil {
+			return path, nil
+		}
+	}
+	return ResolveAppIconPath(app.Icon)
 }
 
 // storeCustomIcon persists the user-chosen icon of app into saveDir and

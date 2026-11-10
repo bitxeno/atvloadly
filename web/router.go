@@ -84,8 +84,10 @@ func route(fi *fiber.App) {
 			return c.Status(http.StatusNotFound).SendString(err.Error())
 		}
 
-		// Only an icon stored with an installed app is served.
-		icon, err := service.ResolveAppIconPath(t.Icon)
+		// Show the custom icon when the app has one and its file is still
+		// readable; otherwise fall back to the IPA icon. Both are restricted
+		// to icons stored with the installed app.
+		icon, err := service.ResolveAppDisplayIconPath(*t)
 		if err != nil {
 			return c.Status(http.StatusNotFound).SendString("")
 		}

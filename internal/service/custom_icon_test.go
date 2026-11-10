@@ -65,6 +65,62 @@ func TestSaveCustomIconUploadRejectsNonImage(t *testing.T) {
 	}
 }
 
+// An oversized upload is downscaled to the storage bound while keeping its
+// aspect ratio; a small icon is left untouched.
+func TestSaveCustomIconUploadDownscalesOversizedImage(t *testing.T) {
+	setupCustomIconConfig(t)
+	big := image.NewRGBA(image.Rect(0, 0, 2400, 1200))
+	var upload bytes.Buffer
+	if err := png.Encode(&upload, big); err != nil {
+		t.Fatal(err)
+	}
+	path, err := SaveCustomIconUpload(upload.Bytes())
+	if err != nil {
+		t.Fatalf("SaveCustomIconUpload: %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, format, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if format != "png" || cfg.Width != 1024 || cfg.Height != 512 {
+		t.Fatalf("stored icon = %dx%d %s, want 1024x512 PNG", cfg.Width, cfg.Height, format)
+	}
+}
+
+func TestFitCustomIcon(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		w, h     int
+		wantW    int
+		wantH    int
+		wantSame bool
+	}{
+		{name: "small icon unchanged", w: 16, h: 16, wantSame: true},
+		{name: "large square", w: 2048, h: 2048, wantW: 1024, wantH: 1024},
+		{name: "wide", w: 2400, h: 1200, wantW: 1024, wantH: 512},
+		{name: "tall", w: 1200, h: 2400, wantW: 512, wantH: 1024},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			src := image.NewRGBA(image.Rect(0, 0, tt.w, tt.h))
+			got := fitCustomIcon(src)
+			if tt.wantSame {
+				if got != src {
+					t.Fatal("a small icon was needlessly reallocated")
+				}
+				return
+			}
+			cfg := got.Bounds()
+			if cfg.Dx() != tt.wantW || cfg.Dy() != tt.wantH {
+				t.Fatalf("size = %dx%d, want %dx%d", cfg.Dx(), cfg.Dy(), tt.wantW, tt.wantH)
+			}
+		})
+	}
+}
+
 func TestResolveCustomIconPath(t *testing.T) {
 	dataDir := setupCustomIconConfig(t)
 	uploadDir := filepath.Join(dataDir, "tmp")
@@ -108,6 +164,55 @@ func TestResolveCustomIconPath(t *testing.T) {
 				t.Fatalf("error code = %q, want %q", signing.CodeOf(err), signing.CodeCustomIconInvalid)
 			}
 		})
+	}
+}
+
+// The displayed icon is the custom one when available, and falls back to the
+// IPA icon when there is no custom icon or its file is unreadable.
+func TestResolveAppDisplayIconPath(t *testing.T) {
+	dataDir := setupCustomIconConfig(t)
+	ipaDir := filepath.Join(dataDir, "ipa", "1")
+	if err := os.MkdirAll(ipaDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	original := filepath.Join(ipaDir, "app.png")
+	custom := filepath.Join(ipaDir, customIconFileName)
+	for _, p := range []string{original, custom} {
+		if err := os.WriteFile(p, testPNG(t), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// resolvePathWithin follows symlinks, so compare against the canonical
+	// form of the temp directory (macOS resolves /var to /private/var).
+	canonical := func(p string) string {
+		resolved, err := filepath.EvalSymlinks(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resolved
+	}
+	original, custom = canonical(original), canonical(custom)
+
+	app := model.InstalledApp{Icon: original}
+	if got, err := ResolveAppDisplayIconPath(app); err != nil || got != original {
+		t.Fatalf("without a custom icon got %q, err %v; want the IPA icon", got, err)
+	}
+
+	app.CustomIconPath = custom
+	if got, err := ResolveAppDisplayIconPath(app); err != nil || got != custom {
+		t.Fatalf("with a custom icon got %q, err %v; want the custom icon", got, err)
+	}
+
+	// A stale custom icon path must not hide the still-valid IPA icon.
+	app.CustomIconPath = filepath.Join(ipaDir, "missing.png")
+	if got, err := ResolveAppDisplayIconPath(app); err != nil || got != original {
+		t.Fatalf("with a missing custom icon got %q, err %v; want the IPA icon", got, err)
+	}
+
+	// A custom icon outside the app directory cannot be served either.
+	app.CustomIconPath = filepath.Join(t.TempDir(), "evil.png")
+	if got, err := ResolveAppDisplayIconPath(app); err != nil || got != original {
+		t.Fatalf("with an outside custom icon got %q, err %v; want the IPA icon", got, err)
 	}
 }
 
