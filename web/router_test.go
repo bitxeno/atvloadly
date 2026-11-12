@@ -229,6 +229,41 @@ func TestInstallRefusesUnusableCustomIdentifier(t *testing.T) {
 	}
 }
 
+func TestInstallRejectsInvalidDeviceType(t *testing.T) {
+	server, _ := newTestServer(t)
+
+	var body bytes.Buffer
+	form := multipart.NewWriter(&body)
+	if err := form.WriteField("device_type", "iphone"); err != nil {
+		t.Fatal(err)
+	}
+	if err := form.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/install", &body)
+	req.Header.Set("Content-Type", form.FormDataContentType())
+	resp, err := server.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	var result struct {
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Code != -1 {
+		t.Fatalf("code = %d, want -1", result.Code)
+	}
+	if result.Msg != "invalid device_type: iphone; valid values are: AppleTV, iPhone, iPad" {
+		t.Fatalf("msg = %q, want invalid device type and valid values", result.Msg)
+	}
+}
+
 // An Apple ID install with a valid custom bundle identifier is accepted: it
 // passes validation and is queued, so it is not refused as an unusable
 // combination.

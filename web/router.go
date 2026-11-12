@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -549,6 +548,10 @@ func route(fi *fiber.App) {
 		account := strings.TrimSpace(c.FormValue("account"))
 		ipaURL := strings.TrimSpace(c.FormValue("url"))
 		deviceID := strings.TrimSpace(c.FormValue("device_id"))
+		deviceType := strings.TrimSpace(c.FormValue("device_type"))
+		if err := service.ValidateInstallDeviceType(deviceType); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
 		customName := strings.TrimSpace(c.FormValue("custom_name"))
 		customIdentifier := strings.TrimSpace(c.FormValue("custom_identifier"))
 		customIconPath := strings.TrimSpace(c.FormValue("custom_icon_path"))
@@ -638,7 +641,7 @@ func route(fi *fiber.App) {
 			manager.CleanUploadTempFiles(ipaPath, customIconPath)
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
-		selectedDevice, err := selectInstallDevice(devices, deviceID)
+		selectedDevice, err := service.SelectInstallDevice(devices, deviceID, deviceType)
 		if err != nil {
 			manager.CleanUploadTempFiles(ipaPath, customIconPath)
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
@@ -996,33 +999,6 @@ func route(fi *fiber.App) {
 		}
 	})
 
-}
-
-// selectInstallDevice picks the install target: the device with deviceID, or
-// the only available device when deviceID is empty. Several devices without
-// a deviceID is refused rather than guessed.
-func selectInstallDevice(devices []model.Device, deviceID string) (model.Device, error) {
-	if len(devices) == 0 {
-		return model.Device{}, fmt.Errorf("no available devices found")
-	}
-	if deviceID != "" {
-		for _, d := range devices {
-			if d.ID == deviceID {
-				return d, nil
-			}
-		}
-		return model.Device{}, fmt.Errorf("device_id not found: %s", deviceID)
-	}
-	if len(devices) == 1 {
-		return devices[0], nil
-	}
-
-	choices := make([]string, 0, len(devices))
-	for _, d := range devices {
-		choices = append(choices, fmt.Sprintf("%s (%s, %s)", d.ID, d.Name, d.DeviceClass))
-	}
-	sort.Strings(choices)
-	return model.Device{}, fmt.Errorf("several devices are available, device_id is required: %s", strings.Join(choices, ", "))
 }
 
 // removeUploadArtifacts removes the temp files of already parsed uploads in a
