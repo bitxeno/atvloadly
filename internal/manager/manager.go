@@ -22,8 +22,15 @@ func ScanServices(ctx context.Context, callback func(serviceType string, name st
 func StartDeviceManager() {
 	// 如果之前已启动，先停止
 	StopDeviceManager()
-	// Zeroconf disabled: no Avahi or mDNS discovery at all. Manually paired
-	// devices are still loaded from the pairing files on each ReloadDevices.
+	// Load persisted manual (pairing-file) devices before discovery starts so
+	// they are available right after startup regardless of whether Zeroconf is
+	// enabled. Without this, a Zeroconf-disabled deployment leaves the registry
+	// empty until something explicitly calls ReloadDevices (the Devices page or
+	// /api/reload), so scheduled refreshes fail with "device not found for
+	// UDID" after every restart (issue #261).
+	deviceManager.ReloadManualDevices()
+	// Zeroconf disabled: no Avahi or mDNS discovery at all, but the manual
+	// devices loaded above stay available.
 	if !app.ZeroconfEnabled() {
 		log.Info("Zeroconf discovery disabled by configuration")
 		return
