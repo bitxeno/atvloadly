@@ -511,7 +511,7 @@
     <dialog
       :class="['modal', { 'modal-open': certRevoke.visible }]"
     >
-      <div class="modal-box">
+      <div class="modal-box atv-cert-revoke-dialog">
         <h3 class="font-bold text-lg">{{ $t("install.cert_revoke.title") }}</h3>
         <p class="py-2 text-sm opacity-80">{{ $t("install.cert_revoke.warning") }}</p>
 
@@ -1963,6 +1963,11 @@ import DismissIcon from "@/assets/icons/dismiss.svg";
   padding: 0;
   border-radius: 9999px;
   box-shadow: var(--atv-menu-shadow);
+}
+
+.modal .modal-box.atv-cert-revoke-dialog {
+  width: min(768px, calc(100vw - 24px));
+  max-width: 768px;
 }
 
 /* Compatibility plan of the external certificate mode, below the form. */
