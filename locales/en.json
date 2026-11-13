@@ -109,7 +109,7 @@
         "sidebar": {
             "add_device": {
                 "title": "Add New Device",
-                "subtitle": "Connect AppleTV or iPhone"
+                "subtitle": "Connect Apple TV or iPhone"
             },
             "device_status": {
                 "pairable": "Pairable",
@@ -123,7 +123,7 @@
             },
             "tips": {
                 "no_paired_devices": "No connected devices",
-                "how_pair_device": "For AppleTV, go to 'Settings -> Remotes and Devices -> Remote App and Devices' to enter pairing mode for completion"
+                "how_pair_device": "For Apple TV, go to 'Settings -> Remotes and Devices -> Remote App and Devices' to enter pairing mode for completion"
             }
         },
         "table": {
@@ -207,7 +207,7 @@
             "pin": {
                 "title": "Enter PIN code",
                 "loading": "Connecting…",
-                "placeholder": "Please enter the PIN displayed on AppleTV",
+                "placeholder": "Please enter the PIN displayed on Apple TV",
                 "button": "Confirm"
             },
             "completed": {
@@ -449,7 +449,7 @@
             },
             "iphone_toggle": {
                 "label": "iPhone Auto Refresh",
-                "tips": "iPhone refresh isn't restricted by the configured running time; it will attempt to refresh when the iPhone is connected to WiFi"
+                "tips": "iPhone refresh isn't restricted by the configured running time; it will attempt to refresh when the iPhone is connected to Wi-Fi."
             },
             "mode": {
                 "label": "Refresh Mode",
