@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bitxeno/atvloadly/internal/app"
 	"github.com/bitxeno/atvloadly/internal/model"
 )
 
@@ -411,4 +412,37 @@ func TestWarmManualDevicePortSkipsUnknownIP(t *testing.T) {
 	})
 	dm := newDeviceManager()
 	dm.WarmManualDevicePort("100.65.100.99") // no pairing file for this IP
+}
+
+// TestStartDeviceManagerLoadsManualDevicesWithZeroconfDisabled reproduces
+// issue #261: with discovery off, saved manual-IP devices must be loaded at
+// startup, not only after an explicit reload (Devices page or /api/reload).
+func TestStartDeviceManagerLoadsManualDevicesWithZeroconfDisabled(t *testing.T) {
+	pdir := setSideloadDataDir(t)
+	if err := os.MkdirAll(pdir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeJSON(t, pdir, "AAA.json", `{"manual":true,"model":"AppleTV11,1","name":"AppleTV","remotepairing_ip":"100.65.100.37","remotepairing_udid":"AAA"}`)
+
+	// Isolate the global manager and force discovery off for this test.
+	previousConfig := app.Config
+	app.Config = &app.Configuration{}
+	app.Config.Zeroconf = false
+	previousManager := deviceManager
+	deviceManager = newDeviceManager()
+	t.Cleanup(func() {
+		deviceManager.Stop()
+		deviceManager = previousManager
+		app.Config = previousConfig
+	})
+
+	StartDeviceManager()
+
+	dev, ok := deviceManager.GetDeviceByUDID("AAA")
+	if !ok {
+		t.Fatal("manual device not loaded at startup with zeroconf disabled")
+	}
+	if dev.IP != "100.65.100.37" || !dev.Manual {
+		t.Fatalf("unexpected manual device: %+v", dev)
+	}
 }
