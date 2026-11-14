@@ -27,7 +27,8 @@ var (
 var (
 	// Payload/UnicornApp.app/AppIcon_TikTok76x76@2x~ipad.png
 	// Payload/UnicornApp.app/AppIcon76x76.png
-	regNewIconRegular   = regexp.MustCompile(`^Payload\/.*\.app\/AppIcon-?_?\w*(\d+(\.\d+)?)x(\d+(\.\d+)?)(@\dx)?(~ipad)?\.png$`)
+	// Payload/UnicornApp.app/Icon60x60@2x.png
+	regNewIconRegular   = regexp.MustCompile(`^Payload\/.*\.app\/(?:App)?Icon-?_?\w*(\d+(\.\d+)?)x(\d+(\.\d+)?)(@\dx)?(~ipad)?\.png$`)
 	regOldIconRegular   = regexp.MustCompile(`^Payload\/.*\.app\/Icon-?_?\w*(\d+(\.\d+)?)?.png$`)
 	regAssetRegular     = regexp.MustCompile(`^Payload\/.*\.app/Assets.car$`)
 	regInfoPlistRegular = regexp.MustCompile(`^Payload\/.*\.app/Info.plist$`)
