@@ -33,18 +33,8 @@ const (
 // provider dropped a dead D-Bus connection.
 var errAvahiBrowserFreed = errors.New("avahi browser freed")
 
-// avahiDaemon is the process-wide Avahi connection.
-//
-// go-avahi ties a Server to a D-Bus connection: Server.Close() closes the
-// connection, and ServerNew() starts a signal dispatch goroutine that only
-// Server.Close() stops. Creating a Server per operation therefore leaks a
-// connection, a goroutine and a registered signal channel every time. Sharing
-// dbus.SystemBus() instead is not an option: godbus forbids Close on shared
-// connections, and go-avahi never removes its signal channel, so the server
-// could never be cleaned up.
-//
-// One long-lived Server avoids both problems. Browsers are still created per
-// operation and freed when it ends.
+// avahiDaemon shares a private system-bus connection across discovery and scans.
+// Each operation owns its browsers. The provider owns the server's dispatch loop.
 var avahiDaemon = newAvahiServerProvider()
 
 type avahiServerProvider struct {
@@ -58,7 +48,7 @@ func newAvahiServerProvider() *avahiServerProvider {
 }
 
 // get returns the shared Avahi server, reconnecting when the D-Bus connection
-// has died (e.g. avahi-daemon restarted). The returned server is owned by the
+// has died (e.g. the system bus restarted). The returned server is owned by the
 // provider and must not be closed by the caller.
 func (p *avahiServerProvider) get() (*avahi.Server, error) {
 	p.mu.Lock()
@@ -66,15 +56,6 @@ func (p *avahiServerProvider) get() (*avahi.Server, error) {
 
 	if p.server != nil && p.conn.Connected() {
 		return p.server, nil
-	}
-
-	if p.server != nil {
-		// The connection is dead. Closing frees the browsers registered on
-		// it, which makes their channels readable-as-closed so the
-		// operations using them return instead of hanging. Safe to close:
-		// this connection is private to the provider.
-		p.server.Close()
-		p.server, p.conn = nil, nil
 	}
 
 	conn, err := dbus.ConnectSystemBus()
@@ -88,6 +69,9 @@ func (p *avahiServerProvider) get() (*avahi.Server, error) {
 		return nil, fmt.Errorf("avahi new failed: %v", err)
 	}
 
+	// A bus disconnect closes go-avahi's signal channel. Stop its dispatch
+	// loop immediately and wake idle browsers so discovery can reconnect.
+	context.AfterFunc(conn.Context(), server.Close)
 	p.server, p.conn = server, conn
 	return server, nil
 }
@@ -395,13 +379,7 @@ func (dm *DeviceManager) Scan() {
 
 // avahiBrowsers tracks the avahi browsers created for one operation on the
 // shared server, so all of them are freed when the operation ends.
-//
-// A browser must be freed exactly once. Server.Close() frees every browser it
-// still knows about, and freeing one afterwards closes an already-closed
-// channel and panics. Browsers are created from per-service-type goroutines
-// while the owning loop may return at any moment, so registration is
-// serialized against teardown: Close marks the set closed first, so a browser
-// created concurrently is either freed here or never freed at all.
+// Per-service-type goroutines can register browsers while a scan is ending.
 type avahiBrowsers struct {
 	server *avahi.Server
 
