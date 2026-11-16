@@ -8,7 +8,11 @@ import srLatn from "@locales/sr-Latn.json";
 import ru from "@locales/ru.json";
 
 i18next.use(LanguageDetector).init({
-  //   debug: true,
+  detection: {
+    lookupLocalStorage: "atvloadly-language",
+    order: ["querystring", "localStorage", "cookie", "sessionStorage", "navigator", "htmlTag"],
+    convertDetectedLanguage: (lang) => lang === "zh" ? "zh-CN" : lang,
+  },
   fallbackLng: "en",
   // Translations are rendered as text (Vue interpolation, toasts), which
   // escapes them already: escaping here would show entities like &#39;.
