@@ -14,9 +14,7 @@ import (
 )
 
 func Run(addr string, port int) error {
-	server := fiber.New(fiber.Config{
-		BodyLimit: math.MaxInt,
-	})
+	server := newServer()
 	setup(server)
 
 	if err := server.Listen(fmt.Sprintf("%s:%d", addr, port)); err != nil {
@@ -30,9 +28,7 @@ func Run(addr string, port int) error {
 // app uses to bind a random loopback port before opening its window. It
 // returns when the listener closes.
 func RunListener(ln net.Listener) error {
-	server := fiber.New(fiber.Config{
-		BodyLimit: math.MaxInt,
-	})
+	server := newServer()
 	setup(server)
 
 	if err := server.Listener(ln); err != nil {
@@ -40,6 +36,21 @@ func RunListener(ln net.Listener) error {
 		return err
 	}
 	return nil
+}
+
+// newServer returns the Fiber app the web service runs on.
+//
+// BodyLimit lifts Fiber's 4 MiB request cap so an IPA of any size is accepted.
+// StreamRequestBody is left off on purpose: fasthttp pre-parses a multipart
+// body of known length into a temporary file before the handler runs, so the
+// handler streams that file to its destination instead of holding the IPA in
+// memory. Staging the body in TMPDIR costs one extra write per upload; the
+// Docker image points TMPDIR at the data volume so the file is renamed rather
+// than copied onto it.
+func newServer() *fiber.App {
+	return fiber.New(fiber.Config{
+		BodyLimit: math.MaxInt,
+	})
 }
 
 func setup(server *fiber.App) {

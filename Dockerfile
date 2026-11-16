@@ -85,9 +85,11 @@ RUN printf '#!/bin/sh \n\n\
 
 ulimit -c 0 \n\
 mkdir -p /data/lockdown \n\
+mkdir -p /data/tmp \n\
 mkdir -p /data/PlumeImpactor \n\
 mkdir -p /data/PlumeImpactor/pairing_files \n\
 mkdir -p $HOME/.config \n\
+export TMPDIR=/data/tmp \n\
 [ ! -e "$HOME/.config/PlumeImpactor" ] && ln -s /data/PlumeImpactor $HOME/.config/PlumeImpactor \n\
 
 if [ -d "/keep/lib" ]; then  \n\
