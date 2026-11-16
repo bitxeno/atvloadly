@@ -8,6 +8,11 @@ import {
   needsCertificateReset,
   pickRevocableCertificates,
 } from "../src/utils/install-error-feedback.mjs";
+import {
+  createUploadGuard,
+  defaultUploadStallMs,
+  uploadStallMessage,
+} from "../src/utils/upload-guard.mjs";
 
 const source = readFileSync(new URL("../src/page/install/index.vue", import.meta.url), "utf8");
 const script = source.match(/<script>([\s\S]*?)<\/script>/)[1]
@@ -43,6 +48,10 @@ function page(upload = async () => [{ name: "app.ipa", path: "/tmp/app.ipa" }], 
   const context = vm.createContext({
     SigningIssueList: {}, SigningPlan: {}, SourcePicker: {},
     WebSocket, createSigningReportStream, FormData, JSZip,
+    createUploadGuard, uploadStallMessage, defaultUploadStallMs,
+    // The upload guard relies on these browser globals, which a bare vm
+    // context does not provide.
+    AbortController, setTimeout, clearTimeout,
     parseBundleIdFromPlist: () => ipaBundleId,
     formatInstallFailureMessage: installFailureMessage,
     needsCertificateReset, pickRevocableCertificates,

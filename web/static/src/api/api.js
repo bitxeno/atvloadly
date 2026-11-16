@@ -1,4 +1,5 @@
 import request from "@/utils/request";
+import { uploadRequestConfig } from "@/utils/upload-guard.mjs";
 
 export default {
   syncLang: (params) => {
@@ -215,12 +216,16 @@ export default {
     });
   },
 
-  upload: (data) => {
+  // upload stages one IPA on the server. It has no request timeout: the file
+  // size decides how long it takes, and a 23 GB IPA needs far longer than any
+  // timeout short enough to catch a dead connection. A guard aborts it only
+  // when no byte moved for its stall budget (see utils/upload-guard.mjs).
+  upload: (data, guard) => {
     return new Promise((resolve, reject) => {
       request({
         url: "/api/upload",
         method: "post",
-        timeout: 300000,
+        ...uploadRequestConfig(guard),
         headers: {
           "Content-Type": "multipart/form-data",
         },

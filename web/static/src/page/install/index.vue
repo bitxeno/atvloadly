@@ -597,6 +597,7 @@ import {
   signingCodeText,
   summarizePlan,
 } from "@/utils/signing-report.mjs";
+import { createUploadGuard, defaultUploadStallMs, uploadStallMessage } from "@/utils/upload-guard.mjs";
 
 const appleIDMode = "apple_id";
 const externalMode = "external_certificate";
@@ -645,6 +646,12 @@ export default {
       // data() alone.
       uploadSeq: 0,
       checkSeq: 0,
+      // Guard of the upload in flight, if any: leaving the page releases it so
+      // its stall timer stops instead of aborting an abandoned request.
+      uploadGuard: null,
+      // Last whole 5% reported for the upload in flight, so the log gets one
+      // progress line per step instead of one per progress event.
+      uploadReportedPct: 0,
       accounts: [],
       installedApps: [],
       recommendedAccount: "",
@@ -871,6 +878,9 @@ export default {
     // A submission may still be uploading or checking with no socket open:
     // release it so its guards return before opening a socket or sending.
     this.releaseAttempt();
+    // An upload still in flight must not keep its stall timer running.
+    this.uploadGuard?.release();
+    this.uploadGuard = null;
     this.stopUpdateLog();
     this.releaseCustomIconObjectURL();
     // Drops the external IPA, including one still being uploaded or
@@ -953,6 +963,42 @@ export default {
       const text = this.$t(key);
       return text !== key ? text : signingClass;
     },
+    // uploadIpa stages one IPA on the server. It is guarded by upload progress
+    // rather than a request timeout: the file size decides how long a healthy
+    // upload takes, so only one that stopped delivering bytes is abandoned.
+    // Progress is reported to the install log so a large upload shows it is
+    // still moving.
+    async uploadIpa(formData) {
+      this.uploadReportedPct = -5;
+      const guard = createUploadGuard(defaultUploadStallMs, (event) => {
+        const loaded = event?.loaded ?? 0;
+        const total = event?.total ?? 0;
+        if (total <= 0) {
+          return;
+        }
+        const pct = Math.floor((loaded * 100) / total);
+        // One line per 5%: a 23 GB upload must not flood the log.
+        if (pct < this.uploadReportedPct + 5) {
+          return;
+        }
+        this.uploadReportedPct = pct - (pct % 5);
+        this.log.newcontent += `Upload progress: ${this.uploadReportedPct}%\n`;
+      });
+      this.uploadGuard = guard;
+      try {
+        return await api.upload(formData, guard);
+      } catch (err) {
+        if (guard.stalled()) {
+          throw new Error(uploadStallMessage(err?.reason ?? err));
+        }
+        throw err;
+      } finally {
+        guard.release();
+        if (this.uploadGuard === guard) {
+          this.uploadGuard = null;
+        }
+      }
+    },
     // prepareExternalIpa uploads the chosen IPA file, or has the server
     // download the selected source build, then checks it.
     async prepareExternalIpa() {
@@ -964,7 +1010,7 @@ export default {
       if (this.installMode === "file" && this.files.length > 0) {
         const formData = new FormData();
         formData.append("files", this.files[0]);
-        pending = api.upload(formData).then((data) => data[0]);
+        pending = this.uploadIpa(formData).then((data) => data[0]);
       } else if (this.installMode === "source" && this.sourceSelection) {
         const selection = this.sourceSelection;
         key = sourceBuildKey(selection);
@@ -1183,7 +1229,7 @@ export default {
             formData.append("files", file);
           }
           _this.log.output += "IPA uploading...\n";
-          let data = await api.upload(formData)
+          let data = await _this.uploadIpa(formData)
           ipa = data[0];
         } else if (_this.installMode === "link") {
           _this.log.output += "IPA URL: " + _this.ipaUrl + "\n";
