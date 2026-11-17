@@ -2,45 +2,23 @@ name: "🚀 Release Nightly"
 
 # on events
 on:
-  schedule:
-    - cron: '0 0 * * *' # runs daily at 00:00
+  # Build on every merge/push to master, plus manual runs. No cron: scheduled
+  # runs would rebuild commits a push already covered.
+  push:
+    branches: [master]
   workflow_dispatch:
-  # push:
-  #   branches: [main, master, release/v*, tvos17]
+
+# Debounce bursts of merges/pushes on the same branch: a newer run cancels the
+# one still in progress, so a stack of merges ends up building only the newest
+# commit. This replaces "sleep for a while" — nothing waits, stale runs stop.
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: true
 
 # jobs
 jobs:
-  check:
-    name: Check has new commits today
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-    outputs:
-      require_build: ${{steps.commit_check.outputs.require_build}}
-    steps:
-      - name: Checkout the repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 1
-      - name: Check for new commits
-        id: commit_check
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "require_build=true" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event_name }}" = "schedule" ]; then
-            if [ "$(git log --oneline --since '24 hours ago' | wc -l | xargs)" -gt 0 ]; then
-              echo "require_build=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "require_build=false" >> "$GITHUB_OUTPUT"
-            fi
-          else
-            echo "require_build=false" >> "$GITHUB_OUTPUT"
-          fi
-
   build:
     name: Generate cross-platform builds
-    if: ${{needs.check.outputs.require_build == 'true'}}
-    needs: [check]
     permissions:
       contents: write
     strategy:
@@ -121,8 +99,6 @@ jobs:
   # downloads NSIS itself.
   desktop:
     name: Build desktop apps
-    if: ${{needs.check.outputs.require_build == 'true'}}
-    needs: [check]
     strategy:
       matrix:
         include:
