@@ -184,6 +184,7 @@ export default {
             // string, so a wording change upstream cannot leave the user
             // waiting on a prompt with no dialog to answer it.
             if (_this.is2FAPrompt(line)) {
+                _this.authLoading = false;
                 _this.authForm.authcode = "";
                 _this.authDialogVisible = true;
                 return;
