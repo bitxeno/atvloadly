@@ -89,3 +89,41 @@ func TestStartSkipsDiscoveryWhenAvahiUnavailable(t *testing.T) {
 		t.Fatal("Start did not return when Avahi was unavailable")
 	}
 }
+
+// Closing only this provider's private bus connection simulates a D-Bus restart
+// without interrupting the daemon or other clients on the test host.
+func TestAvahiDisconnectWakesIdleBrowser(t *testing.T) {
+	provider := newAvahiServerProvider()
+	server, err := provider.get()
+	if err != nil {
+		t.Skipf("requires a system D-Bus: %v", err)
+	}
+	t.Cleanup(func() { _ = provider.conn.Close() })
+	if _, err := server.GetAPIVersion(); err != nil {
+		t.Skipf("requires avahi-daemon: %v", err)
+	}
+	browser, err := server.ServiceBrowserNew(avahi.InterfaceUnspec, avahi.ProtoUnspec, "_atvloadly-test._tcp", "local", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := provider.conn.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Discovery must wake up without a scan or another call to provider.get.
+	timeout := time.After(3 * time.Second)
+	for {
+		select {
+		case _, ok := <-browser.AddChannel:
+			if !ok {
+				return
+			}
+		case _, ok := <-browser.RemoveChannel:
+			if !ok {
+				return
+			}
+		case <-timeout:
+			t.Fatal("idle browser still waiting after D-Bus disconnect")
+		}
+	}
+}

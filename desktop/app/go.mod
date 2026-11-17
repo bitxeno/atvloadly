@@ -30,13 +30,13 @@ require (
 	github.com/go-resty/resty/v2 v2.6.0 // indirect
 	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible // indirect
 	github.com/go-text/typesetting v0.3.5 // indirect
-	github.com/godbus/dbus/v5 v5.0.4 // indirect
+	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/gofiber/contrib/websocket v1.0.0 // indirect
 	github.com/gofiber/fiber/v2 v2.52.5 // indirect
 	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gookit/event v1.1.2 // indirect
-	github.com/holoplot/go-avahi v1.0.1 // indirect
+	github.com/holoplot/go-avahi v1.1.0 // indirect
 	github.com/iineva/CgbiPngFix v0.0.0-20210523041253-b8869b346914 // indirect
 	github.com/iineva/ipa-server v0.0.0-20210613102156-5a07a87df9a8 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
