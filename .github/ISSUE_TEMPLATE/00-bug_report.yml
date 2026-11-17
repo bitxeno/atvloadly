@@ -15,10 +15,23 @@ body:
         - label: |
             I confirm this is an `atvloadly` issue, not caused by other reasons (such as [network]).
   - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Which platform are you running atvloadly on?
+      options:
+        - Docker (Linux)
+        - Docker (OpenWrt)
+        - Desktop app (macOS)
+        - Desktop app (Windows)
+      default: 0
+    validations:
+      required: true
+  - type: dropdown
     id: arch
     attributes:
       label: Architecture
-      description: What is the cpu architecture of your Docker?
+      description: What is the cpu architecture of your platform?
       options:
         - x86_64
         - Arm64
