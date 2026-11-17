@@ -275,6 +275,10 @@ func route(fi *fiber.App) {
 			app.Settings.Notification = settings.Notification
 		case "network":
 			app.Settings.Network = settings.Network
+		case "advanced":
+			app.Settings.Advanced = settings.Advanced
+			// Apply the new debug mode to the running process immediately.
+			app.ApplyLogLevel()
 		case "task":
 			app.Settings.Task = settings.Task
 			if err := task.ReloadTask(); err != nil {

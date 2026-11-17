@@ -542,6 +542,10 @@
                 "anisette_server": "Anisette 服务器",
                 "anisette_server_default_tag": "默认",
                 "anisette_server_tips": "留空使用默认服务器。如果更换服务器后还是请求失败，请尝试重置/删除对应帐号的 Anisette 数据。",
+                "debug_mode": {
+                    "label": "调试模式",
+                    "tips": "开启后，执行安装命令时会附加 RUST_LOG=debug 环境变量，日志级别也会调整为 debug。"
+                },
                 "save": "保存",
                 "reset_anisette": "Anisette 数据",
                 "reset_anisette_empty": "没有保存 Anisette 数据的帐号。",

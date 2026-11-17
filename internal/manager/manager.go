@@ -208,6 +208,11 @@ func GetRunEnvs() []string {
 			envs = append(envs, fmt.Sprintf("https_proxy=%s", app.Settings.Network.HTTPSProxy))
 		}
 	}
+	// Debug mode makes the signing engine (a Rust binary reading RUST_LOG)
+	// log at debug level.
+	if app.Settings.Advanced.DebugMode {
+		envs = append(envs, "RUST_LOG=debug")
+	}
 	return utils.MergeEnvs(os.Environ(), envs)
 }
 

@@ -85,6 +85,12 @@ type SettingsConfiguration struct {
 		HTTPProxy    string `koanf:"http_proxy" json:"http_proxy"`
 		HTTPSProxy   string `koanf:"https_proxy" json:"https_proxy"`
 	} `koanf:"network" json:"network"`
+	Advanced struct {
+		// DebugMode turns on debug logging for both atvloadly and the signing
+		// engine: install commands run with RUST_LOG=debug and the application
+		// log level drops to debug.
+		DebugMode bool `koanf:"debug_mode" json:"debug_mode"`
+	} `koanf:"advanced" json:"advanced"`
 }
 
 func SaveSettings() {
@@ -149,6 +155,9 @@ func printRedactedSettings() {
 			"proxy_enabled": Settings.Network.ProxyEnabled,
 			"http_proxy":    redactProxyURL(Settings.Network.HTTPProxy),
 			"https_proxy":   redactProxyURL(Settings.Network.HTTPSProxy),
+		},
+		"advanced": map[string]any{
+			"debug_mode": Settings.Advanced.DebugMode,
 		},
 	}
 	log.Infof("Load settings (redacted): %s", utils.ToJSON(redacted))

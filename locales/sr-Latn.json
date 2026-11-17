@@ -539,6 +539,10 @@
       "anisette_server": "Anisette server",
       "anisette_server_default_tag": "Podrazumevani",
       "anisette_server_tips": "Ostavite prazno za podrazumevani server. Ako zahtevi i dalje ne uspevaju nakon promene servera, pokušajte da resetujete ili obrišete Anisette podatke naloga.",
+      "debug_mode": {
+          "label": "Režim debagovanja",
+          "tips": "Kada je uključeno, komande instalacije se izvršavaju sa promenljivom okruženja RUST_LOG=debug, a nivo logovanja se postavlja na debug."
+      },
       "save": "Sačuvaj",
       "reset_anisette": "Anisette podaci",
       "reset_anisette_empty": "Nijedan nalog nema sačuvane Anisette podatke.",

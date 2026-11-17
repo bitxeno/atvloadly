@@ -47,6 +47,10 @@ func AddFileOutput(logPath string) {
 	}
 }
 
+func SetInfoLevel() {
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+}
+
 func SetDebugLevel() {
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 }

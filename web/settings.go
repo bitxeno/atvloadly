@@ -26,6 +26,7 @@ type safeSettingsResponse struct {
 	Update       safeUpdateSettings `json:"update"`
 	Notification any                `json:"notification"`
 	Network      any                `json:"network"`
+	Advanced     any                `json:"advanced"`
 }
 
 func safeSettings() safeSettingsResponse {
@@ -41,6 +42,7 @@ func safeSettings() safeSettingsResponse {
 			Update:       update,
 			Notification: s.Notification,
 			Network:      s.Network,
+			Advanced:     s.Advanced,
 		}
 	}
 	return safeSettingsResponse{Update: update}

@@ -542,6 +542,10 @@
                 "anisette_server": "Anisette Server",
                 "anisette_server_default_tag": "Default",
                 "anisette_server_tips": "Leave empty to use the default server. If requests still fail after changing the server, try resetting or deleting the Anisette data of the account.",
+                "debug_mode": {
+                    "label": "Debug Mode",
+                    "tips": "When enabled, install commands run with the RUST_LOG=debug environment variable and the log level is set to debug."
+                },
                 "save": "Save",
                 "reset_anisette": "Anisette Data",
                 "reset_anisette_empty": "No account has Anisette data stored.",

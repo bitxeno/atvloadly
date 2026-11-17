@@ -97,13 +97,32 @@ func InitLogger(conf *Configuration) error {
 		}
 	}
 	log.AddFileOutput(conf.Log.LogFile)
-	if conf.Log.Level == "debug" {
-		log.SetDebugLevel()
-	}
-	if conf.Log.Level == "trace" {
-		log.SetTraceLevel()
-	}
+	ApplyLogLevel()
 	return nil
+}
+
+// ApplyLogLevel sets the application log level from the configuration and the
+// debug mode setting. It is called at startup and again whenever the debug
+// mode setting changes, so toggling it takes effect without a restart. Debug
+// mode always wins: the engine gets RUST_LOG=debug, so atvloadly logs at debug
+// too. Otherwise the configured level (info by default, trace when verbose) is
+// used.
+func ApplyLogLevel() {
+	level := "info"
+	if Config != nil && Config.Log.Level != "" {
+		level = Config.Log.Level
+	}
+	if Settings != nil && Settings.Advanced.DebugMode {
+		level = "debug"
+	}
+	switch level {
+	case "trace":
+		log.SetTraceLevel()
+	case "debug":
+		log.SetDebugLevel()
+	default:
+		log.SetInfoLevel()
+	}
 }
 
 func InitDb(conf *Configuration) error {

@@ -423,6 +423,14 @@ export default {
     });
   },
 
+  saveAdvancedSettings: function (data) {
+    return request({
+      url: "/api/settings/advanced",
+      method: "post",
+      data,
+    });
+  },
+
   saveUpdateSettings: function (data) {
     return request({
       url: "/api/settings/update",

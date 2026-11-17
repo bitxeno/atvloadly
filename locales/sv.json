@@ -539,6 +539,10 @@
       "anisette_server": "Anisette-server",
       "anisette_server_default_tag": "Standard",
       "anisette_server_tips": "Lämna tomt för att använda standardservern. Om anropen fortfarande misslyckas efter att du bytt server, försök återställa eller ta bort kontots Anisette-data.",
+      "debug_mode": {
+          "label": "Felsökningsläge",
+          "tips": "När det är aktiverat körs installationskommandon med miljövariabeln RUST_LOG=debug och loggnivån sätts till debug."
+      },
       "save": "Spara",
       "reset_anisette": "Anisette-data",
       "reset_anisette_empty": "Inget konto har sparad Anisette-data.",

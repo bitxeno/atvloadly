@@ -602,6 +602,23 @@
             </div>
           </div>
         </div>
+        <div class="form-item">
+          <label class="form-item-label">
+            <span class="label-text">{{ $t('settings.advanced.debug_mode.label') }}</span>
+          </label>
+          <div class="form-item-content">
+            <input
+              type="checkbox"
+              class="toggle toggle-success"
+              v-model="settings.advanced.debug_mode"
+              :disabled="advanced.debugLoading"
+              @change="saveDebugMode"
+            />
+            <label class="label">
+              <span class="label-text-alt whitespace-normal">{{ $t('settings.advanced.debug_mode.tips') }}</span>
+            </label>
+          </div>
+        </div>
       </form>
     </section>
   </div>
@@ -647,6 +664,9 @@ export default {
           http_proxy: "",
           https_proxy: "",
         },
+        advanced: {
+          debug_mode: false,
+        },
       },
       advanced: {
         adiLoading: false,
@@ -655,6 +675,7 @@ export default {
         anisetteServer: "",
         savedAnisetteServer: "",
         serverLoading: false,
+        debugLoading: false,
       },
       anisetteAccounts: [],
       serverComboOpen: false,
@@ -829,6 +850,26 @@ export default {
           toast.success(this.$t("settings.toast.save_success"));
         }
       });
+    },
+
+    saveDebugMode() {
+      this.advanced.debugLoading = true;
+      const enabled = this.settings.advanced.debug_mode;
+      api.saveAdvancedSettings({ advanced: { debug_mode: enabled } })
+        .then((res) => {
+          if (res.data) {
+            toast.success(this.$t("settings.toast.save_success"));
+          }
+        })
+        .catch((err) => {
+          // request.js already shows the error; revert the toggle so the UI
+          // reflects the setting that is actually stored.
+          this.settings.advanced.debug_mode = !enabled;
+          console.error(err);
+        })
+        .finally(() => {
+          this.advanced.debugLoading = false;
+        });
     },
 
     confirmUpdateCoreADI(close) {
