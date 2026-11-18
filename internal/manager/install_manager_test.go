@@ -1,11 +1,67 @@
 package manager
 
 import (
+	"context"
+	"errors"
+	"os"
+	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 
+	execx "github.com/bitxeno/atvloadly/internal/exec"
 	"github.com/bitxeno/atvloadly/internal/model"
 )
+
+func TestEngineTimeoutAfterUpload(t *testing.T) {
+	dir := t.TempDir()
+	// Emit the same progress messages as plumesign, then wait for the deadline.
+	script := "#!/bin/sh\nprintf '%s\\n' \"$@\"\nexec sleep 30\n"
+	if err := os.WriteFile(filepath.Join(dir, "plumesign"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	for _, tc := range []struct {
+		name    string
+		lines   []string
+		pending bool
+		busy    bool
+	}{
+		{"waiting for confirmation", []string{"AFC upload progress: 100%"}, true, false},
+		{"device reports busy extension", []string{"AFC upload progress: 100%", "PlugInKit Code=14: plugins are busy"}, true, true},
+		{"still transferring", []string{"AFC upload progress: 95%"}, false, false},
+		{"already installed", []string{"AFC upload progress: 100%", "Installation complete!"}, false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mgr := NewInstallManager()
+			defer mgr.Close()
+			// External signing retains the previous engine attempt's log.
+			mgr.WriteLog("AFC upload progress: 100%\n")
+			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+			defer cancel()
+			err := mgr.runEngine(ctx, tc.lines, dir, nil, nil)
+			if !errors.Is(err, execx.ErrCommandTimeout) {
+				t.Fatalf("expected a command timeout, got %v", err)
+			}
+			if got := strings.Contains(err.Error(), "waiting for the device"); got != tc.pending {
+				t.Fatalf("pending installation = %t, got %v", tc.pending, err)
+			}
+			if got := strings.Contains(err.Error(), "busy app extension"); got != tc.busy {
+				t.Fatalf("busy extension = %t, got %v", tc.busy, err)
+			}
+			if retry := shouldRetryInstall(model.SigningModeAppleID, err, nil); retry == tc.pending {
+				t.Fatalf("retry = %t after %v", retry, err)
+			}
+			if tc.pending {
+				external := classifyExternalFailure(engineMarkerInstalling, err)
+				if shouldRetryInstall(model.SigningModeExternalCertificate, external, nil) {
+					t.Fatalf("unexpected retry of external installation: %v", external)
+				}
+			}
+		})
+	}
+}
 
 func TestBuildInstallArgsUsesUDIDForRSD(t *testing.T) {
 	args := buildInstallArgs(InstallOptions{

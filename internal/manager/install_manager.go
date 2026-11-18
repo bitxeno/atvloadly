@@ -32,6 +32,9 @@ var ErrCertificateResetRequired = errors.New("certificate reset required")
 // longer than 30 minutes to sign and install.
 const installTimeout = 60 * time.Minute
 
+// The device may still be processing this installation after the engine exits.
+var errDeviceInstallTimeout = fmt.Errorf("%w: IPA upload reached 100%%, timed out waiting for the device to confirm installation", execx.ErrCommandTimeout)
+
 // maxCapturedOutput bounds the engine output kept in memory for one
 // installation; older output is dropped and replaced by a truncation marker.
 const maxCapturedOutput = 4 << 20
@@ -221,6 +224,7 @@ func (t *InstallManager) withRunTimeout(ctx context.Context) context.Context {
 // runEngine runs plumesign with args, streaming its output into the captured
 // install output. A nil stdin connects the engine to the null device.
 func (t *InstallManager) runEngine(ctx context.Context, args []string, dir string, env []string, stdin io.Reader) error {
+	mark := t.outputStdout.Mark()
 	cmd := execx.CommandContext(ctx, "plumesign", args...).
 		WithTimeout(installTimeout).
 		WithDir(dir).
@@ -232,14 +236,18 @@ func (t *InstallManager) runEngine(ctx context.Context, args []string, dir strin
 	log.Debugf("Install Command: %s", strings.Join(append([]string{cmd.Name}, cmd.Args...), " "))
 
 	err := cmd.Run()
-	if err != nil {
-		if errors.Is(err, execx.ErrCommandTimeout) {
-			log.Err(err).Msgf("Installation exceeded %d-minute timeout limit. %s", int(installTimeout.Minutes()), t.ErrorLog())
-			return fmt.Errorf("installation exceeded %d-minute timeout limit: %w", int(installTimeout.Minutes()), err)
-		}
+	if !errors.Is(err, execx.ErrCommandTimeout) {
 		return err
 	}
-	return nil
+	output := t.outputStdout.Since(mark)
+	if strings.Contains(output, "AFC upload progress: 100%") && !installSucceeded(output) {
+		if strings.Contains(output, "plugins are busy") {
+			return fmt.Errorf("%w: device reported a busy app extension; check the device installation log before retrying", errDeviceInstallTimeout)
+		}
+		return errDeviceInstallTimeout
+	}
+	log.Err(err).Msgf("Installation timed out. %s", t.ErrorLog())
+	return fmt.Errorf("installation timed out: %w", err)
 }
 
 func buildInstallArgs(opts InstallOptions, provisionPath string) []string {
@@ -467,8 +475,11 @@ func (t *InstallManager) NeedsCertificateReset() bool {
 }
 
 func (t *InstallManager) IsSuccess() bool {
-	log := t.OutputLog()
-	return strings.Contains(log, "Installation Succeeded") || strings.Contains(log, "Installation complete")
+	return installSucceeded(t.OutputLog())
+}
+
+func installSucceeded(output string) bool {
+	return strings.Contains(output, "Installation Succeeded") || strings.Contains(output, "Installation complete")
 }
 
 func (t *InstallManager) OutputLog() string {
