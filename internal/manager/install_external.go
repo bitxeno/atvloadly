@@ -241,12 +241,15 @@ func engineErrorSummary(output string, runErr error) string {
 }
 
 // shouldRetryInstall decides whether a failed installation takes the single
-// usbmuxd-restart retry. Apple ID installations retry every failure other than
-// an invalid account (handled before). External certificate installations
+// usbmuxd-restart retry. A device that has received the entire upload may
+// still be installing it. External certificate installations
 // only retry transport failures of a request still active: certificate,
 // profile and signing failures would fail again identically, and so would an
 // invalid pairing record, which only a new pairing fixes.
 func shouldRetryInstall(mode model.SigningMode, err error, ctxErr error) bool {
+	if errors.Is(err, errDeviceInstallTimeout) {
+		return false
+	}
 	if mode.OrDefault() != model.SigningModeExternalCertificate {
 		return true
 	}

@@ -1,10 +1,20 @@
 package exec
 
 import (
+	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestRunWithExpiredDeadline(t *testing.T) {
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+	if err := CommandContext(ctx, "echo", "unreachable").Run(); !errors.Is(err, ErrCommandTimeout) {
+		t.Fatalf("expected timeout before process start, got %v", err)
+	}
+}
 
 // A secret argument is masked in the debug log while the process still gets
 // the real value. -p carries a password for some subcommands and a package

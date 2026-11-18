@@ -137,9 +137,9 @@ func (c *Cmd) Run() error {
 
 	err := cmd.Run()
 	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
-			_ = cmd.Process.Kill()
-			return fmt.Errorf("%s %w", err.Error(), ErrCommandTimeout)
+		// CommandContext can return an ExitError for the process it killed.
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return fmt.Errorf("%w: %w", ErrCommandTimeout, err)
 		}
 		return c.parseError(err, nil)
 	}
