@@ -990,33 +990,61 @@ html[data-theme="dark"] {
 }
 
 /* device-warning-design-v1 */
-.app-container .main-container .atv-device-panel {
-  padding: 10px;
+/* The device panel/row is rendered both in the home page's left column (inside
+   .app-container .main-container) and in the phone drawer (an AppSidebar in a
+   teleported overlay that lives outside .app-container). Both selectors are
+   listed so the two placements share identical styling — including the row
+   padding that keeps the "IP" badge from being clipped. */
+.app-container .main-container .atv-device-panel,
+.app-sidebar--panel .atv-device-panel {
+  /* Base panel has no padding: the connected-device rows and service items add
+     their own 12px inset so their icons align with the add-device icon. */
+  padding: 0;
   background: var(--atv-surface);
   border: 1px solid var(--atv-border);
   border-radius: 18px;
   box-shadow: var(--atv-shadow);
 }
-.app-container .main-container .atv-device-panel .atv-device-row {
+
+/* The service-status card keeps vertical breathing room (top/bottom) while its
+   horizontal padding stays 0 for icon alignment. Scoped to the service card so
+   the connected-devices card is unaffected. */
+.app-container .main-container .atv-service-status .atv-device-panel,
+.app-sidebar--panel .atv-service-status .atv-device-panel {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+/* The empty connected-devices prompt keeps a little inner padding. */
+.app-container .main-container .atv-device-empty,
+.app-sidebar--panel .atv-device-empty {
+  padding: 10px;
+}
+.app-container .main-container .atv-device-panel .atv-device-row,
+.app-sidebar--panel .atv-device-panel .atv-device-row {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
   border-radius: 12px;
 }
-.app-container .main-container .atv-device-panel .atv-device-row:hover {
+.app-container .main-container .atv-device-panel .atv-device-row:hover,
+.app-sidebar--panel .atv-device-panel .atv-device-row:hover {
   background: var(--atv-surface-hover);
 }
-.app-container .atv-device-row .avatar > div {
+.app-container .atv-device-row .avatar > div,
+.app-sidebar--panel .atv-device-row .avatar > div {
   width: 50px;
   border-radius: 12px;
 }
-.app-container .atv-device-row h4 {
+.app-container .atv-device-row h4,
+.app-sidebar--panel .atv-device-row h4 {
   margin: 0;
   font-size: .88rem;
   line-height: 1.35;
 }
-.app-container .atv-device-row p {
+.app-container .atv-device-row p,
+.app-sidebar--panel .atv-device-row p {
   color: var(--atv-muted);
   font-size: .8rem;
 }
@@ -1089,4 +1117,10 @@ html[data-theme="dark"] {
 .app-container .atv-account-page .atv-account-action:disabled {
   opacity: .45;
   cursor: not-allowed;
+}
+
+/* Lock page scrolling while the phone app drawer covers the content. */
+html.atv-shell-locked,
+html.atv-shell-locked body {
+  overflow: hidden;
 }

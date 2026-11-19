@@ -50,6 +50,8 @@
     "preferences": "Опције",
     "account": "Налози",
     "devices": "Уређаји",
+    "expand_sidebar": "Прошири бочну панел",
+    "collapse_sidebar": "Скупи бочну панел",
     "donate": "Донирај",
     "about": "О програму"
   },

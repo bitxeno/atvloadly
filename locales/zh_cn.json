@@ -50,6 +50,8 @@
         "preferences": "选项",
         "account": "帐号",
         "devices": "设备",
+        "expand_sidebar": "展开侧栏",
+        "collapse_sidebar": "收起侧栏",
         "donate": "赞助",
         "about": "关于"
     },
