@@ -94,6 +94,15 @@ func writeInstallRejected(mgr *manager.WebsocketManager, reason string) {
 // refuses any serial its account does not currently list.
 var revokeCertificateSerialPattern = regexp.MustCompile(`^[0-9A-Fa-f]{0,64}$`)
 
+// ValidateRevokeCertificateSerial rejects a revocation authorization that is not
+// an Apple certificate serial. The empty string means no authorization.
+func ValidateRevokeCertificateSerial(serial string) error {
+	if !revokeCertificateSerialPattern.MatchString(serial) {
+		return fmt.Errorf("invalid certificate serial: %q", serial)
+	}
+	return nil
+}
+
 // resolveInteractiveUploadIPAPath accepts only a regular file that resolves
 // inside the upload directory. Interactive install requests must not borrow an
 // installed app's persistent IPA: SaveApp moves the successful request's IPA
@@ -136,8 +145,8 @@ func validateInstallRequest(v *model.InstalledApp) error {
 		// The serial arrives as plain text from the install page and becomes
 		// one engine argument; Apple serials are hex, and the engine refuses
 		// it unless the account currently lists it.
-		if !revokeCertificateSerialPattern.MatchString(v.RevokeCertificateSerial) {
-			return fmt.Errorf("invalid certificate serial: %q", v.RevokeCertificateSerial)
+		if err := ValidateRevokeCertificateSerial(v.RevokeCertificateSerial); err != nil {
+			return err
 		}
 	case model.SigningModeExternalCertificate:
 		v.RevokeCertificateSerial = ""

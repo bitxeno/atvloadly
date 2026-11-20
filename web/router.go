@@ -816,6 +816,25 @@ func route(fi *fiber.App) {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 
+		// A refresh normally revokes nothing. The home page may retry a refresh
+		// that stopped at the certificate limit with one certificate serial the
+		// user picked, the same one-shot authorization the install page sends.
+		var req struct {
+			RevokeCertificateSerial string `json:"revoke_certificate_serial"`
+		}
+		if len(c.Body()) > 0 {
+			if err := c.BodyParser(&req); err != nil {
+				return c.Status(http.StatusOK).JSON(apiError("invalid request body"))
+			}
+		}
+		if t.IsExternalSigning() {
+			req.RevokeCertificateSerial = ""
+		}
+		if err := service.ValidateRevokeCertificateSerial(req.RevokeCertificateSerial); err != nil {
+			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
+		}
+		t.RevokeCertificateSerial = req.RevokeCertificateSerial
+
 		task.RefreshApp(*t)
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))
 	})

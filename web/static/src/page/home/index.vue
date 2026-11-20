@@ -315,6 +315,12 @@
       </div>
     </div>
 
+    <CertificateRevokeDialog
+      ref="certificateRevokeDialog"
+      @confirm="confirmCertificateRevoke"
+      @close="closeCertificateRevoke"
+    />
+
     <SourceDialog
       ref="sourceDialog"
       @saved="fetchAppList"
@@ -332,11 +338,13 @@ import { truncateIP } from "@/utils/utils";
 import { homeShell } from "@/utils/home-shell";
 import SourceDialog from "@/components/SourceDialog.vue";
 import AppSidebar from "@/components/AppSidebar.vue";
+import CertificateRevokeDialog from "@/components/CertificateRevokeDialog.vue";
+import { takePendingCertificateReset } from "@/utils/install-error-feedback.mjs";
 import { updateFailed } from "@/utils/source.mjs";
 
 export default {
   name: "Home",
-  components: { SourceDialog, AppSidebar },
+  components: { CertificateRevokeDialog, SourceDialog, AppSidebar },
   data() {
     return {
       list: [],
@@ -351,6 +359,12 @@ export default {
       // IDs of apps whose update request is pending. The installing list
       // polled from the server does not include them yet.
       pendingUpdates: {},
+      // IDs of apps whose manual refresh is pending. When one finishes at the
+      // Apple ID certificate limit, the home page offers the same certificate
+      // choice as the install page and retries it with that authorization.
+      pendingRefreshIds: {},
+      // App currently explained by the certificate dialog, if any.
+      certificateRevokeApp: null,
       // ID of the app armed for deletion in the row dropdown menu. Clicking
       // delete once arms it, clicking again confirms.
       confirmDeleteId: null,
@@ -416,7 +430,7 @@ export default {
     fetchAppList() {
       let _this = this;
 
-      api.getAppList().then((res) => {
+      return api.getAppList().then((res) => {
         _this.list = res.data;
       });
     },
@@ -426,7 +440,9 @@ export default {
       api.getInstallingApps().then((res) => {
         // res.data returns empty, indicating that the installation has been completed.
         if (_this.installingApps && (res.data || []).length == 0) {
-          _this.fetchAppList();
+          _this.fetchAppList().then(() => {
+            _this.offerPendingCertificateReset();
+          });
 
           if (_this.newInstallToastId) {
             toast.remove(_this.newInstallToastId);
@@ -481,26 +497,76 @@ export default {
       closePopper?.();
     },
     refreshApp(item) {
+      if (this.isInstalling(item)) return;
+      // A previous refresh already failed at the certificate limit: ask which
+      // certificate may be revoked before retrying, like the install page does.
+      if (!this.isExternalApp(item) && Number(item.refreshed_error) === 5) {
+        this.openCertificateRevocation(item);
+        return;
+      }
+      this.startRefresh(item, "");
+    },
+    startRefresh(item, revokeCertificateSerial) {
       let _this = this;
 
+      _this.pendingRefreshIds[item.ID] = true;
       _this.installingApps.push(item);
 
-      api.refreshApp(item.ID).then((res) => {
-        _this.checkInstallingAppDelay();
-        if (_this.isExternalApp(item)) {
+      const data = revokeCertificateSerial
+        ? { revoke_certificate_serial: revokeCertificateSerial }
+        : undefined;
+      api
+        .refreshApp(item.ID, data)
+        .then((res) => {
+          _this.checkInstallingAppDelay();
+          if (_this.isExternalApp(item)) {
+            toast.info(
+              this.$t("home.toast.reinstall_app_started", {
+                name: item.ipa_name,
+              })
+            );
+            return;
+          }
           toast.info(
-            this.$t("home.toast.reinstall_app_started", {
+            this.$t("home.toast.refresh_app_started", {
               name: item.ipa_name,
             })
           );
-          return;
-        }
-        toast.info(
-          this.$t("home.toast.refresh_app_started", {
-            name: item.ipa_name,
-          })
-        );
-      });
+        })
+        .catch(() => {
+          // The request never started; stop showing it as installing and
+          // forget the result this page was waiting for.
+          delete _this.pendingRefreshIds[item.ID];
+          _this.installingApps = _this.installingApps.filter((app) => app.ID !== item.ID);
+          _this.fetchAppList();
+        });
+    },
+    // openCertificateRevocation asks which certificate may be revoked for
+    // item. The dialog only collects the choice; startRefresh retries after
+    // the user confirms it.
+    openCertificateRevocation(item) {
+      if (!item || !item.account || this.certificateRevokeApp) return;
+      this.certificateRevokeApp = item;
+      this.$refs.certificateRevokeDialog.show(item.account);
+    },
+    confirmCertificateRevoke(serial) {
+      const item = this.certificateRevokeApp;
+      this.certificateRevokeApp = null;
+      if (!item || !serial) return;
+      this.startRefresh(item, serial);
+      this.offerPendingCertificateReset();
+    },
+    closeCertificateRevoke() {
+      this.certificateRevokeApp = null;
+      this.offerPendingCertificateReset();
+    },
+    // offerPendingCertificateReset opens the certificate dialog for a refresh
+    // that finished at the account limit. It runs after the app list is
+    // reloaded, once the queued task has recorded its result.
+    offerPendingCertificateReset() {
+      if (this.certificateRevokeApp) return;
+      const item = takePendingCertificateReset(this.list, this.pendingRefreshIds);
+      if (item) this.openCertificateRevocation(item);
     },
     reinstallApp(item) {
       let _this = this;

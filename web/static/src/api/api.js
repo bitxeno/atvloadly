@@ -290,10 +290,11 @@ export default {
     });
   },
 
-  refreshApp: (id) => {
+  refreshApp: (id, data) => {
     return request({
       url: `/api/apps/${id}/refresh`,
       method: "post",
+      data,
     });
   },
 

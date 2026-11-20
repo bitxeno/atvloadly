@@ -129,6 +129,11 @@ func TestBuildInstallArgsAppleID(t *testing.T) {
 			opts: InstallOptions{UDID: "DEVICE", Account: "user@example.com", IpaPath: "app.ipa", CustomIconPath: "/data/ipa/1/custom-icon.png"},
 			want: []string{"sign", "--apple-id", "--register-and-install", "--output-provision", "embedded.mobileprovision", "--udid", "DEVICE", "-u", "user@example.com", "-p", "app.ipa", "--custom-icon=/data/ipa/1/custom-icon.png"},
 		},
+		{
+			name: "authorized certificate revocation",
+			opts: InstallOptions{UDID: "DEVICE", Account: "user@example.com", IpaPath: "app.ipa", RevokeCertificateSerial: "AB12cd34"},
+			want: []string{"sign", "--apple-id", "--register-and-install", "--output-provision", "embedded.mobileprovision", "--udid", "DEVICE", "-u", "user@example.com", "-p", "app.ipa", "--revoke-certificate", "AB12cd34"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

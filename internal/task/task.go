@@ -344,7 +344,7 @@ func (t *Task) runQueue() {
 
 func (t *Task) tryInstallApp(item TaskItem) {
 	// Decide before resolveIPA replaces a remote IpaPath with the downloaded file.
-	refresh := shouldUseRefreshMode(item.App, item.Reinstall)
+	refresh := usesRefreshMode(item.App, item.Reinstall)
 	update := isSourceUpdate(item.App)
 
 	resolvedApp, err := t.resolveIPA(item.App)
@@ -615,16 +615,17 @@ func (t *Task) runInternal(v model.InstalledApp, refresh bool, installMgr *manag
 	}
 
 	err := installMgr.TryStart(context.Background(), manager.InstallOptions{
-		UDID:             v.UDID,
-		Account:          v.Account,
-		IP:               dev.IP,
-		Port:             dev.Port,
-		IpaPath:          v.IpaPath,
-		CustomName:       v.CustomName,
-		CustomIdentifier: v.CustomIdentifier,
-		CustomIconPath:   v.CustomIconPath,
-		RemoveExtensions: v.RemoveExtensions,
-		RefreshMode:      refresh,
+		UDID:                    v.UDID,
+		Account:                 v.Account,
+		IP:                      dev.IP,
+		Port:                    dev.Port,
+		IpaPath:                 v.IpaPath,
+		CustomName:              v.CustomName,
+		CustomIdentifier:        v.CustomIdentifier,
+		CustomIconPath:          v.CustomIconPath,
+		RemoveExtensions:        v.RemoveExtensions,
+		RefreshMode:             refresh,
+		RevokeCertificateSerial: v.RevokeCertificateSerial,
 	})
 	if err != nil {
 		installMgr.WriteLog(err.Error())
@@ -676,6 +677,15 @@ func (t *Task) runExternal(v model.InstalledApp, installMgr *manager.InstallMana
 // An explicit reinstall (item.Reinstall) runs the full install flow instead.
 func shouldUseRefreshMode(v model.InstalledApp, reinstall bool) bool {
 	return v.ID != 0 && !reinstall && !ipa.IsRemoteURL(v.IpaPath)
+}
+
+// usesRefreshMode reports whether the engine may run in refresh mode. During
+// identity setup, the engine can revoke a certificate and create a replacement
+// even in refresh mode, but refresh mode skips signing the app. An authorized
+// revocation therefore requires the full install flow so the app is signed
+// again with the new identity.
+func usesRefreshMode(v model.InstalledApp, reinstall bool) bool {
+	return v.RevokeCertificateSerial == "" && shouldUseRefreshMode(v, reinstall)
 }
 
 // isSourceUpdate reports whether v installs a new build of an installed app

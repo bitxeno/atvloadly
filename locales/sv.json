@@ -167,7 +167,7 @@
       "tips": {
         "view_log": "Klicka för att visa installationsloggen",
         "account_invalid": "Det finns ett problem med kontot. Kontrollera loggarna och åtgärda felet.",
-        "certificate_limit": "Apple-ID:t har nått gränsen för antalet certifikat. Ingen app installerades och inget certifikat återkallades. Öppna appen på installationssidan och välj vilket certifikat som får återkallas.",
+        "certificate_limit": "Apple-ID:t har nått gränsen för antalet certifikat. Ingen app installerades och inget certifikat återkallades. Välj vilket certifikat som får återkallas för att försöka igen.",
         "no_data": "Inga uppgifter",
         "footer": "Som standard förnyas appars signering automatiskt mellan kl. 03 och 06 när mindre än ett dygn återstår till utgångsdatumet. Appar som är kopplade till en GitHub- eller AltStore-källa kontrolleras i bakgrunden efter nya versioner; automatiska versionsuppdateringar installeras under samma tidsperiod.",
         "footer_external": "Appar som signerats med ett externt certifikat uppdateras aldrig automatiskt: de slutar fungera när certifikatet eller provisioneringsprofilen går ut. En ominstallation med samma certifikat och profil förlänger inte det datumet: byt profil (eller importera en ny signeringsidentitet om certifikatet går ut först) och installera sedan om appen.",

@@ -39,6 +39,28 @@ func TestShouldUseRefreshMode(t *testing.T) {
 	}
 }
 
+func TestUsesRefreshModeWithCertificateRevocation(t *testing.T) {
+	existingApp := model.InstalledApp{IpaPath: "/data/ipa/1/app.ipa"}
+	existingApp.ID = 1
+
+	if !usesRefreshMode(existingApp, false) {
+		t.Fatal("an ordinary refresh should use refresh mode")
+	}
+
+	// Refresh mode can revoke a certificate during identity setup, but it skips
+	// signing the app afterward. An authorized revocation must therefore run
+	// the full install flow and sign with the replacement certificate.
+	revokingApp := existingApp
+	revokingApp.RevokeCertificateSerial = "AB12cd34"
+	if usesRefreshMode(revokingApp, false) {
+		t.Fatal("a refresh that may revoke a certificate must sign the app again")
+	}
+
+	if usesRefreshMode(revokingApp, true) {
+		t.Fatal("an explicit reinstall never uses refresh mode")
+	}
+}
+
 func TestVerifyIPA(t *testing.T) {
 	tvApp := model.InstalledApp{DeviceClass: "AppleTV", BundleIdentifier: "com.example.app"}
 	installed := tvApp
