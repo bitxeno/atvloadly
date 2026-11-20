@@ -1,9 +1,10 @@
 <template>
   <div class="app-container">
     <header class="navbar border-b pt-0 pb-0">
-      <div class="flex-1">
-        <!-- Phones use the app drawer on every page: the brand becomes the
-             drawer toggle. Larger viewports keep the normal brand. -->
+      <div class="flex-1 flex items-center gap-x-1 min-w-0">
+        <!-- Phones use the app drawer on every page: show the drawer toggle and
+             keep the brand logo to its right. Larger viewports have no toggle
+             and just show the brand. -->
         <button
           v-if="isMobile"
           type="button"
@@ -14,7 +15,7 @@
         >
           <span class="atv-nav-toggle__icon"><PanelLeftIcon /></span>
         </button>
-        <a v-else href="/" class="btn btn-ghost rounded-btn atv-brand">
+        <a href="/" class="btn btn-ghost rounded-btn atv-brand min-w-0">
           <AppIcon class="w-7 h-7" />
           <span class="normal-case text-xl">atvloadly</span>
         </a>
@@ -431,8 +432,14 @@ import PanelLeftIcon from "@/assets/icons/panel-left.svg";
 
 /* Phone sidebar toggle that replaces the brand: a plain icon button sized to
    match the navbar's other icon buttons. */
-.atv-nav-toggle__icon { display: inline-flex; width: 22px; height: 22px; }
+.atv-nav-toggle__icon { display: inline-flex; width: 18px; height: 18px; }
 .atv-nav-toggle__icon svg { display: block; width: 100%; height: 100%; }
+
+/* Very small phones (≤349px) cannot fit the toggle + logo mark + wordmark next
+   to the navbar icons: drop just the wordmark so the logo glyph still shows. */
+@media (max-width: 349px) {
+  .atv-brand .normal-case { display: none; }
+}
 
 /* Phone app drawer: a full-viewport overlay (covers the navbar) with the
    sidebar panel sliding in from the left. */

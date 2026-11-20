@@ -60,7 +60,7 @@ html[data-theme="dark"] {
 }
 
 .app-container > .navbar {
-  min-height: 68px;
+  min-height: 64px;
   padding-inline: clamp(20px, 3vw, 52px);
   background: var(--atv-nav-bg);
   border-bottom: 1px solid var(--atv-border);
@@ -357,7 +357,7 @@ html[data-theme="dark"] {
   position: sticky;
   top: 0;
   z-index: 90;
-  min-height: 72px;
+  min-height: 64px;
 }
 
 .app-container > .navbar .dropdown {

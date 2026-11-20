@@ -14,7 +14,7 @@
         :aria-label="$t('nav.collapse_sidebar')"
         @click="$emit('collapse')"
       >
-        <span class="app-sidebar__collapse-icon"><PanelLeftIcon /></span>
+        <span class="app-sidebar__collapse-icon"><CloseIcon /></span>
       </button>
     </div>
 
@@ -182,7 +182,7 @@ import AppleTVIcon from "@/assets/icons/appletv.svg";
 import TrashIcon from "@/assets/icons/trash.svg";
 import CheckMarkIcon from "@/assets/icons/checkmark.svg";
 import DismissIcon from "@/assets/icons/dismiss.svg";
-import PanelLeftIcon from "@/assets/icons/panel-left.svg";
+import CloseIcon from "@/assets/icons/close.svg";
 </script>
 
 <style lang="postcss" scoped>
