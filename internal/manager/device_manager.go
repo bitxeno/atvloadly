@@ -756,10 +756,22 @@ func (dm *DeviceManager) WarmManualDevicePort(ip string) {
 	log.Infof("Manual device %s tunnel port ready: %d", ip, target.Port)
 }
 
-// RemoveManualDevice drops a manual device from memory (after its pairing
-// files are deleted).
-func (dm *DeviceManager) RemoveManualDevice(id string) {
+// ForgetDevice removes a device entirely: it deletes any pairing files for the
+// device's UDID (<udid>.json, <udid>.plist) and its lockdown pairing record,
+// then drops the device from both the discovered and manual (pairing-file)
+// in-memory lists so it disappears immediately. A connected device comes back
+// only if it re-pairs or re-announces.
+func (dm *DeviceManager) ForgetDevice(id, udid string) error {
+	if err := deletePairingFiles(udid); err != nil {
+		return err
+	}
+	removeLockdownDevice(udid)
+	dm.cancelPairingCheck(udid)
+	dm.clearPairingThrottle(udid)
+	dm.devices.Delete(id)
+	dm.DeleteDeviceByUDID(udid)
 	dm.manualDevices.Delete(id)
+	return nil
 }
 
 func (dm *DeviceManager) CheckAfcServiceStatus(dev *model.Device) error {

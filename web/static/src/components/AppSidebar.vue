@@ -44,8 +44,7 @@
           class="atv-device-row flex flex-row gap-x-3 cursor-pointer"
           v-for="item in pairedDevices"
           v-bind:key="item.id"
-          :class="{ 'atv-device-row--manual': item.manual }"
-          :title="item.manual ? deviceLabel(item) : undefined"
+          :title="deviceLabel(item)"
           @click="$emit('select-device', item)"
           @mouseleave="$emit('forget-reset')"
         >
@@ -67,7 +66,6 @@
           </div>
 
           <button
-            v-if="item.manual"
             type="button"
             class="atv-device-forget"
             :class="{ 'atv-device-forget--armed': forgetConfirmId === item.id }"
@@ -133,7 +131,7 @@ export default {
     mode: { type: String, default: "desktop" },
     devices: { type: Array, default: () => [] },
     services: { type: Array, default: () => [] },
-    // Id of a manual device armed for the "forget" confirmation.
+    // Id of a device armed for the "delete" confirmation.
     forgetConfirmId: { type: [String, Number], default: null },
   },
   emits: ["select-device", "forget-device", "forget-reset", "collapse", "navigate"],
@@ -418,8 +416,8 @@ import CloseIcon from "@/assets/icons/close.svg";
   overflow: hidden;
 }
 
-/* "Forget" action for a manual device: a trash icon that floats over the far
-   right edge of the row without taking any horizontal space from the title
+/* "Delete" action for a device: a trash icon that floats over the far right
+   edge of the row without taking any horizontal space from the title
    (absolute, out of flow). Hidden at rest on desktop and revealed on row hover
    or keyboard focus, where it grows a left-to-right fade panel that covers the
    title text beneath it. First click arms the confirmation (the icon turns red
@@ -467,7 +465,7 @@ import CloseIcon from "@/assets/icons/close.svg";
   color: var(--atv-danger);
 }
 
-.atv-device-row--manual:hover .atv-device-forget,
+.atv-device-row:hover .atv-device-forget,
 .atv-device-forget:focus-visible,
 .atv-device-forget--armed {
   opacity: 1;

@@ -106,20 +106,34 @@ func ReloadManualDevices() {
 	deviceManager.ReloadManualDevices()
 }
 
-// DeleteManualDevice removes a manually added device: its pairing files
-// (<udid>.json and <udid>.plist) and its in-memory entry.
-func DeleteManualDevice(udid string) error {
-	if strings.TrimSpace(udid) == "" {
-		return fmt.Errorf("udid is required")
+// DeleteDevice removes a connected device by its current ID. It clears the
+// device's pairing material (pairing files and lockdown record) and drops it
+// from the in-memory device list. An unknown or blank ID is an error.
+func DeleteDevice(id string) error {
+	if strings.TrimSpace(id) == "" {
+		return fmt.Errorf("device id is required")
 	}
-	// Both files belong to the same pairing record: delete them together.
+	device, ok := deviceManager.GetDeviceByID(id)
+	if !ok || device == nil {
+		return fmt.Errorf("device not found: %s", id)
+	}
+	return deviceManager.ForgetDevice(id, device.UDID)
+}
+
+// deletePairingFiles removes the <udid>.json (remote pairing record) and
+// <udid>.plist (tunnel pairing record) files for a UDID. A missing file is not
+// an error so forgetting an already-clean device still succeeds.
+func deletePairingFiles(udid string) error {
+	if strings.TrimSpace(udid) == "" {
+		return nil
+	}
+	dir := app.RemotePairingDir()
 	for _, ext := range []string{".json", ".plist"} {
-		path := filepath.Join(app.RemotePairingDir(), udid+ext)
+		path := filepath.Join(dir, udid+ext)
 		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 			return err
 		}
 	}
-	deviceManager.RemoveManualDevice(utils.Md5(udid))
 	return nil
 }
 

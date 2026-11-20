@@ -1004,6 +1004,11 @@ html[data-theme="dark"] {
   border: 1px solid var(--atv-border);
   border-radius: 18px;
   box-shadow: var(--atv-shadow);
+  /* Clip row backgrounds and the floating delete button to the panel's 18px
+     rounded border. The rows round their own fill at 12px, so without this the
+     delete button's gradient/fill spills over the rounded border at the
+     first/last row corners. */
+  overflow: hidden;
 }
 
 /* The service-status card keeps vertical breathing room (top/bottom) while its
