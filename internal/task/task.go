@@ -615,16 +615,17 @@ func (t *Task) runInternal(v model.InstalledApp, refresh bool, installMgr *manag
 	}
 
 	err := installMgr.TryStart(context.Background(), manager.InstallOptions{
-		UDID:             v.UDID,
-		Account:          v.Account,
-		IP:               dev.IP,
-		Port:             dev.Port,
-		IpaPath:          v.IpaPath,
-		CustomName:       v.CustomName,
-		CustomIdentifier: v.CustomIdentifier,
-		CustomIconPath:   v.CustomIconPath,
-		RemoveExtensions: v.RemoveExtensions,
-		RefreshMode:      refresh,
+		UDID:                    v.UDID,
+		Account:                 v.Account,
+		IP:                      dev.IP,
+		Port:                    dev.Port,
+		IpaPath:                 v.IpaPath,
+		CustomName:              v.CustomName,
+		CustomIdentifier:        v.CustomIdentifier,
+		CustomIconPath:          v.CustomIconPath,
+		RemoveExtensions:        v.RemoveExtensions,
+		RefreshMode:             refresh,
+		RevokeCertificateSerial: v.RevokeCertificateSerial,
 	})
 	if err != nil {
 		installMgr.WriteLog(err.Error())

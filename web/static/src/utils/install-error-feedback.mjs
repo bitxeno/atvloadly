@@ -18,6 +18,25 @@ export function needsCertificateReset(output) {
   return String(output ?? "").includes(certificateResetRequiredMarker);
 }
 
+// takePendingCertificateReset returns the first app whose manual refresh is
+// pending and stopped at the certificate limit. IDs of apps that finished any
+// other way are forgotten, so a later state is never mistaken for the result
+// of the request that is being followed. The returned app is forgotten too;
+// further apps at the limit stay pending and can be offered next.
+export function takePendingCertificateReset(apps, pending) {
+  let found = null;
+  for (const app of apps ?? []) {
+    if (!pending[app.ID]) continue;
+    if (Number(app.refreshed_error) === 5) {
+      if (!found) found = app;
+      continue;
+    }
+    delete pending[app.ID];
+  }
+  if (found) delete pending[found.ID];
+  return found;
+}
+
 // pickRevocableCertificates filters the certificates of an account the user
 // may authorize to revoke. An expired or already revoked certificate is not
 // worth offering: revoking it frees no slot. The serials Apple reports for

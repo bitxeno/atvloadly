@@ -507,63 +507,11 @@
       </div>
     </dialog>
 
-    <!-- Certificate Revocation Dialog -->
-    <dialog
-      :class="['modal', { 'modal-open': certRevoke.visible }]"
-    >
-      <div class="modal-box atv-cert-revoke-dialog">
-        <h3 class="font-bold text-lg">{{ $t("install.cert_revoke.title") }}</h3>
-        <p class="py-2 text-sm opacity-80">{{ $t("install.cert_revoke.warning") }}</p>
-
-        <div v-if="certRevoke.loading" class="flex items-center gap-x-2 py-4">
-          <span class="loading loading-spinner loading-sm"></span>
-          <span>{{ $t("common.loading") }}</span>
-        </div>
-        <div v-else-if="certRevoke.certificates.length === 0" class="py-4 text-sm">
-          {{ $t("install.cert_revoke.no_certificates") }}
-        </div>
-        <table v-else class="table w-full">
-          <thead>
-            <tr>
-              <th></th>
-              <th>{{ $t("certificate.table.header.name") }}</th>
-              <th>{{ $t("certificate.table.header.machine_name") }}</th>
-              <th>{{ $t("certificate.table.header.expiration") }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="cert in certRevoke.certificates" :key="cert.serialNumber">
-              <td>
-                <input
-                  type="radio"
-                  name="revoke_cert"
-                  class="radio radio-sm"
-                  :value="cert.serialNumber"
-                  v-model="certRevoke.selectedSerial"
-                />
-              </td>
-              <td class="break-all">{{ cert.name }}</td>
-              <td class="break-all">{{ cert.machineName }}</td>
-              <td class="whitespace-nowrap">{{ cert.expirationDate }}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="modal-action">
-          <button class="btn" @click="closeCertRevoke">
-            {{ $t("home.dialog.delete_confirm.button.cancel") }}
-          </button>
-          <button
-            class="btn btn-error"
-            :disabled="certRevoke.loading || certRevoke.submitting || !certRevoke.selectedSerial"
-            @click="confirmCertRevoke"
-          >
-            <span v-if="certRevoke.submitting" class="loading loading-spinner loading-xs"></span>
-            {{ $t("install.cert_revoke.button.revoke") }}
-          </button>
-        </div>
-      </div>
-    </dialog>
+    <CertificateRevokeDialog
+      ref="certRevokeDialog"
+      @confirm="confirmCertRevoke"
+      @close="closeCertRevoke"
+    />
   </div>
 </template>
   
@@ -575,7 +523,6 @@ import { parseBundleIdFromPlist } from "@/utils/utils";
 import {
   installFailureMessage as formatInstallFailureMessage,
   needsCertificateReset,
-  pickRevocableCertificates,
 } from "@/utils/install-error-feedback.mjs";
 import { accountStatusLabel as formatAccountStatus } from "@/utils/install-feedback.mjs";
 import {
@@ -587,6 +534,7 @@ import {
 } from "@/utils/download.mjs";
 import { guessSourceKind } from "@/utils/source.mjs";
 import JSZip from "jszip";
+import CertificateRevokeDialog from "@/components/CertificateRevokeDialog.vue";
 import SigningIssueList from "@/components/SigningIssueList.vue";
 import SigningPlan from "@/components/SigningPlan.vue";
 import SourcePicker from "@/components/SourcePicker.vue";
@@ -622,7 +570,7 @@ function validCustomIdentifier(id) {
 }
 
 export default {
-  components: { SigningIssueList, SigningPlan, SourcePicker },
+  components: { CertificateRevokeDialog, SigningIssueList, SigningPlan, SourcePicker },
   data() {
     return {
       id: "",
@@ -722,18 +670,10 @@ export default {
         image: "",
         status: "",
       },
-      // Certificate revocation confirmation. The engine reports
-      // certificate_reset_required when the account is at its limit; the page
-      // then asks which one certificate may be revoked and resends the exact
-      // install it snapshotted in `payload` with that authorization.
-      certRevoke: {
-        visible: false,
-        loading: false,
-        submitting: false,
-        certificates: [],
-        selectedSerial: "",
-        payload: null,
-      },
+      // The exact install request that stopped at the certificate limit. It is
+      // kept so the certificate dialog can resend it with the one certificate
+      // the user authorizes to revoke.
+      certRevokePayload: null,
     };
   },
   computed: {
@@ -1299,7 +1239,7 @@ export default {
         // Kept so the certificate dialog can resend this same install with the
         // certificate the user authorizes to revoke. Only an Apple ID install
         // can reach that failure.
-        _this.certRevoke.payload = external ? null : payload;
+        _this.certRevokePayload = external ? null : payload;
         _this.websocketsend(1, payload);
       } catch (error) {
         if (isStale()) {
@@ -1680,7 +1620,7 @@ export default {
       // Installation successful.
       if (line.indexOf("Installation Succeeded") !== -1) {
         _this.onInstallFinished();
-        _this.certRevoke.payload = null;
+        _this.certRevokePayload = null;
         toast.success(this.$t("install.toast.install_success"));
         return;
       }
@@ -1696,7 +1636,7 @@ export default {
         }
         // Any other failure ends the request: the snapshot must not be
         // offered again for a later, unrelated failure.
-        _this.certRevoke.payload = null;
+        _this.certRevokePayload = null;
         const failure = _this.report.failure;
         toast.error(failure
           ? _this.codeText(failure.code, failure.message)
@@ -1719,49 +1659,30 @@ export default {
     // resolve its IPA from a source or an upload the server already staged,
     // so only the exact request that failed can be resent.
     offerCertificateRevocation() {
-      const state = this.certRevoke;
-      if (!state.payload || !needsCertificateReset(this.log.output + this.log.newcontent)) {
+      const payload = this.certRevokePayload;
+      if (!payload || !needsCertificateReset(this.log.output + this.log.newcontent)) {
         return false;
       }
-      state.visible = true;
-      state.submitting = false;
-      state.selectedSerial = "";
-      state.certificates = [];
-      state.loading = true;
-      this.fetchRevocableCertificates(state.payload.account);
+      this.$refs.certRevokeDialog.show(payload.account);
       return true;
     },
 
-    fetchRevocableCertificates(account) {
-      const state = this.certRevoke;
-      api
-        .getCertificates({ email: account })
-        .then((res) => {
-          state.certificates = pickRevocableCertificates(res.data);
-        })
-        .finally(() => {
-          state.loading = false;
-        });
-    },
-
-    confirmCertRevoke() {
-      const state = this.certRevoke;
-      if (!state.payload || !state.selectedSerial || state.submitting) {
+    confirmCertRevoke(serial) {
+      const payload = this.certRevokePayload;
+      if (!payload || !serial) {
         return;
       }
-      state.submitting = true;
-      state.visible = false;
+      this.certRevokePayload = null;
       // The retry is the same install request with the one authorized serial;
       // the engine applies it only when its account currently lists it.
-      const payload = { ...state.payload, revoke_certificate_serial: state.selectedSerial };
-      state.payload = null;
+      const retry = { ...payload, revoke_certificate_serial: serial };
       this.loading = true;
       this.submittedMode = this.signing.mode;
       this.resetSigningReport();
       this.log.newcontent = "";
       this.log.output += this.$t("install.cert_revoke.resuming") + "\n";
       try {
-        this.websocketsend(1, payload);
+        this.websocketsend(1, retry);
       } catch (error) {
         this.log.newcontent += error + "\n";
         this.onInstallFinished();
@@ -1770,11 +1691,7 @@ export default {
     },
 
     closeCertRevoke() {
-      const state = this.certRevoke;
-      state.visible = false;
-      state.payload = null;
-      state.selectedSerial = "";
-      state.certificates = [];
+      this.certRevokePayload = null;
     },
     
     accountStatusLabel(status) {

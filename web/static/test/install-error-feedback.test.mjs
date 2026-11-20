@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { installFailureMessage } from "../src/utils/install-error-feedback.mjs";
+import {
+  installFailureMessage,
+  takePendingCertificateReset,
+} from "../src/utils/install-error-feedback.mjs";
 
 function loadLocale(name) {
   return JSON.parse(
@@ -27,6 +30,27 @@ test("explains an unavailable App Group in every supported locale", () => {
       message("install.toast.app_group_unavailable"),
     );
   }
+});
+
+test("offers only pending refreshes that stopped at the certificate limit", () => {
+  const apps = [
+    { ID: 1, refreshed_error: 0 },
+    { ID: 2, refreshed_error: 5 },
+    { ID: 3, refreshed_error: 1 },
+    { ID: 4, refreshed_error: 5 },
+  ];
+  const pending = { 1: true, 2: true, 3: true, 4: true, 9: true };
+
+  const first = takePendingCertificateReset(apps, pending);
+  assert.equal(first.ID, 2);
+  assert.deepEqual(pending, { 4: true, 9: true });
+
+  const second = takePendingCertificateReset(apps, pending);
+  assert.equal(second.ID, 4);
+  assert.deepEqual(pending, { 9: true });
+
+  assert.equal(takePendingCertificateReset(apps, pending), null);
+  assert.deepEqual(pending, { 9: true });
 });
 
 test("retains the generic failure message for unrelated errors", () => {

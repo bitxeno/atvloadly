@@ -154,6 +154,66 @@ func TestDeleteRefusesInstallingApp(t *testing.T) {
 	}
 }
 
+// A manual refresh may retry with one certificate serial the user authorized
+// to revoke, mirroring the install page. Anything else is refused before the
+// task is queued.
+func TestRefreshAcceptsCertificateRevocationSerial(t *testing.T) {
+	server, dataDir := newTestServer(t)
+	const appID uint = 900002
+	record := model.InstalledApp{
+		Model:            gorm.Model{ID: appID},
+		IpaName:          "Test",
+		IpaPath:          writeFile(t, filepath.Join(dataDir, "ipa", strconv.FormatUint(uint64(appID), 10), "app.ipa"), "ipa"),
+		BundleIdentifier: "com.example.test",
+		UDID:             "device",
+		Account:          "user@example.com",
+		Enabled:          true,
+	}
+	if err := db.Store().Create(&record).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	refresh := func(serial string) ApiResult {
+		t.Helper()
+		body, err := json.Marshal(map[string]string{"revoke_certificate_serial": serial})
+		if err != nil {
+			t.Fatal(err)
+		}
+		req := httptest.NewRequest(http.MethodPost, "/api/apps/"+strconv.FormatUint(uint64(appID), 10)+"/refresh", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := server.Test(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = resp.Body.Close() }()
+		var result ApiResult
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			t.Fatal(err)
+		}
+		return result
+	}
+
+	if result := refresh("not-a-serial"); result.Code != -1 {
+		t.Fatalf("invalid serial: code = %d, want -1", result.Code)
+	}
+	if task.IsInstalling(appID) {
+		t.Fatal("invalid serial queued the refresh")
+	}
+
+	if result := refresh("AB12cd34"); result.Code != 200 {
+		t.Fatalf("valid serial: code = %d, want 200", result.Code)
+	}
+	for _, app := range task.GetCurrentInstallingApps() {
+		if app.ID == appID {
+			if app.RevokeCertificateSerial != "AB12cd34" {
+				t.Fatalf("queued serial = %q, want AB12cd34", app.RevokeCertificateSerial)
+			}
+			return
+		}
+	}
+	t.Fatal("refresh was not queued")
+}
+
 // A custom bundle identifier is refused before anything is queued when the
 // installation cannot use it.
 func TestInstallRefusesUnusableCustomIdentifier(t *testing.T) {

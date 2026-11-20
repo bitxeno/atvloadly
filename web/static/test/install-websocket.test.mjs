@@ -46,7 +46,7 @@ function page(upload = async () => [{ name: "app.ipa", path: "/tmp/app.ipa" }], 
     }),
   };
   const context = vm.createContext({
-    SigningIssueList: {}, SigningPlan: {}, SourcePicker: {},
+    CertificateRevokeDialog: {}, SigningIssueList: {}, SigningPlan: {}, SourcePicker: {},
     WebSocket, createSigningReportStream, FormData, JSZip,
     createUploadGuard, uploadStallMessage, defaultUploadStallMs,
     // The upload guard relies on these browser globals, which a bare vm
@@ -66,6 +66,56 @@ function page(upload = async () => [{ name: "app.ipa", path: "/tmp/app.ipa" }], 
   for (const [name, method] of Object.entries(component.methods)) {
     state[name] = method.bind(state);
   }
+  // The certificate dialog is a component with its own state and methods in
+  // the browser; repeat its contract here so page logic can be exercised.
+  const revokeDialog = {
+    visible: false,
+    loading: false,
+    submitting: false,
+    certificates: [],
+    selectedSerial: "",
+    account: "",
+    requestID: 0,
+    reset() {
+      this.requestID++;
+      this.visible = false;
+      this.loading = false;
+      this.submitting = false;
+      this.certificates = [];
+      this.selectedSerial = "";
+      this.account = "";
+    },
+    show(account) {
+      this.reset();
+      this.visible = true;
+      this.loading = true;
+      this.account = account || "";
+      const requestID = this.requestID;
+      return Promise.resolve(certificates({ email: this.account }))
+        .then((res) => {
+          if (requestID !== this.requestID) return;
+          this.certificates = pickRevocableCertificates(res.data);
+        })
+        .finally(() => {
+          if (requestID !== this.requestID) return;
+          this.loading = false;
+        });
+    },
+    confirm() {
+      if (this.loading || this.submitting || !this.selectedSerial) return;
+      const serial = this.selectedSerial;
+      this.submitting = true;
+      this.visible = false;
+      this.reset();
+      state.confirmCertRevoke(serial);
+    },
+    close() {
+      this.reset();
+      state.closeCertRevoke();
+    },
+  };
+  state.certRevoke = revokeDialog;
+  state.$refs = { certRevokeDialog: revokeDialog };
   Object.defineProperty(state, "canInstall", { configurable: true, get: () => component.computed.canInstall.call(state) });
   Object.defineProperty(state, "customIdentifierPlaceholder", { configurable: true, get: () => component.computed.customIdentifierPlaceholder.call(state) });
   Object.defineProperty(state, "customIconPreview", { configurable: true, get: () => component.computed.customIconPreview.call(state) });
@@ -309,7 +359,7 @@ test("offers the certificate dialog when the engine stops at the limit", async (
 test("confirming resends the exact install with the authorized serial", async () => {
   const { state, sockets } = await failedInstall(true);
   state.certRevoke.selectedSerial = "BBBB2222";
-  state.confirmCertRevoke();
+  state.certRevoke.confirm();
 
   assert.equal(state.certRevoke.visible, false);
   assert.equal(state.loading, true);
@@ -321,7 +371,7 @@ test("confirming resends the exact install with the authorized serial", async ()
   assert.equal(install.ipa_path, "https://example.com/app.ipa");
   assert.equal(install.account, "");
   // The authorization is spent: a later failure cannot reuse it silently.
-  assert.equal(state.certRevoke.payload, null);
+  assert.equal(state.certRevokePayload, null);
 
   sockets[0].onmessage({ currentTarget: sockets[0], data: "Installation Succeeded" });
   assert.equal(state.loading, false);
@@ -330,9 +380,9 @@ test("confirming resends the exact install with the authorized serial", async ()
 
 test("cancelling the certificate dialog reports the plain failure", async () => {
   const { state, sockets, errors } = await failedInstall(true);
-  state.closeCertRevoke();
+  state.certRevoke.close();
   assert.equal(state.certRevoke.visible, false);
-  assert.equal(state.certRevoke.payload, null);
+  assert.equal(state.certRevokePayload, null);
   // A cancel never sends another install; the engine already revoked nothing.
   assert.equal(sockets[0].sent.length, 1);
 
@@ -345,7 +395,7 @@ test("cancelling the certificate dialog reports the plain failure", async () => 
 test("an ordinary failure never opens the certificate dialog", async () => {
   const { state, errors } = await failedInstall(false);
   assert.equal(state.certRevoke.visible, false);
-  assert.equal(state.certRevoke.payload, null);
+  assert.equal(state.certRevokePayload, null);
   assert.equal(errors.length, 1);
 });
 
@@ -358,7 +408,7 @@ test("an external install has no certificate offer", async () => {
   const pending = state.onSubmit();
   sockets[0].open();
   await pending;
-  assert.equal(state.certRevoke.payload, null);
+  assert.equal(state.certRevokePayload, null);
 
   sockets[0].onmessage({ currentTarget: sockets[0], data: `${resetRequiredLog}\nInstallation Failed!` });
   assert.equal(state.certRevoke.visible, false);
