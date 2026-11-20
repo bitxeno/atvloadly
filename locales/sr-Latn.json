@@ -121,7 +121,8 @@
         "ip_badge": "IP",
         "forget": "Obriši",
         "forget_confirm": "Potvrdi",
-        "forget_done": "Uređaj je zaboravljen"
+        "forget_done": "Uređaj je obrisan",
+        "more": "Više"
       },
       "tips": {
         "no_paired_devices": "Nema povezanih uređaja",

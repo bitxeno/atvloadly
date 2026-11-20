@@ -121,7 +121,8 @@
                 "ip_badge": "IP",
                 "forget": "Удалить",
                 "forget_confirm": "Подтвердить",
-                "forget_done": "Устройство удалено"
+                "forget_done": "Устройство удалено",
+                "more": "Ещё"
             },
             "tips": {
                 "no_paired_devices": "Нет подключённых устройств",

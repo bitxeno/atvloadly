@@ -40,14 +40,12 @@
     <section class="app-sidebar__group">
       <h4 class="app-sidebar__group-title">{{ $t("home.heading.paired_devices") }}</h4>
       <div class="card atv-device-panel" v-show="pairedDevices.length > 0">
-        <a
+        <div
           class="atv-device-row flex flex-row gap-x-3 cursor-pointer"
           v-for="item in pairedDevices"
           v-bind:key="item.id"
-          :class="{ 'atv-device-row--manual': item.manual }"
-          :title="item.manual ? deviceLabel(item) : undefined"
+          :title="deviceLabel(item)"
           @click="$emit('select-device', item)"
-          @mouseleave="$emit('forget-reset')"
         >
           <div>
             <div class="avatar" :class="{ online: !item.manual }">
@@ -66,22 +64,38 @@
             </p>
           </div>
 
-          <button
-            v-if="item.manual"
-            type="button"
-            class="atv-device-forget"
-            :class="{ 'atv-device-forget--armed': forgetConfirmId === item.id }"
-            :title="forgetConfirmId === item.id ? $t('home.sidebar.device_status.forget_confirm') : $t('home.sidebar.device_status.forget')"
-            :aria-label="$t('home.sidebar.device_status.forget')"
-            @click.stop.prevent="$emit('forget-device', item)"
-          >
-            <span class="atv-device-forget-icon"><TrashIcon /></span>
-            <span
-              class="atv-device-forget-label"
-              v-if="forgetConfirmId === item.id"
-            >{{ $t("home.sidebar.device_status.forget_confirm") }}</span>
-          </button>
-        </a>
+          <!-- Device actions: a dots trigger opens a menu with the delete
+               action. Anchored to the trigger so the menu opens down-left,
+               clear of the row's right edge. The trigger is a tabindex div
+               (not a button) so WebKit focuses it on click and daisyUI opens
+               the menu, matching the app-actions menu on the home page. -->
+          <div class="dropdown dropdown-end atv-device-menu" @click.stop @mouseleave="$emit('forget-reset')">
+            <div
+              tabindex="0"
+              role="button"
+              class="atv-device-more"
+              :aria-label="$t('home.sidebar.device_status.more')"
+              :title="$t('home.sidebar.device_status.more')"
+            >
+              <span class="atv-device-more-icon"><DotsIcon /></span>
+            </div>
+            <ul
+              tabindex="0"
+              class="dropdown-content z-[2] menu p-1 shadow bg-base-100 rounded-box w-40 gap-1"
+            >
+              <li>
+                <a class="atv-menu-danger" @click.stop.prevent="$emit('forget-device', item)">
+                  <span class="w-4 h-4 shrink-0"><TrashIcon /></span>
+                  {{
+                    forgetConfirmId === item.id
+                      ? $t("home.sidebar.device_status.forget_confirm")
+                      : $t("home.sidebar.device_status.forget")
+                  }}
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       <div
@@ -133,7 +147,7 @@ export default {
     mode: { type: String, default: "desktop" },
     devices: { type: Array, default: () => [] },
     services: { type: Array, default: () => [] },
-    // Id of a manual device armed for the "forget" confirmation.
+    // Id of a device armed for the "delete" confirmation.
     forgetConfirmId: { type: [String, Number], default: null },
   },
   emits: ["select-device", "forget-device", "forget-reset", "collapse", "navigate"],
@@ -179,6 +193,7 @@ import PlusIcon from "@/assets/icons/plus.svg";
 import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
 import IPhoneIcon from "@/assets/icons/iphone.svg";
 import AppleTVIcon from "@/assets/icons/appletv.svg";
+import DotsIcon from "@/assets/icons/dots.svg";
 import TrashIcon from "@/assets/icons/trash.svg";
 import CheckMarkIcon from "@/assets/icons/checkmark.svg";
 import DismissIcon from "@/assets/icons/dismiss.svg";
@@ -411,89 +426,79 @@ import CloseIcon from "@/assets/icons/close.svg";
   flex-wrap: wrap;
 }
 
-/* Positioning context for the floating forget panel; overflow keeps the
-   panel's fill inside the row's rounded corners. */
+/* Positioning context for the row's action menu. */
 .atv-device-row {
   position: relative;
-  overflow: hidden;
 }
 
-/* "Forget" action for a manual device: a trash icon that floats over the far
-   right edge of the row without taking any horizontal space from the title
-   (absolute, out of flow). Hidden at rest on desktop and revealed on row hover
-   or keyboard focus, where it grows a left-to-right fade panel that covers the
-   title text beneath it. First click arms the confirmation (the icon turns red
-   and shows the confirm label), the second click deletes. Always visible on
-   phones, which have no hover. */
-.atv-device-forget {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 2;
-  display: flex;
+/* Device action menu: the dots trigger sits inline at the row's right edge
+   (takes its own space, no overlay). Hidden at rest on desktop and revealed on
+   row hover or keyboard focus; always visible on phones, which have no hover.
+   daisyUI's .dropdown keeps the menu anchored to this trigger. */
+.atv-device-menu {
+  flex-shrink: 0;
+}
+
+.atv-device-more {
+  display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 5px;
-  padding: 0 16px 0 52px;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   border: 0;
-  border-radius: 0 12px 12px 0;
-  background: linear-gradient(
-    to right,
-    transparent 0%,
-    var(--atv-surface-hover) 46%
-  );
+  border-radius: 8px;
+  background: transparent;
   color: var(--atv-muted);
-  white-space: nowrap;
+  cursor: pointer;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 140ms ease, color 140ms ease;
+  transition: opacity 140ms ease, background-color 150ms ease, color 150ms ease;
 }
 
-.atv-device-forget-icon {
+.atv-device-more-icon {
   display: inline-flex;
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
 }
 
-.atv-device-forget-icon svg {
+.atv-device-more-icon svg {
   width: 100%;
   height: 100%;
 }
 
-.atv-device-forget-label {
-  font-size: 0.78rem;
-  font-weight: 650;
-  color: var(--atv-danger);
-}
-
-.atv-device-row--manual:hover .atv-device-forget,
-.atv-device-forget:focus-visible,
-.atv-device-forget--armed {
+.atv-device-row:hover .atv-device-more,
+.atv-device-menu:focus-within .atv-device-more,
+.atv-device-more:focus-visible {
   opacity: 1;
   pointer-events: auto;
 }
 
-.atv-device-forget:hover,
-.atv-device-forget--armed {
-  color: var(--atv-danger);
+.atv-device-more:hover,
+.atv-device-more:focus-visible {
+  background: var(--atv-surface-hover);
+  color: var(--atv-ink);
 }
 
-/* Touch devices (phones and iPads) have no hover, so the forget icon is
-   always shown. With no hovered row to blend into, the gradient fades to the
-   card's own background instead of the hover tint, and the panel is kept
-   compact so it covers as little of the title as possible. */
+/* Touch devices (phones and iPads) have no hover, so the dots trigger is
+   always shown. */
 @media (hover: none) {
-  .atv-device-forget {
-    padding: 0 12px 0 16px;
-    background: linear-gradient(
-      to right,
-      transparent 0%,
-      var(--atv-surface) 46%
-    );
+  .atv-device-more {
     opacity: 1;
     pointer-events: auto;
   }
+}
+
+/* Danger menu item: keep the danger red in normal, hover and focus states,
+   beating daisyUI's menu hover rule that resets the color. */
+.atv-menu-danger {
+  color: var(--atv-danger) !important;
+}
+
+.atv-menu-danger:hover,
+.atv-menu-danger:focus-visible {
+  background: var(--atv-surface-hover);
+  color: var(--atv-danger) !important;
 }
 
 /* Empty-state card height parity with the old column. */

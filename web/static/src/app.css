@@ -1032,6 +1032,19 @@ html[data-theme="dark"] {
 .app-sidebar--panel .atv-device-panel .atv-device-row:hover {
   background: var(--atv-surface-hover);
 }
+/* Follow the panel's 18px corner on the first/last row so the row's hover tint
+   matches the card edge. The panel intentionally avoids overflow: hidden so a
+   row's action menu can overflow it. */
+.app-container .main-container .atv-device-panel .atv-device-row:first-child,
+.app-sidebar--panel .atv-device-panel .atv-device-row:first-child {
+  border-top-left-radius: 17px;
+  border-top-right-radius: 17px;
+}
+.app-container .main-container .atv-device-panel .atv-device-row:last-child,
+.app-sidebar--panel .atv-device-panel .atv-device-row:last-child {
+  border-bottom-left-radius: 17px;
+  border-bottom-right-radius: 17px;
+}
 .app-container .atv-device-row .avatar > div,
 .app-sidebar--panel .atv-device-row .avatar > div {
   width: 50px;

@@ -283,9 +283,9 @@ export default {
     });
   },
 
-  deleteManualDevice: (id) => {
+  deleteDevice: (id) => {
     return request({
-      url: `/api/devices/${id}/manual/delete`,
+      url: `/api/devices/${id}/delete`,
       method: "post",
     });
   },

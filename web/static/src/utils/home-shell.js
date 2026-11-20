@@ -44,8 +44,8 @@ export const homeShell = reactive({
     });
   },
 
-  // Arm or confirm forgetting a manual (pairing-file) device. Resolves true
-  // when the device was actually deleted, so the caller can refresh its view.
+  // Arm or confirm deleting a device. Resolves true when the device was
+  // actually deleted, so the caller can refresh its view.
   async forgetDevice(device) {
     if (this.forgetConfirmId !== device.id) {
       this.forgetConfirmId = device.id;
@@ -53,7 +53,7 @@ export const homeShell = reactive({
     }
     this.forgetConfirmId = null;
     try {
-      await api.deleteManualDevice(device.id);
+      await api.deleteDevice(device.id);
       toast.success(i18n.t("home.sidebar.device_status.forget_done"));
       this.loaded = false;
       this.load(true);

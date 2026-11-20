@@ -311,14 +311,12 @@ func route(fi *fiber.App) {
 		return c.Status(http.StatusOK).JSON(apiError("device not found"))
 	})
 
-	// Forget a manually added device (pairing files + in-memory entry).
-	api.Post("/devices/:id/manual/delete", func(c *fiber.Ctx) error {
+	// Delete a connected device: clears its pairing material (pairing files and
+	// lockdown record) and drops it from the list. Works for any connected
+	// device, whether it was added manually or discovered on the network.
+	api.Post("/devices/:id/delete", func(c *fiber.Ctx) error {
 		id := c.Params("id")
-		device, ok := manager.GetDeviceByID(id)
-		if !ok || device == nil || !device.Manual || device.UDID == "" {
-			return c.Status(http.StatusOK).JSON(apiError("manual device not found"))
-		}
-		if err := service.DeleteManualDevice(device.UDID); err != nil {
+		if err := service.DeleteDevice(id); err != nil {
 			return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 		}
 		return c.Status(http.StatusOK).JSON(apiSuccess(true))

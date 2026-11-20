@@ -121,7 +121,8 @@
                 "ip_badge": "IP",
                 "forget": "删除",
                 "forget_confirm": "确认",
-                "forget_done": "已忘记设备"
+                "forget_done": "已忘记设备",
+                "more": "更多"
             },
             "tips": {
                 "no_paired_devices": "没有连接设备",
