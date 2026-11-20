@@ -1,8 +1,21 @@
 <template>
   <div class="app-container">
     <header class="navbar border-b pt-0 pb-0">
-      <div class="flex-1">
-        <a href="/" class="btn btn-ghost rounded-btn atv-brand">
+      <div class="flex-1 flex items-center gap-x-1 min-w-0">
+        <!-- Phones use the app drawer on every page: show the drawer toggle and
+             keep the brand logo to its right. Larger viewports have no toggle
+             and just show the brand. -->
+        <button
+          v-if="isMobile"
+          type="button"
+          class="btn btn-ghost rounded-btn atv-nav-toggle"
+          :aria-label="$t('nav.expand_sidebar')"
+          :aria-expanded="homeShell.open"
+          @click="homeShell.toggle()"
+        >
+          <span class="atv-nav-toggle__icon"><PanelLeftIcon /></span>
+        </button>
+        <a href="/" class="btn btn-ghost rounded-btn atv-brand min-w-0">
           <AppIcon class="w-7 h-7" />
           <span class="normal-case text-xl">atvloadly</span>
         </a>
@@ -141,6 +154,31 @@
       <router-view />
     </div>
 
+    <!-- App drawer: on phones it covers the whole viewport (including the top
+         navbar) and is available on every page. Teleported to <body> so it can
+         escape the content stacking context. -->
+    <Teleport to="body">
+      <div
+        v-if="homeShell.available"
+        class="app-drawer-overlay"
+        :class="{ 'is-open': homeShell.open }"
+        @click.self="homeShell.close()"
+      >
+        <AppSidebar
+          mode="panel"
+          class="app-drawer-panel"
+          :devices="homeShell.devices"
+          :services="homeShell.services"
+          :forget-confirm-id="homeShell.forgetConfirmId"
+          @select-device="openInstall"
+          @forget-device="forgetDevice"
+          @forget-reset="homeShell.forgetConfirmId = null"
+          @collapse="homeShell.close()"
+          @navigate="homeShell.close()"
+        />
+      </div>
+    </Teleport>
+
     <!-- Donate Modal -->
     <div v-if="showDonateModal" class="modal modal-open modal-middle" @click.self="showDonateModal = false">
       <div class="modal-box relative">
@@ -201,8 +239,11 @@
   
   <script>
 import api from "@/api/api";
+import { homeShell } from "@/utils/home-shell";
+import AppSidebar from "@/components/AppSidebar.vue";
 export default {
   name: "App",
+  components: { AppSidebar },
   data() {
     return {
       languages: [],
@@ -215,7 +256,26 @@ export default {
       showAboutModal: false,
       appVersion: "unknown",
       buildDate: "unknown",
+      // Expose the shared home-shell store (sidebar open state) to the template.
+      homeShell,
     };
+  },
+  watch: {
+    // A route change (e.g. opening the add-device page from the drawer) closes
+    // the overlay.
+    $route() {
+      homeShell.close();
+    },
+    // Lock page scrolling while the drawer covers the content, and load the
+    // device list the first time it is opened.
+    "homeShell.open": function (open) {
+      document.documentElement.classList.toggle("atv-shell-locked", open);
+      if (open) homeShell.load();
+    },
+    // Keep the store's availability in sync with the phone breakpoint.
+    isMobile: function (isMobile) {
+      homeShell.setAvailable(isMobile);
+    },
   },
   created() {
     const saved = window.localStorage.getItem("atvloadly-theme");
@@ -241,14 +301,25 @@ export default {
     this.colorSchemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
     this.colorSchemeQuery.addEventListener("change", this.applyTheme);
     this.applyTheme();
+    // The drawer exists on every page, phones only.
+    homeShell.setAvailable(this.isMobile);
   },
   beforeUnmount() {
     this.colorSchemeQuery?.removeEventListener("change", this.applyTheme);
     this.mobileMediaQuery?.removeEventListener("change", this.onMobileBreakpointChange);
     document.removeEventListener("click", this.onDocumentClick);
     document.removeEventListener("keydown", this.onDocumentKeydown);
+    document.documentElement.classList.remove("atv-shell-locked");
   },
   methods: {
+    openInstall(device) {
+      this.$router.push({ name: "install", params: { id: device.id } });
+    },
+    forgetDevice(device) {
+      // The store reloads the shared device list after a successful delete, so
+      // any page showing devices (e.g. the home column) updates automatically.
+      homeShell.forgetDevice(device);
+    },
     onMobileBreakpointChange(event) {
       this.isMobile = event.matches;
       this.openMobileMenu = null;
@@ -340,6 +411,7 @@ import ToolsIcon from "@/assets/icons/tools.svg";
 import FlaskIcon from "@/assets/icons/flask.svg";
 import HelpIcon from "@/assets/icons/help.svg";
 import UpdateBanner from "@/components/UpdateBanner.vue";
+import PanelLeftIcon from "@/assets/icons/panel-left.svg";
 </script>
 
 <style lang="postcss" scoped>
@@ -357,4 +429,44 @@ import UpdateBanner from "@/components/UpdateBanner.vue";
 
 .atv-theme-glyph { display: inline-flex; width: 20px; height: 20px; }
 .atv-theme-glyph svg { display: block; width: 100%; height: 100%; }
+
+/* Phone sidebar toggle that replaces the brand: a plain icon button sized to
+   match the navbar's other icon buttons. */
+.atv-nav-toggle__icon { display: inline-flex; width: 18px; height: 18px; }
+.atv-nav-toggle__icon svg { display: block; width: 100%; height: 100%; }
+
+/* Very small phones (≤349px) cannot fit the toggle + logo mark + wordmark next
+   to the navbar icons: drop just the wordmark so the logo glyph still shows. */
+@media (max-width: 349px) {
+  .atv-brand .normal-case { display: none; }
+}
+
+/* Phone app drawer: a full-viewport overlay (covers the navbar) with the
+   sidebar panel sliding in from the left. */
+.app-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: flex-start;
+  background: rgba(15, 23, 42, 0.34);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 200ms ease, visibility 200ms ease;
+}
+.app-drawer-overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.app-drawer-panel {
+  width: min(320px, 86vw);
+  max-width: 100%;
+  transform: translateX(-100%);
+  transition: transform 220ms ease;
+}
+.app-drawer-overlay.is-open .app-drawer-panel {
+  transform: translateX(0);
+}
 </style>

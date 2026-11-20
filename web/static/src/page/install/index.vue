@@ -38,7 +38,7 @@
 
         <div class="divider divider-horizontal"></div>
 
-        <div class="p-6 flex flex-col gap-y-4 w-full max-w-lg atv-install-form-wrap">
+        <div class="p-6 flex flex-col gap-y-4 w-full max-w-lg mx-auto lg:mx-0 atv-install-form-wrap">
           <form id="form" class="flex flex-col gap-y-4" @submit.prevent>
             <div class="join w-full atv-install-mode">
               <button

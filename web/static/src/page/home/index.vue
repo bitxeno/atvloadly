@@ -1,409 +1,317 @@
 <template>
-  <div class="xl:flex xl:flex-row xl:gap-x-12">
-    <div class="xl:basis-3/12 min-w-0 flex gap-x-16 flex-col gap-y-8 mb-8 xl:mb-0">
-      <div class="grid card atv-device-panel">
-        <router-link
-          :to="{ name: 'add-device' }"
-          class="atv-device-row flex flex-row gap-x-3 cursor-pointer"
-        >
-          <div class="atv-add-device-icon">
-            <PlusIcon />
-          </div>
-          <div class="atv-add-device-text">
-            <h4>{{ $t("home.sidebar.add_device.title") }}</h4>
-            <p>{{ $t("home.sidebar.add_device.subtitle") }}</p>
-          </div>
-          <span class="atv-add-device-chevron">
-            <ChevronRightIcon />
-          </span>
-        </router-link>
+  <div class="home-page">
+    <!-- The two-column grid (device column + installed apps). The phone drawer
+         is provided globally by the layout, so the page always renders both
+         columns here; on phones the device column is simply off-canvas inside
+         the drawer. -->
+    <div class="xl:flex xl:flex-row xl:gap-x-12">
+      <div class="home-device-col xl:basis-3/12 min-w-0 flex gap-x-16 flex-col gap-y-8 mb-8 xl:mb-0">
+        <AppSidebar
+          mode="desktop"
+          :devices="homeShell.devices"
+          :services="homeShell.services"
+          :forget-confirm-id="homeShell.forgetConfirmId"
+          @select-device="installIpa"
+          @forget-device="forgetDevice"
+          @forget-reset="homeShell.forgetConfirmId = null"
+        />
       </div>
 
-      <div>
-        <h4 class="mb-2">{{ $t("home.heading.paired_devices") }}</h4>
-        <div class="flex flex-col w-full border-opacity-50">
-          <div
-            class="grid card atv-device-panel"
-            v-show="pairedDevices.length > 0"
+      <div class="xl:basis-9/12 min-w-0 flex-1 flex flex-col gap-y-2">
+        <div class="flex items-center justify-between gap-x-2">
+          <h4>{{ $t("home.heading.installed_app") }}</h4>
+          <button
+            type="button"
+            class="btn btn-sm btn-ghost gap-x-2"
+            v-if="hasTrackedApps"
+            :disabled="checkingUpdates"
+            @click="checkUpdates"
           >
-            <a
-              class="atv-device-row flex flex-row gap-x-3 cursor-pointer"
-              v-for="item in pairedDevices"
-              v-bind:key="item.id"
-              :class="{ 'atv-device-row--manual': item.manual }"
-              @click="installIpa(item)"
-              @mouseleave="forgetConfirmId = null"
-            >
-              <div>
-                <div class="avatar" :class="{ online: !item.manual }">
-                  <span v-if="item.manual" class="atv-ip-badge">{{ $t("home.sidebar.device_status.ip_badge") }}</span>
-                  <div class="w-16 rounded">
-                    <IPhoneIcon v-if="item.name.toLowerCase().includes('iphone')" />
-                    <AppleTVIcon v-else />
+            <span class="loading loading-spinner loading-xs" v-if="checkingUpdates"></span>
+            <span class="w-4 h-4" v-else><RefreshIcon /></span>
+            {{ $t("home.source.check_updates") }}
+          </button>
+        </div>
+        <div class="overflow-x-auto min-w-0 max-w-full">
+          <table class="table table-auto static">
+            <!-- head -->
+            <thead>
+              <tr>
+                <th>{{ $t("home.table.header.app") }}</th>
+                <th @click="toggleSort('device')" class="cursor-pointer select-none">
+                  <div class="flex items-center gap-x-1">
+                    {{ $t("home.table.header.device") }}
+                    <span v-if="sortKey != 'device'" class="text-xs">⇅</span>
+                    <span v-if="sortKey == 'device'" class="text-xs">{{ sortOrder == 'asc' ? '▲' : '▼' }}</span>
                   </div>
-                </div>
-              </div>
-
-              <div class="flex flex-col justify-top flex-1 min-w-0">
-                <h4>{{ item.name }} ({{ truncateIP(item.ip) }})</h4>
-                <p class="atv-device-subline">
-                  <span>{{ formatDeviceStatus(item) }}</span>
-                </p>
-              </div>
-
-              <button
-                v-if="item.manual"
-                type="button"
-                class="atv-device-forget"
-                :class="{ 'atv-device-forget--armed': forgetConfirmId === item.id }"
-                :title="forgetConfirmId === item.id ? $t('home.sidebar.device_status.forget_confirm') : $t('home.sidebar.device_status.forget')"
-                :aria-label="$t('home.sidebar.device_status.forget')"
-                @click.stop.prevent="forgetDevice(item)"
-              >
-                <span class="atv-device-forget-icon"><TrashIcon /></span>
-                <span
-                  class="atv-device-forget-label"
-                  v-if="forgetConfirmId === item.id"
-                >{{ $t("home.sidebar.device_status.forget_confirm") }}</span>
-              </button>
-            </a>
-          </div>
-
-          <div
-            class="grid card atv-device-panel h-36 overflow-hidden"
-            v-show="pairedDevices.length == 0"
-          >
-            <h4 class="flex justify-center items-center">
-              {{ $t("home.sidebar.tips.no_paired_devices") }}
-            </h4>
-
-            <div class="stat-title whitespace-normal text-sm content-center">
-              {{ $t("home.sidebar.tips.how_pair_device") }}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="atv-service-status" v-if="services.length > 0">
-        <h4 class="mb-2">{{ $t("home.heading.service_status") }}</h4>
-        <div class="flex flex-col w-full border-opacity-50">
-          <div
-            class="grid card atv-device-panel min-h-24 overflow-hidden"
-          >
-            <ui class="flex flex-col gap-y-2">
-              <li
-                class="flex items-center gap-x-1"
-                v-for="item in services"
-                v-bind:key="item.name"
-              >
-                <div class="w-6 text-green-500" v-show="item.running">
-                  <CheckMarkIcon />
-                </div>
-                <div class="w-6 text-red-500" v-show="!item.running">
-                  <DismissIcon />
-                </div>
-                {{ item.name }}
-              </li>
-            </ui>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="xl:basis-9/12 min-w-0 flex-1 flex flex-col gap-y-2">
-      <div class="flex items-center justify-between gap-x-2">
-        <h4>{{ $t("home.heading.installed_app") }}</h4>
-        <button
-          type="button"
-          class="btn btn-sm btn-ghost gap-x-2"
-          v-if="hasTrackedApps"
-          :disabled="checkingUpdates"
-          @click="checkUpdates"
-        >
-          <span class="loading loading-spinner loading-xs" v-if="checkingUpdates"></span>
-          <span class="w-4 h-4" v-else><RefreshIcon /></span>
-          {{ $t("home.source.check_updates") }}
-        </button>
-      </div>
-      <div class="overflow-x-auto min-w-0 max-w-full">
-        <table class="table table-auto static">
-          <!-- head -->
-          <thead>
-            <tr>
-              <th>{{ $t("home.table.header.app") }}</th>
-              <th @click="toggleSort('device')" class="cursor-pointer select-none">
-                <div class="flex items-center gap-x-1">
-                  {{ $t("home.table.header.device") }}
-                  <span v-if="sortKey != 'device'" class="text-xs">⇅</span>
-                  <span v-if="sortKey == 'device'" class="text-xs">{{ sortOrder == 'asc' ? '▲' : '▼' }}</span>
-                </div>
-              </th>
-              <th @click="toggleSort('account')" class="cursor-pointer select-none">
-                <div class="flex items-center gap-x-1">
-                  {{ $t("home.table.header.account") }}
-                  <span v-if="sortKey != 'account'" class="text-xs">⇅</span>
-                  <span v-if="sortKey == 'account'" class="text-xs">{{ sortOrder == 'asc' ? '▲' : '▼' }}</span>
-                </div>
-              </th>
-              <th @click="toggleSort('expired_date')" class="cursor-pointer select-none">
-                <div class="flex items-center gap-x-1">
-                  {{ $t("home.table.header.expired_date") }}
-                  <span v-if="sortKey != 'expired_date'" class="text-xs">⇅</span>
-                  <span v-if="sortKey == 'expired_date'" class="text-xs">{{ sortOrder == 'asc' ? '▲' : '▼' }}</span>
-                </div>
-              </th>
-              <th>{{ $t("home.table.header.operate") }}</th>
-            </tr>
-          </thead>
-          <tbody class="bg-base-100">
-            <!-- row 1 -->
-            <tr class="hover" v-for="(item, index) in sortedList" v-bind:key="item.ID">
-              <td>
-                <div class="flex items-center gap-x-2 atv-app-cell">
-                  <div class="indicator">
-                    <div
-                      class="tooltip tooltip-right indicator-item atv-indicator-tip"
-                      :data-tip="indicatorTip(item)"
-                      v-if="indicatorTip(item)"
-                    >
-                      <span class="badge badge-warning">!</span>
-                    </div>
-                    <span
-                      v-else-if="!item.refreshed_result || sourceWarning(item)"
-                      class="indicator-item badge badge-warning"
-                      >!</span
-                    >
-                    <div class="inline-flex">
+                </th>
+                <th @click="toggleSort('account')" class="cursor-pointer select-none">
+                  <div class="flex items-center gap-x-1">
+                    {{ $t("home.table.header.account") }}
+                    <span v-if="sortKey != 'account'" class="text-xs">⇅</span>
+                    <span v-if="sortKey == 'account'" class="text-xs">{{ sortOrder == 'asc' ? '▲' : '▼' }}</span>
+                  </div>
+                </th>
+                <th @click="toggleSort('expired_date')" class="cursor-pointer select-none">
+                  <div class="flex items-center gap-x-1">
+                    {{ $t("home.table.header.expired_date") }}
+                    <span v-if="sortKey != 'expired_date'" class="text-xs">⇅</span>
+                    <span v-if="sortKey == 'expired_date'" class="text-xs">{{ sortOrder == 'asc' ? '▲' : '▼' }}</span>
+                  </div>
+                </th>
+                <th>{{ $t("home.table.header.operate") }}</th>
+              </tr>
+            </thead>
+            <tbody class="bg-base-100">
+              <!-- row 1 -->
+              <tr class="hover" v-for="(item, index) in sortedList" v-bind:key="item.ID">
+                <td>
+                  <div class="flex items-center gap-x-2 atv-app-cell">
+                    <div class="indicator">
                       <div
-                        class="atv-app-icon relative flex items-center justify-center"
-                        :class="{ 'atv-app-icon--ios': isIOSApp(item) }"
+                        class="tooltip tooltip-right indicator-item atv-indicator-tip"
+                        :data-tip="indicatorTip(item)"
+                        v-if="indicatorTip(item)"
                       >
-                        <img
-                          v-if="!failedIcons[item.ID]"
-                          :src="iconUrl(item)"
-                          :alt="appName(item)"
-                          loading="lazy"
-                          @error="markIconFailed(item.ID)"
-                          class="atv-app-icon-img shadow-sm"
-                        />
-                        <span
-                          v-else
-                          class="atv-app-initial"
-                          :aria-label="appName(item)"
-                        >{{ (appName(item) || "?").charAt(0).toUpperCase() }}</span>
+                        <span class="badge badge-warning">!</span>
+                      </div>
+                      <span
+                        v-else-if="!item.refreshed_result || sourceWarning(item)"
+                        class="indicator-item badge badge-warning"
+                        >!</span
+                      >
+                      <div class="inline-flex">
                         <div
-                          class="absolute w-full h-full top-0 flex items-center justify-center bg-[#00000066] atv-app-icon-mask"
-                          v-show="isInstalling(item)"
+                          class="atv-app-icon relative flex items-center justify-center"
+                          :class="{ 'atv-app-icon--ios': isIOSApp(item) }"
                         >
+                          <img
+                            v-if="!failedIcons[item.ID]"
+                            :src="iconUrl(item)"
+                            :alt="appName(item)"
+                            loading="lazy"
+                            @error="markIconFailed(item.ID)"
+                            class="atv-app-icon-img shadow-sm"
+                          />
                           <span
-                            class="loading loading-spinner loading-lg text-slate-100"
-                          ></span>
+                            v-else
+                            class="atv-app-initial"
+                            :aria-label="appName(item)"
+                          >{{ (appName(item) || "?").charAt(0).toUpperCase() }}</span>
+                          <div
+                            class="absolute w-full h-full top-0 flex items-center justify-center bg-[#00000066] atv-app-icon-mask"
+                            v-show="isInstalling(item)"
+                          >
+                            <span
+                              class="loading loading-spinner loading-lg text-slate-100"
+                            ></span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div class="flex flex-col justify-start prose atv-app-text">
-                    <div>{{ appName(item) }}</div>
-                    <div class="stat-title text-sm">{{ item.version }}</div>
-                    <!-- The same IPA installed with and without a custom bundle
-                         identifier is two different apps on the device: show the
-                         identifier so the two rows can be told apart. -->
-                    <div
-                      v-if="item.custom_identifier"
-                      class="stat-title text-xs truncate"
-                      :title="item.custom_identifier"
-                    >
-                      {{ item.custom_identifier }}
-                    </div>
-                    <div class="stat-title text-sm">
-                      <a
-                        class="link link-hover stat-title font-normal"
-                        :href="logUrl(item)"
-                        :title="$t('home.table.tips.view_log')"
-                        target="_blank"
-                        >{{ formatRefreshDate(item) }}</a
+                    <div class="flex flex-col justify-start prose atv-app-text">
+                      <div>{{ appName(item) }}</div>
+                      <div class="stat-title text-sm">{{ item.version }}</div>
+                      <!-- The same IPA installed with and without a custom bundle
+                           identifier is two different apps on the device: show the
+                           identifier so the two rows can be told apart. -->
+                      <div
+                        v-if="item.custom_identifier"
+                        class="stat-title text-xs truncate"
+                        :title="item.custom_identifier"
                       >
-                    </div>
-                    <div class="flex flex-wrap items-center gap-1 atv-source-line">
-                      <button
-                        type="button"
-                        class="badge badge-info badge-sm max-w-full atv-source-badge"
-                        v-if="item.source.latest_build_id"
-                        :title="$t('home.source.manage')"
-                        @click="openSourceDialog(item)"
-                      >
-                        <span class="truncate">{{
-                          $t("home.source.available", { version: item.source.latest_version })
-                        }}</span>
-                      </button>
-                      <button
-                        v-else-if="item.source.kind"
-                        type="button"
-                        class="atv-source-chip max-w-full"
-                        :title="item.source.url"
-                        @click="openSourceDialog(item)"
-                      >
-                        <span class="w-3.5 h-3.5 shrink-0">
-                          <GithubIcon v-if="item.source.kind === 'github'" />
-                          <LinkIcon v-else />
-                        </span>
-                        <span class="truncate">{{ item.source.version || "—" }}</span>
-                        <span class="badge badge-ghost badge-xs shrink-0" v-if="item.source.auto_update">{{
-                          $t("home.source.auto")
-                        }}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </td>
-              <td class="lg:break-all" v-html="formatDeviceName(item)">
-              </td>
-              <td class="lg:break-all">
-                <div v-if="isExternalApp(item)" class="flex flex-col items-start gap-y-1">
-                  <span class="badge atv-badge-external min-w-max">{{
-                    $t("home.table.signing.external_badge")
-                  }}</span>
-                  <div
-                    class="tooltip"
-                    :data-tip="externalErrorText(item)"
-                    v-if="externalErrorText(item)"
-                  >
-                    <div class="text-red-500">{{ identityName(item) }}</div>
-                  </div>
-                  <div v-else>{{ identityName(item) }}</div>
-                </div>
-                <template v-else>
-                  <div class="tooltip" :data-tip="$t('home.table.tips.account_invalid')" v-if="item.refreshed_error == 1">
-                    <div class="text-red-500"> {{ item.account }}</div>
-                  </div>
-                  <div v-else>
-                    {{ item.account }}
-                  </div>
-                </template>
-              </td>
-              <td>
-                <div :class="expiryHue(item) === null ? 'badge badge-ghost min-w-max' : 'badge atv-expiry min-w-max'"
-                  :style="{ '--expiry-hue': expiryHue(item) }">
-                  {{ formatExpiredTime(item) }}
-                </div>
-                <div
-                  v-if="isExternalApp(item) && item.expiration_date"
-                  class="stat-title text-xs mt-1 whitespace-nowrap"
-                  :title="$t('home.table.tips.reinstall_external')"
-                >
-                  {{ $t("home.table.signing.valid_until", { date: formatDate(item.expiration_date) }) }}
-                </div>
-              </td>
-              <td>
-                <div class="flex gap-x-2 atv-app-actions">
-                  <button
-                    type="button"
-                    class="btn atv-action atv-action--update"
-                    v-if="item.source.latest_build_id"
-                    :disabled="isInstalling(item)"
-                    @click="updateApp(item)"
-                  >{{ $t("home.table.button.update") }}</button>
-                  <button
-                    type="button"
-                    class="btn atv-action atv-action--refresh"
-                    v-if="!item.source.latest_build_id"
-                    :title="isExternalApp(item) ? $t('home.table.tips.reinstall_external') : undefined"
-                    @click="refreshApp(item)"
-                  >{{
-                    isExternalApp(item)
-                      ? $t("home.table.button.reinstall")
-                      : $t("home.table.button.refresh")
-                  }}</button>
-                  <div
-                    class="dropdown dropdown-hover dropdown-end"
-                    :class="{ 'dropdown-top': index === sortedList.length - 1 }"
-                    @mouseleave="resetConfirmDelete"
-                  >
-                    <div
-                      tabindex="0"
-                      role="button"
-                      class="btn atv-action"
-                    >{{ $t("home.table.button.more") }}</div>
-                    <ul
-                      tabindex="0"
-                      class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-48 gap-1"
-                    >
-                      <li>
-                        <a @click="openSourceDialog(item)">
-                          <span class="w-4 h-4 shrink-0">
+                        {{ item.custom_identifier }}
+                      </div>
+                      <div class="stat-title text-sm">
+                        <a
+                          class="link link-hover stat-title font-normal"
+                          :href="logUrl(item)"
+                          :title="$t('home.table.tips.view_log')"
+                          target="_blank"
+                          >{{ formatRefreshDate(item) }}</a
+                        >
+                      </div>
+                      <div class="flex flex-wrap items-center gap-1 atv-source-line">
+                        <button
+                          type="button"
+                          class="badge badge-info badge-sm max-w-full atv-source-badge"
+                          v-if="item.source.latest_build_id"
+                          :title="$t('home.source.manage')"
+                          @click="openSourceDialog(item)"
+                        >
+                          <span class="truncate">{{
+                            $t("home.source.available", { version: item.source.latest_version })
+                          }}</span>
+                        </button>
+                        <button
+                          v-else-if="item.source.kind"
+                          type="button"
+                          class="atv-source-chip max-w-full"
+                          :title="item.source.url"
+                          @click="openSourceDialog(item)"
+                        >
+                          <span class="w-3.5 h-3.5 shrink-0">
                             <GithubIcon v-if="item.source.kind === 'github'" />
                             <LinkIcon v-else />
                           </span>
-                          {{
-                            item.source.kind
-                              ? $t("home.source.manage")
-                              : $t("home.source.track")
-                          }}
-                        </a>
-                      </li>
-                      <li v-if="item.source.latest_build_id">
-                        <a
-                          :title="isExternalApp(item) ? $t('home.table.tips.reinstall_external') : undefined"
-                          @click="refreshApp(item)"
-                        >
-                          <span class="w-4 h-4 shrink-0">
-                            <RefreshIcon />
-                          </span>
-                          {{
-                            isExternalApp(item)
-                              ? $t("home.table.button.reinstall")
-                              : $t("home.table.button.refresh")
-                          }}
-                        </a>
-                      </li>
-                      <li v-if="!isExternalApp(item)">
-                        <a @click="reinstallApp(item)">
-                          <span class="w-4 h-4 shrink-0">
-                            <DownloadIcon />
-                          </span>
-                          {{ $t("home.table.button.reinstall") }}
-                        </a>
-                      </li>
-                      <li v-if="confirmDeleteId !== item.ID">
-                        <a class="atv-menu-danger" @click="confirmDelete(item)">
-                          <span class="w-4 h-4 shrink-0">
-                            <DismissIcon />
-                          </span>
-                          {{ $t("home.table.button.delete") }}
-                        </a>
-                      </li>
-                      <li v-else>
-                        <a class="atv-menu-danger" @click="deleteApp(item)">
-                          <span class="w-4 h-4 shrink-0">
-                            <DismissIcon />
-                          </span>
-                          {{ $t("home.table.button.confirm_delete") }}
-                        </a>
-                      </li>
-                    </ul>
+                          <span class="truncate">{{ item.source.version || "—" }}</span>
+                          <span class="badge badge-ghost badge-xs shrink-0" v-if="item.source.auto_update">{{
+                            $t("home.source.auto")
+                          }}</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </td>
+                <td class="lg:break-all" v-html="formatDeviceName(item)">
+                </td>
+                <td class="lg:break-all">
+                  <div v-if="isExternalApp(item)" class="flex flex-col items-start gap-y-1">
+                    <span class="badge atv-badge-external min-w-max">{{
+                      $t("home.table.signing.external_badge")
+                    }}</span>
+                    <div
+                      class="tooltip"
+                      :data-tip="externalErrorText(item)"
+                      v-if="externalErrorText(item)"
+                    >
+                      <div class="text-red-500">{{ identityName(item) }}</div>
+                    </div>
+                    <div v-else>{{ identityName(item) }}</div>
+                  </div>
+                  <template v-else>
+                    <div class="tooltip" :data-tip="$t('home.table.tips.account_invalid')" v-if="item.refreshed_error == 1">
+                      <div class="text-red-500"> {{ item.account }}</div>
+                    </div>
+                    <div v-else>
+                      {{ item.account }}
+                    </div>
+                  </template>
+                </td>
+                <td>
+                  <div :class="expiryHue(item) === null ? 'badge badge-ghost min-w-max' : 'badge atv-expiry min-w-max'"
+                    :style="{ '--expiry-hue': expiryHue(item) }">
+                    {{ formatExpiredTime(item) }}
+                  </div>
+                  <div
+                    v-if="isExternalApp(item) && item.expiration_date"
+                    class="stat-title text-xs mt-1 whitespace-nowrap"
+                    :title="$t('home.table.tips.reinstall_external')"
+                  >
+                    {{ $t("home.table.signing.valid_until", { date: formatDate(item.expiration_date) }) }}
+                  </div>
+                </td>
+                <td>
+                  <div class="flex gap-x-2 atv-app-actions">
+                    <button
+                      type="button"
+                      class="btn atv-action atv-action--update"
+                      v-if="item.source.latest_build_id"
+                      :disabled="isInstalling(item)"
+                      @click="updateApp(item)"
+                    >{{ $t("home.table.button.update") }}</button>
+                    <button
+                      type="button"
+                      class="btn atv-action atv-action--refresh"
+                      v-if="!item.source.latest_build_id"
+                      :title="isExternalApp(item) ? $t('home.table.tips.reinstall_external') : undefined"
+                      @click="refreshApp(item)"
+                    >{{
+                      isExternalApp(item)
+                        ? $t("home.table.button.reinstall")
+                        : $t("home.table.button.refresh")
+                    }}</button>
+                    <div
+                      class="dropdown dropdown-hover dropdown-end"
+                      :class="{ 'dropdown-top': index === sortedList.length - 1 }"
+                      @mouseleave="resetConfirmDelete"
+                    >
+                      <div
+                        tabindex="0"
+                        role="button"
+                        class="btn atv-action"
+                      >{{ $t("home.table.button.more") }}</div>
+                      <ul
+                        tabindex="0"
+                        class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-48 gap-1"
+                      >
+                        <li>
+                          <a @click="openSourceDialog(item)">
+                            <span class="w-4 h-4 shrink-0">
+                              <GithubIcon v-if="item.source.kind === 'github'" />
+                              <LinkIcon v-else />
+                            </span>
+                            {{
+                              item.source.kind
+                                ? $t("home.source.manage")
+                                : $t("home.source.track")
+                            }}
+                          </a>
+                        </li>
+                        <li v-if="item.source.latest_build_id">
+                          <a
+                            :title="isExternalApp(item) ? $t('home.table.tips.reinstall_external') : undefined"
+                            @click="refreshApp(item)"
+                          >
+                            <span class="w-4 h-4 shrink-0">
+                              <RefreshIcon />
+                            </span>
+                            {{
+                              isExternalApp(item)
+                                ? $t("home.table.button.reinstall")
+                                : $t("home.table.button.refresh")
+                            }}
+                          </a>
+                        </li>
+                        <li v-if="!isExternalApp(item)">
+                          <a @click="reinstallApp(item)">
+                            <span class="w-4 h-4 shrink-0">
+                              <DownloadIcon />
+                            </span>
+                            {{ $t("home.table.button.reinstall") }}
+                          </a>
+                        </li>
+                        <li v-if="confirmDeleteId !== item.ID">
+                          <a class="atv-menu-danger" @click="confirmDelete(item)">
+                            <span class="w-4 h-4 shrink-0">
+                              <DismissIcon />
+                            </span>
+                            {{ $t("home.table.button.delete") }}
+                          </a>
+                        </li>
+                        <li v-else>
+                          <a class="atv-menu-danger" @click="deleteApp(item)">
+                            <span class="w-4 h-4 shrink-0">
+                              <DismissIcon />
+                            </span>
+                            {{ $t("home.table.button.confirm_delete") }}
+                          </a>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
-        <div class="empty" v-show="list.length == 0">
-          {{ $t("home.table.tips.no_data") }}
+          <div class="empty" v-show="list.length == 0">
+            {{ $t("home.table.tips.no_data") }}
+          </div>
         </div>
-      </div>
 
-      <div
-        class="stat-title text-sm whitespace-normal atv-refresh-footer-note"
-      >
-        {{ $t("home.table.tips.footer") }}
-      </div>
-      <div
-        v-if="hasExternalApps"
-        class="stat-title text-sm whitespace-normal atv-refresh-footer-note"
-      >
-        {{ $t("home.table.tips.footer_external") }}
+        <div
+          class="stat-title text-sm whitespace-normal atv-refresh-footer-note"
+        >
+          {{ $t("home.table.tips.footer") }}
+        </div>
+        <div
+          v-if="hasExternalApps"
+          class="stat-title text-sm whitespace-normal atv-refresh-footer-note"
+        >
+          {{ $t("home.table.tips.footer_external") }}
+        </div>
       </div>
     </div>
 
@@ -414,40 +322,24 @@
     />
   </div>
 </template>
-  
+
 
 <script>
 import dayjs from "dayjs";
 import api from "@/api/api";
 import { toast } from "vue3-toastify";
 import { truncateIP } from "@/utils/utils";
+import { homeShell } from "@/utils/home-shell";
 import SourceDialog from "@/components/SourceDialog.vue";
+import AppSidebar from "@/components/AppSidebar.vue";
 import { updateFailed } from "@/utils/source.mjs";
 
 export default {
   name: "Home",
-  components: { SourceDialog },
+  components: { SourceDialog, AppSidebar },
   data() {
     return {
-      devices: [],
-      list: [
-        // {
-        //   ID: 1,
-        //   ipa_name: "AppleTV",
-        //   version: "1.0.0",
-        //   account: "admin",
-        //   refreshed_date: "2023-06-30 16:10:10",
-        //   refreshed_result: true,
-        // },
-        // {
-        //   ID: 2,
-        //   ipa_name: "AppleTV",
-        //   version: "1.0.0",
-        //   account: "admin",
-        //   refreshed_date: "2023-06-10 10:10:10",
-        // },
-      ],
-      services: [],
+      list: [],
       installingApps: [],
       checkInstallingTimer: null,
       newInstallToastId: null,
@@ -462,16 +354,12 @@ export default {
       // ID of the app armed for deletion in the row dropdown menu. Clicking
       // delete once arms it, clicking again confirms.
       confirmDeleteId: null,
-      // ID of a manual device armed for "forget" confirmation.
-      forgetConfirmId: null,
+      // Shared sidebar store: devices/services/forget state live here so the
+      // desktop left column and the global phone drawer stay in sync.
+      homeShell,
     };
   },
   computed: {
-    pairedDevices: function () {
-      return this.devices.filter(function (item) {
-        return item.status == "paired";
-      });
-    },
     hasTrackedApps: function () {
       return this.list.some((item) => item.source.kind);
     },
@@ -511,13 +399,9 @@ export default {
     fetchData() {
       let _this = this;
 
-      api.getDevices().then((res) => {
-        _this.devices = res.data;
-      });
-
-      api.getServiceStatus().then((res) => {
-        _this.services = res.data;
-      });
+      // Devices/services live in the shared sidebar store (also used by the
+      // global phone drawer); loading here keeps the desktop column populated.
+      homeShell.load();
 
       _this.checkInstallingApp();
       _this.fetchAppList();
@@ -797,45 +681,9 @@ export default {
       // Less than 1 hour
       return this.$t("home.table.expired_time_format.less_than_hour");
     },
-    formatStatus(status) {
-      if (status == "paired") {
-        return this.$t("home.sidebar.device_status.paired");
-      } else if (status == "pairable") {
-        return this.$t("home.sidebar.device_status.pairable");
-      } else {
-        return this.$t("home.sidebar.device_status.unpaired");
-      }
-    },
-    formatConnection(connection) {
-      return connection;
-    },
-    formatDeviceStatus(item) {
-      // Manual (pairing-file) devices are "added", not discovered as connected.
-      const status = item.manual
-        ? this.$t("home.sidebar.device_status.added")
-        : this.formatStatus(item.status);
-      const connection = this.formatConnection(item.connection);
-
-      if (!connection) {
-        return status;
-      }
-
-      return `${status} · ${connection}`;
-    },
-    async forgetDevice(item) {
-      // First click arms the confirmation, second click deletes.
-      if (this.forgetConfirmId !== item.id) {
-        this.forgetConfirmId = item.id;
-        return;
-      }
-      this.forgetConfirmId = null;
-      try {
-        await api.deleteManualDevice(item.id);
-        toast.success(this.$t("home.sidebar.device_status.forget_done"));
-        this.fetchData();
-      } catch (error) {
-        console.error(error);
-      }
+    forgetDevice(item) {
+      // Arm/confirm through the shared store (which also refreshes the list).
+      homeShell.forgetDevice(item);
     },
     isIOSApp(item) {
       if (!item || !item.device_class) return false;
@@ -886,8 +734,8 @@ export default {
     },
     getSortValue(item, key) {
       if (key === "device") {
-        for (let i = 0; i < this.devices.length; i++) {
-          const dev = this.devices[i];
+        for (let i = 0; i < this.homeShell.devices.length; i++) {
+          const dev = this.homeShell.devices[i];
           if (dev.udid == item.udid && dev.status == "paired") {
             return dev.name;
           }
@@ -919,8 +767,8 @@ export default {
     },
     formatDeviceName(item) {
       let _this = this;
-      for (let i = 0; i < _this.devices.length; i++) {
-        const dev = _this.devices[i];
+      for (let i = 0; i < _this.homeShell.devices.length; i++) {
+        const dev = _this.homeShell.devices[i];
         if (dev.udid == item.udid && dev.status == "paired") {
           return `${dev.name}<br/>(${truncateIP(dev.ip)})`;
         }
@@ -956,189 +804,21 @@ export default {
 </script>
 
 <script setup>
-import AppleTVIcon from "@/assets/icons/appletv.svg";
-import IPhoneIcon from "@/assets/icons/iphone.svg";
-import HelpIcon from "@/assets/icons/help.svg";
-import CheckMarkIcon from "@/assets/icons/checkmark.svg";
 import DismissIcon from "@/assets/icons/dismiss.svg";
 import GithubIcon from "@/assets/icons/github.svg";
 import LinkIcon from "@/assets/icons/link.svg";
 import RefreshIcon from "@/assets/icons/refresh.svg";
 import DownloadIcon from "@/assets/icons/download.svg";
-import PlusIcon from "@/assets/icons/plus.svg";
-import ChevronRightIcon from "@/assets/icons/chevron-right.svg";
-import TrashIcon from "@/assets/icons/trash.svg";
 </script>
 
-  
+
 <style lang="postcss" scoped>
-.headline {
-  @apply prose mb-2;
-}
-
-/* Persistent entry that opens the add-device page. It reuses the device
-   panel/row so its hover tint is inset by the panel padding, exactly like the
-   connected-device rows. */
-.atv-add-device-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 50px;
-  height: 50px;
-  border-radius: 9999px;
-  background: var(--atv-accent-soft);
-  color: var(--atv-accent);
-  flex-shrink: 0;
-  transition: background-color .15s ease;
-}
-
-/* The row hover tint is almost the same shade as the badge, so the badge
-   would blend into the background on hover. Deepen it to keep the icon
-   readable while the row is highlighted. */
-.atv-device-row:hover .atv-add-device-icon {
-  background: var(--atv-accent-soft-hover);
-}
-
-.atv-add-device-icon svg {
-  width: 22px;
-  height: 22px;
-}
-
-.atv-add-device-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.atv-add-device-text h4 {
-  margin: 0;
-  font-size: 0.88rem;
-  line-height: 1.35;
-  font-weight: 700;
-  color: var(--atv-ink);
-}
-
-.atv-add-device-text p {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--atv-muted);
-  line-height: 1.35;
-}
-
-.atv-add-device-chevron {
-  width: 18px;
-  height: 18px;
-  color: var(--atv-muted);
-  flex-shrink: 0;
-}
-
-/* Manual (pairing-file) device: "IP" badge on the avatar's top-right corner
-   instead of the online dot. It sits on .avatar (not .avatar > div, which
-   daisyUI clips with overflow:hidden) so it is never cut off. */
-.atv-ip-badge {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  z-index: 11;
-  padding: 2px 5px;
-  border-radius: 7px;
-  background: var(--atv-accent);
-  color: #fff;
-  font-size: 9px;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: 0.03em;
-  box-shadow: 0 0 0 2px var(--atv-surface);
-}
-
-/* "Forget" action for a manual device: a trash icon that floats over the far
-   right edge of the row without taking any horizontal space from the title
-   (absolute, out of flow). Hidden at rest on desktop and revealed on row hover
-   or keyboard focus, where it grows a left-to-right fade panel that covers the
-   title text beneath it. First click arms the confirmation (the icon turns red
-   and shows the confirm label), the second click deletes. Always visible on
-   phones, which have no hover. */
-.atv-device-subline {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-/* Positioning context for the floating forget panel; overflow keeps the
-   panel's fill inside the row's rounded corners. */
-.atv-device-row {
-  position: relative;
-  overflow: hidden;
-}
-
-.atv-device-forget {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 5px;
-  padding: 0 16px 0 52px;
-  border: 0;
-  border-radius: 0 12px 12px 0;
-  background: linear-gradient(
-    to right,
-    transparent 0%,
-    var(--atv-surface-hover) 46%
-  );
-  color: var(--atv-muted);
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 140ms ease, color 140ms ease;
-}
-
-.atv-device-forget-icon {
-  display: inline-flex;
-  width: 17px;
-  height: 17px;
-}
-
-.atv-device-forget-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.atv-device-forget-label {
-  font-size: 0.78rem;
-  font-weight: 650;
-  color: var(--atv-danger);
-}
-
-.atv-device-row--manual:hover .atv-device-forget,
-.atv-device-forget:focus-visible,
-.atv-device-forget--armed {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.atv-device-forget:hover,
-.atv-device-forget--armed {
-  color: var(--atv-danger);
-}
-
-/* Touch devices (phones and iPads) have no hover, so the forget icon is
-   always shown. With no hovered row to blend into, the gradient fades to the
-   card's own background instead of the hover tint, and the panel is kept
-   compact so it covers as little of the title as possible. */
-@media (hover: none) {
-  .atv-device-forget {
-    padding: 0 12px 0 16px;
-    background: linear-gradient(
-      to right,
-      transparent 0%,
-      var(--atv-surface) 46%
-    );
-    opacity: 1;
-    pointer-events: auto;
+/* On phones the device column lives in the global drawer, so the page shows
+   only the installed-apps table (consistent with every other page). Tablet and
+   desktop keep the original two-column layout. */
+@media (max-width: 767px) {
+  .home-device-col {
+    display: none;
   }
 }
 

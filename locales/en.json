@@ -50,6 +50,8 @@
         "preferences": "Preferences",
         "account": "Accounts",
         "devices": "Devices",
+        "expand_sidebar": "Expand sidebar",
+        "collapse_sidebar": "Collapse sidebar",
         "donate": "Donate",
         "about": "About"
     },
