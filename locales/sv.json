@@ -121,7 +121,8 @@
         "ip_badge": "IP",
         "forget": "Ta bort",
         "forget_confirm": "Bekräfta",
-        "forget_done": "Enheten har tagits bort"
+        "forget_done": "Enheten har tagits bort",
+        "more": "Mer"
       },
       "tips": {
         "no_paired_devices": "Inga anslutna enheter",

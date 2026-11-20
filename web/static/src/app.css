@@ -1004,11 +1004,6 @@ html[data-theme="dark"] {
   border: 1px solid var(--atv-border);
   border-radius: 18px;
   box-shadow: var(--atv-shadow);
-  /* Clip row backgrounds and the floating delete button to the panel's 18px
-     rounded border. The rows round their own fill at 12px, so without this the
-     delete button's gradient/fill spills over the rounded border at the
-     first/last row corners. */
-  overflow: hidden;
 }
 
 /* The service-status card keeps vertical breathing room (top/bottom) while its
@@ -1036,6 +1031,19 @@ html[data-theme="dark"] {
 .app-container .main-container .atv-device-panel .atv-device-row:hover,
 .app-sidebar--panel .atv-device-panel .atv-device-row:hover {
   background: var(--atv-surface-hover);
+}
+/* Follow the panel's 18px corner on the first/last row so the row's hover tint
+   matches the card edge. The panel intentionally avoids overflow: hidden so a
+   row's action menu can overflow it. */
+.app-container .main-container .atv-device-panel .atv-device-row:first-child,
+.app-sidebar--panel .atv-device-panel .atv-device-row:first-child {
+  border-top-left-radius: 17px;
+  border-top-right-radius: 17px;
+}
+.app-container .main-container .atv-device-panel .atv-device-row:last-child,
+.app-sidebar--panel .atv-device-panel .atv-device-row:last-child {
+  border-bottom-left-radius: 17px;
+  border-bottom-right-radius: 17px;
 }
 .app-container .atv-device-row .avatar > div,
 .app-sidebar--panel .atv-device-row .avatar > div {
