@@ -1,0 +1,53 @@
+name: "🏷️ PR Title"
+
+# Enforce Conventional Commits in PR titles. GitHub squash-merges default to the
+# PR title verbatim ("Default to PR title for squash merge commits"), so a valid
+# title is exactly what makes the resulting squash commit legible to
+# changelogithub. Without it a title such as
+#   "Add a phone drawer for navigation and device management (#279)"
+# is not a Conventional Commit, and changelogithub silently drops the whole
+# entry (see the "Generate Changelog" step in release.yml).
+#
+# Trigger: pull_request, not pull_request_target. The action only reads the
+# title, so the read-only token that fork PRs receive is enough, and
+# pull_request_target is blocked by default in public repositories starting
+# 2026-12-02. synchronize keeps the required check current on the latest commit.
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+
+permissions:
+  pull-requests: read
+
+jobs:
+  lint-title:
+    name: Validate PR title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Conventional types this repo uses. The first five mirror release.yml's
+          # changelog `types` list; the rest are valid Conventional Commit types
+          # that simply do not appear in the changelog (docs, ci, test, style,
+          # build, revert).
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            chore
+            docs
+            ci
+            test
+            style
+            build
+            revert
+          # Scopes are free-form (device, install, auth, settings, ...), so a
+          # scope is allowed but not required.
+          requireScope: false

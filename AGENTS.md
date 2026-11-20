@@ -170,6 +170,13 @@ fix(install): resolve timeout issue during IPA installation
 docs(readme): update installation instructions
 ```
 
+### Pull Request Titles
+
+**MANDATORY**: PR titles follow the same Conventional Commits format and types
+as commit messages above. Squash merges reuse the PR title as the commit
+subject, so a non-conventional title is dropped from the changelog. Enforced by
+`.github/workflows/pr-title.yml`.
+
 ## Platforms
 
 - **Docker server**: Linux/OpenWrt (requires `avahi-daemon` for device discovery and `usbmuxd2` for iOS device communication)
