@@ -188,6 +188,49 @@ func TestApplyBuild(t *testing.T) {
 	}
 }
 
+func TestRestartPreferenceSurvivesSourceUpdates(t *testing.T) {
+	setupTestDB(t)
+	app := model.InstalledApp{UDID: "tv", BundleIdentifier: "com.example.tv", Account: "user@example.com"}
+	save := func(v model.InstalledApp) model.InstalledApp {
+		t.Helper()
+		saved, err := SaveApp(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+		loaded, err := GetApp(saved.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return *loaded
+	}
+	stored := save(app)
+	if stored.RestartAfterInstall {
+		t.Fatal("new installs should default to leaving the TV running")
+	}
+	app.RestartAfterInstall = true
+	enabled := save(app)
+	other := app
+	other.UDID, other.RestartAfterInstall = "office", false
+	office := save(other)
+	updated := ApplyBuild(enabled, source.Build{ID: "next", Name: "Test.ipa", Version: "2"})
+	saved, err := SaveSourceUpdate(updated)
+	if err != nil || saved.ID != stored.ID || !saved.RestartAfterInstall || mustGetApp(t, office.ID).RestartAfterInstall {
+		t.Fatalf("source update lost the per-device choice: %v", err)
+	}
+	// A pending update finishes after a manual install changes both toggles.
+	app.RestartAfterInstall, app.RemoveExtensions = false, true
+	app.Source.AutoUpdate = true
+	save(app)
+	saved, err = SaveSourceUpdate(updated)
+	if err != nil || saved.RestartAfterInstall || !saved.RemoveExtensions || !saved.Source.AutoUpdate {
+		t.Fatalf("queued update restored stale options: %+v, err=%v", saved, err)
+	}
+	app.RemoveExtensions = false
+	if save(app).RemoveExtensions {
+		t.Fatal("Apple ID reinstall kept removing extensions")
+	}
+}
+
 func fullSource() model.AppSource {
 	d := func(day int) *time.Time { return timePtr(time.Date(2026, 9, day, 10, 0, 0, 0, time.UTC)) }
 	return model.AppSource{

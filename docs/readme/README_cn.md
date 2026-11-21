@@ -45,6 +45,10 @@ atvloadly 是一个支持在 AppleTV 上侧载应用的 web 服务。底层通�
   <img width="600" src="../preview/install.png">
 </p>
 
+在 Apple TV 的安装页面开启 **安装完成后重启 Apple TV**，即可为这台设备上的这个应用保存选择。以后完整安装或自动更新成功后，atvloadly 会等同一台电视的待安装任务结束，再重启一次。仅刷新描述文件时不会重启。重启会中断播放。重启期间新提交的安装会等待设备断线、安装服务重新可用；等待三分钟后会恢复常规连接检查。重启请求失败可在服务器日志中查看。
+
+从本版本构建的 Docker 镜像已包含重启所需的客户端。独立运行或使用桌面版时，需要在服务能找到的 Python 虚拟环境或系统解释器（macOS/Linux 的 `python3`，Windows 的 `python`）中安装 `pymobiledevice3==11.58.0`。客户端使用现有设备配对。
+
 ## 安装
 
 ### Docker（Linux/OpenWrt）

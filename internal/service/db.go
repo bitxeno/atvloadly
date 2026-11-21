@@ -100,6 +100,8 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 		cur.RefreshedError = app.RefreshedError
 		cur.Password = app.Password
 		cur.CustomName = app.CustomName
+		cur.RestartAfterInstall = app.RestartAfterInstall
+		cur.RemoveExtensions = app.RemoveExtensions
 		cur.SigningMode = app.SigningMode
 		cur.SigningIdentityID = app.SigningIdentityID
 		cur.SignedBundleIdentifier = app.SignedBundleIdentifier
@@ -116,14 +118,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 		// again. An empty choice clears it; an invalid path keeps the previous
 		// icon rather than silently losing it.
 		cur.CustomIconPath = storeCustomIcon(app.CustomIconPath, saveDir, cur.CustomIconPath)
-		if cur.IpaPath != "" {
-			ipaPath := filepath.Join(saveDir, "app.ipa")
-			if err := os.Rename(cur.IpaPath, ipaPath); err != nil {
-				log.Err(err).Msgf("Can not move to %s", ipaPath)
-			} else {
-				cur.IpaPath = ipaPath
-			}
-		}
+		cur.IpaPath = storeUpdatedIPA(cur.IpaPath, saveDir)
 		cur.Icon = storeAppIcon(app.Icon, saveDir, cur.Icon)
 
 		updateData := map[string]any{
@@ -139,6 +134,8 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 			"refreshed_error":            cur.RefreshedError,
 			"password":                   cur.Password,
 			"custom_name":                cur.CustomName,
+			"restart_after_install":      cur.RestartAfterInstall,
+			"remove_extensions":          cur.RemoveExtensions,
 			"signing_mode":               cur.SigningMode,
 			"signing_identity_id":        cur.SigningIdentityID,
 			"signed_bundle_identifier":   cur.SignedBundleIdentifier,
@@ -150,11 +147,6 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 		// replace when it is installed under the same identifier.
 		cur.BundleIdentifier = app.BundleIdentifier
 		updateData["bundle_identifier"] = cur.BundleIdentifier
-		if cur.IsExternalSigning() {
-			// The next reinstall signs with the same plan as this installation.
-			cur.RemoveExtensions = app.RemoveExtensions
-			updateData["remove_extensions"] = cur.RemoveExtensions
-		}
 		for k, v := range sourceColumns(cur.Source) {
 			updateData[k] = v
 		}
@@ -203,6 +195,52 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 
 		return &app, nil
 	}
+}
+
+// SaveSourceUpdate records the installed build by ID. An update can spend
+// time in the queue while the user edits the app or changes its source.
+func SaveSourceUpdate(app model.InstalledApp) (*model.InstalledApp, error) {
+	cur, err := GetApp(app.ID)
+	if err != nil {
+		return nil, err
+	}
+	dir := filepath.Join(conf.Config.Server.DataDir, "ipa", fmt.Sprint(app.ID))
+	result := map[string]any{
+		"ipa_path":                 storeUpdatedIPA(app.IpaPath, dir),
+		"icon":                     storeAppIcon(app.Icon, dir, cur.Icon),
+		"ipa_name":                 app.IpaName,
+		"version":                  app.Version,
+		"refreshed_date":           app.RefreshedDate,
+		"expiration_date":          app.ExpirationDate,
+		"refreshed_result":         app.RefreshedResult,
+		"refreshed_error":          app.RefreshedError,
+		"signed_bundle_identifier": app.SignedBundleIdentifier,
+	}
+	err = db.Store().Transaction(func(tx *gorm.DB) error {
+		row := tx.Model(&model.InstalledApp{}).Where("id = ?", app.ID)
+		if err := row.Updates(result).Error; err != nil {
+			return err
+		}
+		return tx.Model(&model.InstalledApp{}).
+			Where("id = ? AND source_kind = ? AND source_url = ?", app.ID, app.Source.Kind, app.Source.URL).
+			Updates(sourceBuildColumns(app.Source)).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+	return GetApp(app.ID)
+}
+
+func storeUpdatedIPA(path, dir string) string {
+	if path == "" {
+		return ""
+	}
+	dst := filepath.Join(dir, "app.ipa")
+	if err := os.Rename(path, dst); err != nil {
+		log.Err(err).Msgf("Can not move to %s", dst)
+		return path
+	}
+	return dst
 }
 
 // storeAppIcon moves the icon of an installation into saveDir and returns the

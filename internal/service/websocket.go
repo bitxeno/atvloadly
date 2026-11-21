@@ -69,7 +69,29 @@ func HandleInstallMessage(c *websocket.Conn) {
 				continue
 			}
 
-			go runInstallMessage(websocketMgr, installMgr, v, dev)
+			v.RestartAfterInstall = v.RestartAfterInstall && dev.DeviceClass == string(model.DeviceClassAppleTV)
+			ready, finish := manager.BeginDeviceInstall(dev.UDID)
+			go func() {
+				if ready != nil {
+					websocketMgr.WriteMessage("Waiting for Apple TV to restart...\n")
+					select {
+					case <-websocketMgr.Context().Done():
+						finish(false)
+						manager.CleanUploadTempFiles(v.IpaPath, v.Icon, v.CustomIconPath)
+						return
+					case <-ready:
+					}
+					dev, found = manager.GetDeviceByUDID(v.UDID)
+					if !found {
+						finish(false)
+						manager.CleanUploadTempFiles(v.IpaPath, v.Icon, v.CustomIconPath)
+						writeInstallRejected(websocketMgr, "Apple TV did not reconnect after restarting")
+						return
+					}
+				}
+				installed := runInstallMessage(websocketMgr, installMgr, v, dev)
+				finish(installed && v.RestartAfterInstall)
+			}()
 		case model.MessageType2FA:
 			code := msg.Data
 			installMgr.Write([]byte(code + "\n"))
@@ -176,14 +198,14 @@ func validateInstallRequest(v *model.InstalledApp) error {
 	return nil
 }
 
-func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.InstallManager, v model.InstalledApp, dev *model.Device) {
+func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.InstallManager, v model.InstalledApp, dev *model.Device) bool {
 	if v.Source.Tracked() {
 		mgr.WriteMessage("Resolving build from source...\n")
 		if err := ResolveSourceInstall(&v); err != nil {
 			mgr.WriteMessage(fmt.Sprintf("ERROR: %s", err.Error()))
 			mgr.WriteMessage("\n")
 			mgr.WriteMessage("Installation Failed!")
-			return
+			return false
 		}
 	} else {
 		// Only the server writes source data.
@@ -216,7 +238,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 			mgr.WriteMessage(msg)
 			mgr.WriteMessage("\n")
 			mgr.WriteMessage("Installation Failed!")
-			return
+			return false
 		}
 		ipaPath = result.LocalPath
 		defer func() { _ = os.Remove(result.LocalPath) }()
@@ -229,7 +251,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 			mgr.WriteMessage(fmt.Sprintf("ERROR: %s", err.Error()))
 			mgr.WriteMessage("\n")
 			mgr.WriteMessage("Installation Failed!")
-			return
+			return false
 		}
 
 		v.IpaPath = result.LocalPath
@@ -254,12 +276,11 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 		mgr.WriteMessage(fmt.Sprintf("ERROR: %s", err.Error()))
 		mgr.WriteMessage("\n")
 		mgr.WriteMessage("Installation Failed!")
-		return
+		return false
 	}
 
 	if v.IsExternalSigning() {
-		runExternalInstallMessage(mgr, installMgr, v, dev)
-		return
+		return runExternalInstallMessage(mgr, installMgr, v, dev)
 	}
 
 	err := installMgr.Start(mgr.Context(), manager.InstallOptions{
@@ -286,17 +307,18 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 			mgr.WriteMessage(fmt.Sprintf("ERROR: %s", err.Error()))
 			mgr.WriteMessage("\n")
 			mgr.WriteMessage("Installation Failed!")
-			return
+			return false
 		}
 		installMgr.CleanTempFiles(v.IpaPath, v.Icon, v.CustomIconPath)
 		msg := fmt.Sprintf("ERROR: %s", err.Error())
 		mgr.WriteMessage(msg)
 		mgr.WriteMessage("\n")
 		mgr.WriteMessage("Installation Failed!")
-		return
+		return false
 	}
 
-	if installMgr.IsSuccess() {
+	installed := installMgr.IsSuccess()
+	if installed {
 		now := time.Now()
 		expirationDate := now.AddDate(0, 0, 7)
 		if installMgr.ProvisioningProfile != nil {
@@ -313,7 +335,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 			mgr.WriteMessage(msg)
 			mgr.WriteMessage("\n")
 			mgr.WriteMessage("Installation Failed!")
-			return
+			return false
 		} else {
 			installMgr.SaveLog(app.ID)
 			mgr.WriteMessage("Installation Succeeded!")
@@ -324,6 +346,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 	// success, and copies the custom icon there, so cleaning the original
 	// paths is a no-op or removes the leftover upload in that case.
 	installMgr.CleanTempFiles(v.IpaPath, v.Icon, v.CustomIconPath)
+	return installed
 }
 
 // runExternalInstallMessage signs and installs v with its external signing
@@ -331,7 +354,7 @@ func runInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.Instal
 // any; a first installation that fails creates no record, and a request
 // cancelled by the install page records nothing. Only the upload files of v
 // are cleaned up.
-func runExternalInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.InstallManager, v model.InstalledApp, dev *model.Device) {
+func runExternalInstallMessage(mgr *manager.WebsocketManager, installMgr *manager.InstallManager, v model.InstalledApp, dev *model.Device) bool {
 	defer CleanExternalUpload(v.IpaPath, v.Icon, v.CustomIconPath)
 	// RunExternalInstall releases its own lease before the record is saved.
 	// DeleteSigningIdentity refuses a delete without force only while a lease
@@ -350,7 +373,7 @@ func runExternalInstallMessage(mgr *manager.WebsocketManager, installMgr *manage
 		mgr.WriteMessage(fmt.Sprintf("ERROR: %s", err.Error()))
 		mgr.WriteMessage("\n")
 		mgr.WriteMessage("Installation Failed!")
-		return
+		return false
 	}
 
 	now := time.Now()
@@ -366,10 +389,11 @@ func runExternalInstallMessage(mgr *manager.WebsocketManager, installMgr *manage
 		mgr.WriteMessage(fmt.Sprintf("ERROR: save app to db failed. %s", err.Error()))
 		mgr.WriteMessage("\n")
 		mgr.WriteMessage("Installation Failed!")
-		return
+		return false
 	}
 	installMgr.SaveLog(app.ID)
 	mgr.WriteMessage("Installation Succeeded!")
+	return true
 }
 
 // recordExternalInstallFailure marks the previous record of the external

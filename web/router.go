@@ -33,6 +33,10 @@ import (
 )
 
 func route(fi *fiber.App) {
+	registerRoutes(fi, task.ReloadTask)
+}
+
+func registerRoutes(fi *fiber.App, reloadTask func() error) {
 	mcpHandler := adaptor.HTTPHandler(mcpserver.NewHTTPHandler())
 	fi.All("/mcp", mcpHandler)
 	fi.All("/mcp/*", mcpHandler)
@@ -262,7 +266,7 @@ func route(fi *fiber.App) {
 	api.Post("/settings/:key", func(c *fiber.Ctx) error {
 		key := c.Params("key")
 		if key == "update" {
-			return saveUpdateSettings(c)
+			return saveUpdateSettings(c, reloadTask)
 		}
 
 		var settings app.SettingsConfiguration
@@ -281,7 +285,7 @@ func route(fi *fiber.App) {
 			app.ApplyLogLevel()
 		case "task":
 			app.Settings.Task = settings.Task
-			if err := task.ReloadTask(); err != nil {
+			if err := reloadTask(); err != nil {
 				errMsg := fmt.Sprintf("invalid time format: %s", err.Error())
 				return c.Status(http.StatusOK).JSON(apiError(errMsg))
 			}
@@ -659,6 +663,7 @@ func route(fi *fiber.App) {
 			Enabled:                  true,
 			CustomName:               customName,
 			RemoveExtensions:         removeExt,
+			RestartAfterInstall:      selectedDevice.DeviceClass == string(model.DeviceClassAppleTV) && c.FormValue("restart_after_install") == "true",
 			SigningMode:              signingMode,
 			SigningIdentityID:        signingIdentityID,
 			AllowMissingEntitlements: allowMissingEntitlements,
@@ -853,7 +858,7 @@ func route(fi *fiber.App) {
 
 	api.Post("/apps/:id/source", func(c *fiber.Ctx) error {
 		id := utils.MustParseInt(c.Params("id"))
-		// A running update saves the source settings it was queued with.
+		// Keep the source stable while its build is being installed.
 		if task.IsInstalling(uint(id)) {
 			return c.Status(http.StatusOK).JSON(apiError("app is installing"))
 		}

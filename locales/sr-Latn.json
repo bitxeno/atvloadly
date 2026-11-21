@@ -340,6 +340,10 @@
         "back": "Nazad",
         "submit": "Instaliraj"
       },
+      "restart_after_install": {
+        "label": "Ponovo pokreni Apple TV posle instalacije",
+        "tips": "Zapamti izbor za ovu aplikaciju. Posle uspešne instalacije ili ažuriranja, Apple TV će se ponovo pokrenuti kada se završe preostale instalacije. Reprodukcija će biti prekinuta."
+      },
       "extensions": {
         "remove_extensions": "Ukloni ekstenzije (Plug-ins)",
         "tips": "Korisno kada nema dovoljno dostupnih App ID identifikatora za registraciju",

@@ -289,6 +289,19 @@
               />
             </div>
 
+            <div class="form-control" v-if="device?.device_class === 'AppleTV'">
+              <label class="label cursor-pointer justify-between items-center gap-x-4">
+                <span class="flex items-center">
+                  <span class="label-text">{{ $t("install.form.restart_after_install.label") }}</span>
+                  <span class="tooltip" :data-tip="$t('install.form.restart_after_install.tips')">
+                    <span class="block w-4 h-4 text-secondary-content"><HelpIcon /></span>
+                  </span>
+                </span>
+                <input type="checkbox" class="toggle toggle-success" :disabled="loading"
+                  v-model="form.restart_after_install" />
+              </label>
+            </div>
+
             <div class="form-control">
               <label class="label cursor-pointer justify-between items-center gap-x-4">
                 <div class="flex items-center">
@@ -556,6 +569,15 @@ function sourceBuildKey(selection) {
   return selection ? JSON.stringify([selection.kind, selection.url, selection.build.id]) : "";
 }
 
+// GitHub feeds identify release assets by ID. A later release with the
+// same generated asset filter belongs to the same tracked update stream.
+function sameTrackedAsset(source, selection) {
+  if (!source?.kind || !selection || source.kind !== selection.kind ||
+      source.url.toLowerCase() !== selection.url.toLowerCase()) return false;
+  return (!!source.build_id && source.build_id === selection.build.id) ||
+    (!!selection.build.filter && source.filter === selection.build.filter);
+}
+
 // bundleIdentifierPattern is the bundle identifier the server accepts for a
 // custom identifier: dot separated, non-empty parts of letters, digits and
 // hyphens (see internal/signing/appcheck.ValidateBundleIdentifier).
@@ -608,6 +630,7 @@ export default {
       // picked (Apple ID installs never reach the server before the install, so
       // it is the only source there). Previews the identifier the app keeps.
       ipaBundleIdentifier: "",
+      preferenceTarget: "",
       signingModes: [appleIDMode, externalMode],
       signing: {
         mode: appleIDMode,
@@ -638,6 +661,7 @@ export default {
         account: "",
         password: "",
         custom_name: "",
+        restart_after_install: false,
         remove_extensions: false,
         // Main bundle identifier of the signed app; empty keeps the identifiers
         // of the IPA. Synced on change, not on input, so that the compatibility
@@ -796,9 +820,14 @@ export default {
       this.runCheck();
     },
     "form.custom_identifier"() {
+      this.syncInstallPreferences();
       this.runCheck();
     },
+    installedApps() {
+      this.syncInstallPreferences();
+    },
     "device.udid"() {
+      this.syncInstallPreferences();
       this.runCheck();
     },
   },
@@ -1227,6 +1256,7 @@ export default {
             bundle_identifier: _this.ipa.bundle_identifier,
             version: _this.ipa.version,
             custom_name: _this.form.custom_name.trim(),
+            restart_after_install: _this.device.device_class === "AppleTV" && _this.form.restart_after_install,
             remove_extensions: _this.form.remove_extensions,
             custom_identifier: _this.form.custom_identifier,
             custom_icon_path: _this.supportsCustomIcon ? _this.form.custom_icon_path : "",
@@ -1267,6 +1297,7 @@ export default {
       this.ipaBundleIdentifier = "";
       this.sourceInitial = null;
       this.sourceSelection = null;
+      this.syncInstallPreferences();
       // The external IPA and the values prefilled for it belonged to the
       // inputs of the previous mode.
       this.clearPrefilled();
@@ -1287,12 +1318,16 @@ export default {
       this.sourceInitial = { kind: "github", url };
     },
     onSourceSelection(selection) {
+      const previous = this.sourceSelection;
       this.sourceSelection = selection;
+      // A filter or prerelease edit can emit the same build again.
+      if (selection && sourceBuildKey(previous) === sourceBuildKey(selection)) return;
       this.recommendedAccount = "";
       this.recommendedIdentityId = 0;
       this.ipaBundleIdentifier = "";
       this.clearPrefilled();
       if (!selection) {
+        this.syncInstallPreferences();
         if (this.isExternal) {
           this.cancelExternalIpa();
         }
@@ -1302,12 +1337,12 @@ export default {
       // Reuse the account or signing identity of the app already installed
       // from this source on this device, else of an app with the same bundle
       // identifier.
-      const url = selection.url.toLowerCase();
       const bundleId = selection.build.bundle_id;
       // A source build names its own bundle identifier, which the placeholder
       // previews for an Apple ID install too.
       this.ipaBundleIdentifier = bundleId || "";
-      const isSameSource = (a) => a.udid === this.device.udid && a.source.url.toLowerCase() === url;
+      const isSameSource = (a) => a.udid === this.device.udid && sameTrackedAsset(a.source, selection) &&
+        (!bundleId || a.bundle_identifier === bundleId);
       const candidates = this.installedApps.filter(isSameSource).concat(
         bundleId ? this.installedApps.filter((a) => a.bundle_identifier === bundleId) : [],
       );
@@ -1319,7 +1354,7 @@ export default {
         if (typed && a.custom_identifier === typed) return 0;
         return a.custom_identifier ? 2 : 1;
       };
-      candidates.sort((a, b) => preferred(a) - preferred(b));
+      candidates.sort((a, b) => preferred(a) - preferred(b) || Number(b.udid === this.device.udid) - Number(a.udid === this.device.udid));
       let matched = false;
       for (const app of candidates) {
         if (this.recommendApp(app)) {
@@ -1327,6 +1362,7 @@ export default {
           break;
         }
       }
+      this.syncInstallPreferences();
       if (!matched && !this.signing.modeChosen) {
         if (this.accounts.length === 0 && this.signing.identities.length === 1) {
           this.signing.identityId = this.signing.identities[0].id;
@@ -1447,10 +1483,9 @@ export default {
               // The placeholder previews it, and an Apple ID install reads it
               // here: the server sees the IPA only once the install is queued.
               this.ipaBundleIdentifier = bundleId;
-              for (let app of this.installedApps) {
-                if (app.bundle_identifier !== bundleId) {
-                  continue;
-                }
+              const candidates = this.installedApps.filter((app) => app.bundle_identifier === bundleId);
+              candidates.sort((a, b) => Number(b.udid === this.device.udid) - Number(a.udid === this.device.udid));
+              for (const app of candidates) {
                 if (this.recommendApp(app)) {
                   break;
                 }
@@ -1462,6 +1497,7 @@ export default {
           console.error("Failed to read IPA bundle identifier:", err);
         }
       }
+      this.syncInstallPreferences();
       if (!this.recommendedAccount && !this.recommendedIdentityId && !this.signing.modeChosen) {
         if (this.accounts.length === 0 && this.signing.identities.length === 1) {
           this.signing.identityId = this.signing.identities[0].id;
@@ -1474,10 +1510,25 @@ export default {
       this.prepareExternalIpa();
     },
     recommendApp(app) {
-      if (app.signing_mode === externalMode) {
-        return this.recommendIdentity(app);
-      }
-      return this.recommendAccount(app);
+      return app.signing_mode === externalMode ? this.recommendIdentity(app) : this.recommendAccount(app);
+    },
+    syncInstallPreferences() {
+      const selection = this.sourceSelection;
+      const bundle = this.ipaBundleIdentifier;
+      const custom = this.form.custom_identifier.trim();
+      const udid = this.device?.udid;
+      const app = this.installedApps.find((candidate) => {
+        if (!udid || candidate.udid !== udid || (candidate.custom_identifier || "") !== custom) return false;
+        if (bundle) return candidate.bundle_identifier === bundle;
+        return sameTrackedAsset(candidate.source, selection);
+      });
+      const target = JSON.stringify([udid, custom, bundle, sourceBuildKey(selection), app?.ID, !!app]);
+      if (this.preferenceTarget === target) return;
+      this.preferenceTarget = target;
+      this.form.restart_after_install = !!app?.restart_after_install;
+      this.form.remove_extensions = !!app?.remove_extensions;
+      this.form.auto_update = !!selection && app?.source?.kind === selection.kind &&
+        app.source.url.toLowerCase() === selection.url.toLowerCase() && !!app.source.auto_update;
     },
     recommendAccount(app) {
       if (app.signing_mode === externalMode) {

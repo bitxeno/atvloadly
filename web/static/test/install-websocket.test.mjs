@@ -530,3 +530,86 @@ test("does not prefill a custom icon for Apple TV", () => {
   });
   assert.equal(state.form.custom_icon_path, "");
 });
+
+test("the restart switch sits between the bundle identifier and extension removal", () => {
+  const form = source.split("<script>")[0];
+  const bundle = form.indexOf('v-model.lazy.trim="form.custom_identifier"');
+  const restart = form.indexOf('v-model="form.restart_after_install"');
+  assert.ok(bundle >= 0 && bundle < restart && restart < form.indexOf('v-model="form.remove_extensions"'));
+});
+
+test("only sends an opted-in restart for an Apple TV", async () => {
+  for (const [deviceClass, selected, expected] of [
+    ["AppleTV", false, false], ["AppleTV", true, true], ["iPhone", true, false],
+  ]) {
+    const { state, sockets } = page();
+    assert.equal(state.form.restart_after_install, false);
+    state.device.device_class = deviceClass;
+    state.form.restart_after_install = selected;
+    const pending = state.onSubmit();
+    sockets[0].open();
+    await pending;
+    assert.equal(JSON.parse(sockets[0].sent[0].d).restart_after_install, expected);
+  }
+});
+
+test("reuses only this TV's restart preference when choosing an IPA", async () => {
+  const { state } = page();
+  state.device = { connection: "RPPairing", udid: "tv", device_class: "AppleTV" };
+  state.accounts = [{ email: "user@example.com", status: "valid" }];
+  const app = { bundle_identifier: "com.example.app", account: "user@example.com", restart_after_install: true };
+  state.installedApps = [{ ...app, udid: "other" }];
+  const event = { target: { files: [{ arrayBuffer: async () => new ArrayBuffer(0) }] } };
+  await state.onFileChange(event);
+  assert.equal(state.form.restart_after_install, false);
+  state.installedApps.push({ ...app, udid: "tv" });
+  await state.onFileChange(event);
+  assert.equal(state.form.restart_after_install, true);
+  state.setInstallMode("source");
+  assert.equal(state.form.restart_after_install, false);
+});
+
+test("source reinstall keeps automatic updates and explicit restart edits on the same build", async () => {
+  const { state, sockets } = page();
+  state.installMode = "source";
+  state.device = { connection: "RPPairing", udid: "living", device_class: "AppleTV" };
+  state.accounts = [{ email: "user@example.com" }];
+  const selection = { kind: "github", url: "owner/repo", filter: "tv", build: { id: "release-2", name: "TV.ipa", filter: "tv" } };
+  state.installedApps = [{ ID: 1, udid: "living", account: state.accounts[0].email,
+    bundle_identifier: "com.example.tv", restart_after_install: true, remove_extensions: true,
+    source: { kind: "github", url: selection.url, build_id: "release-1", filter: "tv", auto_update: true } }];
+  state.onSourceSelection(selection);
+  assert.equal(state.form.auto_update, true);
+  assert.equal(state.form.restart_after_install, true);
+  assert.equal(state.form.remove_extensions, true);
+  state.form.remove_extensions = false;
+  state.form.restart_after_install = false;
+  state.onSourceSelection({ ...selection, filter: "tvos" });
+  const pending = state.onSubmit();
+  sockets[0].open();
+  await pending;
+  const payload = JSON.parse(sockets[0].sent[0].d);
+  assert.equal(payload.remove_extensions, false);
+  assert.equal(payload.source.filter, "tvos");
+  assert.equal(payload.source.auto_update, true);
+  assert.equal(payload.restart_after_install, false);
+});
+
+test("another app or custom bundle ID on the same TV starts with restart off", () => {
+  const { state } = page();
+  state.device = { udid: "living", device_class: "AppleTV" };
+  state.accounts = [{ email: "user@example.com" }];
+  const source = { kind: "altstore", url: "https://example.org/apps.json", auto_update: true };
+  state.installedApps = [{ ID: 1, udid: "living", account: state.accounts[0].email,
+    bundle_identifier: "com.example.a", restart_after_install: true, source }];
+  const select = (id) => state.onSourceSelection({ ...source, build: { id, bundle_id: id } });
+  select("com.example.a");
+  assert.equal(state.form.restart_after_install, true);
+  state.form.custom_identifier = "com.example.custom";
+  state.syncInstallPreferences();
+  assert.equal(state.form.restart_after_install, false);
+  state.form.custom_identifier = "";
+  select("com.example.b");
+  assert.equal(state.form.restart_after_install, false);
+  assert.equal(state.form.auto_update, false);
+});

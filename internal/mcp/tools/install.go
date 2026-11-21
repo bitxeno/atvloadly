@@ -20,13 +20,14 @@ import (
 )
 
 type installAppInput struct {
-	IpaURL            string `json:"ipa_url" jsonschema:"Required IPA download URL"`
-	DeviceID          string `json:"device_id,omitempty" jsonschema:"Optional target device ID"`
-	AccountID         string `json:"account_id,omitempty" jsonschema:"Optional Apple account ID (md5 of account email). Omit when signing_identity_id is set"`
-	SigningIdentityID uint   `json:"signing_identity_id,omitempty" jsonschema:"Optional imported signing identity ID: signs with that external certificate and provisioning profile instead of an Apple account. Omit account_id when set"`
-	RemoveExtensions  bool   `json:"remove_extensions,omitempty" jsonschema:"Optional remove app extensions while installing"`
-	CustomIdentifier  string `json:"custom_identifier,omitempty" jsonschema:"Optional bundle identifier to install the app under, with either signing method. The IPA main bundle identifier is replaced by it in the app and its extensions. Omit to keep the IPA bundle identifiers. Installing the same IPA with and without it puts two different apps on the device and creates two records"`
-	CustomIconPath    string `json:"custom_icon_path,omitempty" jsonschema:"Optional path of an uploaded custom app icon (from POST /api/custom-icon/upload). It is stored with the app and reused on every refresh and update"`
+	IpaURL              string `json:"ipa_url" jsonschema:"Required IPA download URL"`
+	DeviceID            string `json:"device_id,omitempty" jsonschema:"Optional target device ID"`
+	AccountID           string `json:"account_id,omitempty" jsonschema:"Optional Apple account ID (md5 of account email). Omit when signing_identity_id is set"`
+	SigningIdentityID   uint   `json:"signing_identity_id,omitempty" jsonschema:"Optional imported signing identity ID: signs with that external certificate and provisioning profile instead of an Apple account. Omit account_id when set"`
+	RestartAfterInstall bool   `json:"restart_after_install,omitempty" jsonschema:"Restart the target Apple TV after successful full installs and updates of this app"`
+	RemoveExtensions    bool   `json:"remove_extensions,omitempty" jsonschema:"Optional remove app extensions while installing"`
+	CustomIdentifier    string `json:"custom_identifier,omitempty" jsonschema:"Optional bundle identifier to install the app under, with either signing method. The IPA main bundle identifier is replaced by it in the app and its extensions. Omit to keep the IPA bundle identifiers. Installing the same IPA with and without it puts two different apps on the device and creates two records"`
+	CustomIconPath      string `json:"custom_icon_path,omitempty" jsonschema:"Optional path of an uploaded custom app icon (from POST /api/custom-icon/upload). It is stored with the app and reused on every refresh and update"`
 }
 
 type installDeviceOption struct {
@@ -186,15 +187,16 @@ func handleInstallApp(_ context.Context, _ *sdkmcp.CallToolRequest, input instal
 // for both.
 func newInstallRecord(input installAppInput, device installDeviceOption, customIdentifier, customIconPath string) model.InstalledApp {
 	return model.InstalledApp{
-		IpaName:          ipaFileNameFromURL(strings.TrimSpace(input.IpaURL)),
-		IpaPath:          strings.TrimSpace(input.IpaURL),
-		Device:           device.Name,
-		DeviceClass:      device.DeviceClass,
-		UDID:             device.UDID,
-		Enabled:          true,
-		RemoveExtensions: input.RemoveExtensions,
-		CustomIdentifier: customIdentifier,
-		CustomIconPath:   customIconPath,
+		IpaName:             ipaFileNameFromURL(strings.TrimSpace(input.IpaURL)),
+		IpaPath:             strings.TrimSpace(input.IpaURL),
+		Device:              device.Name,
+		DeviceClass:         device.DeviceClass,
+		UDID:                device.UDID,
+		Enabled:             true,
+		RemoveExtensions:    input.RemoveExtensions,
+		RestartAfterInstall: input.RestartAfterInstall && device.DeviceClass == string(model.DeviceClassAppleTV),
+		CustomIdentifier:    customIdentifier,
+		CustomIconPath:      customIconPath,
 	}
 }
 

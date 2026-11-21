@@ -44,10 +44,12 @@ type Task struct {
 }
 
 type TaskItem struct {
-	App     model.InstalledApp
-	Notify  bool
-	BatchID string
-	Key     installOperationKey
+	App                 model.InstalledApp
+	Notify              bool
+	BatchID             string
+	deviceReady         <-chan struct{}
+	finishDeviceInstall func(bool)
+	Key                 installOperationKey
 	// Reinstall runs the full install flow for an existing app instead of
 	// the refresh flow: the stored IPA is signed and installed from scratch.
 	Reinstall bool
@@ -65,16 +67,17 @@ type installOperationKey struct {
 	BundleIdentifier string
 	// CustomIdentifier is part of the key: the same IPA installed with and
 	// without it is two different apps, so both may be queued at once.
-	CustomIdentifier string
-	CustomName       string
-	CustomIconPath   string
-	RemoveExtensions bool
-	SourceKind       string
-	SourceURL        string
-	SourceFilter     string
-	SourceBuildID    string
-	SourcePrerelease bool
-	SourceAutoUpdate bool
+	CustomIdentifier    string
+	CustomName          string
+	CustomIconPath      string
+	RemoveExtensions    bool
+	RestartAfterInstall bool
+	SourceKind          string
+	SourceURL           string
+	SourceFilter        string
+	SourceBuildID       string
+	SourcePrerelease    bool
+	SourceAutoUpdate    bool
 }
 
 type BatchInfo struct {
@@ -283,14 +286,16 @@ func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool, batchI
 	if _, loaded := t.InstallingApps.LoadOrStore(key, v); loaded {
 		return false
 	}
+	ready, finish := manager.BeginDeviceInstall(v.UDID)
 	select {
-	case t.InstallAppQueue <- TaskItem{App: v, Notify: notify, BatchID: batchID, Key: key, Reinstall: reinstall}:
+	case t.InstallAppQueue <- TaskItem{App: v, Notify: notify, BatchID: batchID, Key: key, Reinstall: reinstall, deviceReady: ready, finishDeviceInstall: finish}:
 		// The queued upload waits in the upload temp directory until its
 		// turn; mark it so the stale-file sweep keeps it until the task
 		// is done.
 		manager.ReserveUploadTempFiles(v.IpaPath, v.Icon, v.CustomIconPath)
 		return true
 	default:
+		finish(false)
 		t.InstallingApps.Delete(key)
 		// The task is dropped before any install runs: clean a local
 		// upload now, since no later stage will see it.
@@ -306,20 +311,21 @@ func installKey(v model.InstalledApp) installOperationKey {
 	}
 
 	return installOperationKey{
-		UDID:             v.UDID,
-		IpaPath:          v.IpaPath,
-		Account:          v.Account,
-		BundleIdentifier: v.BundleIdentifier,
-		CustomIdentifier: v.CustomIdentifier,
-		CustomName:       v.CustomName,
-		CustomIconPath:   v.CustomIconPath,
-		RemoveExtensions: v.RemoveExtensions,
-		SourceKind:       v.Source.Kind,
-		SourceURL:        v.Source.URL,
-		SourceFilter:     v.Source.Filter,
-		SourceBuildID:    v.Source.BuildID,
-		SourcePrerelease: v.Source.Prerelease,
-		SourceAutoUpdate: v.Source.AutoUpdate,
+		UDID:                v.UDID,
+		IpaPath:             v.IpaPath,
+		Account:             v.Account,
+		BundleIdentifier:    v.BundleIdentifier,
+		CustomIdentifier:    v.CustomIdentifier,
+		CustomName:          v.CustomName,
+		CustomIconPath:      v.CustomIconPath,
+		RemoveExtensions:    v.RemoveExtensions,
+		RestartAfterInstall: v.RestartAfterInstall,
+		SourceKind:          v.Source.Kind,
+		SourceURL:           v.Source.URL,
+		SourceFilter:        v.Source.Filter,
+		SourceBuildID:       v.Source.BuildID,
+		SourcePrerelease:    v.Source.Prerelease,
+		SourceAutoUpdate:    v.Source.AutoUpdate,
 	}
 }
 
@@ -330,7 +336,11 @@ func (t *Task) runQueue() {
 	for {
 		select {
 		case v := <-t.InstallAppQueue:
-			t.tryInstallApp(v)
+			if v.deviceReady != nil {
+				<-v.deviceReady
+			}
+			requestRestart := t.tryInstallApp(v)
+			v.finishDeviceInstall(requestRestart)
 			t.InstallingApps.Delete(v.Key)
 
 			// Next execution delayed by 10 seconds.
@@ -342,7 +352,7 @@ func (t *Task) runQueue() {
 	}
 }
 
-func (t *Task) tryInstallApp(item TaskItem) {
+func (t *Task) tryInstallApp(item TaskItem) bool {
 	// Decide before resolveIPA replaces a remote IpaPath with the downloaded file.
 	refresh := usesRefreshMode(item.App, item.Reinstall)
 	update := isSourceUpdate(item.App)
@@ -354,7 +364,7 @@ func (t *Task) tryInstallApp(item TaskItem) {
 		manager.CleanUploadTempFiles(item.App.IpaPath, item.App.Icon, item.App.CustomIconPath)
 		manager.ReleaseUploadTempFiles(item.App.IpaPath, item.App.Icon, item.App.CustomIconPath)
 		t.handleInstallFailure(item, item.App, err)
-		return
+		return false
 	}
 	v := *resolvedApp
 	// The resolved IPA, display icon and custom icon may be fresh uploads in
@@ -395,6 +405,14 @@ func (t *Task) tryInstallApp(item TaskItem) {
 		manager.ReleaseUploadTempFiles(item.App.IpaPath, item.App.Icon, item.App.CustomIconPath, origIpaPath, origIcon, origCustomIcon)
 		installMgr.Close()
 	}()
+	if item.App.ID != 0 {
+		current, lookupErr := service.GetApp(item.App.ID)
+		if lookupErr != nil {
+			t.handleInstallFailure(item, v, lookupErr)
+			return false
+		}
+		v.RemoveExtensions = current.RemoveExtensions
+	}
 	result, err := t.runInternal(v, refresh, installMgr)
 
 	success := err == nil
@@ -409,11 +427,15 @@ func (t *Task) tryInstallApp(item TaskItem) {
 		v.SignedBundleIdentifier = result.SignedBundleIdentifier
 
 		if v.ID == 0 || update {
-			savedApp, saveErr := service.SaveApp(v)
+			save := service.SaveApp
+			if update {
+				save = service.SaveSourceUpdate
+			}
+			savedApp, saveErr := save(v)
 			if saveErr != nil {
 				log.Err(saveErr).Msgf("Save app failed after installation success: %s", v.IpaName)
 				t.handleInstallFailure(item, v, saveErr)
-				return
+				return false
 			}
 			v = *savedApp
 		} else {
@@ -425,11 +447,23 @@ func (t *Task) tryInstallApp(item TaskItem) {
 		log.Infof("Installing ipa success: %s", v.IpaName)
 	} else {
 		t.handleInstallFailure(item, v, err)
-		return
+		return false
 	}
 
 	// Track batch progress and send aggregated notification
 	t.trackBatchProgress(item, success, err)
+	if refresh {
+		return false
+	}
+	if item.App.ID != 0 && !update {
+		current, err := service.GetApp(item.App.ID)
+		if err != nil {
+			log.Err(err).Msg("Could not read the current restart preference")
+			return false
+		}
+		return current.RestartAfterInstall
+	}
+	return v.RestartAfterInstall
 }
 
 func (t *Task) handleInstallFailure(item TaskItem, v model.InstalledApp, err error) {
@@ -685,7 +719,7 @@ func shouldUseRefreshMode(v model.InstalledApp, reinstall bool) bool {
 // revocation therefore requires the full install flow so the app is signed
 // again with the new identity.
 func usesRefreshMode(v model.InstalledApp, reinstall bool) bool {
-	return v.RevokeCertificateSerial == "" && shouldUseRefreshMode(v, reinstall)
+	return !v.IsExternalSigning() && v.RevokeCertificateSerial == "" && shouldUseRefreshMode(v, reinstall)
 }
 
 // isSourceUpdate reports whether v installs a new build of an installed app
