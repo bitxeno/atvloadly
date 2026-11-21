@@ -114,7 +114,7 @@
     <!-- Service status -->
     <section class="app-sidebar__group atv-service-status" v-if="services.length > 0">
       <h4 class="app-sidebar__group-title">{{ $t("home.heading.service_status") }}</h4>
-      <div class="card atv-device-panel min-h-24 overflow-hidden">
+      <div class="card atv-device-panel overflow-hidden">
         <ul class="flex flex-col gap-y-2">
           <li
             class="flex items-center gap-x-1"
