@@ -568,3 +568,48 @@ test("reuses only this TV's restart preference when choosing an IPA", async () =
   state.setInstallMode("source");
   assert.equal(state.form.restart_after_install, false);
 });
+
+test("source reinstall keeps automatic updates and explicit restart edits on the same build", async () => {
+  const { state, sockets } = page();
+  state.installMode = "source";
+  state.device = { connection: "RPPairing", udid: "living", device_class: "AppleTV" };
+  state.accounts = [{ email: "user@example.com" }];
+  const selection = { kind: "github", url: "owner/repo", filter: "tv", build: { id: "release-2", name: "TV.ipa", filter: "tv" } };
+  state.installedApps = [{ ID: 1, udid: "living", account: state.accounts[0].email,
+    bundle_identifier: "com.example.tv", restart_after_install: true, remove_extensions: true,
+    source: { kind: "github", url: selection.url, build_id: "release-1", filter: "tv", auto_update: true } }];
+  state.onSourceSelection(selection);
+  assert.equal(state.form.auto_update, true);
+  assert.equal(state.form.restart_after_install, true);
+  assert.equal(state.form.remove_extensions, true);
+  state.form.remove_extensions = false;
+  state.form.restart_after_install = false;
+  state.onSourceSelection({ ...selection, filter: "tvos" });
+  const pending = state.onSubmit();
+  sockets[0].open();
+  await pending;
+  const payload = JSON.parse(sockets[0].sent[0].d);
+  assert.equal(payload.remove_extensions, false);
+  assert.equal(payload.source.filter, "tvos");
+  assert.equal(payload.source.auto_update, true);
+  assert.equal(payload.restart_after_install, false);
+});
+
+test("another app or custom bundle ID on the same TV starts with restart off", () => {
+  const { state } = page();
+  state.device = { udid: "living", device_class: "AppleTV" };
+  state.accounts = [{ email: "user@example.com" }];
+  const source = { kind: "altstore", url: "https://example.org/apps.json", auto_update: true };
+  state.installedApps = [{ ID: 1, udid: "living", account: state.accounts[0].email,
+    bundle_identifier: "com.example.a", restart_after_install: true, source }];
+  const select = (id) => state.onSourceSelection({ ...source, build: { id, bundle_id: id } });
+  select("com.example.a");
+  assert.equal(state.form.restart_after_install, true);
+  state.form.custom_identifier = "com.example.custom";
+  state.syncInstallPreferences();
+  assert.equal(state.form.restart_after_install, false);
+  state.form.custom_identifier = "";
+  select("com.example.b");
+  assert.equal(state.form.restart_after_install, false);
+  assert.equal(state.form.auto_update, false);
+});

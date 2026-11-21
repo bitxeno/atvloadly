@@ -47,6 +47,7 @@ type TaskItem struct {
 	App                 model.InstalledApp
 	Notify              bool
 	BatchID             string
+	deviceReady         <-chan struct{}
 	finishDeviceInstall func(bool)
 	Key                 installOperationKey
 	// Reinstall runs the full install flow for an existing app instead of
@@ -285,9 +286,9 @@ func (t *Task) startInstallAppInternal(v model.InstalledApp, notify bool, batchI
 	if _, loaded := t.InstallingApps.LoadOrStore(key, v); loaded {
 		return false
 	}
-	finish := manager.BeginDeviceInstall(v.UDID)
+	ready, finish := manager.BeginDeviceInstall(v.UDID)
 	select {
-	case t.InstallAppQueue <- TaskItem{App: v, Notify: notify, BatchID: batchID, Key: key, Reinstall: reinstall, finishDeviceInstall: finish}:
+	case t.InstallAppQueue <- TaskItem{App: v, Notify: notify, BatchID: batchID, Key: key, Reinstall: reinstall, deviceReady: ready, finishDeviceInstall: finish}:
 		// The queued upload waits in the upload temp directory until its
 		// turn; mark it so the stale-file sweep keeps it until the task
 		// is done.
@@ -335,6 +336,9 @@ func (t *Task) runQueue() {
 	for {
 		select {
 		case v := <-t.InstallAppQueue:
+			if v.deviceReady != nil {
+				<-v.deviceReady
+			}
 			requestRestart := t.tryInstallApp(v)
 			v.finishDeviceInstall(requestRestart)
 			t.InstallingApps.Delete(v.Key)
@@ -401,6 +405,14 @@ func (t *Task) tryInstallApp(item TaskItem) bool {
 		manager.ReleaseUploadTempFiles(item.App.IpaPath, item.App.Icon, item.App.CustomIconPath, origIpaPath, origIcon, origCustomIcon)
 		installMgr.Close()
 	}()
+	if item.App.ID != 0 {
+		current, lookupErr := service.GetApp(item.App.ID)
+		if lookupErr != nil {
+			t.handleInstallFailure(item, v, lookupErr)
+			return false
+		}
+		v.RemoveExtensions = current.RemoveExtensions
+	}
 	result, err := t.runInternal(v, refresh, installMgr)
 
 	success := err == nil
@@ -415,7 +427,11 @@ func (t *Task) tryInstallApp(item TaskItem) bool {
 		v.SignedBundleIdentifier = result.SignedBundleIdentifier
 
 		if v.ID == 0 || update {
-			savedApp, saveErr := service.SaveApp(v)
+			save := service.SaveApp
+			if update {
+				save = service.SaveSourceUpdate
+			}
+			savedApp, saveErr := save(v)
 			if saveErr != nil {
 				log.Err(saveErr).Msgf("Save app failed after installation success: %s", v.IpaName)
 				t.handleInstallFailure(item, v, saveErr)
@@ -436,7 +452,18 @@ func (t *Task) tryInstallApp(item TaskItem) bool {
 
 	// Track batch progress and send aggregated notification
 	t.trackBatchProgress(item, success, err)
-	return v.RestartAfterInstall && !refresh
+	if refresh {
+		return false
+	}
+	if item.App.ID != 0 && !update {
+		current, err := service.GetApp(item.App.ID)
+		if err != nil {
+			log.Err(err).Msg("Could not read the current restart preference")
+			return false
+		}
+		return current.RestartAfterInstall
+	}
+	return v.RestartAfterInstall
 }
 
 func (t *Task) handleInstallFailure(item TaskItem, v model.InstalledApp, err error) {

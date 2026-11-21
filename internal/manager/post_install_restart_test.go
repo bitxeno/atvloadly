@@ -1,64 +1,81 @@
 package manager
 
 import (
+	"context"
 	"errors"
-	"reflect"
 	"testing"
+	"time"
 )
 
 func TestPostInstallRestartsWaitForEachDevice(t *testing.T) {
-	var restarted []string
+	restarted := make(chan string)
+	release := make(chan struct{})
 	r := installRestarts{
 		devices: make(map[string]*deviceInstalls),
 		restart: func(udid string) error {
-			restarted = append(restarted, udid)
+			restarted <- udid
+			<-release
 			return errors.New("device went offline")
 		},
 	}
-
-	first, second, last := r.begin("living"), r.begin("living"), r.begin("living")
+	_, first := r.begin("living")
+	_, second := r.begin("living")
+	_, last := r.begin("living")
 	first(true)
 	second(true)
-	r.begin("office")(false)
-	if len(restarted) != 0 {
-		t.Fatalf("unexpected restart while an install was pending: %v", restarted)
+	_, other := r.begin("office")
+	other(false)
+	if ready, finish := r.begin("living"); ready != nil {
+		t.Fatal("started a restart before the last install completed")
+	} else {
+		finish(false)
 	}
-	r.begin("bedroom")(true)
 	last(false)
-	r.begin("living")(false)
-	if !reflect.DeepEqual(restarted, []string{"bedroom", "living"}) || len(r.devices) != 0 {
-		t.Fatalf("restart attempts = %v, active devices = %d", restarted, len(r.devices))
+	if got := <-restarted; got != "living" {
+		t.Fatalf("restart for %q", got)
 	}
-}
 
-func TestPostInstallAdmissionDuringRestart(t *testing.T) {
-	started, release := make(chan struct{}), make(chan struct{})
-	r := installRestarts{
-		devices: make(map[string]*deviceInstalls),
-		restart: func(string) error {
-			close(started)
-			<-release
-			return nil
-		},
+	ready, next := r.begin("living")
+	if ready == nil {
+		t.Fatal("new work missed the in-flight restart")
 	}
-	finish := r.begin("tv")
-	go finish(true)
-	<-started
-	r.begin("other")(false)
-
-	entered := make(chan struct{})
-	reserved := make(chan func(bool))
-	go func() {
-		close(entered)
-		reserved <- r.begin("tv")
-	}()
-	<-entered
+	if otherReady, finish := r.begin("office"); otherReady != nil {
+		t.Fatal("the other device is blocked")
+	} else {
+		finish(false)
+	}
+	_, rejected := r.begin("living")
+	rejected(false)
 	select {
-	case <-reserved:
-		close(release)
-		t.Fatal("accepted an install on the TV while its restart request was in flight")
+	case <-ready:
+		t.Fatal("allowed device I/O before restart recovery")
 	default:
 	}
 	close(release)
-	(<-reserved)(false)
+	<-ready
+	next(false)
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.devices) != 0 {
+		t.Fatal("leaked a device reservation or requested a second restart")
+	}
+}
+
+func TestWaitForRestartRequiresDisconnectAndRecovery(t *testing.T) {
+	observations := []bool{true, true, false, false, true}
+	checks := 0
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	err := waitForRestart(ctx, time.Millisecond, func() bool {
+		checks++
+		return observations[checks-1]
+	})
+	if err != nil || checks != len(observations) {
+		t.Fatalf("checks=%d, err=%v", checks, err)
+	}
+	ctx, cancelTimeout := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancelTimeout()
+	if err := waitForRestart(ctx, time.Millisecond, func() bool { return false }); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("offline device: %v", err)
+	}
 }

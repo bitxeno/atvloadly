@@ -45,7 +45,9 @@ func newTestServer(t *testing.T) (*fiber.App, string) {
 	t.Cleanup(func() { _ = sqlDB.Close() })
 
 	server := fiber.New()
-	route(server)
+	// Settings requests must not start the process-wide queue against a
+	// database and upload directory owned by a single test.
+	registerRoutes(server, func() error { return nil })
 	return server, dataDir
 }
 

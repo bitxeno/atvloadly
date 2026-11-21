@@ -146,15 +146,19 @@ func ScanWirelessDevices(ctx context.Context, timeout time.Duration) ([]model.De
 }
 
 func CheckAfcServiceStatus(udid string) error {
+	return checkAfcServiceStatus(context.Background(), udid)
+}
+
+func checkAfcServiceStatus(ctx context.Context, udid string) error {
 	device, found := deviceManager.GetDeviceByUDID(udid)
 	if !found {
 		return fmt.Errorf("device not found: %s", udid)
 	}
 	// Manual devices need their tunnel port resolved before the AFC check.
-	if err := PrepareManualDevice(context.Background(), device); err != nil {
+	if err := PrepareManualDevice(ctx, device); err != nil {
 		return err
 	}
-	return deviceManager.CheckAfcServiceStatus(device)
+	return deviceManager.checkAfcServiceStatus(ctx, device)
 }
 
 func CheckDeviceStatus(udid string) error {

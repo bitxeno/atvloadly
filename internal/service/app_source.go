@@ -48,12 +48,17 @@ type SourceCheckResult struct {
 
 // sourceColumns returns every source column of s, zero values included.
 func sourceColumns(s model.AppSource) map[string]any {
+	cols := sourceBuildColumns(s)
+	cols["source_kind"] = s.Kind
+	cols["source_url"] = s.URL
+	cols["source_filter"] = s.Filter
+	cols["source_prerelease"] = s.Prerelease
+	cols["source_auto_update"] = s.AutoUpdate
+	return cols
+}
+
+func sourceBuildColumns(s model.AppSource) map[string]any {
 	return map[string]any{
-		"source_kind":            s.Kind,
-		"source_url":             s.URL,
-		"source_filter":          s.Filter,
-		"source_prerelease":      s.Prerelease,
-		"source_auto_update":     s.AutoUpdate,
 		"source_build_id":        s.BuildID,
 		"source_version":         s.Version,
 		"source_build_name":      s.BuildName,

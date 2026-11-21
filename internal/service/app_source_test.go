@@ -209,13 +209,25 @@ func TestRestartPreferenceSurvivesSourceUpdates(t *testing.T) {
 	}
 	app.RestartAfterInstall = true
 	enabled := save(app)
+	other := app
+	other.UDID, other.RestartAfterInstall = "office", false
+	office := save(other)
 	updated := ApplyBuild(enabled, source.Build{ID: "next", Name: "Test.ipa", Version: "2"})
-	if saved := save(updated); saved.ID != stored.ID || !saved.RestartAfterInstall {
-		t.Fatal("the source update lost the preference on the installed record")
+	saved, err := SaveSourceUpdate(updated)
+	if err != nil || saved.ID != stored.ID || !saved.RestartAfterInstall || mustGetApp(t, office.ID).RestartAfterInstall {
+		t.Fatalf("source update lost the per-device choice: %v", err)
 	}
-	app.RestartAfterInstall = false
-	if cleared := save(app); cleared.ID != stored.ID || cleared.RestartAfterInstall {
-		t.Fatal("turning off the option did not clear the stored preference")
+	// A pending update finishes after a manual install changes both toggles.
+	app.RestartAfterInstall, app.RemoveExtensions = false, true
+	app.Source.AutoUpdate = true
+	save(app)
+	saved, err = SaveSourceUpdate(updated)
+	if err != nil || saved.RestartAfterInstall || !saved.RemoveExtensions || !saved.Source.AutoUpdate {
+		t.Fatalf("queued update restored stale options: %+v, err=%v", saved, err)
+	}
+	app.RemoveExtensions = false
+	if save(app).RemoveExtensions {
+		t.Fatal("Apple ID reinstall kept removing extensions")
 	}
 }
 

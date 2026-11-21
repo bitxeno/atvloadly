@@ -70,8 +70,25 @@ func HandleInstallMessage(c *websocket.Conn) {
 			}
 
 			v.RestartAfterInstall = v.RestartAfterInstall && dev.DeviceClass == string(model.DeviceClassAppleTV)
-			finish := manager.BeginDeviceInstall(dev.UDID)
+			ready, finish := manager.BeginDeviceInstall(dev.UDID)
 			go func() {
+				if ready != nil {
+					websocketMgr.WriteMessage("Waiting for Apple TV to restart...\n")
+					select {
+					case <-websocketMgr.Context().Done():
+						finish(false)
+						manager.CleanUploadTempFiles(v.IpaPath, v.Icon, v.CustomIconPath)
+						return
+					case <-ready:
+					}
+					dev, found = manager.GetDeviceByUDID(v.UDID)
+					if !found {
+						finish(false)
+						manager.CleanUploadTempFiles(v.IpaPath, v.Icon, v.CustomIconPath)
+						writeInstallRejected(websocketMgr, "Apple TV did not reconnect after restarting")
+						return
+					}
+				}
 				installed := runInstallMessage(websocketMgr, installMgr, v, dev)
 				finish(installed && v.RestartAfterInstall)
 			}()

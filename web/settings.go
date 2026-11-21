@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/bitxeno/atvloadly/internal/app"
-	"github.com/bitxeno/atvloadly/internal/task"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -62,7 +61,7 @@ type updateSettingsRequest struct {
 	} `json:"update"`
 }
 
-func saveUpdateSettings(c *fiber.Ctx) error {
+func saveUpdateSettings(c *fiber.Ctx, reloadTask func() error) error {
 	var req updateSettingsRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(http.StatusOK).JSON(apiError("Invalid argument. error: " + err.Error()))
@@ -107,7 +106,7 @@ func saveUpdateSettings(c *fiber.Ctx) error {
 	}
 	// An absent github_token keeps the stored token.
 
-	if err := task.ReloadTask(); err != nil {
+	if err := reloadTask(); err != nil {
 		return c.Status(http.StatusOK).JSON(apiError(err.Error()))
 	}
 

@@ -774,10 +774,10 @@ func (dm *DeviceManager) ForgetDevice(id, udid string) error {
 	return nil
 }
 
-func (dm *DeviceManager) CheckAfcServiceStatus(dev *model.Device) error {
-	cmd := exec.Command("plumesign", "check", "afc", "--udid", dev.UDID).WithTimeout(10 * time.Second)
+func (dm *DeviceManager) checkAfcServiceStatus(ctx context.Context, dev *model.Device) error {
+	cmd := exec.CommandContext(ctx, "plumesign", "check", "afc", "--udid", dev.UDID).WithTimeout(10 * time.Second)
 	if dev.Connection == model.DeviceConnectionRemote {
-		cmd = exec.Command("plumesign", "check", "afc", "--ip", dev.IP, "--port", fmt.Sprintf("%d", dev.Port), "--udid", dev.UDID).WithTimeout(10 * time.Second)
+		cmd = exec.CommandContext(ctx, "plumesign", "check", "afc", "--ip", dev.IP, "--port", fmt.Sprintf("%d", dev.Port), "--udid", dev.UDID).WithTimeout(10 * time.Second)
 	}
 
 	data, err := cmd.CombinedOutput()
