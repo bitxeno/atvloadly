@@ -44,6 +44,10 @@ atvloadly is a web service that supports sideloading app on Apple TV. It uses [I
   <img width="600" src="./docs/preview/install_en.png">
 </p>
 
+To restart an Apple TV after sideloading, enable **Restart Apple TV after installation** on the app’s install form. The choice is saved with that app on that device and applies to reinstalls and background updates. The server waits for queued installs on the same TV to finish and requests one restart when a full installation with this option enabled succeeded. Profile-only refreshes do not trigger a restart. A restart interrupts playback. Restart errors appear in the server log and leave the installation result intact.
+
+Docker images built from this version include the device client. For standalone or desktop builds, this optional feature requires Python with `pymobiledevice3==11.58.0` installed in the interpreter environment on the server's PATH (`python3` on macOS/Linux, `python` on Windows). The client uses the existing device pairing.
+
 ## Installation
 
 ### Docker (Linux/OpenWrt)

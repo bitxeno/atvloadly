@@ -289,6 +289,19 @@
               />
             </div>
 
+            <div class="form-control" v-if="device?.device_class === 'AppleTV'">
+              <label class="label cursor-pointer justify-between items-center gap-x-4">
+                <span class="flex items-center">
+                  <span class="label-text">{{ $t("install.form.restart_after_install.label") }}</span>
+                  <span class="tooltip" :data-tip="$t('install.form.restart_after_install.tips')">
+                    <span class="block w-4 h-4 text-secondary-content"><HelpIcon /></span>
+                  </span>
+                </span>
+                <input type="checkbox" class="toggle toggle-success" :disabled="loading"
+                  v-model="form.restart_after_install" />
+              </label>
+            </div>
+
             <div class="form-control">
               <label class="label cursor-pointer justify-between items-center gap-x-4">
                 <div class="flex items-center">
@@ -638,6 +651,7 @@ export default {
         account: "",
         password: "",
         custom_name: "",
+        restart_after_install: false,
         remove_extensions: false,
         // Main bundle identifier of the signed app; empty keeps the identifiers
         // of the IPA. Synced on change, not on input, so that the compatibility
@@ -809,7 +823,7 @@ export default {
     this.externalIpaKey = "";
     // Custom name, bundle identifier and custom icon prefilled from an earlier
     // installation of the chosen app; empty when nothing was prefilled.
-    this.prefilled = { custom_name: "", custom_identifier: "", custom_icon_path: "" };
+    this.prefilled = { custom_name: "", custom_identifier: "", custom_icon_path: "", restart_after_install: false };
     this.reportStream = createSigningReportStream();
 
     this.fetchData();
@@ -1227,6 +1241,7 @@ export default {
             bundle_identifier: _this.ipa.bundle_identifier,
             version: _this.ipa.version,
             custom_name: _this.form.custom_name.trim(),
+            restart_after_install: _this.device.device_class === "AppleTV" && _this.form.restart_after_install,
             remove_extensions: _this.form.remove_extensions,
             custom_identifier: _this.form.custom_identifier,
             custom_icon_path: _this.supportsCustomIcon ? _this.form.custom_icon_path : "",
@@ -1319,7 +1334,7 @@ export default {
         if (typed && a.custom_identifier === typed) return 0;
         return a.custom_identifier ? 2 : 1;
       };
-      candidates.sort((a, b) => preferred(a) - preferred(b));
+      candidates.sort((a, b) => preferred(a) - preferred(b) || Number(b.udid === this.device.udid) - Number(a.udid === this.device.udid));
       let matched = false;
       for (const app of candidates) {
         if (this.recommendApp(app)) {
@@ -1447,10 +1462,9 @@ export default {
               // The placeholder previews it, and an Apple ID install reads it
               // here: the server sees the IPA only once the install is queued.
               this.ipaBundleIdentifier = bundleId;
-              for (let app of this.installedApps) {
-                if (app.bundle_identifier !== bundleId) {
-                  continue;
-                }
+              const candidates = this.installedApps.filter((app) => app.bundle_identifier === bundleId);
+              candidates.sort((a, b) => Number(b.udid === this.device.udid) - Number(a.udid === this.device.udid));
+              for (const app of candidates) {
                 if (this.recommendApp(app)) {
                   break;
                 }
@@ -1474,10 +1488,11 @@ export default {
       this.prepareExternalIpa();
     },
     recommendApp(app) {
-      if (app.signing_mode === externalMode) {
-        return this.recommendIdentity(app);
+      const matched = app.signing_mode === externalMode ? this.recommendIdentity(app) : this.recommendAccount(app);
+      if (matched && app.udid === this.device?.udid) {
+        this.prefill("restart_after_install", app.restart_after_install);
       }
-      return this.recommendAccount(app);
+      return matched;
     },
     recommendAccount(app) {
       if (app.signing_mode === externalMode) {
@@ -1546,7 +1561,7 @@ export default {
     clearPrefilled() {
       for (const field of Object.keys(this.prefilled)) {
         if (this.prefilled[field] && this.form[field] === this.prefilled[field]) {
-          this.form[field] = "";
+          this.form[field] = field === "restart_after_install" ? false : "";
         }
         this.prefilled[field] = "";
       }

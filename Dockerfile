@@ -1,4 +1,15 @@
+# The paired-device client runs in its own Python environment. Keep the build
+# tools out of the runtime image and use the same libc in both stages.
+FROM ubuntu:22.04 AS restart-client
+COPY --from=ghcr.io/astral-sh/uv:0.13.6 /uv /usr/local/bin/uv
+ENV UV_PYTHON_INSTALL_DIR=/opt/atv-restart/python
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates build-essential \
+    && uv venv --python 3.13 --managed-python /opt/atv-restart/venv \
+    && uv pip install --python /opt/atv-restart/venv/bin/python pymobiledevice3==11.58.0
+
 FROM ubuntu:22.04
+COPY --from=restart-client /opt/atv-restart /opt/atv-restart
+ENV PATH="/opt/atv-restart/venv/bin:${PATH}"
 ARG APP_NAME
 ARG VERSION
 ARG BUILDDATE

@@ -530,3 +530,41 @@ test("does not prefill a custom icon for Apple TV", () => {
   });
   assert.equal(state.form.custom_icon_path, "");
 });
+
+test("the restart switch sits between the bundle identifier and extension removal", () => {
+  const form = source.split("<script>")[0];
+  const bundle = form.indexOf('v-model.lazy.trim="form.custom_identifier"');
+  const restart = form.indexOf('v-model="form.restart_after_install"');
+  assert.ok(bundle >= 0 && bundle < restart && restart < form.indexOf('v-model="form.remove_extensions"'));
+});
+
+test("only sends an opted-in restart for an Apple TV", async () => {
+  for (const [deviceClass, selected, expected] of [
+    ["AppleTV", false, false], ["AppleTV", true, true], ["iPhone", true, false],
+  ]) {
+    const { state, sockets } = page();
+    assert.equal(state.form.restart_after_install, false);
+    state.device.device_class = deviceClass;
+    state.form.restart_after_install = selected;
+    const pending = state.onSubmit();
+    sockets[0].open();
+    await pending;
+    assert.equal(JSON.parse(sockets[0].sent[0].d).restart_after_install, expected);
+  }
+});
+
+test("reuses only this TV's restart preference when choosing an IPA", async () => {
+  const { state } = page();
+  state.device = { connection: "RPPairing", udid: "tv", device_class: "AppleTV" };
+  state.accounts = [{ email: "user@example.com", status: "valid" }];
+  const app = { bundle_identifier: "com.example.app", account: "user@example.com", restart_after_install: true };
+  state.installedApps = [{ ...app, udid: "other" }];
+  const event = { target: { files: [{ arrayBuffer: async () => new ArrayBuffer(0) }] } };
+  await state.onFileChange(event);
+  assert.equal(state.form.restart_after_install, false);
+  state.installedApps.push({ ...app, udid: "tv" });
+  await state.onFileChange(event);
+  assert.equal(state.form.restart_after_install, true);
+  state.setInstallMode("source");
+  assert.equal(state.form.restart_after_install, false);
+});

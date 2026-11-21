@@ -659,6 +659,7 @@ func route(fi *fiber.App) {
 			Enabled:                  true,
 			CustomName:               customName,
 			RemoveExtensions:         removeExt,
+			RestartAfterInstall:      selectedDevice.DeviceClass == string(model.DeviceClassAppleTV) && c.FormValue("restart_after_install") == "true",
 			SigningMode:              signingMode,
 			SigningIdentityID:        signingIdentityID,
 			AllowMissingEntitlements: allowMissingEntitlements,

@@ -341,6 +341,10 @@
                 "back": "返 回",
                 "submit": "安装"
             },
+            "restart_after_install": {
+                "label": "安装完成后重启 Apple TV",
+                "tips": "记住此应用的选择。完整安装或更新成功后，等这台电视的安装队列结束再重启一次。重启会中断播放。"
+            },
             "extensions": {
                 "remove_extensions": "移除扩展插件",
                 "tips": "没有足够的 App ID 可以注册时很有用",

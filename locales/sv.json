@@ -340,6 +340,10 @@
         "back": "Tillbaka",
         "submit": "Installera"
       },
+      "restart_after_install": {
+        "label": "Starta om Apple TV efter installation",
+        "tips": "Spara valet för den här appen. Efter en lyckad installation eller uppdatering startas Apple TV om när övriga installationer är klara. Uppspelningen avbryts."
+      },
       "extensions": {
         "remove_extensions": "Ta bort tillägg (insticksprogram)",
         "tips": "Användbart när det inte finns tillräckligt många lediga app-ID:n för registrering",

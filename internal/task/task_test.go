@@ -61,6 +61,14 @@ func TestUsesRefreshModeWithCertificateRevocation(t *testing.T) {
 	}
 }
 
+func TestExternalSigningAlwaysInstallsTheIPA(t *testing.T) {
+	app := model.InstalledApp{SigningMode: model.SigningModeExternalCertificate, IpaPath: "/data/ipa/1/app.ipa"}
+	app.ID = 1
+	if usesRefreshMode(app, false) {
+		t.Fatal("an external certificate refresh reinstalls the full IPA")
+	}
+}
+
 func TestVerifyIPA(t *testing.T) {
 	tvApp := model.InstalledApp{DeviceClass: "AppleTV", BundleIdentifier: "com.example.app"}
 	installed := tvApp

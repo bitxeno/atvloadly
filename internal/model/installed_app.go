@@ -11,24 +11,25 @@ import (
 type InstalledApp struct {
 	gorm.Model
 
-	IpaName          string         `json:"ipa_name"`
-	IpaPath          string         `json:"ipa_path"`
-	Description      string         `json:"description,omitempty"`
-	Device           string         `json:"device"`
-	DeviceClass      string         `json:"device_class"`
-	UDID             string         `gorm:"column:udid" json:"udid"`
-	Account          string         `json:"account"`
-	Password         string         `json:"password"`
-	InstalledDate    *time.Time     `json:"installed_date"`
-	RefreshedDate    *time.Time     `json:"refreshed_date"`
-	ExpirationDate   *time.Time     `json:"expiration_date"`
-	RefreshedResult  bool           `json:"refreshed_result"`
-	RefreshedError   RefreshedError `json:"refreshed_error"`
-	Icon             string         `json:"icon"`
-	BundleIdentifier string         `json:"bundle_identifier"`
-	Version          string         `json:"version"`
-	RemoveExtensions bool           `json:"remove_extensions"`
-	CustomName       string         `json:"custom_name,omitempty"`
+	IpaName             string         `json:"ipa_name"`
+	IpaPath             string         `json:"ipa_path"`
+	Description         string         `json:"description,omitempty"`
+	Device              string         `json:"device"`
+	DeviceClass         string         `json:"device_class"`
+	UDID                string         `gorm:"column:udid" json:"udid"`
+	Account             string         `json:"account"`
+	Password            string         `json:"password"`
+	InstalledDate       *time.Time     `json:"installed_date"`
+	RefreshedDate       *time.Time     `json:"refreshed_date"`
+	ExpirationDate      *time.Time     `json:"expiration_date"`
+	RefreshedResult     bool           `json:"refreshed_result"`
+	RefreshedError      RefreshedError `json:"refreshed_error"`
+	Icon                string         `json:"icon"`
+	BundleIdentifier    string         `json:"bundle_identifier"`
+	Version             string         `json:"version"`
+	RestartAfterInstall bool           `gorm:"not null;default:false" json:"restart_after_install"`
+	RemoveExtensions    bool           `json:"remove_extensions"`
+	CustomName          string         `json:"custom_name,omitempty"`
 	// CustomIconPath is the image file passed to the engine as --custom-icon.
 	// Unlike Icon (the display icon extracted from the IPA), this is a user
 	// choice: it is stored with the record and reused on every reinstallation

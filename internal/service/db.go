@@ -100,6 +100,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 		cur.RefreshedError = app.RefreshedError
 		cur.Password = app.Password
 		cur.CustomName = app.CustomName
+		cur.RestartAfterInstall = app.RestartAfterInstall
 		cur.SigningMode = app.SigningMode
 		cur.SigningIdentityID = app.SigningIdentityID
 		cur.SignedBundleIdentifier = app.SignedBundleIdentifier
@@ -139,6 +140,7 @@ func SaveApp(app model.InstalledApp) (*model.InstalledApp, error) {
 			"refreshed_error":            cur.RefreshedError,
 			"password":                   cur.Password,
 			"custom_name":                cur.CustomName,
+			"restart_after_install":      cur.RestartAfterInstall,
 			"signing_mode":               cur.SigningMode,
 			"signing_identity_id":        cur.SigningIdentityID,
 			"signed_bundle_identifier":   cur.SignedBundleIdentifier,

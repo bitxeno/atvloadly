@@ -188,6 +188,37 @@ func TestApplyBuild(t *testing.T) {
 	}
 }
 
+func TestRestartPreferenceSurvivesSourceUpdates(t *testing.T) {
+	setupTestDB(t)
+	app := model.InstalledApp{UDID: "tv", BundleIdentifier: "com.example.tv", Account: "user@example.com"}
+	save := func(v model.InstalledApp) model.InstalledApp {
+		t.Helper()
+		saved, err := SaveApp(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+		loaded, err := GetApp(saved.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return *loaded
+	}
+	stored := save(app)
+	if stored.RestartAfterInstall {
+		t.Fatal("new installs should default to leaving the TV running")
+	}
+	app.RestartAfterInstall = true
+	enabled := save(app)
+	updated := ApplyBuild(enabled, source.Build{ID: "next", Name: "Test.ipa", Version: "2"})
+	if saved := save(updated); saved.ID != stored.ID || !saved.RestartAfterInstall {
+		t.Fatal("the source update lost the preference on the installed record")
+	}
+	app.RestartAfterInstall = false
+	if cleared := save(app); cleared.ID != stored.ID || cleared.RestartAfterInstall {
+		t.Fatal("turning off the option did not clear the stored preference")
+	}
+}
+
 func fullSource() model.AppSource {
 	d := func(day int) *time.Time { return timePtr(time.Date(2026, 9, day, 10, 0, 0, 0, time.UTC)) }
 	return model.AppSource{
