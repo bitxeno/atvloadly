@@ -121,6 +121,7 @@
   <script>
 import api from "@/api/api";
 import { toast } from "vue3-toastify";
+import { homeShell } from "@/utils/home-shell";
 import { truncateIP } from "@/utils/utils";
 export default {
   data() {
@@ -250,6 +251,7 @@ export default {
       });
     },
     goback() {
+      homeShell.loaded = false;
       this.$router.push("/");
     },
     initWebSocket() {
@@ -335,6 +337,7 @@ export default {
         if (line.indexOf("SUCCESS") !== -1) {
           _this.active++;
           _this.success = true;
+          homeShell.loaded = false;
           return;
         }
       }
