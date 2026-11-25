@@ -370,7 +370,9 @@
     },
     "login_modal": {
       "title": "Prijava na Apple nalog",
-      "setup_2fa_help": "Kako podesiti iPhone kao pouzdani uređaj za 2FA kod?",
+      "error": {
+        "help": "Kako da rešite probleme sa prijavom?"
+      },
       "button": {
         "close": "Zatvori",
         "login": "Prijavi se",

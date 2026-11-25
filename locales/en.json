@@ -372,7 +372,9 @@
         ,
         "login_modal": {
             "title": "Login Apple Account",
-            "setup_2fa_help": "How to set up an iPhone as a trusted device for 2FA?",
+            "error": {
+                "help": "How to resolve login issues?"
+            },
             "button": {
                 "close": "Close",
                 "login": "Login",

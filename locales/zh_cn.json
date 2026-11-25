@@ -372,7 +372,9 @@
         ,
         "login_modal": {
             "title": "登录 Apple 帐号",
-            "setup_2fa_help": "如何把 iPhone 设为 2FA 授信设备？",
+            "error": {
+                "help": "如何解决登录问题？"
+            },
             "button": {
                 "close": "关闭",
                 "login": "登录",

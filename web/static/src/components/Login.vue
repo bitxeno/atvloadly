@@ -6,25 +6,7 @@
       :class="['modal', { 'modal-open': loginDialogVisible }]"
     >
       <div class="modal-box">
-        <div class="flex items-center justify-between">
-          <h3 class="font-bold text-lg">{{ $t("install.login_modal.title") }}</h3>
-          <div class="dropdown dropdown-left dropdown-hover">
-            <label tabindex="0" class="cursor-pointer">
-              <div class="w-4 h-4 text-secondary-content"><HelpIcon /></div>
-            </label>
-            <div
-              tabindex="0"
-              class="dropdown-content z-[1] rounded-box shadow bg-base-100 p-2 w-56 text-sm"
-            >
-              <a
-                class="link link-hover"
-                href="https://github.com/bitxeno/atvloadly/wiki/Setup-burned-account-to-receive-2FA-on-a-trusted-device"
-                target="_blank"
-                rel="noopener noreferrer"
-              >{{ $t("install.login_modal.setup_2fa_help") }}</a>
-            </div>
-          </div>
-        </div>
+        <h3 class="font-bold text-lg">{{ $t("install.login_modal.title") }}</h3>
         <form ref="loginForm" class="flex flex-col gap-y-4 mt-4" @submit.prevent>
           <div class="form-control w-full">
             <label class="label">
@@ -55,6 +37,13 @@
           </div>
         </form>
         <div class="modal-action">
+          <a
+            v-if="loginFailed"
+            class="link link-hover mr-auto self-center"
+            :href="loginHelpUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          >{{ $t("install.login_modal.error.help") }}</a>
           <button class="btn" @click="loginDialogVisible = false">
             {{ $t("install.login_modal.button.close") }}
           </button>
@@ -91,6 +80,13 @@
           </p>
         </form>
         <div class="modal-action">
+          <a
+            v-if="loginFailed"
+            class="link link-hover mr-auto self-center"
+            :href="loginHelpUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          >{{ $t("install.login_modal.error.help") }}</a>
           <button class="btn" @click="authDialogVisible = false">
             {{ $t("install.login_modal.button.close") }}
           </button>
@@ -110,17 +106,20 @@
 
 <script>
 import { toast } from "vue3-toastify";
-import HelpIcon from "@/assets/icons/help.svg";
+
+const LOGIN_HELP_URL =
+    "https://github.com/bitxeno/atvloadly/wiki/How-to-resolve-the-login-error";
 
 export default {
     name: "Login",
-    components: { HelpIcon },
     data() {
         return {
             loginWebsock: null,
             loginDialogVisible: false,
             loginLoading: false,
             loginErr: "",
+            loginFailed: false,
+            loginHelpUrl: LOGIN_HELP_URL,
             authDialogVisible: false,
             authLoading: false,
             loginForm: {
@@ -139,6 +138,7 @@ export default {
             this.loginForm.password = "";
             this.authForm.authcode = "";
             this.loginErr = "";
+            this.loginFailed = false;
         },
         validateForm(formRef) {
             const form = this.$refs[formRef];
@@ -155,6 +155,7 @@ export default {
             }
             this.loginLoading = true;
             this.loginErr = "";
+            this.loginFailed = false;
             this.initLoginWebSocket();
         },
         initLoginWebSocket() {
@@ -204,6 +205,7 @@ export default {
             if (line.indexOf("Login Failed") !== -1) {
                 _this.loginLoading = false;
                 _this.authLoading = false;
+                _this.loginFailed = true;
                 toast.error(_this.loginErr, { autoClose: 7000 });
                 return;
             }
@@ -229,6 +231,8 @@ export default {
         loginWebsocketonerror(e) {
             console.log("Login WebSocket connect failed.");
             this.loginLoading = false;
+            this.authLoading = false;
+            this.loginFailed = true;
             toast.error("WebSocket connection failed", { autoClose: 7000 });
         },
         is2FAPrompt(line) {

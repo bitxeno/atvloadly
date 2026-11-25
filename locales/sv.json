@@ -370,7 +370,9 @@
     },
     "login_modal": {
       "title": "Logga in på ett Apple-konto",
-      "setup_2fa_help": "Hur sätter man upp en iPhone som betrodd enhet för 2FA?",
+      "error": {
+        "help": "Hur löser man inloggningsproblem?"
+      },
       "button": {
         "close": "Stäng",
         "login": "Logga in",
