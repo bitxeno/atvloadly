@@ -117,6 +117,7 @@ func DeleteDevice(id string) error {
 	if !ok || device == nil {
 		return fmt.Errorf("device not found: %s", id)
 	}
+	log.Infof("forget device requested: id=%s name=%q udid=%s connection=%s", id, device.Name, device.UDID, device.Connection)
 	return deviceManager.ForgetDevice(id, device.UDID)
 }
 
